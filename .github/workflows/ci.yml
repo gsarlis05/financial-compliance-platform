@@ -56,6 +56,8 @@ jobs:
         run: uv run python -m tools.fcp_lint.no_float
       - name: Tests with coverage gate
         run: uv run pytest --cov --cov-report=term --cov-report=xml
+      - name: Money library requires 100% branch coverage (AC-M0-7)
+        run: uv run coverage report --include='*/fcp/core/money/*' --fail-under=100
       - name: Dependency audit
         run: uv run pip-audit --skip-editable
 

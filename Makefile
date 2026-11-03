@@ -46,7 +46,7 @@ test: backend-test frontend-test
 lint: backend-lint frontend-lint
 
 backend-test:
-	cd backend && uv run pytest
+	cd backend && uv run pytest --cov && uv run coverage report --include='*/fcp/core/money/*' --fail-under=100 >/dev/null
 
 frontend-test:
 	cd frontend && pnpm test
