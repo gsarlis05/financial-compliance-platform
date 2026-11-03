@@ -5,6 +5,7 @@
 - **One pull request per backlog item** (`docs/planning/08-implementation-backlog.md`), small and reviewable. Every PR is reviewed by the product owner before merge (`.github/CODEOWNERS`).
 - Fill in the PR template's feature checklist.
 - **Never commit real customer, client or personal data.** Use the synthetic data generator. `dev` and `staging` hold synthetic data only (ADR-0010).
+- **Synthetic data** (`make synthetic`, or `python -m fcp.devtools.synthetic --help`) generates a business (Demo Trading Ltd: counterparties, sales and purchase invoices, bank transactions, loan schedule, recurring costs) and a household (accounts, categorised transactions, mortgage). The same seed always gives byte-identical files. VAT numbers and IBANs are deliberately invalid, names carry "(Demo)", and e-mails use `.example`. To mimic your own situation, export a profile with `--print-profile`, adjust the levels, keep it under `var/` (git-ignored) and generate with `--profile`. Never put real records in a profile.
 - **Never commit secrets.** Configuration comes from environment variables; `.env` files are git-ignored, and `.env.example` documents the variables with placeholder values only.
 - No deployment and no migration is applied to any shared or deployed environment without explicit approval.
 
