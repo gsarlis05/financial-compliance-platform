@@ -1,0 +1,54 @@
+[project]
+name = "fcp-backend"
+version = "0.0.0"
+description = "Financial Compliance Platform backend"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "django>=5.2,<5.3",
+    "psycopg[binary]>=3.2,<4",
+]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "fcp"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "fcp.settings.test"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "S", "BLE", "DTZ", "T20", "SIM", "RUF", "PL", "PT"]
+ignore = ["PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR0913"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+mypy_path = "src"
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "fcp.settings.test"
+
+[dependency-groups]
+dev = [
+    "django-stubs>=6.1.2",
+    "hypothesis>=6.170.14",
+    "mypy>=1.15",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.3",
+]
