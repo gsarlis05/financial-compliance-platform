@@ -143,6 +143,22 @@ jobs:
           docker run --rm -v "$PWD/infra/terraform:/tf" "$CHECKOV_IMAGE"
           -d /tf --framework terraform --quiet --compact --skip-path .terraform
 
+  containers:
+    name: Container images (build, checkov, production-like smoke; never pushed)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dockerfile policy (checkov)
+        run: >-
+          docker run --rm -v "$PWD:/src" bridgecrew/checkov:3.4.3
+          -f /src/backend/Dockerfile -f /src/frontend/Dockerfile --framework dockerfile --quiet --compact
+      - name: Build the API image
+        run: docker build -t fcp-backend:ci backend/
+      - name: Build the web image
+        run: docker build -t fcp-web:ci frontend/
+      - name: Production-like smoke test (TLS database, migration task, read-only, non-root)
+        run: scripts/ci/container-smoke.sh fcp-backend:ci fcp-web:ci
+
   prove-gates:
     name: Prove gates reject violations
     runs-on: ubuntu-24.04

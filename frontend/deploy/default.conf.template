@@ -1,0 +1,35 @@
+# Web front end: serves the built single-page app and forwards /api and /auth to the API on the
+# same origin (so __Host- cookies and strict CSRF work unchanged).
+# On AWS the same split is done by CloudFront (S3 origin for the app, ALB origin for /api/* and
+# /auth/*); this container is for production-like local runs, or ECS if ever preferred over S3.
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+
+    location ~ ^/(api|auth)/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto ${FORWARDED_PROTO};
+        client_max_body_size 25m;
+    }
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+    # Hashed build assets never change: cache for a year.
+    location /assets/ {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+    # Everything else is the app shell (client-side routing); never cached.
+    location / {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-store" always;
+        try_files $uri /index.html;
+    }
+}
