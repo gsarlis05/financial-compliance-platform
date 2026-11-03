@@ -15,9 +15,12 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, corrections, entries, idempotency, integrity, periods, reports
+from . import accounts, corrections, dimensions, entries, idempotency, integrity, periods, reports
 from .models import (
     Account,
+    AccountDimensionRule,
+    Dimension,
+    DimensionValue,
     FiscalYear,
     IntegrityCheckRun,
     JournalEntry,
@@ -148,6 +151,149 @@ def apply_template(
     return Status(201, accounts.apply_template(ctx, entity_id, payload.template))
 
 
+# --- dimensions (M2-1) -----------------------------------------------------------------------
+
+
+class DimensionValueOut(Schema):
+    id: UUID
+    code: str
+    name: str
+    parent_id: UUID | None
+    status: str
+
+
+class DimensionOut(Schema):
+    id: UUID
+    code: str
+    name: str
+    kind: str
+    status: str
+    values: list[DimensionValueOut]
+
+
+class DimensionIn(Schema):
+    code: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=100)
+    kind: Dimension.Kind
+
+
+class DimensionPatch(Schema):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    status: Dimension.Status | None = None
+
+
+class DimensionValueIn(Schema):
+    code: str = Field(min_length=1, max_length=30)
+    name: str = Field(min_length=1, max_length=200)
+    parent_code: str | None = Field(default=None, max_length=30)
+
+
+class DimensionValuePatch(Schema):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    status: Dimension.Status | None = None
+
+
+class DimensionRuleIO(Schema):
+    dimension_id: UUID
+    rule: AccountDimensionRule.Rule
+
+
+def _dimension_out(d: Dimension) -> DimensionOut:
+    return DimensionOut(
+        id=d.id,
+        code=d.code,
+        name=d.name,
+        kind=d.kind,
+        status=d.status,
+        values=[
+            DimensionValueOut.from_orm(v) for v in sorted(d.values.all(), key=lambda v: v.code)
+        ],
+    )
+
+
+@router.get(f"{BASE}/dimensions", response=list[DimensionOut])
+@requires("ledger.account.read")
+def list_dimensions(request: HttpRequest, slug: str, entity_id: UUID) -> list[DimensionOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_dimension_out(d) for d in dimensions.list_dimensions(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/dimensions", response={201: DimensionOut})
+@requires("ledger.account.manage")
+def create_dimension(
+    request: HttpRequest, slug: str, entity_id: UUID, payload: DimensionIn
+) -> Status[DimensionOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    created = dimensions.create_dimension(ctx, entity_id, **payload.dict())
+    return Status(201, _dimension_out(created))
+
+
+@router.patch(f"{BASE}/dimensions/{{uuid:dimension_id}}", response=DimensionOut)
+@requires("ledger.account.manage")
+def update_dimension(
+    request: HttpRequest, slug: str, entity_id: UUID, dimension_id: UUID, payload: DimensionPatch
+) -> DimensionOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    updated = dimensions.update_dimension(
+        ctx, entity_id, dimension_id, **payload.dict(exclude_unset=True)
+    )
+    return _dimension_out(updated)
+
+
+@router.post(f"{BASE}/dimensions/{{uuid:dimension_id}}/values", response={201: DimensionValueOut})
+@requires("ledger.account.manage")
+def create_dimension_value(
+    request: HttpRequest,
+    slug: str,
+    entity_id: UUID,
+    dimension_id: UUID,
+    payload: DimensionValueIn,
+) -> Status[DimensionValue]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, dimensions.create_value(ctx, entity_id, dimension_id, **payload.dict()))
+
+
+@router.patch(f"{BASE}/dimension-values/{{uuid:value_id}}", response=DimensionValueOut)
+@requires("ledger.account.manage")
+def update_dimension_value(
+    request: HttpRequest, slug: str, entity_id: UUID, value_id: UUID, payload: DimensionValuePatch
+) -> DimensionValue:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return dimensions.update_value(ctx, entity_id, value_id, **payload.dict(exclude_unset=True))
+
+
+@router.get(f"{BASE}/accounts/{{uuid:account_id}}/dimension-rules", response=list[DimensionRuleIO])
+@requires("ledger.account.read")
+def get_dimension_rules(
+    request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID
+) -> list[DimensionRuleIO]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    account = accounts.get_account(ctx, entity_id, account_id)
+    rules = dimensions.account_rules(entity_id, [account.id]).get(account.id, {})
+    return [
+        DimensionRuleIO(dimension_id=d, rule=AccountDimensionRule.Rule(r)) for d, r in rules.items()
+    ]
+
+
+@router.put(f"{BASE}/accounts/{{uuid:account_id}}/dimension-rules", response=list[DimensionRuleIO])
+@requires("ledger.account.manage")
+def set_dimension_rules(
+    request: HttpRequest,
+    slug: str,
+    entity_id: UUID,
+    account_id: UUID,
+    payload: list[DimensionRuleIO],
+) -> list[DimensionRuleIO]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    created = dimensions.set_account_rules(
+        ctx, entity_id, account_id, [(r.dimension_id, r.rule) for r in payload]
+    )
+    return [
+        DimensionRuleIO(dimension_id=r.dimension_id, rule=AccountDimensionRule.Rule(r.rule))
+        for r in created
+    ]
+
+
 # --- fiscal years and periods ----------------------------------------------------------------
 
 
@@ -188,6 +334,9 @@ class LineIn(Schema):
     debit: str = Field(default="0", pattern=AMOUNT, description='Decimal string, e.g. "120.50"')
     credit: str = Field(default="0", pattern=AMOUNT, description="Decimal string")
     memo: str = Field(default="", max_length=300)
+    dimension_value_ids: list[UUID] = Field(
+        default_factory=list, max_length=10, description="At most one value per dimension"
+    )
 
 
 class EntryIn(Schema):
@@ -199,6 +348,14 @@ class EntryIn(Schema):
     lines: list[LineIn] = Field(min_length=1, max_length=500)
 
 
+class LineDimensionOut(Schema):
+    dimension_id: UUID
+    dimension_code: str
+    value_id: UUID
+    value_code: str
+    value_name: str
+
+
 class LineOut(Schema):
     line_no: int
     account_id: UUID
@@ -206,6 +363,7 @@ class LineOut(Schema):
     debit: str
     credit: str
     memo: str
+    dimensions: list[LineDimensionOut]
 
 
 class EntryOut(Schema):
@@ -285,6 +443,16 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 debit=f"{ln.debit:.2f}",
                 credit=f"{ln.credit:.2f}",
                 memo=ln.memo,
+                dimensions=[
+                    LineDimensionOut(
+                        dimension_id=t.dimension_id,
+                        dimension_code=t.dimension.code,
+                        value_id=t.value_id,
+                        value_code=t.value.code,
+                        value_name=t.value.name,
+                    )
+                    for t in sorted(ln.dimension_tags.all(), key=lambda t: t.dimension.code)
+                ],
             )
             for ln in lines
         ],
@@ -299,7 +467,10 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
         journal_code=payload.journal,
         use_adjustment_period=payload.use_adjustment_period,
         lines=[
-            entries.LineInput(ln.account_id, ln.debit, ln.credit, ln.memo) for ln in payload.lines
+            entries.LineInput(
+                ln.account_id, ln.debit, ln.credit, ln.memo, tuple(ln.dimension_value_ids)
+            )
+            for ln in payload.lines
         ],
     )
 
@@ -555,6 +726,9 @@ class TrialBalanceQuery(Schema):
     as_of: date
     date_from: date | None = None
     include_zero: bool = False
+    dimension_value_id: UUID | None = Field(
+        default=None, description="Only lines tagged with this value (the result need not balance)"
+    )
 
 
 class TrialBalanceRowOut(Schema):
@@ -580,6 +754,7 @@ class TrialBalanceOut(Schema):
 class LedgerQuery(Schema):
     date_from: date
     date_to: date
+    dimension_value_id: UUID | None = None
 
 
 class LedgerLineOut(Schema):
@@ -608,7 +783,12 @@ class AccountLedgerOut(Schema):
 def _tb(request: HttpRequest, slug: str, entity_id: UUID, q: TrialBalanceQuery) -> Any:
     ctx = workspace_ctx(request, slug, entity_id)
     return ctx, reports.trial_balance(
-        ctx, entity_id, as_of=q.as_of, date_from=q.date_from, include_zero=q.include_zero
+        ctx,
+        entity_id,
+        as_of=q.as_of,
+        date_from=q.date_from,
+        include_zero=q.include_zero,
+        dimension_value_id=q.dimension_value_id,
     )
 
 
@@ -673,7 +853,12 @@ def trial_balance_csv(
 def _gl(request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID, q: LedgerQuery) -> Any:
     ctx = workspace_ctx(request, slug, entity_id)
     return ctx, reports.general_ledger(
-        ctx, entity_id, account_id, date_from=q.date_from, date_to=q.date_to
+        ctx,
+        entity_id,
+        account_id,
+        date_from=q.date_from,
+        date_to=q.date_to,
+        dimension_value_id=q.dimension_value_id,
     )
 
 

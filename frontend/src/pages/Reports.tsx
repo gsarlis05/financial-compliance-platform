@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router";
 import { apiUrl } from "../api/client";
-import { useIntegrity, useScope, useTrialBalance } from "../api/hooks";
+import { useDimensions, useIntegrity, useScope, useTrialBalance } from "../api/hooks";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount } from "../money";
@@ -10,20 +10,48 @@ export function TrialBalancePage() {
   const { t, locale } = useI18n();
   const { base } = useScope();
   const [asOf, setAsOf] = useState(new Date().toISOString().slice(0, 10));
-  const tb = useTrialBalance(asOf);
+  const [valueId, setValueId] = useState("");
+  const tb = useTrialBalance(asOf, valueId);
+  const dimensions = useDimensions();
   return (
     <Page
       title={t("tb.title")}
       actions={
-        <a className="button" href={apiUrl(`${base}/reports/trial-balance.csv`, { as_of: asOf })}>
+        <a
+          className="button"
+          href={apiUrl(`${base}/reports/trial-balance.csv`, {
+            as_of: asOf,
+            ...(valueId ? { dimension_value_id: valueId } : {}),
+          })}
+        >
           {t("tb.export")}
         </a>
       }
     >
-      <label className="form inline">
-        {t("tb.asOf")}
-        <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
-      </label>
+      <div className="form inline">
+        <label>
+          {t("tb.asOf")}
+          <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+        </label>
+        {dimensions.data?.length ? (
+          <label>
+            {t("tb.dimension")}
+            <select value={valueId} onChange={(e) => setValueId(e.target.value)}>
+              <option value="">{t("tb.allLines")}</option>
+              {dimensions.data.map((d) => (
+                <optgroup key={d.id} label={`${d.code} · ${d.name}`}>
+                  {d.values.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {d.code}: {v.code} · {v.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
+      {valueId ? <p className="notice">{t("tb.partial")}</p> : null}
       {tb.isPending ? <Loading /> : null}
       <ProblemMessage error={tb.error} />
       {tb.data ? (
