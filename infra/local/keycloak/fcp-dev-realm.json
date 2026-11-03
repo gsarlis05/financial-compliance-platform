@@ -63,6 +63,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
+        "http://localhost:5173/auth/callback",
         "http://localhost:8000/auth/callback"
       ],
       "webOrigins": [],

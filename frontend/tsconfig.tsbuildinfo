@@ -1,1 +1,1 @@
-{"root":["./src/App.test.tsx","./src/App.tsx","./src/main.tsx","./src/test-setup.ts","./vite.config.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/money.ts","./src/test-setup.ts","./src/api/client.ts","./src/api/hooks.ts","./src/api/types.ts","./src/components/Layout.tsx","./src/components/common.tsx","./src/i18n/I18n.tsx","./src/i18n/messages.ts","./src/pages/Accounts.tsx","./src/pages/Entries.tsx","./src/pages/EntryForm.tsx","./src/pages/Periods.tsx","./src/pages/Reports.tsx","./src/pages/Workspaces.tsx","./vite.config.ts"],"version":"5.9.3"}
