@@ -7,6 +7,7 @@ on:
     branches: [main, claude/process-tracker]
     paths:
       - docs/tracker/milestones.json
+      - docs/tracker/pr-links.json
       - scripts/tracker/sync.py
       - .github/workflows/tracker-sync.yml
   issues:
@@ -16,6 +17,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: write
 
 concurrency:
   group: tracker-sync

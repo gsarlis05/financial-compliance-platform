@@ -41,7 +41,7 @@ Phase (1–5) ─► Milestone (M0 … M13, GitHub milestone) ─► Issue (M2-5
 | 1. Ready | Issue exists in the right milestone with scope, acceptance criteria and dependencies | Claude (from the brief) |
 | 2. Start | Before coding: post purpose, dependencies, approach, acceptance criteria and risks (directive) on the issue or in the PR description | Claude |
 | 3. Branch | `claude/<key>-<short-name>` (e.g. `claude/m2-5-bank-import`), stacked on the previous open branch until earlier PRs merge | Claude |
-| 4. PR | Uses `.github/pull_request_template.md`; body starts with `Closes #<issue>`; all CI gates green | Claude |
+| 4. PR | Uses `.github/pull_request_template.md`; body starts with `Closes #<issue>` (also recorded in `docs/tracker/pr-links.json`; tracker-sync adds the line if missing); all CI gates green | Claude |
 | 5. In review | Label `status:in-review` on the issue; `docs/PROGRESS.md` updated in the same PR | Claude |
 | 6. Review and merge | Review; merge in order (oldest first). Merging closes the issue | **Product owner** |
 | 7. Done | Issue closed by the merge; milestone closes when all its issues are closed | GitHub |

@@ -1,7 +1,8 @@
 """Sync GitHub milestones and labels from docs/tracker/milestones.json (idempotent).
 
 Also assigns every issue whose title starts with a backlog key ("M2-5: ...", "M7: ...") to the
-milestone of that key, so an issue can never sit in the wrong milestone for long.
+milestone of that key, and adds "Closes #<issue>" to open PRs listed in
+docs/tracker/pr-links.json, so merging a PR closes its issues.
 
 Runs in GitHub Actions (.github/workflows/tracker-sync.yml) with the built-in GITHUB_TOKEN
 (issues: write). Standard library only. Never deletes milestones, labels or issues.
@@ -21,6 +22,8 @@ from typing import Any
 
 API = "https://api.github.com"
 SPEC = Path(__file__).resolve().parents[2] / "docs" / "tracker" / "milestones.json"
+LINKS = SPEC.with_name("pr-links.json")
+CLOSES = re.compile(r"(?i)\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#(\d+)")
 KEY = re.compile(r"^\[?(M\d+)(?:-\d+)?\]?[:\s]")
 
 
@@ -108,6 +111,20 @@ def main() -> int:
             print(f"issue #{issue['number']} -> milestone {match.group(1)}")
             if not dry:
                 request("PATCH", f"/repos/{repo}/issues/{issue['number']}", {"milestone": wanted})
+
+    links = json.loads(LINKS.read_text(encoding="utf-8"))["links"] if LINKS.exists() else {}
+    for number, issues in links.items():
+        pr = request("GET", f"/repos/{repo}/pulls/{number}")
+        if pr["state"] != "open":
+            continue
+        body = pr.get("body") or ""
+        already = {int(m.group(3)) for m in CLOSES.finditer(body)}
+        missing = [i for i in issues if i not in already]
+        if missing:
+            print(f"PR #{number}: add Closes {missing}")
+            if not dry:
+                line = ", ".join(f"Closes #{i}" for i in missing)
+                request("PATCH", f"/repos/{repo}/pulls/{number}", {"body": f"{line}\n\n{body}"})
 
     print(json.dumps({"milestones": numbers}, sort_keys=True))
     return 0
