@@ -1,5 +1,14 @@
 import { type SyntheticEvent, useState } from "react";
-import type { Account, Counterparty, Dimension, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
+import type {
+  Account,
+  Counterparty,
+  Dimension,
+  EntryInput,
+  FiscalYear,
+  JournalEntry,
+  Period,
+  VatCode,
+} from "../api/types";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
@@ -14,6 +23,7 @@ interface LineState {
   dims: Record<string, string>;
   counterparty_id: string;
   reference: string;
+  vat_code_id: string;
 }
 
 let nextKey = 1;
@@ -26,6 +36,7 @@ const emptyLine = (): LineState => ({
   dims: {},
   counterparty_id: "",
   reference: "",
+  vat_code_id: "",
 });
 
 export function periodFor(years: FiscalYear[], date: string, adjustment: boolean): Period | undefined {
@@ -44,6 +55,7 @@ interface Props {
   accounts: Account[];
   dimensions?: Dimension[];
   counterparties?: Counterparty[];
+  vatCodes?: VatCode[];
   fiscalYears: FiscalYear[];
   initial?: JournalEntry | undefined;
   saving: boolean;
@@ -55,6 +67,7 @@ export function EntryForm({
   accounts,
   dimensions = [],
   counterparties = [],
+  vatCodes = [],
   fiscalYears,
   initial,
   saving,
@@ -75,6 +88,7 @@ export function EntryForm({
       dims: Object.fromEntries(l.dimensions.map((d) => [d.dimension_id, d.value_id])),
       counterparty_id: l.counterparty_id ?? "",
       reference: l.reference,
+      vat_code_id: l.vat_code_id ?? "",
     })) ?? [emptyLine(), emptyLine()],
   );
   // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
@@ -84,6 +98,9 @@ export function EntryForm({
   const postable = accounts.filter((a) => a.is_postable && a.status === "ACTIVE");
   const controlOf = new Map(accounts.map((a) => [a.id, a.control_type]));
   const hasControl = accounts.some((a) => a.control_type !== "");
+  const vatRoleOf = new Map(accounts.map((a) => [a.id, a.vat_role]));
+  const showVat = vatCodes.length > 0;
+  const vatLabel = (v: VatCode) => `${v.code} · ${locale === "el" && v.name_el ? v.name_el : v.name}${v.verified ? "" : ` (${t("vat.unverified")})`}`;
   const partiesFor = (control: string, current: string) =>
     counterparties.filter(
       (c) =>
@@ -114,6 +131,7 @@ export function EntryForm({
         dimension_value_ids: Object.values(l.dims).filter((v) => v !== ""),
         counterparty_id: l.counterparty_id || null,
         reference: l.reference,
+        vat_code_id: l.vat_code_id || null,
       })),
     };
   }
@@ -151,6 +169,7 @@ export function EntryForm({
             <th scope="col">{t("je.debit")}</th>
             <th scope="col">{t("je.credit")}</th>
             <th scope="col">{t("je.memo")}</th>
+            {showVat ? <th scope="col">{t("je.vat")}</th> : null}
             {hasControl ? <th scope="col">{t("je.counterparty")}</th> : null}
             {shownDims.map((d) => (
               <th scope="col" key={d.id}>
@@ -213,6 +232,25 @@ export function EntryForm({
                 />
                 <FieldError error={error} field={`lines.${index}.dimension_value_ids`} />
               </td>
+              {showVat ? (
+                <td>
+                  <select
+                    className="dimension-picker"
+                    aria-label={`${t("je.vat")} ${index + 1}`}
+                    value={line.vat_code_id}
+                    required={!!vatRoleOf.get(line.account_id)}
+                    onChange={(e) => update(line.key, { vat_code_id: e.target.value })}
+                  >
+                    <option value="">—</option>
+                    {vatCodes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {vatLabel(v)}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError error={error} field={`lines.${index}.vat_code_id`} />
+                </td>
+              ) : null}
               {hasControl ? (
                 <td>
                   {controlOf.get(line.account_id) ? (
@@ -286,7 +324,7 @@ export function EntryForm({
             <td className="amount" data-testid="total-credit">
               {formatAmount(totalCredit, locale)}
             </td>
-            <td colSpan={2 + shownDims.length + (hasControl ? 1 : 0)} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
+            <td colSpan={2 + shownDims.length + (hasControl ? 1 : 0) + (showVat ? 1 : 0)} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
               {balanced ? t("je.balanced") : `${t("je.difference")}: ${formatAmount(difference, locale)}`}
             </td>
           </tr>
@@ -297,6 +335,9 @@ export function EntryForm({
         + {t("je.addLine")}
       </button>
       {!balanced ? <p className="notice">{t("je.unbalanced")}</p> : null}
+      {lines.some((l) => vatCodes.find((v) => v.id === l.vat_code_id && !v.verified)) ? (
+        <p className="notice">{t("vat.unverifiedHelp")}</p>
+      ) : null}
       <ProblemMessage error={error} />
       <div className="actions">
         <button type="button" disabled={saving || !amountsValid} onClick={(e) => handle(e, false)}>

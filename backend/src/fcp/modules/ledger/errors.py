@@ -94,3 +94,13 @@ class CounterpartyRequiredError(ValidationFailedError):
 class CounterpartyInvalidError(ValidationFailedError):
     code = "ledger.line.counterparty_invalid"
     title = "Invalid counterparty on a journal line"
+
+
+class VatCodeRequiredError(ValidationFailedError):
+    code = "ledger.line.vat_code_required"
+    title = "A VAT code is required on VAT-account lines"
+
+
+class VatCodeInvalidError(ValidationFailedError):
+    code = "ledger.line.vat_code_invalid"
+    title = "Invalid VAT code on a journal line"

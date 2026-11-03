@@ -90,6 +90,7 @@ def reverse(
             counterparty_id=line.counterparty_id,
             reference=line.reference,
             due_date=line.due_date,
+            vat_code_id=line.vat_code_id,
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
@@ -126,7 +127,7 @@ def link_reversal(entry: JournalEntry) -> None:
 
     def tags(ln: JournalLine) -> tuple[str, ...]:
         dims = sorted(str(t.value_id) for t in ln.dimension_tags.all())
-        return (*dims, f"counterparty={ln.counterparty_id}")
+        return (*dims, f"counterparty={ln.counterparty_id}", f"vat={ln.vat_code_id}")
 
     expected = sorted((ln.account_id, ln.credit, ln.debit, tags(ln)) for ln in original.lines.all())
     actual = sorted((ln.account_id, ln.debit, ln.credit, tags(ln)) for ln in entry.lines.all())

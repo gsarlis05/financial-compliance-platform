@@ -13,7 +13,11 @@ GLOBAL_TABLES: dict[str, str] = {
     "auth_group_permissions": "Django framework metadata (unused by the application)",
     "identity_user": "Global identities; one person may belong to several workspaces",
     "tenancy_tenant": "Workspaces themselves; protected by RLS on id/membership instead",
+    "ledger_vat_code": "Reference data: VAT code catalogue per jurisdiction (no tenant data)",
 }
 
 # Tables the runtime role may only INSERT into and SELECT from (no UPDATE or DELETE).
 APPEND_ONLY_TABLES: set[str] = {"audit_log_event"}
+
+# Reference-data tables the runtime role may only SELECT from (changed by migrations only).
+READ_ONLY_TABLES: set[str] = {"ledger_vat_code"}

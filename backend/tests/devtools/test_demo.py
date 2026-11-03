@@ -37,6 +37,7 @@ def test_demo_entry_nets_each_account_to_one_side() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("reference_data")
 def test_demo_walkthrough_runs_end_to_end() -> None:
     viewer = User.objects.create(idp_subject="https://idp.test|viewer", email="viewer@example.test")
     said: list[str] = []
@@ -64,6 +65,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.usefixtures("reference_data")
 def test_demo_share_with_unknown_user_is_reported_not_fatal() -> None:
     said: list[str] = []
     result = run(share_with="nobody@example.test", say=said.append)

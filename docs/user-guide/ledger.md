@@ -115,13 +115,26 @@ then the oldest invoices). Matches can also be made or removed one by one throug
 invoice can be flagged as disputed (automatic matching skips it). A reversed invoice becomes a credit
 note that cancels it. CSV export is available.
 
-## 10. Integrity checks
+## 10. VAT codes
+Each line can carry a **VAT code** from the Cyprus catalogue: S19 (standard 19%), R9 and R5
+(reduced), Z0 (zero), EX (exempt), RC (EU reverse charge), OUT (outside the scope) and SETTLE
+(payments to or refunds from the tax authority). Lines on the VAT accounts (**1220** input VAT,
+**2120** output VAT) must have one, and the code must be valid on the accounting date.
+
+> **All rates are marked "unverified"** until a Cyprus tax professional confirms them (decision
+> #93). The 3% rate is not in the catalogue yet for the same reason. The app does **not** produce or
+> submit VAT returns; that comes with the rules engine (M9), with human sign-off.
+
+The catalogue is reference data maintained by the platform (versioned by validity dates); the app
+itself can only read it.
+
+## 11. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on the **Integrity**
 tab (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 11. Try it with demo data
+## 12. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).
