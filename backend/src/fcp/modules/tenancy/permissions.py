@@ -23,6 +23,7 @@ PERMISSIONS: dict[str, str] = {
     "ledger.period.post_soft_closed": "Post into soft-closed periods",
     "ledger.period.unlock_request": "Request that a locked period be unlocked",
     "ledger.period.unlock_approve": "Approve a period unlock (two distinct approvers needed)",
+    "ledger.settings.manage": "Change ledger controls such as the approval policy",
     # journal entries
     "ledger.entry.read": "See journal entries",
     "ledger.entry.create": "Create, edit and submit draft entries (including reversal drafts)",
@@ -59,6 +60,7 @@ _SIGN_OFF = (
         "ledger.period.lock",
         "ledger.period.post_soft_closed",
         "ledger.period.unlock_approve",
+        "ledger.settings.manage",
         "audit.read",
         "admin.integrity.read",
     }

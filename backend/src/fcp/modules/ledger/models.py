@@ -119,3 +119,216 @@ class Period(TenantOwned):
             ),
         ]
         ordering = ["fiscal_year__start_date", "number"]
+
+
+# --- journal entries (backlog M1-8) --------------------------------------------------------------
+
+# Monetary columns: NUMERIC(19,4) (doc 03 conventions; ADR-0003).
+
+
+class LedgerSettings(TenantOwned):
+    """Per-entity controls. The approval policy decides when a second person must approve."""
+
+    class Approval(models.TextChoices):
+        NONE = "NONE"  # preparer may post (personal finances)
+        THRESHOLD = "THRESHOLD"  # approval needed above the threshold amount
+        ALWAYS = "ALWAYS"
+
+    legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    approval_policy = models.CharField(max_length=16, choices=Approval.choices)
+    approval_threshold = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_settings"
+
+
+class Journal(TenantOwned):
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "ledger_journal"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code"], name="ledger_journal_code_unique"
+            )
+        ]
+
+
+class JournalEntry(TenantOwned):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT"
+        SUBMITTED = "SUBMITTED"
+        APPROVED = "APPROVED"
+        POSTED = "POSTED"
+        REJECTED = "REJECTED"
+        VOID = "VOID"
+
+    class EntryType(models.TextChoices):
+        STANDARD = "STANDARD"
+        REVERSAL = "REVERSAL"
+        ADJUSTMENT = "ADJUSTMENT"
+        OPENING = "OPENING"
+        CLOSING = "CLOSING"
+
+    class Source(models.TextChoices):
+        MANUAL = "MANUAL"
+        IMPORT = "IMPORT"
+        SYSTEM = "SYSTEM"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    journal = models.ForeignKey(Journal, on_delete=models.PROTECT, related_name="+")
+    entry_type = models.CharField(
+        max_length=16, choices=EntryType.choices, default=EntryType.STANDARD
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANUAL)
+    accounting_date = models.DateField()
+    document_date = models.DateField(null=True, blank=True)
+    use_adjustment_period = models.BooleanField(default=False)
+    description = models.CharField(max_length=500)
+    currency = models.CharField(max_length=3)
+    reverses_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    reversed_by_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    related_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    correction_reason = models.CharField(max_length=500, blank=True)
+    content_hash = models.CharField(max_length=64, blank=True)
+    prepared_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_hash = models.CharField(max_length=64, blank=True)
+    rejection_reason = models.CharField(max_length=500, blank=True)
+    # Set at posting.
+    period = models.ForeignKey(
+        Period, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    fiscal_year = models.ForeignKey(
+        FiscalYear, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    entry_no = models.PositiveIntegerField(null=True, blank=True)
+    posting_seq = models.BigIntegerField(null=True, blank=True)
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_in_soft_closed = models.BooleanField(default=False)
+    unlock_request_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        db_table = "ledger_journal_entry"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["journal", "fiscal_year", "entry_no"], name="ledger_entry_number_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "posting_seq"], name="ledger_entry_posting_seq_unique"
+            ),
+            # An entry can be reversed once: one live reversal per original (AC-C6).
+            models.UniqueConstraint(
+                fields=["reverses_entry"],
+                condition=~models.Q(status__in=["VOID", "REJECTED"]),
+                name="ledger_entry_single_reversal",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(status="POSTED")
+                | models.Q(entry_no__isnull=False, posting_seq__isnull=False, period__isnull=False),
+                name="ledger_entry_posted_fields",
+            ),
+        ]
+        indexes = [models.Index(fields=["legal_entity", "status", "accounting_date"])]
+
+
+class JournalLine(TenantOwned):
+    entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name="lines")
+    line_no = models.PositiveSmallIntegerField()
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    debit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    credit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    memo = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        db_table = "ledger_journal_line"
+        constraints = [
+            models.UniqueConstraint(fields=["entry", "line_no"], name="ledger_line_number_unique"),
+            # Exactly one side, strictly positive (AC-C1, enforced by the database too).
+            models.CheckConstraint(
+                condition=(models.Q(debit__gt=0) & models.Q(credit=0))
+                | (models.Q(credit__gt=0) & models.Q(debit=0)),
+                name="ledger_line_one_positive_side",
+            ),
+        ]
+
+
+class EntrySequence(TenantOwned):
+    """Gapless entry numbers per journal and fiscal year; the row is locked while posting."""
+
+    journal = models.ForeignKey(Journal, on_delete=models.PROTECT, related_name="+")
+    fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.PROTECT, related_name="+")
+    last_no = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "ledger_entry_sequence"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["journal", "fiscal_year"], name="ledger_sequence_unique"
+            )
+        ]
+
+
+class PostingCounter(models.Model):
+    """Per-tenant posting watermark (doc 10 §2.3); strictly increasing, gapless."""
+
+    tenant = models.OneToOneField("tenancy.Tenant", primary_key=True, on_delete=models.PROTECT,
+                                  related_name="+")  # fmt: skip
+    last_seq = models.BigIntegerField(default=0)
+
+    class Meta:
+        db_table = "ledger_posting_counter"
+
+
+class IdempotencyRecord(TenantOwned):
+    key = models.CharField(max_length=100)
+    operation = models.CharField(max_length=50)
+    request_hash = models.CharField(max_length=64)
+    response = models.JSONField()
+    status_code = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = "ledger_idempotency"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "key"], name="ledger_idempotency_unique")
+        ]
+
+
+class AccountBalance(TenantOwned):
+    """Debit and credit totals per account and period, maintained at posting (doc 05 §7).
+
+    Rebuildable from posted lines at any time; the integrity job (M1-11) compares the two.
+    """
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    period = models.ForeignKey(Period, on_delete=models.PROTECT, related_name="+")
+    debit_total = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    credit_total = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+
+    class Meta:
+        db_table = "ledger_account_balance"
+        constraints = [
+            models.UniqueConstraint(fields=["account", "period"], name="ledger_balance_unique")
+        ]
