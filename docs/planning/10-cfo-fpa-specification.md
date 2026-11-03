@@ -1,6 +1,6 @@
 # 10 — CFO & FP&A Specification: Calculation and Forecasting Requirements
 
-Status: **DRAFT for review** · Related: [01 PRD §5](01-product-requirements.md), [02 SAD §10](02-software-architecture.md), [03 ERD §5](03-entity-relationship-model.md), [12 tests](12-fpa-testing-and-acceptance.md), ADR-0007/0009
+Status: **APPROVED (2026-11-03)** · Related: [01 PRD §5](01-product-requirements.md), [02 SAD §10](02-software-architecture.md), [03 ERD §5](03-entity-relationship-model.md), [12 tests](12-fpa-testing-and-acceptance.md), ADR-0007/0009
 
 The CFO module answers the question: **"What is likely to happen, and what can management do about it?"**
 The ledger answers: "What has happened?" This document defines how the first is derived from the second

@@ -1,6 +1,6 @@
 # 11 — Customer Types and Secure Coexistence (Firm, Business, Personal)
 
-Status: **DRAFT for review** · Extends [04](04-auth-and-tenant-isolation.md) · ADR-0008
+Status: **APPROVED (2026-11-03)** · Extends [04](04-auth-and-tenant-isolation.md) · ADR-0008
 
 ## 1. Requirement
 One person may be, at the same time:
@@ -87,7 +87,7 @@ unapproved environments. Proposed rules:
 |---|---|---|
 | `dev` (local/CI) | **Synthetic only** (generated fixtures, including a realistic synthetic "household" and "Demo Trading Ltd") | Mock provider or approved provider with synthetic data only |
 | `staging` | Synthetic only | Same as dev |
-| **`pilot`** (new): production-grade controls (EU region, MFA, encryption, backups, audit, monitoring), separate account/project, invite-only | **Your own personal and own-business data**. **No third-party client data** until the GA security gate (pen-test, DPA) is passed | Disabled by default. You may enable it for **your personal workspace only**, with an approved provider configuration (EU, zero data retention) |
+| **`pilot`** (new): production-grade controls (EU region, MFA, encryption, backups, audit, monitoring), separate account/project, invite-only | **Your own personal and own-business data**. **No third-party client data** until the GA security gate (pen-test, DPA) is passed | Disabled by default; **always disabled for your business workspace during the pilot** (decided 2026-11-03). You may enable it for **your personal workspace only**, with an approved provider configuration (EU, zero data retention) |
 | `prod` | Customer data | Per tenant policy |
 
 - `pilot` deployments follow the same approval rule as production. **I will not create or deploy it without your explicit approval** (directive: no unapproved production deployments).

@@ -1,5 +1,5 @@
 # ADR-0002: Shared-schema multi-tenancy with PostgreSQL Row-Level Security
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 Many small tenants (firms, SMEs). Isolation must not depend solely on application code.
 ## Decision

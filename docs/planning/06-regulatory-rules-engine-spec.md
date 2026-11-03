@@ -1,6 +1,6 @@
 # 06 — Regulatory Rules Engine Specification
 
-Status: **DRAFT for review** · ADR-0004
+Status: **APPROVED (2026-11-03)** · ADR-0004
 
 > **No rate or threshold shown here is authoritative.** Examples illustrate structure only.
 > Real values enter the system through the curation workflow (§5) with a verified source.

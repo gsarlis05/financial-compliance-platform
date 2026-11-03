@@ -1,6 +1,6 @@
 # 05 — Financial Ledger Specification
 
-Status: **DRAFT for review** · Data model: [03 §2](03-entity-relationship-model.md)
+Status: **APPROVED (2026-11-03)** · Data model: [03 §2](03-entity-relationship-model.md)
 
 ## 1. Principles
 1. **Double entry:** every posted entry has ≥ 2 lines and Σdebits = Σcredits in functional currency (and in transaction currency when all lines share one currency).

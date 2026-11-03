@@ -1,6 +1,6 @@
 # 12 — FP&A Testing Strategy and Phase 2 (MVP) Acceptance Criteria
 
-Status: **DRAFT for review** · Applies to M3–M5 (Phase 2), and the strategy extends to Phase 3.
+Status: **APPROVED (2026-11-03)** · Applies to M3–M5 (Phase 2), and the strategy extends to Phase 3.
 Phase 1 criteria: [09](09-milestone-1-acceptance-criteria.md) (M1) + §3 below (M2).
 
 ## 1. Test strategy for calculations and forecasting
@@ -90,7 +90,7 @@ Phase 1 criteria: [09](09-milestone-1-acceptance-criteria.md) (M1) + §3 below (
 - AC-PE2 The personal net worth = Σ assets − Σ liabilities, reconciled to the underlying ledger. Category budgets and goals work with the personal taxonomy.
 - AC-PE3 The counterpart hint never posts without confirmation in the target workspace.
 - AC-PE4 Full workspace export (JSON + CSV + documents) and deletion flows work and are audited. Deletion respects legal hold/retention where applicable.
-- AC-PE5 Pilot readiness (Gate P): backup restore tested; AI disabled; no pilot→dev data path (infra policy test); security review completed; **your approval recorded**.
+- AC-PE5 Pilot readiness (Gate P, for the owner's personal **and** business workspaces): the coexistence suite passes for exactly this pair; AI is disabled for the business workspace; backup restore tested; AI disabled; no pilot→dev data path (infra policy test); security review completed; **your approval recorded**.
 
 ### 4.8 Quality gates (all milestones)
 Domain coverage ≥ 90% line / 85% branch; calc engines 100% branch; CI green (lint, mypy strict,

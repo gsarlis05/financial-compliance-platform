@@ -1,6 +1,6 @@
 # Documentation index
 
-Status: **DRAFT v2, awaiting review and approval. No application code until approved.**
+Status: **APPROVED v2 (2026-11-03). Implementation proceeds milestone by milestone, one reviewed PR per backlog item.**
 
 **Start here → [MASTER-PLAN.md](MASTER-PLAN.md)** (summary, roadmap, MVP priorities, risks, decisions needed).
 
@@ -19,6 +19,7 @@ Status: **DRAFT v2, awaiting review and approval. No application code until appr
 | 10 | [CFO & FP&A specification (calculation & forecasting requirements)](planning/10-cfo-fpa-specification.md) |
 | 11 | [Customer types & secure coexistence](planning/11-account-types-and-coexistence.md) |
 | 12 | [FP&A testing strategy & Phase 2 (MVP) acceptance criteria](planning/12-fpa-testing-and-acceptance.md) |
-| ADR | [Architecture decision records 0001–0010](adr/) (all *Proposed*) |
+| 13 | [Milestone 0 implementation brief](planning/13-milestone-0-brief.md) (awaiting go-ahead) |
+| ADR | [Architecture decision records 0001–0010](adr/) (all *Accepted*) |
 
 Research and legal inputs, when available, go in `research/`.

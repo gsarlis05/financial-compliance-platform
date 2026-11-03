@@ -1,5 +1,5 @@
 # ADR-0004: Regulatory rules as versioned declarative data evaluated by deterministic code
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 Tax law changes (e.g. the Cyprus 2026 reform) must apply by effective date while historical periods stay reproducible. Rules require professional verification.
 ## Decision

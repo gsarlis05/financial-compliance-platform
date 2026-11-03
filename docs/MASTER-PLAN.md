@@ -1,6 +1,6 @@
 # Master Plan — v2 (Accounting · Compliance · FP&A · CFO Intelligence)
 
-Status: **DRAFT for review**. No application code will be written until this plan is approved.
+Status: **APPROVED 2026-11-03** (product owner: "accept all defaults except 7: personal and my business"). See §8a for the decision record.
 Date: 2026-11-03 · Supersedes the v1 planning scope.
 
 ## 1. What changed in v2
@@ -150,6 +150,24 @@ Defaults are in *italics*. "Accept all defaults except …" is a valid answer. T
 26. Uptime and recovery: 99.5% uptime, RPO 15 minutes, RTO 4 hours. *Default: accept for pilot.*
 27. Team size and languages, which affects item 12 and the timeline.
 28. Working method: one PR per backlog item, reviewed by you before merge. *Default: yes.* Should I open a PR now for this planning branch? *Default: yes.*
+
+## 8a. Decision record (2026-11-03)
+All defaults in §8 are **accepted**, with this exception:
+- **#7: the owner will dogfood both a personal workspace and their own business workspace.** Consequences:
+  - Gate P covers two pilot workspaces (PERSONAL + BUSINESS), held as separate tenants as per doc 11.
+  - The business workspace contains third-party personal data (customers, suppliers, employees), so it is classified as confidential. **AI stays disabled for the business workspace during the pilot**, and only the personal workspace may opt in (ADR-0010).
+  - The business needs Phase 1 features fully working before Gate P: bank import for the business's bank format, open AR/AP, VAT codes, and dimensions. That makes items #8 and #9 below concrete questions about your business.
+  - The owner is the controller of the business's data. Pilot terms and a simple DPA between the owner's business and the platform operator are recommended before uploading business records.
+
+Items whose default was conditional or not decided yet (they **do not block Milestone 0**):
+
+| # | Status |
+|---|---|
+| 2 | Tax professional: **open**, needed by Phase 4 (calendar templates by M3) |
+| 3 | Golden-model sign-off: product owner (default) |
+| 8 | Multi-currency: **depends on whether your business trades in non-EUR currencies**. Answer before M2. |
+| 9 | Import sources: **open**. Which bank(s) does your business use, and what statement export formats? Do you use any existing accounting software? Answer before M2. |
+| 27 | Team size and languages: **open**. Assumed: the owner + Claude, Python/TypeScript. |
 
 ## 9. Document map
 | Doc | Status |

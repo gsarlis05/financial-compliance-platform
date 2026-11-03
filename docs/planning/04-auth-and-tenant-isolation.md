@@ -1,6 +1,6 @@
 # 04 — Authentication, Authorization and Tenant-Isolation Design
 
-Status: **DRAFT v2 for review**. Customer types, engagements, dimension scoping and personal workspaces are specified in [11](11-account-types-and-coexistence.md) and extend this document.
+Status: **APPROVED v2 (2026-11-03)**. Customer types, engagements, dimension scoping and personal workspaces are specified in [11](11-account-types-and-coexistence.md) and extend this document.
 
 ## 1. Goals
 1. Only authenticated, MFA-verified people and scoped service clients can access data.

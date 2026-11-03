@@ -1,5 +1,5 @@
 # ADR-0009: Shared calculation framework (taxonomy, expression evaluator, calc runs with lineage)
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 KPIs, budgets, forecasts, projections, goals, scenarios, statements and tax rules all need consistent definitions, periods, precision and auditability.
 ## Decision

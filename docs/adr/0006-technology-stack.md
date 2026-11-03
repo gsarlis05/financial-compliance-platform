@@ -1,5 +1,5 @@
 # ADR-0006: Python/Django + PostgreSQL + React/TypeScript
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 No stack was proposed in the inputs. Needs: native decimal, mature migrations/auth, RLS-capable DB, hiring pool, permissive licences.
 ## Decision

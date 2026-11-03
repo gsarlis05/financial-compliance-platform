@@ -1,5 +1,5 @@
 # ADR-0010: Environment and data policy (synthetic dev/staging, owner-only pilot)
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 The product owner wants to use the platform personally during development with realistic data; real confidential client data must not enter unapproved environments or AI services.
 ## Decision

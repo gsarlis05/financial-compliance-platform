@@ -1,6 +1,6 @@
 # 08 — Phased Roadmap and Implementation Backlog — v2
 
-Status: **DRAFT v2 for review** (re-sequenced per the FP&A scope update).
+Status: **APPROVED v2 (2026-11-03)** (re-sequenced per the FP&A scope update).
 Sizes: S ≤ 2 days, M ≤ 1 week, L ≤ 2 weeks (one engineer). Every item ships with the directive's feature
 checklist: business requirements, technical design, DB changes, security controls, automated tests, edge cases,
 sample data, user-facing validation, docs, and known limitations.
@@ -109,7 +109,7 @@ workflows exist. **If you want Cyprus firms as early customers, consider moving 
 | M5-5 | Pilot environment IaC (separate account, prod-grade controls), backup/restore drill, monitoring. **Created/deployed only after your approval (Gate P)** | M |
 | M5-6 | Data export (full workspace export, so you always own your data) + workspace deletion flow | M |
 
-**Gate P (owner-only pilot):** isolation and coexistence suites green, backup/restore tested, MFA
+**Gate P (owner-only pilot; covers the owner's PERSONAL and BUSINESS workspaces, decided 2026-11-03):** the owner's business bank format importable, open items/VAT codes working, isolation and coexistence suites green, backup/restore tested, MFA
 enforced, AI disabled, a security review of Phases 1–2, and your written approval.
 
 ## Phase 3 — Advanced FP&A

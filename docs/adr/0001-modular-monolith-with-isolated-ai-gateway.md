@@ -1,5 +1,5 @@
 # ADR-0001: Modular monolith with an isolated AI gateway
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 A small team needs strong consistency across ledger, tax and audit data, and fast iteration. AI calls carry data-exfiltration and prompt-injection risk.
 ## Decision

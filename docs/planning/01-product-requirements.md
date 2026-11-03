@@ -1,6 +1,6 @@
 # 01 — Product Requirements Document (PRD) — v2
 
-Status: **DRAFT v2 for review** (v1 superseded by the scope update adding FP&A/CFO intelligence and personal use)
+Status: **APPROVED v2 (2026-11-03)** (v1 superseded by the scope update adding FP&A/CFO intelligence and personal use)
 Related: [MASTER-PLAN](../MASTER-PLAN.md), [10 CFO/FP&A spec](10-cfo-fpa-specification.md), [11 customer types](11-account-types-and-coexistence.md), [08 roadmap](08-implementation-backlog.md)
 
 ## 1. Vision

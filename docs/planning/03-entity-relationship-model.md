@@ -1,6 +1,6 @@
 # 03 — Initial Entity-Relationship Model
 
-Status: **DRAFT for review**. This is a logical model. Physical DDL will be produced in Milestone 1 after approval.
+Status: **APPROVED (2026-11-03)**. This is a logical model. Physical DDL will be produced in Milestone 1 after approval.
 
 Conventions (all tenant-owned tables):
 - `id UUID` (v7, time-ordered) as PK, plus `tenant_id UUID NOT NULL` with an RLS policy. FKs to tenant-owned tables are **composite** `(tenant_id, id)` so a row cannot reference another tenant's row even by bug.

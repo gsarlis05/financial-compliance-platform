@@ -1,5 +1,5 @@
 # ADR-0005: AI as a non-authoritative, read-only, isolated service
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 LLMs can hallucinate, can be prompt-injected by documents, and are third-party processors of confidential data.
 ## Decision

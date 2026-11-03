@@ -1,6 +1,6 @@
 # 09 — Milestone 1 Acceptance Criteria: "Secure tenancy + core ledger"
 
-Status: **DRAFT v2 for review**. Includes Milestone 0 foundations. Phase 1 = M1 (this document) + M2 (criteria in [12 §3](12-fpa-testing-and-acceptance.md)). Milestone 1 is accepted only when **all** criteria pass in CI and in a reviewed demo on staging (synthetic data).
+Status: **APPROVED v2 (2026-11-03)**. Includes Milestone 0 foundations. Phase 1 = M1 (this document) + M2 (criteria in [12 §3](12-fpa-testing-and-acceptance.md)). Milestone 1 is accepted only when **all** criteria pass in CI and in a reviewed demo on staging (synthetic data).
 
 ## Business purpose
 Give a firm a secure, multi-tenant workspace where staff can maintain a chart of accounts, record

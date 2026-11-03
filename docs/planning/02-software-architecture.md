@@ -1,6 +1,6 @@
 # 02 — Software Architecture Document (SAD)
 
-Status: **DRAFT v2 for review** (adds Planning & CFO domain, workspaces) · Related ADRs: [../adr/](../adr/)
+Status: **APPROVED v2 (2026-11-03)** (adds Planning & CFO domain, workspaces) · Related ADRs: [../adr/](../adr/)
 
 ## 1. Architectural style
 
@@ -157,16 +157,16 @@ Controls:
 ## 9. Architecture decision log
 | ADR | Title | Status |
 |---|---|---|
-| 0001 | Modular monolith with isolated AI gateway | Proposed |
-| 0002 | Shared-schema multi-tenancy with PostgreSQL RLS | Proposed |
-| 0003 | Decimal money type and explicit rounding | Proposed |
-| 0004 | Regulatory rules as versioned, declarative data evaluated by deterministic code | Proposed |
-| 0005 | AI as a non-authoritative, read-only, isolated service | Proposed |
-| 0006 | Python/Django + PostgreSQL + React stack | Proposed |
-| 0007 | Planning domain separated from ledger; actuals via a read model; nature-tagged values | Proposed |
-| 0008 | Workspace kinds (firm/business/personal) as separate tenants + engagement grants | Proposed |
-| 0009 | Shared calculation framework (taxonomy, expression evaluator, calc runs with lineage) | Proposed |
-| 0010 | Environment and data policy (synthetic dev/staging, owner-only pilot) | Proposed |
+| 0001 | Modular monolith with isolated AI gateway | Accepted |
+| 0002 | Shared-schema multi-tenancy with PostgreSQL RLS | Accepted |
+| 0003 | Decimal money type and explicit rounding | Accepted |
+| 0004 | Regulatory rules as versioned, declarative data evaluated by deterministic code | Accepted |
+| 0005 | AI as a non-authoritative, read-only, isolated service | Accepted |
+| 0006 | Python/Django + PostgreSQL + React stack | Accepted |
+| 0007 | Planning domain separated from ledger; actuals via a read model; nature-tagged values | Accepted |
+| 0008 | Workspace kinds (firm/business/personal) as separate tenants + engagement grants | Accepted |
+| 0009 | Shared calculation framework (taxonomy, expression evaluator, calc runs with lineage) | Accepted |
+| 0010 | Environment and data policy (synthetic dev/staging, owner-only pilot) | Accepted |
 
 ## 10. Planning & CFO domain architecture (ADR-0007, ADR-0009)
 

@@ -1,6 +1,6 @@
 # 00 — Input Review, Assumptions and Open Questions
 
-Status: **DRAFT for review** · Date: 2026-11-03 · Scope: first assignment (planning only, no application code)
+Status: **APPROVED (2026-11-03)** · Date: 2026-11-03 · Scope: first assignment (planning only, no application code)
 
 > **Update (v2):** Scope expanded to FP&A/CFO intelligence and three customer types (firm, business, personal). Assumptions A-1 and A-2 are superseded by [PRD v2](01-product-requirements.md) and the [master plan](../MASTER-PLAN.md). The consolidated open decisions are in MASTER-PLAN §8.
 

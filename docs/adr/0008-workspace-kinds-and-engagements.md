@@ -1,5 +1,5 @@
 # ADR-0008: Workspace kinds as separate tenants, with firm↔client engagement grants
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 The platform serves firms, businesses and individuals; one person may be all three. Personal and business data must be securely separated, while firms need scoped access to clients.
 ## Decision

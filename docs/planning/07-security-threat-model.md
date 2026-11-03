@@ -1,6 +1,6 @@
 # 07 — Security Threat Model
 
-Status: **DRAFT v2 for review** (adds §7 FP&A, workspaces, personal data) · Method: STRIDE per trust boundary + abuse cases · Re-review: each milestone and on any architecture change
+Status: **APPROVED v2 (2026-11-03)** (adds §7 FP&A, workspaces, personal data) · Method: STRIDE per trust boundary + abuse cases · Re-review: each milestone and on any architecture change
 
 ## 1. Assets (by sensitivity)
 1. Client financial data (ledgers, statements, tax computations): confidential, integrity-critical.

@@ -1,5 +1,5 @@
 # ADR-0003: Decimal money type and explicit rounding
-Status: Proposed · Date: 2026-11-03
+Status: **Accepted** · Date: 2026-11-03 (accepted by product owner 2026-11-03)
 ## Context
 Binary floating point cannot represent decimal currency exactly.
 ## Decision
