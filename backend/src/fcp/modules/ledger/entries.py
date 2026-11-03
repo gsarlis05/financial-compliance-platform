@@ -519,11 +519,16 @@ def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
             f"{entry.accounting_date}. Create the fiscal year first.",
             field_errors={"accounting_date": ["no period"]},
         )
-    if period.status == Period.Status.LOCKED and entry.unlock_request_id is None:
-        raise PeriodLockedError(
-            f"Period {period.number} of {period.fiscal_year.name} is locked. "
-            "Request an unlock, which needs two approvers."
-        )
+    if period.status == Period.Status.LOCKED:
+        from .corrections import active_unlock  # noqa: PLC0415 - avoids an import cycle
+
+        unlock = active_unlock(period)
+        if unlock is None:
+            raise PeriodLockedError(
+                f"Period {period.number} of {period.fiscal_year.name} is locked. "
+                "Request an unlock, which needs two approvers."
+            )
+        entry.unlock_request_id = unlock.id
     if period.status == Period.Status.SOFT_CLOSED and not ctx.can(
         "ledger.period.post_soft_closed", entry.legal_entity_id
     ):
@@ -595,7 +600,10 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
     entry.status = Status.POSTED
     entry.save()
     from .balances import apply_posting  # noqa: PLC0415 - avoids an import cycle
+    from .corrections import link_reversal  # noqa: PLC0415
 
+    if entry.reverses_entry_id:
+        link_reversal(entry)
     apply_posting(entry)
     _audit(
         ctx,
@@ -608,6 +616,8 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
             "period_id": period.id,
             "content_hash": entry.content_hash,
             "soft_closed": entry.posted_in_soft_closed,
+            "unlock_request_id": entry.unlock_request_id,
+            "reverses_entry_id": entry.reverses_entry_id,
         },
     )
     return entry

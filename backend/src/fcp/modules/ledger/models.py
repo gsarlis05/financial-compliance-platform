@@ -332,3 +332,61 @@ class AccountBalance(TenantOwned):
         constraints = [
             models.UniqueConstraint(fields=["account", "period"], name="ledger_balance_unique")
         ]
+
+
+class PeriodUnlock(TenantOwned):
+    """A time-boxed exception to a period lock (doc 05 §4, AC-C7).
+
+    Needs two approvals by distinct users with ``ledger.period.unlock_approve``, neither of them
+    the requester. While ACTIVE and inside its window, entries may post into the locked period and
+    are tagged with this unlock; the period itself stays LOCKED, so expiry re-locks automatically.
+    """
+
+    class Status(models.TextChoices):
+        REQUESTED = "REQUESTED"
+        ACTIVE = "ACTIVE"
+        REJECTED = "REJECTED"
+        CLOSED = "CLOSED"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    period = models.ForeignKey(Period, on_delete=models.PROTECT, related_name="unlocks")
+    reason = models.CharField(max_length=500)
+    window_minutes = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.REQUESTED)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    first_approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    second_approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    active_from = models.DateTimeField(null=True, blank=True)
+    active_until = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "ledger_period_unlock"
+        constraints = [
+            # At most one open (requested or active) unlock per period.
+            models.UniqueConstraint(
+                fields=["period"],
+                condition=models.Q(status__in=["REQUESTED", "ACTIVE"]),
+                name="ledger_unlock_one_open_per_period",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(first_approver__isnull=True)
+                | ~models.Q(first_approver=models.F("requested_by")),
+                name="ledger_unlock_first_approver_not_requester",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(second_approver__isnull=True)
+                | (
+                    ~models.Q(second_approver=models.F("requested_by"))
+                    & ~models.Q(second_approver=models.F("first_approver"))
+                ),
+                name="ledger_unlock_second_approver_distinct",
+            ),
+        ]
