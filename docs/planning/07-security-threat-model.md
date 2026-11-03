@@ -1,6 +1,6 @@
 # 07 — Security Threat Model
 
-Status: **DRAFT for review** · Method: STRIDE per trust boundary + abuse cases · Re-review: each milestone and on any architecture change
+Status: **DRAFT v2 for review** (adds §7 FP&A, workspaces, personal data) · Method: STRIDE per trust boundary + abuse cases · Re-review: each milestone and on any architecture change
 
 ## 1. Assets (by sensitivity)
 1. Client financial data (ledgers, statements, tax computations): confidential, integrity-critical.
@@ -62,3 +62,20 @@ tracked per milestone.
 - An LLM provider breach is mitigated but not eliminated by redaction/ZDR. Tenants can disable AI.
 - Shared-schema multi-tenancy relies on RLS correctness. The dedicated-DB option for high-risk tenants is a later offering.
 - Rule correctness depends on human curators (see doc 06 §9).
+
+## 7. Additions for FP&A, workspaces and personal use (v2)
+
+| # | Area | STRIDE | Threat | Mitigations | Verification |
+|---|---|---|---|---|---|
+| T23 | Workspaces | I | Personal data shown in a business context (or vice versa) for a user with both | Separate tenants, path-based context, distinct visual theme, no cross-workspace queries, per-workspace notifications/search/AI context | Coexistence suite (doc 11 §9) |
+| T24 | Engagements | E/I | Firm keeps access after a client revokes the engagement, or exceeds the engagement scope | Per-request grant check (no caching beyond request), permission = intersection(scope, role), revocation job purges derived firm-side summaries | Revocation and scope-intersection tests |
+| T25 | Dimension scoping | I | Department budget owner reads other departments' figures via aggregate endpoints, exports, KPI drill-downs or AI | Dimension filters applied in the query layer of every planning/reporting endpoint; aggregates computed only over permitted dimensions or denied | Per-endpoint scoped-user tests incl. exports |
+| T26 | Integrity | T/R | **Forecast or hypothetical values presented as actuals** (misleading management, lenders, auditors) | Nature-tagged values, type-level separation, API schema requires nature, visual contract, provenance footers on exports, report packs frozen with watermark | Type tests, API schema tests, export golden tests, UI snapshot tests |
+| T27 | Integrity | T | Silent overwrite of approved budget or published forecast | Immutability triggers, versioning, approval workflow, audit events | Direct-SQL tamper tests |
+| T28 | Formula DSL | E/D | Malicious custom KPI/driver formula (code execution, resource exhaustion, data access across scopes) | Sandboxed AST evaluator, whitelisted functions, typed references resolved through authz, expression size/depth limits, run time/memory limits | Fuzzing; malicious-formula corpus |
+| T29 | Imports | T | Malicious Excel budget import (formula injection, XML bombs in XLSX, huge sheets) | Read values only (no formula evaluation), defusedxml-backed parser, size/row limits, preview + validation | Malicious-file corpus incl. XLSX |
+| T30 | Exports | I | Report pack sent outside the company includes data beyond the user's scope | Pack generation under the generating user's permissions; scope stated on cover page; export audit event | Export scope tests |
+| T31 | AI CFO | T/I | AI invents figures or presents scenarios as facts; prompt injection via document/commentary text | Numbers must originate from tool results (validator), hypothetical outputs labelled, tools read-only, AI output panel visually distinct | Fabricated-number tests; injection corpus incl. commentary fields |
+| T32 | Personal data | I | Special-category inferences (health, religion, union) from personal transactions leak to telemetry/AI | Category labels excluded from telemetry; AI off by default; personal workspace data class = high sensitivity | Telemetry redaction tests |
+| T33 | Environments | I | Owner's real data, or client data, copied into dev/staging or a non-approved AI provider during development | Separate pilot account, no pilot→dev data path, synthetic generators, AI provider allow-list per environment enforced in the gateway config | Infra policy checks; gateway config tests |
+| T34 | Availability | D | Expensive scenario/sensitivity runs used to exhaust workers | Per-user/tenant run quotas, input-hash caching, run timeouts, priority queues | Load tests |

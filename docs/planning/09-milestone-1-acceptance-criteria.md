@@ -1,6 +1,6 @@
 # 09 — Milestone 1 Acceptance Criteria: "Secure tenancy + core ledger"
 
-Status: **DRAFT for review**. Includes Milestone 0 foundations. Milestone 1 is accepted only when **all** criteria pass in CI and in a reviewed demo on staging (synthetic data).
+Status: **DRAFT v2 for review**. Includes Milestone 0 foundations. Phase 1 = M1 (this document) + M2 (criteria in [12 §3](12-fpa-testing-and-acceptance.md)). Milestone 1 is accepted only when **all** criteria pass in CI and in a reviewed demo on staging (synthetic data).
 
 ## Business purpose
 Give a firm a secure, multi-tenant workspace where staff can maintain a chart of accounts, record
@@ -26,6 +26,8 @@ Documents, bank import, FX/multi-currency posting (single-currency EUR entities 
 - AC-B5 CI schema check fails when a tenant table lacks FORCE RLS/policy or tenant classification.
 - AC-B6 Entity-scoped users cannot see entities outside their assignment (API + DB tests).
 - AC-B7 Tenant admin cannot grant a permission they do not hold, and the default admin cannot approve entries.
+- AC-B8 Workspaces have a kind (FIRM, BUSINESS, PERSONAL). Feature entitlements are enforced server-side (e.g. the PERSONAL kind cannot create a second legal entity or access firm-only routes), as tested via the API, not just the UI.
+- AC-B9 A user belonging to two workspaces sees data only from the workspace in the URL path. The workspace switcher shows a distinct label/colour per kind, and a workspace id in a request body is ignored.
 
 ## C. Ledger
 - AC-C1 Posting is rejected for: unbalanced entries (incl. 0.01 difference), < 2 lines, zero/negative amounts, both sides on one line, non-postable/inactive/other-entity accounts, a date outside any period. Each returns a distinct problem+json `code` and a field-level message shown in the UI.
@@ -39,6 +41,7 @@ Documents, bank import, FX/multi-currency posting (single-currency EUR entities 
 - AC-C9 Rounding: all money handling uses `Decimal`. Passing a float to `Money` raises. The lint rule blocks `float(` in domain code. Documented HALF_UP tests at .005 boundaries pass. Amounts up to 10^13 are handled without loss.
 - AC-C10 The nightly integrity job detects a deliberately corrupted balance snapshot and a broken audit hash in test, raising a visible alert.
 - AC-C11 Trial balance and GL CSV exports neutralise formula injection.
+- AC-C12 Every posted entry receives a strictly increasing per-tenant `posting_seq` (the watermark used by FP&A). Concurrent posts produce no duplicates, and the TB as of watermark W is reproducible after later postings.
 
 ## D. Audit trail
 - AC-D1 Every create/update/state change on tenancy, roles, accounts, periods and entries writes an audit event in the same transaction (a forced rollback test leaves no orphan events and no unaudited change).

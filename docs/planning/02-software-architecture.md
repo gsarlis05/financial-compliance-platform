@@ -1,6 +1,6 @@
 # 02 — Software Architecture Document (SAD)
 
-Status: **DRAFT for review** · Related ADRs: [../adr/](../adr/)
+Status: **DRAFT v2 for review** (adds Planning & CFO domain, workspaces) · Related ADRs: [../adr/](../adr/)
 
 ## 1. Architectural style
 
@@ -16,7 +16,12 @@ into each other's tables. This lets us extract services later without a rewrite 
         │ OIDC                        │   identity, tenancy     │      │ read replica (reports) │
         ▼                             │   ledger, tax, rules    │      │                        │
    IdP (Keycloak / managed)           │   documents, audit      │   Workers (jobs, imports,    │
-                                      │   reporting, evidence   │   rule tests, exports)       │
+                                      │   reporting, evidence   │   rule tests, exports,       │
+                                      │   registers, PLANNING:  │   calc runs, re-forecasts)   │
+                                      │   cashflow, budgeting,  │                              │
+                                      │   projections, kpi,     │                              │
+                                      │   goals, scenarios,     │                              │
+                                      │   mgmt_reporting, dash. │                              │
                                       │                         │                              │
                                       ├──► Object storage (SSE-KMS, versioning, Object Lock)   │
                                       │                                                         │
@@ -33,7 +38,7 @@ Accounting, taxation, auditing and compliance logic are separated (directive pri
 | Module | Responsibility | Owns tables | Depends on |
 |---|---|---|---|
 | `identity` | Users, MFA status mirror, sessions, service accounts | `user`, `api_client` | IdP |
-| `tenancy` | Tenants, entities, memberships, roles, grants, auditor engagements | `tenant`, `legal_entity`, `membership`, `role_assignment`, `access_grant` | identity |
+| `tenancy` | Workspaces (FIRM/BUSINESS/PERSONAL), entities, memberships, roles, dimension-scoped assignments, auditor grants, **firm↔client engagements**, feature entitlements | `tenant`, `legal_entity`, `membership`, `role_assignment`, `access_grant`, `engagement`, `feature_entitlement` | identity |
 | `ledger` | CoA, fiscal periods, journals, posting, balances, FX | `account`, `fiscal_year`, `period`, `journal_entry`, `journal_line`, `account_balance`, `fx_rate` | tenancy, rules (read-only for VAT codes) |
 | `rules` | Regulatory rule packs, versions, evaluation engine, test suites | `rule_pack`, `rule_version`, `rule_test_case`, `source_reference` | — (pure) |
 | `tax` | VAT/corporate tax computations, returns, judgments | `tax_computation`, `tax_return`, `judgment_record` | ledger (read), rules |
@@ -42,8 +47,20 @@ Accounting, taxation, auditing and compliance logic are separated (directive pri
 | `banking` | Statement import, matching, reconciliation | `bank_account`, `bank_txn`, `reconciliation` | ledger |
 | `workflow` | Generic approvals, SoD policy, sign-offs | `approval_request`, `approval_step`, `signoff` | tenancy |
 | `audit_log` | Append-only hash-chained event log, evidence packs | `audit_event`, `audit_chain_anchor` | — |
-| `reporting` | TB, GL, statements, IFRS mapping, exports | `report_mapping`, `report_snapshot` | ledger (read) |
-| `ai` (client side) | Request building, data-class filtering, draft storage | `ai_request`, `ai_draft` | AI Gateway |
+| `reporting` | TB, GL, actual financial statements, **`reporting.actuals` read model** (the only path through which any other module reads historical figures), exports | `fact_actuals_monthly`, `fact_cash_daily`, `report_snapshot` | ledger (read) |
+| `ai` (client side) | Request building, data-class filtering, draft storage, tool dispatch to deterministic services | `ai_request`, `ai_draft` | AI Gateway, FP&A services (read-only) |
+| `registers` | Counterparties, open AR/AP items, recurring obligations, debt instruments + schedules, fixed assets, tax payment calendar | `counterparty`, `open_item`, `recurring_obligation`, `debt_instrument`, `fixed_asset`, `tax_payment_calendar` | ledger |
+| `calendar` | Fiscal periods, ISO weeks, business days, bucketing | (reference data) | ledger (fiscal years) |
+| **Planning & CFO domain** (ADR-0007) | | | |
+| `metrics` | **Shared calculation framework**: financial taxonomy, account mapping, expression evaluator (shared with `rules`), unit typing, KPI/metric definitions, calc-run + lineage infrastructure | `taxonomy_*`, `account_taxonomy_map`, `metric_definition*`, `calc_run`, `calc_result`, `calc_lineage` | reporting.actuals (read) |
+| `cashflow` | 13-week and rolling cash forecasts, sensitivity | `plan*` (kind CASH) | metrics, registers, reporting.actuals |
+| `budgeting` | Budgets, versions, revisions, phasing, variance, explanations | `plan*` (kind BUDGET), `variance_explanation` | metrics, workflow |
+| `projections` | Integrated 3-statement model, rolling 12/24-month forecasts | `plan*` (kind PROJECTION), `assumption_set`, `assumption` | metrics, registers |
+| `kpi` | KPI evaluation, scorecards, operational metrics | `operational_metric*` | metrics |
+| `goals` | Goals, evaluations, goal-seek, contribution analysis | `goal`, `goal_evaluation` | kpi, projections/cashflow |
+| `scenarios` | Scenario overrides, scenario runs, comparisons | `scenario`, `scenario_override` | projections, cashflow |
+| `mgmt_reporting` | Report pack templates, snapshots, commentary, Excel/PDF export | `report_pack`, `report_section` | all planning modules (read) |
+| `dashboards` | Widget configuration, alert rules and alerts | `dashboard`, `widget`, `alert_rule`, `alert` | all planning modules (read) |
 
 **Boundary enforcement:** an import-linter contract in CI forbids cross-module imports except
 through each module's `api.py`. The DB role per module is out of scope for MVP; the import-linter
@@ -112,7 +129,9 @@ Core API ── builds AIRequest(task, tenant_id, entity_id, allowed_context_ref
 AI Gateway (separate service, no DB credentials, egress only to LLM endpoint)
    • system prompt + tool schema fixed in code, versioned
    • retrieved documents wrapped as quoted, untrusted data ("<document>…</document>"), never instructions
-   • tools exposed to the model: read-only retrieval over the request's allowed refs + verified source index; NO write tools
+   • tools exposed to the model: read-only retrieval over the request's allowed refs + verified source index, and read-only
+     deterministic FP&A tools (metric series, variance breakdown, goal_seek, sandbox scenario run); NO write tools
+   • every number in the output must originate from a tool result (validator enforced)
    • output validator: every citation must resolve to an ID in the supplied context/source index; otherwise stripped and flagged
    • confidence/uncertainty flags required in the output schema
    ▼
@@ -144,3 +163,36 @@ Controls:
 | 0004 | Regulatory rules as versioned, declarative data evaluated by deterministic code | Proposed |
 | 0005 | AI as a non-authoritative, read-only, isolated service | Proposed |
 | 0006 | Python/Django + PostgreSQL + React stack | Proposed |
+| 0007 | Planning domain separated from ledger; actuals via a read model; nature-tagged values | Proposed |
+| 0008 | Workspace kinds (firm/business/personal) as separate tenants + engagement grants | Proposed |
+| 0009 | Shared calculation framework (taxonomy, expression evaluator, calc runs with lineage) | Proposed |
+| 0010 | Environment and data policy (synthetic dev/staging, owner-only pilot) | Proposed |
+
+## 10. Planning & CFO domain architecture (ADR-0007, ADR-0009)
+
+```
+ ┌──────────────────────── "What happened" ────────────────────────┐   ┌──────────── "What is likely / what to do" ────────────┐
+ │ ledger (immutable, posted) ──► reporting.actuals (read model,   │   │ metrics: taxonomy · evaluator · calc_run · lineage     │
+ │ registers (open items,        │  rebuildable, watermark-stamped)│──►│   ├─ cashflow (13w, rolling)   ├─ kpi                  │
+ │  obligations, debt, assets)   │                                 │   │   ├─ budgeting + variance      ├─ goals (goal-seek)    │
+ │ banking (reconciled cash)     │                                 │   │   ├─ projections (3-statement) ├─ scenarios            │
+ └───────────────────────────────┴─────────────────────────────────┘   │   └─ mgmt_reporting · dashboards (read-only consumers) │
+                    ▲  NO write path from planning to ledger              └────────────────────────────────────────────────────────┘
+                    └──── only via explicit, approved user actions (e.g. "post accrual") in the ledger module itself
+```
+
+Key mechanisms:
+- **One-way dependency:** planning modules depend on `reporting.actuals` and `registers` through their `api.py`. Import-linter forbids any import of `ledger` internals, and the DB role used by planning code paths has `SELECT` only on the actuals read model.
+- **Watermarks:** each posted entry has a monotonically increasing per-tenant `posting_seq`. A calc run records the watermark, and "actuals as of watermark W" is exactly reproducible because posted data is append-only.
+- **Event-driven staleness:** `ledger.entry.posted`, `bank.reconciled`, `openitem.changed`, `assumption.changed` → a dependency index marks affected runs stale → a debounced re-run for rolling forecasts, goals and alerts creates **new** runs. Approved budgets and final packs are never recomputed in place.
+- **Calc engine execution:** pure functions over in-memory, typed data frames of `Decimal`s (no float dataframes). Runs execute in workers with time/memory limits. Results are persisted in `calc_result` with lineage. Sensitivity/scenario sandbox runs are cached (keyed by input hash) and not persisted unless saved.
+- **Type-level separation of natures:** `ActualSeries`, `PlanSeries`, `HypotheticalSeries`, `BlendedSeries` (with a cut-over). Arithmetic across natures is a type error, except through `blend()`. The API's JSON schema requires `nature` on every point.
+- **Frontend:** the dashboard is built from widget components bound to declarative queries. ECharts is used for charts, with a shared "nature style" theme implementing doc 10 §10.1. Drill-down routes reuse ledger report pages, and money stays string/decimal on the client.
+- **Exports:** server-side XLSX (openpyxl) and PDF (WeasyPrint) from the same snapshot data used by the UI. A golden test asserts the values are equal.
+- **Scaling note:** FP&A reads hit the read replica and the precomputed `fact_*` tables. Heavy runs are queued, with interactive priority for the user's own sandbox scenario runs.
+
+## 11. Workspaces & engagements (ADR-0008)
+See [11-account-types-and-coexistence.md](11-account-types-and-coexistence.md). Architecturally:
+`tenant.kind` drives feature entitlements. Engagements let firm users operate **inside** a client's
+tenant context (never cross-tenant queries). The URL path selects the workspace, and the RLS boundary
+is unchanged from §3.2.

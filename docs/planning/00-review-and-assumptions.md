@@ -2,6 +2,8 @@
 
 Status: **DRAFT for review** · Date: 2026-11-03 · Scope: first assignment (planning only, no application code)
 
+> **Update (v2):** Scope expanded to FP&A/CFO intelligence and three customer types (firm, business, personal). Assumptions A-1 and A-2 are superseded by [PRD v2](01-product-requirements.md) and the [master plan](../MASTER-PLAN.md). The consolidated open decisions are in MASTER-PLAN §8.
+
 ## 1. What was reviewed
 
 The repository at the start of this assignment contains a single empty `README.md`.
@@ -39,8 +41,8 @@ reconciled against them before approval.
 
 | ID | Assumption |
 |---|---|
-| A-1 | Primary customers are Cyprus accounting/audit firms (multi-client) and SMEs (single entity). Firms manage many client entities. |
-| A-2 | The MVP is general ledger + VAT, with corporate tax computation as phase 2. Audit working papers are phase 3. Filing to Tax Department portals is assisted (export/prepare), not automated, in early phases. |
+| A-1 | *(superseded by PRD v2)* Primary customers are Cyprus accounting/audit firms (multi-client) and SMEs (single entity). Firms manage many client entities. |
+| A-2 | *(superseded by PRD v2: MVP = Phase 1 + Phase 2 FP&A)* The MVP is general ledger + VAT, with corporate tax computation as phase 2. Audit working papers are phase 3. Filing to Tax Department portals is assisted (export/prepare), not automated, in early phases. |
 | A-3 | All production data is hosted in the EU (single EU region at launch, plus a DR region in the EU). |
 | A-4 | Functional currency is EUR for Cyprus entities. Multi-currency transactions with FX revaluation are needed early (common for Cyprus holding/trading companies). |
 | A-5 | UI languages are English and Greek. Statutory outputs may need Greek. |
