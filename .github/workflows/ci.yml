@@ -34,7 +34,10 @@ jobs:
           --health-timeout 3s --health-retries 30
     env:
       POSTGRES_HOST: 127.0.0.1
-      POSTGRES_PASSWORD: ci-only-throwaway
+      # Throwaway CI-only credentials for an ephemeral service container.
+      POSTGRES_OWNER_USER: fcp_owner
+      POSTGRES_OWNER_PASSWORD: ci-only-owner
+      POSTGRES_APP_USER: fcp_app
     defaults:
       run:
         working-directory: backend
@@ -44,6 +47,11 @@ jobs:
         with:
           python-version: "3.13"
       - run: uv sync --frozen
+      - name: Create database roles (non-superuser owner and runtime roles)
+        run: >-
+          PGPASSWORD=ci-only-throwaway psql -h 127.0.0.1 -U fcp -d fcp -v ON_ERROR_STOP=1
+          -v owner_password=ci-only-owner -v app_password=ci-only-app -v db_name=fcp
+          -f ../scripts/db/create_roles.sql
       - name: Ruff lint
         run: uv run ruff check --output-format=github .
       - name: Ruff format

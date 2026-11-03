@@ -3,10 +3,10 @@ from typing import Any
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 
+from .grants import apply_runtime_grants
+
 
 def _apply_grants_after_migrate(**kwargs: Any) -> None:
-    from .grants import apply_runtime_grants
-
     apply_runtime_grants(using=kwargs.get("using", "default"))
 
 

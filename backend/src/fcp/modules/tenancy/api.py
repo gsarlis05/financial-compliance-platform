@@ -9,7 +9,7 @@ from typing import cast
 from uuid import UUID
 
 from django.http import HttpRequest
-from ninja import Field, Router, Schema
+from ninja import Field, Router, Schema, Status
 
 from fcp.core.api.permissions import AUTHENTICATED, requires
 from fcp.modules.identity.api import User
@@ -40,7 +40,7 @@ class WorkspaceOut(Schema):
     slug: str
     name: str
     kind: str
-    roles: list[str] = []
+    roles: list[str] = Field(default_factory=list)
 
 
 class EntityIn(Schema):
@@ -84,7 +84,7 @@ def _workspace_out(ctx: WorkspaceContext) -> WorkspaceOut:
 
 @router.post("/workspaces", response={201: WorkspaceOut})
 @requires(AUTHENTICATED)
-def create_workspace(request: HttpRequest, payload: WorkspaceIn) -> tuple[int, WorkspaceOut]:
+def create_workspace(request: HttpRequest, payload: WorkspaceIn) -> Status[WorkspaceOut]:
     ctx = services.create_workspace(
         _user(request),
         name=payload.name,
@@ -92,7 +92,7 @@ def create_workspace(request: HttpRequest, payload: WorkspaceIn) -> tuple[int, W
         entity_name=payload.entity_name,
         entity_type=payload.entity_type,
     )
-    return 201, _workspace_out(ctx)
+    return Status(201, _workspace_out(ctx))
 
 
 @router.get("/workspaces", response=list[WorkspaceOut])
@@ -118,7 +118,7 @@ def list_entities(request: HttpRequest, slug: str) -> list[LegalEntity]:
 
 @router.post("/w/{slug}/entities", response={201: EntityOut})
 @requires("tenancy.entity.manage")
-def create_entity(request: HttpRequest, slug: str, payload: EntityIn) -> tuple[int, LegalEntity]:
+def create_entity(request: HttpRequest, slug: str, payload: EntityIn) -> Status[LegalEntity]:
     ctx = enter_workspace(_user(request), slug)
     entity = services.create_entity(
         ctx,
@@ -126,7 +126,7 @@ def create_entity(request: HttpRequest, slug: str, payload: EntityIn) -> tuple[i
         entity_type=payload.entity_type,
         registration_no=payload.registration_no,
     )
-    return 201, entity
+    return Status(201, entity)
 
 
 @router.get("/w/{slug}/entities/{entity_id}", response=EntityOut)
@@ -137,16 +137,22 @@ def get_entity(request: HttpRequest, slug: str, entity_id: UUID) -> LegalEntity:
 
 @router.post("/w/{slug}/invitations", response={201: InvitationOut})
 @requires("tenancy.members.manage")
-def invite(request: HttpRequest, slug: str, payload: InvitationIn) -> tuple[int, InvitationOut]:
+def invite(request: HttpRequest, slug: str, payload: InvitationIn) -> Status[InvitationOut]:
     ctx = enter_workspace(_user(request), slug)
     issued = services.invite_member(
         ctx, email=payload.email, role_key=payload.role_key, legal_entity_id=payload.legal_entity_id
     )
     inv = issued.invitation
-    return 201, InvitationOut(
-        id=inv.id, email=inv.email, role_key=inv.role_key, expires_at=inv.expires_at,
-        token=issued.token,
-    )  # fmt: skip
+    return Status(
+        201,
+        InvitationOut(
+            id=inv.id,
+            email=inv.email,
+            role_key=inv.role_key,
+            expires_at=inv.expires_at,
+            token=issued.token,
+        ),
+    )
 
 
 @router.post("/invitations/accept", response=WorkspaceOut)

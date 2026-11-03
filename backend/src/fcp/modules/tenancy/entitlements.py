@@ -38,13 +38,26 @@ _FEATURES: dict[str, frozenset[Feature]] = {
 
 _ROLES: dict[str, frozenset[Role]] = {
     Tenant.Kind.FIRM: frozenset(
-        {Role.OWNER, Role.TENANT_ADMIN, Role.PARTNER, Role.ACCOUNTANT, Role.REVIEWER,
-         Role.CLIENT_USER, Role.READ_ONLY}
-    ),  # fmt: skip
+        {
+            Role.OWNER,
+            Role.TENANT_ADMIN,
+            Role.PARTNER,
+            Role.ACCOUNTANT,
+            Role.REVIEWER,
+            Role.CLIENT_USER,
+            Role.READ_ONLY,
+        }
+    ),
     Tenant.Kind.BUSINESS: frozenset(
-        {Role.OWNER, Role.TENANT_ADMIN, Role.FINANCE_MANAGER, Role.ACCOUNTANT, Role.REVIEWER,
-         Role.READ_ONLY}
-    ),  # fmt: skip
+        {
+            Role.OWNER,
+            Role.TENANT_ADMIN,
+            Role.FINANCE_MANAGER,
+            Role.ACCOUNTANT,
+            Role.REVIEWER,
+            Role.READ_ONLY,
+        }
+    ),
     Tenant.Kind.PERSONAL: frozenset({Role.OWNER, Role.HOUSEHOLD_MEMBER, Role.READ_ONLY}),
 }
 

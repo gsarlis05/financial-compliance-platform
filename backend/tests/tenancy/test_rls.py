@@ -1,6 +1,7 @@
 """Database-level tenant isolation (doc 09 AC-B4, AC-B5; doc 04 §5)."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import pytest
 from django.db import DatabaseError, connection, transaction
@@ -14,7 +15,7 @@ from fcp.modules.tenancy.models import LegalEntity, Membership, RoleAssignment, 
 pytestmark = pytest.mark.django_db(transaction=False)
 
 
-def scalar(sql: str, params: list[object] | None = None) -> object:
+def scalar(sql: str, params: Sequence[Any] | None = None) -> object:
     with connection.cursor() as cursor:
         cursor.execute(sql, params or [])
         row = cursor.fetchone()
@@ -46,8 +47,7 @@ def test_every_table_is_classified_and_tenant_tables_force_rls() -> None:
     problems = []
     for table in tables():
         rls_forced = scalar(
-            "SELECT relrowsecurity AND relforcerowsecurity FROM pg_class "
-            "WHERE oid = %s::regclass",
+            "SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = %s::regclass",
             [f"public.{table}"],
         )
         policies = scalar("SELECT count(*) FROM pg_policies WHERE tablename = %s", [table])
@@ -60,9 +60,7 @@ def test_every_table_is_classified_and_tenant_tables_force_rls() -> None:
 
 
 def test_connection_role_cannot_bypass_rls() -> None:
-    row = scalar(
-        "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user"
-    )
+    row = scalar("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user")
     assert row is False
 
 
@@ -83,10 +81,13 @@ def test_without_context_every_tenant_table_is_empty(
     set_context(tenant_id=None, user_id=None)
     for table in tables():
         if has_tenant_column(table) or table == "tenancy_tenant":
-            assert scalar(f'SELECT count(*) FROM "{table}"') == 0, table
+            # Table names come from the catalogue, not from input.
+            assert scalar(f'SELECT count(*) FROM "{table}"') == 0, table  # noqa: S608
 
 
-def test_context_shows_only_own_tenant(two_workspaces: tuple[services.WorkspaceContext, ...]) -> None:
+def test_context_shows_only_own_tenant(
+    two_workspaces: tuple[services.WorkspaceContext, ...],
+) -> None:
     a, b = two_workspaces
     set_context(tenant_id=a.tenant.id, user_id=a.user.id)
     assert list(LegalEntity.objects.values_list("tenant_id", flat=True)) == [a.tenant.id]

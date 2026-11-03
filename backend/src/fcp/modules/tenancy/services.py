@@ -14,7 +14,12 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from fcp.core.db.rls import set_context
-from fcp.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationFailedError
+from fcp.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationFailedError,
+)
 from fcp.core.ids import uuid7
 from fcp.modules.identity.api import User
 

@@ -17,8 +17,8 @@ in order.
 | M0-6 Synthetic data | `claude/m0-6-synthetic-data` | #7 | Open, CI green |
 | M0-7 Terraform skeleton | `claude/m0-7-iac-skeleton` | #8 | Open, CI green |
 | M1-1 OIDC sign-in, MFA, sessions | `claude/m1-1-auth` | #9 | Open |
-| M1-2 + M1-4 Workspaces, entities, invitations, RLS isolation | `claude/m1-2-tenancy-rls` | — | In progress |
-| M1-3 Roles, permissions, authz | — | — | Next |
+| M1-2 + M1-4 Workspaces, entities, invitations, RLS isolation | `claude/m1-2-tenancy-rls` | #10 | Open |
+| M1-3 Roles, permissions, authz | `claude/m1-3-authz` | — | Next |
 | M1-5 Audit log | — | — | Planned |
 | M1-6 + M1-7 Chart of accounts, fiscal periods | — | — | Planned |
 | M1-8 Journal entries | — | — | Planned |
