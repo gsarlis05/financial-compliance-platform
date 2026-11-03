@@ -25,8 +25,23 @@ docs/       Planning documents and ADRs
 ## Local commands
 ```
 make test        # backend + frontend tests
-make lint        # linters and type checks
+make lint        # linters, type checks, module boundaries, no-float rule
+make security    # Semgrep project rules + gitleaks (needs Docker)
+make prove-gates # proves each custom gate rejects a deliberate violation
 ```
+
+## CI gates (all block merge)
+| Gate | Tool |
+|---|---|
+| Lint and format | ruff, ESLint (strict type-checked) |
+| Types | mypy `--strict` (backend), `tsc` strict (frontend) |
+| Tests and coverage | pytest (branch coverage at least 90%), Vitest |
+| Module boundaries | import-linter: public `api.py` only, `fcp.core` independent, planning and AI never import the ledger |
+| No floating point in domain code | `tools/fcp_lint/no_float.py` (AST) and Semgrep `fcp-float-call` |
+| Project security rules | Semgrep (`.semgrep/`): swallowed exceptions, logging request payloads, SQL string building |
+| Secrets | gitleaks over the full history |
+| Dependencies | pip-audit, `pnpm audit` (high and critical block), Dependabot weekly |
+| Gate proof | `scripts/ci/prove-gates.sh` injects violations in a temp dir and expects failures |
 Prerequisites: Python 3.13 with uv, Node 22 with pnpm 10, and Docker (for local services, added in M0-3).
 
 ## Licensing

@@ -24,19 +24,57 @@ xfail_strict = true
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["src", "tests"]
+src = ["src", "tests", "tools"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "S", "BLE", "DTZ", "T20", "SIM", "RUF", "PL", "PT"]
 ignore = ["PLR2004"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["fcp", "tools"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR0913"]
+
+[tool.importlinter]
+root_package = "fcp"
+contract_types = ["public_api: tools.fcp_lint.importlinter_contracts.PublicApiContract"]
+include_external_packages = false
+
+[[tool.importlinter.contracts]]
+name = "Modules import each other only through their public api.py"
+type = "public_api"
+modules_root = "fcp.modules"
+
+[[tool.importlinter.contracts]]
+name = "The shared kernel (fcp.core) never depends on modules"
+type = "forbidden"
+source_modules = ["fcp.core"]
+forbidden_modules = ["fcp.modules"]
+
+[[tool.importlinter.contracts]]
+name = "Planning modules never import the ledger directly (ADR-0007: read actuals via reporting)"
+type = "forbidden"
+source_modules = [
+    "fcp.modules.metrics", "fcp.modules.cashflow", "fcp.modules.budgeting",
+    "fcp.modules.projections", "fcp.modules.kpi", "fcp.modules.goals",
+    "fcp.modules.scenarios", "fcp.modules.mgmt_reporting", "fcp.modules.dashboards",
+]
+forbidden_modules = ["fcp.modules.ledger"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The AI client never imports the ledger (ADR-0005: no write path)"
+type = "forbidden"
+source_modules = ["fcp.modules.ai"]
+forbidden_modules = ["fcp.modules.ledger"]
+allow_indirect_imports = true
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
 mypy_path = "src"
+files = ["src", "tests", "tools"]
 plugins = ["mypy_django_plugin.main"]
 
 [tool.django-stubs]
@@ -46,9 +84,22 @@ django_settings_module = "fcp.settings.test"
 dev = [
     "django-stubs>=6.1.2",
     "hypothesis>=6.170.14",
+    "import-linter>=2.15,<3",
     "mypy>=1.15",
+    "pip-audit>=2.10,<3",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-django>=4.14.0",
     "ruff>=0.17.3",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["fcp"]
+omit = ["*/fcp/wsgi.py", "*/fcp/asgi.py", "*/fcp/settings/dev.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
