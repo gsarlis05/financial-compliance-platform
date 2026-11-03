@@ -32,7 +32,7 @@ def permission_problems(api: NinjaAPI, is_known: Callable[[str], bool]) -> list[
         where = f"{method} {path}"
         if permission is None:
             problems.append(f"{where}: no @requires(...) permission declared")
-        elif "{slug}" in path and permission in (PUBLIC, AUTHENTICATED):
+        elif "slug}" in path and permission in (PUBLIC, AUTHENTICATED):
             problems.append(f"{where}: workspace route must declare a workspace permission")
         elif permission not in (PUBLIC, AUTHENTICATED) and not is_known(permission):
             problems.append(f"{where}: unknown permission {permission!r}")

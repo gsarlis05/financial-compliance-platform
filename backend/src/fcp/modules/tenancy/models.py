@@ -8,6 +8,7 @@ security plus composite (tenant_id, id) foreign keys (see migration 0001).
 from django.conf import settings
 from django.db import models
 
+from fcp.core.db.models import TenantOwned
 from fcp.core.ids import uuid7
 
 
@@ -38,17 +39,6 @@ class Tenant(models.Model):
 
     def __str__(self) -> str:
         return self.slug
-
-
-class TenantOwned(models.Model):
-    """Base for tenant-owned rows. ``tenant`` is always set from the request context."""
-
-    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
-    tenant = models.ForeignKey(Tenant, on_delete=models.PROTECT, related_name="+")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        abstract = True
 
 
 class LegalEntity(TenantOwned):
