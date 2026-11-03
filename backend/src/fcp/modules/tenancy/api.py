@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
+from django.db import connection
 from django.http import HttpRequest
 from ninja import Field, Router, Schema, Status
 
@@ -20,7 +21,23 @@ from .entitlements import Feature, Role, has_feature
 from .models import LegalEntity, Tenant
 from .services import WorkspaceContext, enter_workspace
 
-__all__ = ["Feature", "Role", "WorkspaceContext", "enter_workspace", "router", "workspace_ctx"]
+__all__ = [
+    "Feature",
+    "Role",
+    "WorkspaceContext",
+    "all_tenant_ids",
+    "enter_workspace",
+    "router",
+    "workspace_ctx",
+]
+
+
+def all_tenant_ids() -> list[UUID]:
+    """IDs of all active workspaces, for platform jobs only (see migration 0003)."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT app_tenant_ids()")
+        return [row[0] for row in cursor.fetchall()]
+
 
 router = Router(tags=["workspaces"])
 
