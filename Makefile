@@ -116,3 +116,4 @@ openapi-check:
 ops-checks:
 	cd backend && DB_ROLE=owner uv run python manage.py audit_verify
 	cd backend && DB_ROLE=owner uv run python manage.py ledger_integrity_check
+	cd backend && DB_ROLE=owner uv run python manage.py actuals_verify

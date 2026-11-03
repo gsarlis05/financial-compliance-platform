@@ -10,6 +10,7 @@ from fcp.modules.identity.api import router as identity_router
 from fcp.modules.ledger.api import router as ledger_router
 from fcp.modules.metrics.api import router as metrics_router
 from fcp.modules.registers.api import router as registers_router
+from fcp.modules.reporting.api import router as reporting_router
 from fcp.modules.tenancy.api import router as tenancy_router
 
 api = NinjaAPI(
@@ -26,3 +27,4 @@ api.add_router("/", audit_router)
 api.add_router("/", ledger_router)
 api.add_router("/", registers_router)
 api.add_router("/", metrics_router)
+api.add_router("/", reporting_router)

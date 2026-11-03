@@ -6,18 +6,36 @@ ledger; they read actuals only through this module. M2-6 adds account balances; 
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from ninja import Router
+from django.http import HttpRequest
+from ninja import Query, Router, Schema, Status
 
+from fcp.core.api.permissions import requires
+from fcp.modules.audit_log.api import record as audit
 from fcp.modules.ledger.api import account_list, trial_balance_rows
-from fcp.modules.tenancy.api import WorkspaceContext
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
-__all__ = ["AccountActivity", "AccountRef", "account_activity", "accounts", "router"]
+from . import actuals
+from .actuals import Actuals, Drift, Fact
+
+__all__ = [
+    "AccountActivity",
+    "AccountRef",
+    "Actuals",
+    "Fact",
+    "account_activity",
+    "accounts",
+    "actuals_monthly",
+    "cash_daily",
+    "opening_net",
+    "router",
+]
 
 router = Router(tags=["reporting"])
+BASE = "/w/{slug}/entities/{uuid:entity_id}"
 
 
 @dataclass(frozen=True)
@@ -63,3 +81,115 @@ def account_activity(
         r.account_id: AccountActivity(r.account_id, r.debit_total, r.credit_total)
         for r in trial_balance_rows(ctx, entity_id, as_of=as_of)
     }
+
+
+# --- reporting.actuals (M2-7) ---------------------------------------------------------------------
+
+
+def actuals_monthly(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,
+                    date_to: date) -> Actuals:  # fmt: skip
+    """Monthly debit/credit totals per account, with the watermark they include."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.monthly(entity.id, ctx.tenant.id, date_from=date_from, date_to=date_to)
+
+
+def cash_daily(ctx: WorkspaceContext, entity_id: UUID, *, account_ids: list[UUID],
+               date_from: date, date_to: date) -> Actuals:  # fmt: skip
+    """Daily movements of the given (cash) accounts, with the watermark they include."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.daily(entity.id, ctx.tenant.id, account_ids=account_ids,
+                         date_from=date_from, date_to=date_to)  # fmt: skip
+
+
+def opening_net(ctx: WorkspaceContext, entity_id: UUID, *,
+                before: date) -> tuple[int, dict[UUID, Decimal]]:  # fmt: skip
+    """Net debit balance per account from everything dated before ``before``."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.net_before(entity.id, ctx.tenant.id, before=before)
+
+
+class MonthlyQuery(Schema):
+    date_from: date
+    date_to: date
+
+
+class FactOut(Schema):
+    account_id: UUID
+    account_code: str
+    month: date
+    debit: str
+    credit: str
+    net_debit: str
+
+
+class MonthlyOut(Schema):
+    watermark: int
+    facts: list[FactOut]
+
+
+@router.get(f"{BASE}/actuals/monthly", response=MonthlyOut)
+@requires("reports.read")
+def monthly_actuals(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[MonthlyQuery]
+) -> MonthlyOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    result = actuals_monthly(ctx, entity_id, date_from=q.date_from, date_to=q.date_to)
+    codes = {a.id: a.code for a in accounts(ctx, entity_id)}
+    return MonthlyOut(
+        watermark=result.watermark,
+        facts=[FactOut(account_id=f.account_id, account_code=codes.get(f.account_id, "?"),
+                       month=f.period, debit=f"{f.debit_total:.2f}", credit=f"{f.credit_total:.2f}",
+                       net_debit=f"{f.net_debit:.2f}") for f in result.facts],
+    )  # fmt: skip
+
+
+class DriftOut(Schema):
+    grain: str
+    entity_id: UUID
+    account_id: UUID
+    period: date
+    ledger_debit: str
+    ledger_credit: str
+    facts_debit: str
+    facts_credit: str
+
+
+class VerifyOut(Schema):
+    watermark: int
+    ok: bool
+    checked_at: datetime
+    drifts: list[DriftOut]
+
+
+def _verify_out(watermark: int, drifts: list[Drift]) -> VerifyOut:
+    return VerifyOut(
+        watermark=watermark, ok=not drifts, checked_at=datetime.now().astimezone(),
+        drifts=[DriftOut(grain=d.grain, entity_id=d.entity_id, account_id=d.account_id,
+                         period=d.period, ledger_debit=f"{d.ledger[0]:.2f}",
+                         ledger_credit=f"{d.ledger[1]:.2f}", facts_debit=f"{d.facts[0]:.2f}",
+                         facts_credit=f"{d.facts[1]:.2f}") for d in drifts[:100]],
+    )  # fmt: skip
+
+
+@router.get("/w/{slug}/actuals/verify", response=VerifyOut)
+@requires("admin.integrity.read")
+def verify_actuals(request: HttpRequest, slug: str) -> VerifyOut:
+    ctx = workspace_ctx(request, slug)
+    return _verify_out(*actuals.verify(ctx.tenant.id))
+
+
+@router.post("/w/{slug}/actuals/rebuild", response={200: VerifyOut})
+@requires("admin.integrity.read")
+def rebuild_actuals(request: HttpRequest, slug: str) -> Status[VerifyOut]:
+    """Recompute the read model from the ledger, then verify it (safe: facts are derived)."""
+    ctx = workspace_ctx(request, slug)
+    watermark = actuals.rebuild(ctx.tenant.id)
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action="reporting.actuals.rebuilt",
+        subject_type="actuals",
+        subject_id=ctx.tenant.id,
+        changes={"watermark": watermark},
+    )
+    return Status(200, _verify_out(*actuals.verify(ctx.tenant.id)))

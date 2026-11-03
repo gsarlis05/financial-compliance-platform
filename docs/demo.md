@@ -26,6 +26,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ trial balance at 2026-12-31: 1810572.51 = 1810572.51; bank 371514.38 matches the synthetic statement
 ✔ 442 payments matched to invoices; receivables 203631.60 and payables 102084.19 reconcile to the ledger
 ✔ 43 accounts mapped to the financial taxonomy; mapping complete for statements
+✔ actuals read model up to posting 98 matches the ledger
 ✔ integrity checks passed (balance, snapshots, gapless numbering, audit chain)
 ✔ shared with you@example.com as finance_manager
 ```
