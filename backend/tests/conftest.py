@@ -70,3 +70,12 @@ def make_workspace(api_client: Callable[[User], ApiClient]) -> Callable[..., dic
         return body
 
     return make
+
+
+@pytest.fixture
+def reference_data() -> None:
+    """Transactional tests empty every table afterwards, including migration-seeded reference
+    data; tests that need the VAT catalogue after such a flush request this fixture."""
+    from django.core.management import call_command  # noqa: PLC0415
+
+    call_command("seed_reference_data", verbosity=0)

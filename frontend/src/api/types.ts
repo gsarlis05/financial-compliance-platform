@@ -43,6 +43,7 @@ export interface Account {
   status: "ACTIVE" | "INACTIVE";
   currency: string;
   control_type: "" | "RECEIVABLE" | "PAYABLE";
+  vat_role: "" | "INPUT" | "OUTPUT";
 }
 
 export type PeriodStatus = "OPEN" | "SOFT_CLOSED" | "LOCKED";
@@ -87,6 +88,8 @@ export interface EntryLine {
   counterparty_code: string | null;
   reference: string;
   due_date: string | null;
+  vat_code_id: string | null;
+  vat_code: string | null;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
@@ -148,6 +151,7 @@ export interface EntryInput {
     dimension_value_ids: string[];
     counterparty_id?: string | null;
     reference?: string;
+    vat_code_id?: string | null;
   }[];
 }
 
@@ -249,4 +253,17 @@ export interface Ageing {
   total: Amount;
   control_balance: Amount;
   reconciles: boolean;
+}
+
+export interface VatCode {
+  id: string;
+  code: string;
+  name: string;
+  name_el: string;
+  treatment: string;
+  rate: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  verified: boolean;
+  verification_note: string;
 }

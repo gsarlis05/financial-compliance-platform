@@ -71,6 +71,16 @@
           },
           "type": {
             "$ref": "#/components/schemas/Type"
+          },
+          "vat_role": {
+            "default": "",
+            "enum": [
+              "",
+              "INPUT",
+              "OUTPUT"
+            ],
+            "title": "Vat Role",
+            "type": "string"
           }
         },
         "required": [
@@ -189,6 +199,10 @@
           "type": {
             "title": "Type",
             "type": "string"
+          },
+          "vat_role": {
+            "title": "Vat Role",
+            "type": "string"
           }
         },
         "required": [
@@ -202,7 +216,8 @@
           "is_postable",
           "status",
           "currency",
-          "control_type"
+          "control_type",
+          "vat_role"
         ],
         "title": "AccountOut",
         "type": "object"
@@ -259,6 +274,22 @@
                 "type": "null"
               }
             ]
+          },
+          "vat_role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "",
+                  "INPUT",
+                  "OUTPUT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Role"
           }
         },
         "title": "AccountPatch",
@@ -1938,6 +1969,19 @@
             "maxLength": 50,
             "title": "Reference",
             "type": "string"
+          },
+          "vat_code_id": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "VAT code id; required on VAT-account lines",
+            "title": "Vat Code Id"
           }
         },
         "required": [
@@ -2018,6 +2062,28 @@
           "reference": {
             "title": "Reference",
             "type": "string"
+          },
+          "vat_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Code"
+          },
+          "vat_code_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Code Id"
           }
         },
         "required": [
@@ -2031,7 +2097,9 @@
           "counterparty_id",
           "counterparty_code",
           "reference",
-          "due_date"
+          "due_date",
+          "vat_code_id",
+          "vat_code"
         ],
         "title": "LineOut",
         "type": "object"
@@ -2832,6 +2900,106 @@
           "decision_note"
         ],
         "title": "UnlockOut",
+        "type": "object"
+      },
+      "VatCodeOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "treatment": {
+            "title": "Treatment",
+            "type": "string"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "verification_note": {
+            "title": "Verification Note",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "name_el",
+          "treatment",
+          "rate",
+          "valid_from",
+          "valid_to",
+          "verified",
+          "verification_note"
+        ],
+        "title": "VatCodeOut",
+        "type": "object"
+      },
+      "VatCodeQuery": {
+        "properties": {
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only codes valid on this date",
+            "title": "On"
+          }
+        },
+        "title": "VatCodeQuery",
         "type": "object"
       },
       "WorkspaceIn": {
@@ -6509,6 +6677,76 @@
           }
         ],
         "summary": "Reject Unlock",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-codes": {
+      "get": {
+        "operationId": "fcp_modules_ledger_api_list_vat_codes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only codes valid on this date",
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only codes valid on this date",
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VatCodeOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Vat Codes",
         "tags": [
           "ledger"
         ]
