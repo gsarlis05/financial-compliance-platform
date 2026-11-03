@@ -47,6 +47,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "fcp.modules.identity.middleware.AbsoluteSessionTimeoutMiddleware",
     "fcp.core.http.middleware.ProblemDetailsMiddleware",
 ]
