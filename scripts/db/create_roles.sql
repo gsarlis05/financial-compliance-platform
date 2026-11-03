@@ -14,6 +14,13 @@ SELECT format('CREATE ROLE fcp_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOB
               :'app_password')
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fcp_app') \gexec
 
+-- fcp_maintenance: NOLOGIN, BYPASSRLS. It owns exactly one SECURITY DEFINER function that lists
+-- workspace IDs (no data) so platform jobs (audit verification, integrity checks) can visit every
+-- workspace; each visit then runs under that workspace's normal RLS context.
+SELECT 'CREATE ROLE fcp_maintenance NOLOGIN NOSUPERUSER BYPASSRLS'
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fcp_maintenance') \gexec
+GRANT fcp_maintenance TO fcp_owner;
+
 -- Membership lets fcp_owner (tests) run `SET ROLE fcp_app` to verify the runtime role's limits.
 GRANT fcp_app TO fcp_owner;
 
