@@ -58,6 +58,12 @@ source_modules = ["fcp.core"]
 forbidden_modules = ["fcp.modules"]
 
 [[tool.importlinter.contracts]]
+name = "Application code never imports developer tooling (fcp.devtools)"
+type = "forbidden"
+source_modules = ["fcp.core", "fcp.modules", "fcp.settings", "fcp.urls"]
+forbidden_modules = ["fcp.devtools"]
+
+[[tool.importlinter.contracts]]
 name = "Planning modules never import the ledger directly (ADR-0007: read actuals via reporting)"
 type = "forbidden"
 source_modules = [
