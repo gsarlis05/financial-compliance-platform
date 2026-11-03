@@ -66,3 +66,20 @@ rules:
     severity: ERROR
     message: Binary floating point is forbidden for financial values (ADR-0003). Use Decimal/Money.
     pattern: float(...)
+
+  - id: fcp-log-event-not-literal
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Log event names must be static strings (e.g. "entry.posted"). Pass identifiers as
+      keyword arguments so the redaction allow-list applies; interpolating values into the
+      message can leak personal data.
+    patterns:
+      - pattern-either:
+          - pattern: $LOG.$METHOD(f"...", ...)
+          - pattern: $LOG.$METHOD("..." % $X, ...)
+          - pattern: $LOG.$METHOD("...".format(...), ...)
+          - pattern: $LOG.$METHOD("..." + $X, ...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(debug|info|warning|warn|error|exception|critical|msg)$

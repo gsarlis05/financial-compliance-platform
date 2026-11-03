@@ -66,3 +66,14 @@ def money(value):
     from decimal import Decimal
     amount = Decimal(value)
     return amount
+
+
+def log_messages(log, customer):
+    # ruleid: fcp-log-event-not-literal
+    log.info(f"payment from {customer.name}")
+    # ruleid: fcp-log-event-not-literal
+    log.warning("payment from %s" % customer.name)
+    # ok: fcp-log-event-not-literal
+    log.info("payment.received", entity_id=customer.entity_id)
+    # ok: fcp-log-event-not-literal
+    log.info("payment from %s", customer.entity_id)
