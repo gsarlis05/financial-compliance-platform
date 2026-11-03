@@ -21,6 +21,20 @@ jobs:
   backend:
     name: Backend (lint, types, tests, boundaries, audit)
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_DB: fcp
+          POSTGRES_USER: fcp
+          POSTGRES_PASSWORD: ci-only-throwaway
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fcp -d fcp" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PASSWORD: ci-only-throwaway
     defaults:
       run:
         working-directory: backend
