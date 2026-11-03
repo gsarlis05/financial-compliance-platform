@@ -6,6 +6,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "django>=5.2,<5.3",
     "psycopg[binary]>=3.2,<4",
+    "structlog>=25,<27",
 ]
 
 [build-system]
@@ -29,6 +30,10 @@ src = ["src", "tests", "tools"]
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "S", "BLE", "DTZ", "T20", "SIM", "RUF", "PL", "PT"]
 ignore = ["PLR2004"]
+
+[tool.ruff.lint.pylint]
+# Keyword-only parameters are fine; six keeps signatures readable.
+max-args = 6
 
 [tool.ruff.lint.isort]
 known-first-party = ["fcp", "tools"]
