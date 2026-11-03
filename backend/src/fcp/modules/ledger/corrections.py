@@ -81,10 +81,11 @@ def reverse(
             "This entry has already been reversed (or a reversal is pending)."
         )
     mirrored = [
-        entries.LineInput(line.account_id, debit=f"{line.credit:.2f}", credit=f"{line.debit:.2f}",
-                          memo=line.memo)
+        entries.LineInput(
+            line.account_id, debit=f"{line.credit:.2f}", credit=f"{line.debit:.2f}", memo=line.memo
+        )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
-    ]  # fmt: skip
+    ]
     data = entries.EntryInput(
         accounting_date=_reversal_date(original, reversal_date),
         description=f"Reversal of entry {original.journal.code}-{original.entry_no}: {reason}"[
@@ -96,9 +97,13 @@ def reverse(
     try:
         with transaction.atomic():
             return entries.create_draft(
-                ctx, entity_id, data, entry_type=JournalEntry.EntryType.REVERSAL,
-                reverses_entry=original, correction_reason=reason,
-            )  # fmt: skip
+                ctx,
+                entity_id,
+                data,
+                entry_type=JournalEntry.EntryType.REVERSAL,
+                reverses_entry=original,
+                correction_reason=reason,
+            )
     except IntegrityError:
         raise AlreadyReversedError("This entry has already been reversed.") from None
 
@@ -123,17 +128,25 @@ def link_reversal(entry: JournalEntry) -> None:
 
 @transaction.atomic
 def adjust(
-    ctx: WorkspaceContext, entity_id: UUID, related_entry_id: UUID, data: entries.EntryInput, *,
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    related_entry_id: UUID,
+    data: entries.EntryInput,
+    *,
     reason: str,
-) -> JournalEntry:  # fmt: skip
+) -> JournalEntry:
     reason = _require_reason(reason)
     related = entries.get_entry(ctx, entity_id, related_entry_id)
     if related.status != JournalEntry.Status.POSTED:
         raise InvalidStateError("Adjustments reference a posted entry.")
     return entries.create_draft(
-        ctx, entity_id, data, entry_type=JournalEntry.EntryType.ADJUSTMENT,
-        related_entry=related, correction_reason=reason,
-    )  # fmt: skip
+        ctx,
+        entity_id,
+        data,
+        entry_type=JournalEntry.EntryType.ADJUSTMENT,
+        related_entry=related,
+        correction_reason=reason,
+    )
 
 
 # --- period unlock -------------------------------------------------------------------------------
@@ -142,9 +155,15 @@ def adjust(
 def _audit_unlock(
     ctx: WorkspaceContext, unlock: PeriodUnlock, action: str, **changes: object
 ) -> None:
-    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action=action,
-          subject_type="period_unlock", subject_id=unlock.id, entity_id=unlock.legal_entity_id,
-          changes={"period_id": unlock.period_id, "status": unlock.status, **changes})  # fmt: skip
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action=action,
+        subject_type="period_unlock",
+        subject_id=unlock.id,
+        entity_id=unlock.legal_entity_id,
+        changes={"period_id": unlock.period_id, "status": unlock.status, **changes},
+    )
 
 
 def expire_if_due(unlock: PeriodUnlock) -> PeriodUnlock:
@@ -195,13 +214,18 @@ def request_unlock(
     try:
         with transaction.atomic():
             unlock = PeriodUnlock.objects.create(
-                tenant=ctx.tenant, legal_entity_id=entity_id, period=period, reason=reason,
-                window_minutes=window_minutes, requested_by=ctx.user,
-            )  # fmt: skip
+                tenant=ctx.tenant,
+                legal_entity_id=entity_id,
+                period=period,
+                reason=reason,
+                window_minutes=window_minutes,
+                requested_by=ctx.user,
+            )
     except IntegrityError:
         raise InvalidStateError("This period already has an open unlock request.") from None
-    _audit_unlock(ctx, unlock, "ledger.period.unlock_requested", reason=reason,
-                  window_minutes=window_minutes)  # fmt: skip
+    _audit_unlock(
+        ctx, unlock, "ledger.period.unlock_requested", reason=reason, window_minutes=window_minutes
+    )
     return unlock
 
 
@@ -241,8 +265,9 @@ def approve_unlock(ctx: WorkspaceContext, entity_id: UUID, unlock_id: UUID) -> P
     unlock.active_from = now
     unlock.active_until = now + timedelta(minutes=unlock.window_minutes)
     unlock.save(update_fields=["second_approver", "status", "active_from", "active_until"])
-    _audit_unlock(ctx, unlock, "ledger.period.unlock_approved", approval=2,
-                  active_until=unlock.active_until)  # fmt: skip
+    _audit_unlock(
+        ctx, unlock, "ledger.period.unlock_approved", approval=2, active_until=unlock.active_until
+    )
     return unlock
 
 
@@ -278,4 +303,5 @@ def close_unlock(ctx: WorkspaceContext, entity_id: UUID, unlock_id: UUID) -> Per
 
 def list_unlocks(ctx: WorkspaceContext, entity_id: UUID) -> list[PeriodUnlock]:
     get_entity(ctx, entity_id, "ledger.period.read")
-    return list(PeriodUnlock.objects.filter(legal_entity_id=entity_id).order_by("-created_at"))
+    unlocks = PeriodUnlock.objects.filter(legal_entity_id=entity_id).order_by("-created_at")
+    return [expire_if_due(u) for u in unlocks]

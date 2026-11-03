@@ -49,7 +49,8 @@ BEGIN
              WHERE u.id = NEW.unlock_request_id
                AND u.period_id = NEW.period_id
                AND u.status = 'ACTIVE'
-               AND now() BETWEEN u.active_from AND u.active_until
+               -- clock_timestamp(): the actual time, not the transaction start (now()).
+               AND clock_timestamp() BETWEEN u.active_from AND u.active_until
         ) THEN
             RAISE EXCEPTION 'cannot post into a locked period without an active unlock'
                 USING ERRCODE = 'integrity_constraint_violation';
