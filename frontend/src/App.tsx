@@ -8,6 +8,7 @@ import { I18nProvider, useI18n } from "./i18n/I18n";
 import { AccountsPage } from "./pages/Accounts";
 import { CounterpartiesPage } from "./pages/Counterparties";
 import { DimensionsPage } from "./pages/Dimensions";
+import { MappingPage } from "./pages/Mapping";
 import { ReceivablesPage } from "./pages/Receivables";
 import { ApprovalsPage, EntriesPage, EntryDetailPage, NewEntryPage } from "./pages/Entries";
 import { PeriodsPage } from "./pages/Periods";
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/approvals", element: <ApprovalsPage /> },
       { path: "w/:slug/e/:entityId/accounts", element: <AccountsPage /> },
       { path: "w/:slug/e/:entityId/dimensions", element: <DimensionsPage /> },
+      { path: "w/:slug/e/:entityId/mapping", element: <MappingPage /> },
       { path: "w/:slug/e/:entityId/counterparties", element: <CounterpartiesPage /> },
       { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
