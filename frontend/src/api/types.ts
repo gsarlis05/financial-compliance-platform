@@ -267,3 +267,34 @@ export interface VatCode {
   verified: boolean;
   verification_note: string;
 }
+
+export interface TaxonomyLine {
+  code: string;
+  name: string;
+  name_el: string;
+  statement: "BS" | "PL";
+  section: string;
+  account_types: string[];
+  direction: string;
+  order: number;
+}
+
+export interface MappingRow {
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  account_type: string;
+  line_code: string | null;
+  balance: Amount;
+  has_activity: boolean;
+}
+
+export interface MappingCompleteness {
+  as_of: string;
+  taxonomy: string;
+  complete: boolean;
+  mapped: number;
+  unmapped_blocking: MappingRow[];
+  unmapped_warning: MappingRow[];
+  unmapped_idle: number;
+}

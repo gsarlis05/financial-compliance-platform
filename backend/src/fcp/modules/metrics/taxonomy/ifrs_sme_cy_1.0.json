@@ -1,0 +1,429 @@
+{
+  "key": "IFRS_SME_CY",
+  "semver": "1.0",
+  "name": "Small-company statements (IFRS for SMEs style), Cyprus",
+  "note": "Presentation structure for management statements. It is not a statutory filing format; statutory IFRS statements arrive in M10.",
+  "lines": [
+    {
+      "code": "BS.PPE.GROSS",
+      "name": "Property, plant and equipment — cost",
+      "name_el": "Ακίνητα, εγκαταστάσεις και εξοπλισμός — κόστος",
+      "statement": "BS",
+      "section": "NON_CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 10
+    },
+    {
+      "code": "BS.PPE.ACCDEP",
+      "name": "Property, plant and equipment — accumulated depreciation",
+      "name_el": "Ακίνητα, εγκαταστάσεις και εξοπλισμός — συσσωρευμένες αποσβέσεις",
+      "statement": "BS",
+      "section": "NON_CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 20
+    },
+    {
+      "code": "BS.INTANGIBLES",
+      "name": "Intangible assets",
+      "name_el": "Άυλα περιουσιακά στοιχεία",
+      "statement": "BS",
+      "section": "NON_CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 30
+    },
+    {
+      "code": "BS.INVESTMENTS",
+      "name": "Investments",
+      "name_el": "Επενδύσεις",
+      "statement": "BS",
+      "section": "NON_CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 40
+    },
+    {
+      "code": "BS.INVENTORY",
+      "name": "Inventories",
+      "name_el": "Αποθέματα",
+      "statement": "BS",
+      "section": "CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 50
+    },
+    {
+      "code": "BS.AR",
+      "name": "Trade receivables",
+      "name_el": "Εμπορικοί χρεώστες",
+      "statement": "BS",
+      "section": "CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 60
+    },
+    {
+      "code": "BS.OTHER_REC",
+      "name": "Other receivables and prepayments",
+      "name_el": "Άλλοι χρεώστες και προπληρωμές",
+      "statement": "BS",
+      "section": "CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 70
+    },
+    {
+      "code": "BS.TAX_REC",
+      "name": "Tax receivable",
+      "name_el": "Φόροι εισπρακτέοι",
+      "statement": "BS",
+      "section": "CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 80
+    },
+    {
+      "code": "BS.CASH",
+      "name": "Cash and cash equivalents",
+      "name_el": "Μετρητά και ισοδύναμα",
+      "statement": "BS",
+      "section": "CURRENT_ASSETS",
+      "account_types": [
+        "ASSET"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 90
+    },
+    {
+      "code": "BS.EQUITY.SHARE_CAPITAL",
+      "name": "Share capital",
+      "name_el": "Μετοχικό κεφάλαιο",
+      "statement": "BS",
+      "section": "EQUITY",
+      "account_types": [
+        "EQUITY"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 100
+    },
+    {
+      "code": "BS.EQUITY.SHARE_PREMIUM",
+      "name": "Share premium",
+      "name_el": "Αποθεματικό υπέρ το άρτιο",
+      "statement": "BS",
+      "section": "EQUITY",
+      "account_types": [
+        "EQUITY"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 110
+    },
+    {
+      "code": "BS.EQUITY.RETAINED",
+      "name": "Retained earnings",
+      "name_el": "Κέρδη που κρατήθηκαν",
+      "statement": "BS",
+      "section": "EQUITY",
+      "account_types": [
+        "EQUITY"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 120
+    },
+    {
+      "code": "BS.DEBT.NONCURRENT",
+      "name": "Borrowings — non-current",
+      "name_el": "Δανεισμός — μακροπρόθεσμος",
+      "statement": "BS",
+      "section": "NON_CURRENT_LIABILITIES",
+      "account_types": [
+        "LIABILITY"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 130
+    },
+    {
+      "code": "BS.DEBT.CURRENT",
+      "name": "Borrowings — current",
+      "name_el": "Δανεισμός — βραχυπρόθεσμος",
+      "statement": "BS",
+      "section": "CURRENT_LIABILITIES",
+      "account_types": [
+        "LIABILITY"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 140
+    },
+    {
+      "code": "BS.AP",
+      "name": "Trade payables",
+      "name_el": "Εμπορικοί πιστωτές",
+      "statement": "BS",
+      "section": "CURRENT_LIABILITIES",
+      "account_types": [
+        "LIABILITY"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 150
+    },
+    {
+      "code": "BS.OTHER_PAY",
+      "name": "Accruals and other payables",
+      "name_el": "Οφειλόμενα έξοδα και άλλοι πιστωτές",
+      "statement": "BS",
+      "section": "CURRENT_LIABILITIES",
+      "account_types": [
+        "LIABILITY"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 160
+    },
+    {
+      "code": "BS.TAX_PAY",
+      "name": "Tax payable",
+      "name_el": "Φόροι πληρωτέοι",
+      "statement": "BS",
+      "section": "CURRENT_LIABILITIES",
+      "account_types": [
+        "LIABILITY"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 170
+    },
+    {
+      "code": "REV.SALES",
+      "name": "Revenue — sales of goods",
+      "name_el": "Έσοδα — πωλήσεις αγαθών",
+      "statement": "PL",
+      "section": "REVENUE",
+      "account_types": [
+        "INCOME"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 180
+    },
+    {
+      "code": "REV.SERVICES",
+      "name": "Revenue — services",
+      "name_el": "Έσοδα — υπηρεσίες",
+      "statement": "PL",
+      "section": "REVENUE",
+      "account_types": [
+        "INCOME"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 190
+    },
+    {
+      "code": "COGS",
+      "name": "Cost of sales",
+      "name_el": "Κόστος πωλήσεων",
+      "statement": "PL",
+      "section": "COST_OF_SALES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 200
+    },
+    {
+      "code": "REV.OTHER",
+      "name": "Other income",
+      "name_el": "Άλλα έσοδα",
+      "statement": "PL",
+      "section": "OTHER_INCOME",
+      "account_types": [
+        "INCOME"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 210
+    },
+    {
+      "code": "OPEX.PAYROLL",
+      "name": "Employee costs",
+      "name_el": "Κόστος προσωπικού",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 220
+    },
+    {
+      "code": "OPEX.RENT",
+      "name": "Rent",
+      "name_el": "Ενοίκια",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 230
+    },
+    {
+      "code": "OPEX.UTILITIES",
+      "name": "Utilities",
+      "name_el": "Κοινωφελείς υπηρεσίες",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 240
+    },
+    {
+      "code": "OPEX.PROFESSIONAL",
+      "name": "Professional fees",
+      "name_el": "Επαγγελματικά δικαιώματα",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 250
+    },
+    {
+      "code": "OPEX.MARKETING",
+      "name": "Marketing and advertising",
+      "name_el": "Μάρκετινγκ και διαφήμιση",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 260
+    },
+    {
+      "code": "OPEX.TRAVEL",
+      "name": "Travel",
+      "name_el": "Έξοδα ταξιδιών",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 270
+    },
+    {
+      "code": "OPEX.INSURANCE",
+      "name": "Insurance",
+      "name_el": "Ασφάλιστρα",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 280
+    },
+    {
+      "code": "OPEX.OTHER",
+      "name": "Other operating expenses",
+      "name_el": "Άλλα λειτουργικά έξοδα",
+      "statement": "PL",
+      "section": "OPERATING_EXPENSES",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 290
+    },
+    {
+      "code": "DA.DEPRECIATION",
+      "name": "Depreciation",
+      "name_el": "Αποσβέσεις",
+      "statement": "PL",
+      "section": "DEPRECIATION_AMORTISATION",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 300
+    },
+    {
+      "code": "DA.AMORTISATION",
+      "name": "Amortisation",
+      "name_el": "Χρεολύσια",
+      "statement": "PL",
+      "section": "DEPRECIATION_AMORTISATION",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 310
+    },
+    {
+      "code": "INT.INCOME",
+      "name": "Finance income",
+      "name_el": "Χρηματοοικονομικά έσοδα",
+      "statement": "PL",
+      "section": "FINANCE",
+      "account_types": [
+        "INCOME"
+      ],
+      "direction": "HIGHER_BETTER",
+      "order": 320
+    },
+    {
+      "code": "INT.EXPENSE",
+      "name": "Finance costs",
+      "name_el": "Χρηματοοικονομικά έξοδα",
+      "statement": "PL",
+      "section": "FINANCE",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 330
+    },
+    {
+      "code": "FX.DIFF",
+      "name": "Foreign exchange differences",
+      "name_el": "Συναλλαγματικές διαφορές",
+      "statement": "PL",
+      "section": "FINANCE",
+      "account_types": [
+        "EXPENSE",
+        "INCOME"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 340
+    },
+    {
+      "code": "TAX.INCOME",
+      "name": "Income tax expense",
+      "name_el": "Φόρος εισοδήματος",
+      "statement": "PL",
+      "section": "TAX",
+      "account_types": [
+        "EXPENSE"
+      ],
+      "direction": "LOWER_BETTER",
+      "order": 350
+    }
+  ]
+}

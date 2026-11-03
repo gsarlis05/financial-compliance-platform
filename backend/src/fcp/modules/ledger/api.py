@@ -30,7 +30,38 @@ from .models import (
     PeriodUnlock,
 )
 
-__all__ = ["Account", "FiscalYear", "JournalEntry", "JournalLine", "Period", "router"]
+__all__ = [
+    "Account",
+    "FiscalYear",
+    "JournalEntry",
+    "JournalLine",
+    "Period",
+    "TrialBalanceRow",
+    "account_list",
+    "router",
+    "seed_vat_catalogue",
+    "trial_balance_rows",
+]
+
+# Read functions for other modules (the reporting gateway, M2-6 onwards).
+account_list = accounts.list_accounts
+TrialBalanceRow = reports.TrialBalanceRow
+
+
+def trial_balance_rows(
+    ctx: Any, entity_id: UUID, *, as_of: date, date_from: date | None = None
+) -> list[reports.TrialBalanceRow]:
+    """Every postable account with its debit and credit totals up to ``as_of`` (zeros included)."""
+    tb = reports.trial_balance(ctx, entity_id, as_of=as_of, date_from=date_from, include_zero=True)
+    return tb.rows
+
+
+def seed_vat_catalogue() -> int:
+    from .models import VatCode  # noqa: PLC0415
+    from .vat import seed_catalogue  # noqa: PLC0415
+
+    return seed_catalogue(VatCode)
+
 
 router = Router(tags=["ledger"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

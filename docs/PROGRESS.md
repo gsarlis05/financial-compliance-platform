@@ -39,7 +39,8 @@ in order.
 | M0-8 Work tracking process (issue #31) | `claude/process-tracker` | #22 | Open |
 | M2-2 Counterparties + open items (issue #47) | `claude/m2-2-open-items` | #96 | Open |
 | M2-3 VAT codes (issue #48) | `claude/m2-3-vat-codes` | #97 | Open |
-| M2-6 Taxonomy + account mapping (issue #49) | — | — | Next |
+| M2-6 Taxonomy + account mapping (issue #49) | `claude/m2-6-taxonomy` | #98 | Open |
+| M2-7 reporting.actuals read model (issue #50) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
