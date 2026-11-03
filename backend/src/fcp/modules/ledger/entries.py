@@ -83,9 +83,19 @@ def ledger_settings(ctx: WorkspaceContext, entity_id: UUID) -> LedgerSettings:
         if ctx.tenant.kind == Tenant.Kind.PERSONAL
         else LedgerSettings.Approval.ALWAYS
     )
-    created: LedgerSettings = LedgerSettings.objects.create(
-        tenant=ctx.tenant, legal_entity_id=entity_id, approval_policy=policy, updated_by=ctx.user
+    # Race-safe first use: concurrent requests may both try to create the default row.
+    LedgerSettings.objects.bulk_create(
+        [
+            LedgerSettings(
+                tenant=ctx.tenant,
+                legal_entity_id=entity_id,
+                approval_policy=policy,
+                updated_by=ctx.user,
+            )
+        ],
+        ignore_conflicts=True,
     )
+    created: LedgerSettings = LedgerSettings.objects.get(legal_entity_id=entity_id)
     return created
 
 
@@ -107,19 +117,33 @@ def update_settings(
                 "The threshold must be a non-negative amount in whole cents.",
                 field_errors={"approval_threshold": ["invalid"]},
             )
-    before = {"approval_policy": current.approval_policy,
-              "approval_threshold": current.approval_threshold}  # fmt: skip
+    before = {
+        "approval_policy": current.approval_policy,
+        "approval_threshold": current.approval_threshold,
+    }
     current.approval_policy = approval_policy
     current.approval_threshold = (
-        Decimal(threshold) if approval_policy == LedgerSettings.Approval.THRESHOLD and threshold
+        Decimal(threshold)
+        if approval_policy == LedgerSettings.Approval.THRESHOLD and threshold
         else None
-    )  # fmt: skip
+    )
     current.updated_by = ctx.user
     current.save()
-    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="ledger.settings.updated",
-          subject_type="ledger_settings", subject_id=current.id, entity_id=entity.id,
-          changes={"before": before, "after": {"approval_policy": current.approval_policy,
-                   "approval_threshold": current.approval_threshold}})  # fmt: skip
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action="ledger.settings.updated",
+        subject_type="ledger_settings",
+        subject_id=current.id,
+        entity_id=entity.id,
+        changes={
+            "before": before,
+            "after": {
+                "approval_policy": current.approval_policy,
+                "approval_threshold": current.approval_threshold,
+            },
+        },
+    )
     return current
 
 
@@ -129,9 +153,15 @@ def _journal(ctx: WorkspaceContext, entity_id: UUID, code: str) -> Journal:
         return journal
     if code not in DEFAULT_JOURNALS:
         raise InvalidLineError("Unknown journal.", field_errors={"journal": ["not found"]})
-    created: Journal = Journal.objects.create(
-        tenant=ctx.tenant, legal_entity_id=entity_id, code=code, name=DEFAULT_JOURNALS[code]
+    Journal.objects.bulk_create(
+        [
+            Journal(
+                tenant=ctx.tenant, legal_entity_id=entity_id, code=code, name=DEFAULT_JOURNALS[code]
+            )
+        ],
+        ignore_conflicts=True,
     )
+    created: Journal = Journal.objects.get(legal_entity_id=entity_id, code=code)
     return created
 
 
@@ -142,7 +172,9 @@ def _amount(value: str, currency: str, field: str) -> Money:
     try:
         money = Money.of(value, currency)
     except (MoneyError, TypeError):
-        raise InvalidLineError("Amounts must be decimal numbers.", field_errors={field: ["invalid"]}) from None
+        raise InvalidLineError(
+            "Amounts must be decimal numbers.", field_errors={field: ["invalid"]}
+        ) from None
     if money.is_negative():
         raise InvalidLineError("Amounts cannot be negative.", field_errors={field: ["negative"]})
     if not money.is_rounded():
@@ -153,10 +185,15 @@ def _amount(value: str, currency: str, field: str) -> Money:
     return money
 
 
-def _validated_lines(entity_id: UUID, currency: str, lines: Sequence[LineInput]) -> list[dict[str, Any]]:
+def _validated_lines(
+    entity_id: UUID, currency: str, lines: Sequence[LineInput]
+) -> list[dict[str, Any]]:
     """Structural checks that apply to drafts too (each line: one side, positive, rounded)."""
     accounts = {
-        a.id: a for a in Account.objects.filter(legal_entity_id=entity_id, id__in=[ln.account_id for ln in lines])
+        a.id: a
+        for a in Account.objects.filter(
+            legal_entity_id=entity_id, id__in=[ln.account_id for ln in lines]
+        )
     }
     result = []
     for i, line in enumerate(lines):
@@ -178,8 +215,15 @@ def _validated_lines(entity_id: UUID, currency: str, lines: Sequence[LineInput])
                 f"Account {account.code} is a heading or inactive and cannot be posted to.",
                 field_errors={f"lines.{i}.account_id": ["not postable"]},
             )
-        result.append({"line_no": i + 1, "account": account, "debit": debit.amount,
-                       "credit": credit.amount, "memo": line.memo.strip()})  # fmt: skip
+        result.append(
+            {
+                "line_no": i + 1,
+                "account": account,
+                "debit": debit.amount,
+                "credit": credit.amount,
+                "memo": line.memo.strip(),
+            }
+        )
     return result
 
 
@@ -240,7 +284,9 @@ def approval_required(ctx: WorkspaceContext, entry: JournalEntry) -> bool:
 # --- reading ------------------------------------------------------------------------------------
 
 
-def get_entry(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, *, lock: bool = False) -> JournalEntry:
+def get_entry(
+    ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, *, lock: bool = False
+) -> JournalEntry:
     get_entity(ctx, entity_id, "ledger.entry.read")
     queryset = JournalEntry.objects.filter(legal_entity_id=entity_id, id=entry_id)
     if lock:
@@ -251,7 +297,7 @@ def get_entry(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, *, lock: b
     return entry
 
 
-def list_entries(
+def list_entries(  # noqa: PLR0913 - keyword-only filters
     ctx: WorkspaceContext,
     entity_id: UUID,
     *,
@@ -262,7 +308,9 @@ def list_entries(
     offset: int = 0,
 ) -> list[JournalEntry]:
     get_entity(ctx, entity_id, "ledger.entry.read")
-    queryset = JournalEntry.objects.filter(legal_entity_id=entity_id).prefetch_related("lines__account")
+    queryset = JournalEntry.objects.filter(legal_entity_id=entity_id).prefetch_related(
+        "lines__account"
+    )
     if status:
         queryset = queryset.filter(status=status)
     if date_from:
@@ -275,15 +323,25 @@ def list_entries(
 # --- drafting ------------------------------------------------------------------------------------
 
 
-def _audit(ctx: WorkspaceContext, entry: JournalEntry, action: str, changes: dict[str, Any]) -> None:
-    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action=action,
-          subject_type="journal_entry", subject_id=entry.id, entity_id=entry.legal_entity_id,
-          changes=changes)  # fmt: skip
+def _audit(
+    ctx: WorkspaceContext, entry: JournalEntry, action: str, changes: dict[str, Any]
+) -> None:
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action=action,
+        subject_type="journal_entry",
+        subject_id=entry.id,
+        entity_id=entry.legal_entity_id,
+        changes=changes,
+    )
 
 
 def _line_snapshot(entry: JournalEntry) -> list[list[str]]:
-    return [[ln.account.code, f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
-            for ln in sorted(entry.lines.all(), key=lambda x: x.line_no)]  # fmt: skip
+    return [
+        [ln.account.code, f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
+        for ln in sorted(entry.lines.all(), key=lambda x: x.line_no)
+    ]
 
 
 def _write_lines(ctx: WorkspaceContext, entry: JournalEntry, lines: list[dict[str, Any]]) -> None:
@@ -294,7 +352,7 @@ def _write_lines(ctx: WorkspaceContext, entry: JournalEntry, lines: list[dict[st
 
 
 @transaction.atomic
-def create_draft(
+def create_draft(  # noqa: PLR0913 - keyword-only options
     ctx: WorkspaceContext,
     entity_id: UUID,
     data: EntryInput,
@@ -324,22 +382,36 @@ def create_draft(
         prepared_by=ctx.user,
     )
     _write_lines(ctx, entry, lines)
-    _audit(ctx, entry, "ledger.entry.created", {
-        "entry_type": entry_type, "accounting_date": entry.accounting_date,
-        "description": entry.description, "lines": _line_snapshot(entry),
-        "reverses_entry_id": entry.reverses_entry_id, "correction_reason": correction_reason})  # fmt: skip
+    _audit(
+        ctx,
+        entry,
+        "ledger.entry.created",
+        {
+            "entry_type": entry_type,
+            "accounting_date": entry.accounting_date,
+            "description": entry.description,
+            "lines": _line_snapshot(entry),
+            "reverses_entry_id": entry.reverses_entry_id,
+            "correction_reason": correction_reason,
+        },
+    )
     return entry
 
 
 @transaction.atomic
-def update_draft(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, data: EntryInput) -> JournalEntry:
+def update_draft(
+    ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, data: EntryInput
+) -> JournalEntry:
     entity = get_entity(ctx, entity_id, "ledger.entry.create")
     entry = get_entry(ctx, entity_id, entry_id, lock=True)
     if entry.status not in EDITABLE:
         raise InvalidStateError(f"A {entry.status.lower()} entry cannot be edited.")
     lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
-    before = {"accounting_date": entry.accounting_date, "description": entry.description,
-              "lines": _line_snapshot(entry)}  # fmt: skip
+    before = {
+        "accounting_date": entry.accounting_date,
+        "description": entry.description,
+        "lines": _line_snapshot(entry),
+    }
     entry.accounting_date = data.accounting_date
     entry.document_date = data.document_date
     entry.description = data.description.strip()
@@ -350,13 +422,25 @@ def update_draft(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, data: E
     entry.content_hash = ""
     entry.save()
     _write_lines(ctx, entry, lines)
-    _audit(ctx, entry, "ledger.entry.updated", {
-        "before": before, "after": {"accounting_date": entry.accounting_date,
-                                    "description": entry.description, "lines": _line_snapshot(entry)}})  # fmt: skip
+    _audit(
+        ctx,
+        entry,
+        "ledger.entry.updated",
+        {
+            "before": before,
+            "after": {
+                "accounting_date": entry.accounting_date,
+                "description": entry.description,
+                "lines": _line_snapshot(entry),
+            },
+        },
+    )
     return entry
 
 
-def _transition(ctx: WorkspaceContext, entry: JournalEntry, to: str, action: str, **changes: Any) -> None:
+def _transition(
+    ctx: WorkspaceContext, entry: JournalEntry, to: str, action: str, **changes: Any
+) -> None:
     before = entry.status
     entry.status = to
     entry.save()
@@ -374,7 +458,9 @@ def submit(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEnt
     entry.content_hash = content_hash(entry)
     entry.submitted_at = timezone.now()
     entry.rejection_reason = ""
-    _transition(ctx, entry, Status.SUBMITTED, "ledger.entry.submitted", content_hash=entry.content_hash)
+    _transition(
+        ctx, entry, Status.SUBMITTED, "ledger.entry.submitted", content_hash=entry.content_hash
+    )
     return entry
 
 
@@ -413,7 +499,9 @@ def void(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
     get_entity(ctx, entity_id, "ledger.entry.create")
     entry = get_entry(ctx, entity_id, entry_id, lock=True)
     if entry.status not in EDITABLE:
-        raise InvalidStateError("Only draft or rejected entries can be voided; posted entries are reversed.")
+        raise InvalidStateError(
+            "Only draft or rejected entries can be voided; posted entries are reversed."
+        )
     _transition(ctx, entry, Status.VOID, "ledger.entry.voided")
     return entry
 
@@ -422,8 +510,9 @@ def void(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
 
 
 def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
-    period = period_for_date(entry.legal_entity_id, entry.accounting_date,
-                             adjustment=entry.use_adjustment_period)  # fmt: skip
+    period = period_for_date(
+        entry.legal_entity_id, entry.accounting_date, adjustment=entry.use_adjustment_period
+    )
     if period is None:
         raise NoPeriodError(
             f"There is no {'adjustment ' if entry.use_adjustment_period else ''}period for "
@@ -448,8 +537,9 @@ def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
 def _next_number(ctx: WorkspaceContext, entry: JournalEntry, period: Period) -> int:
     with connection.cursor() as cursor:
         cursor.execute(
-            "INSERT INTO ledger_entry_sequence (id, tenant_id, created_at, journal_id, fiscal_year_id, "
-            "last_no) VALUES (gen_random_uuid(), %s, now(), %s, %s, 0) "
+            "INSERT INTO ledger_entry_sequence "
+            "(id, tenant_id, created_at, journal_id, fiscal_year_id, last_no) "
+            "VALUES (gen_random_uuid(), %s, now(), %s, %s, 0) "
             "ON CONFLICT (journal_id, fiscal_year_id) DO NOTHING",
             [ctx.tenant.id, entry.journal_id, period.fiscal_year_id],
         )
@@ -486,7 +576,9 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
         if entry.status == Status.REJECTED:
             raise InvalidStateError("A rejected entry must be corrected and submitted again.")
         if approval_required(ctx, entry):
-            raise ApprovalRequiredError("This entry must be approved by someone else before posting.")
+            raise ApprovalRequiredError(
+                "This entry must be approved by someone else before posting."
+            )
     else:
         raise InvalidStateError(f"A {entry.status.lower()} entry cannot be posted.")
 
@@ -505,9 +597,17 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
     from .balances import apply_posting  # noqa: PLC0415 - avoids an import cycle
 
     apply_posting(entry)
-    _audit(ctx, entry, "ledger.entry.posted", {
-        "from": previous, "entry_no": entry.entry_no, "posting_seq": entry.posting_seq,
-        "period_id": period.id, "content_hash": entry.content_hash,
-        "soft_closed": entry.posted_in_soft_closed})  # fmt: skip
+    _audit(
+        ctx,
+        entry,
+        "ledger.entry.posted",
+        {
+            "from": previous,
+            "entry_no": entry.entry_no,
+            "posting_seq": entry.posting_seq,
+            "period_id": period.id,
+            "content_hash": entry.content_hash,
+            "soft_closed": entry.posted_in_soft_closed,
+        },
+    )
     return entry
-

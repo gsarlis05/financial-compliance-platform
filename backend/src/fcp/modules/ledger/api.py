@@ -4,19 +4,19 @@ All routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from django.http import HttpRequest
-from ninja import Field, Router, Schema, Status
+from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, periods
-from .models import Account, FiscalYear, Period
+from . import accounts, entries, idempotency, periods
+from .models import Account, FiscalYear, JournalEntry, LedgerSettings, Period
 
-__all__ = ["Account", "FiscalYear", "Period", "router"]
+__all__ = ["Account", "FiscalYear", "JournalEntry", "Period", "router"]
 
 router = Router(tags=["ledger"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
@@ -166,3 +166,267 @@ def change_period_status(
     # The transition-specific permission (manage or lock) is enforced by the service.
     ctx = workspace_ctx(request, slug, entity_id)
     return periods.change_status(ctx, entity_id, period_id, payload.status)
+
+
+# --- journal entries (M1-8) ---------------------------------------------------------------------
+
+AMOUNT = r"^\d{1,15}(\.\d{1,4})?$"
+
+
+class LineIn(Schema):
+    account_id: UUID
+    debit: str = Field(default="0", pattern=AMOUNT, description='Decimal string, e.g. "120.50"')
+    credit: str = Field(default="0", pattern=AMOUNT, description="Decimal string")
+    memo: str = Field(default="", max_length=300)
+
+
+class EntryIn(Schema):
+    accounting_date: date
+    document_date: date | None = None
+    description: str = Field(min_length=1, max_length=500)
+    journal: str = Field(default="GJ", max_length=10)
+    use_adjustment_period: bool = False
+    lines: list[LineIn] = Field(min_length=1, max_length=500)
+
+
+class LineOut(Schema):
+    line_no: int
+    account_id: UUID
+    account_code: str
+    debit: str
+    credit: str
+    memo: str
+
+
+class EntryOut(Schema):
+    id: UUID
+    status: str
+    entry_type: str
+    journal: str
+    entry_no: int | None
+    posting_seq: int | None
+    accounting_date: date
+    document_date: date | None
+    use_adjustment_period: bool
+    description: str
+    currency: str
+    period_id: UUID | None
+    reverses_entry_id: UUID | None
+    reversed_by_entry_id: UUID | None
+    related_entry_id: UUID | None
+    correction_reason: str
+    prepared_by_id: UUID
+    approved_by_id: UUID | None
+    posted_by_id: UUID | None
+    rejection_reason: str
+    content_hash: str
+    total_debit: str
+    total_credit: str
+    lines: list[LineOut]
+
+
+class RejectIn(Schema):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class SettingsIn(Schema):
+    approval_policy: LedgerSettings.Approval
+    approval_threshold: str | None = Field(default=None, pattern=AMOUNT)
+
+
+class SettingsOut(Schema):
+    approval_policy: str
+    approval_threshold: str | None
+
+
+def entry_out(entry: JournalEntry) -> EntryOut:
+    lines = sorted(entry.lines.all(), key=lambda ln: ln.line_no)
+    return EntryOut(
+        id=entry.id,
+        status=entry.status,
+        entry_type=entry.entry_type,
+        journal=entry.journal.code,
+        entry_no=entry.entry_no,
+        posting_seq=entry.posting_seq,
+        accounting_date=entry.accounting_date,
+        document_date=entry.document_date,
+        use_adjustment_period=entry.use_adjustment_period,
+        description=entry.description,
+        currency=entry.currency,
+        period_id=entry.period_id,
+        reverses_entry_id=entry.reverses_entry_id,
+        reversed_by_entry_id=entry.reversed_by_entry_id,
+        related_entry_id=entry.related_entry_id,
+        correction_reason=entry.correction_reason,
+        prepared_by_id=entry.prepared_by_id,
+        approved_by_id=entry.approved_by_id,
+        posted_by_id=entry.posted_by_id,
+        rejection_reason=entry.rejection_reason,
+        content_hash=entry.content_hash,
+        total_debit=f"{sum(ln.debit for ln in lines):.2f}",
+        total_credit=f"{sum(ln.credit for ln in lines):.2f}",
+        lines=[
+            LineOut(
+                line_no=ln.line_no,
+                account_id=ln.account_id,
+                account_code=ln.account.code,
+                debit=f"{ln.debit:.2f}",
+                credit=f"{ln.credit:.2f}",
+                memo=ln.memo,
+            )
+            for ln in lines
+        ],
+    )
+
+
+def _entry_input(payload: EntryIn) -> entries.EntryInput:
+    return entries.EntryInput(
+        accounting_date=payload.accounting_date,
+        document_date=payload.document_date,
+        description=payload.description,
+        journal_code=payload.journal,
+        use_adjustment_period=payload.use_adjustment_period,
+        lines=[
+            entries.LineInput(ln.account_id, ln.debit, ln.credit, ln.memo) for ln in payload.lines
+        ],
+    )
+
+
+def _json(entry: JournalEntry) -> dict[str, Any]:
+    body: dict[str, Any] = entry_out(entry).model_dump(mode="json")
+    return body
+
+
+@router.post(f"{BASE}/journal-entries", response={201: EntryOut})
+@requires("ledger.entry.create")
+def create_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, payload: EntryIn
+) -> Status[dict[str, Any]]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    status, body = idempotency.run(
+        ctx,
+        request,
+        f"create:{entity_id}",
+        payload.model_dump(mode="json"),
+        lambda: (201, _json(entries.create_draft(ctx, entity_id, _entry_input(payload)))),
+    )
+    return Status(status, body)
+
+
+class EntryFilter(Schema):
+    status: JournalEntry.Status | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+    limit: int = Field(default=100, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)
+
+
+@router.get(f"{BASE}/journal-entries", response=list[EntryOut])
+@requires("ledger.entry.read")
+def list_entries(
+    request: HttpRequest, slug: str, entity_id: UUID, filters: Query[EntryFilter]
+) -> list[EntryOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = entries.list_entries(
+        ctx,
+        entity_id,
+        status=filters.status,
+        date_from=filters.date_from,
+        date_to=filters.date_to,
+        limit=filters.limit,
+        offset=filters.offset,
+    )
+    return [entry_out(e) for e in found]
+
+
+@router.get(f"{BASE}/journal-entries/{{uuid:entry_id}}", response=EntryOut)
+@requires("ledger.entry.read")
+def get_entry(request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.get_entry(ctx, entity_id, entry_id))
+
+
+@router.put(f"{BASE}/journal-entries/{{uuid:entry_id}}", response=EntryOut)
+@requires("ledger.entry.create")
+def update_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID, payload: EntryIn
+) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.update_draft(ctx, entity_id, entry_id, _entry_input(payload)))
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/submit", response=EntryOut)
+@requires("ledger.entry.create")
+def submit_entry(request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.submit(ctx, entity_id, entry_id))
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/approve", response=EntryOut)
+@requires("ledger.entry.approve")
+def approve_entry(request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.approve(ctx, entity_id, entry_id))
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/reject", response=EntryOut)
+@requires("ledger.entry.approve")
+def reject_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID, payload: RejectIn
+) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.reject(ctx, entity_id, entry_id, payload.reason))
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/post", response=EntryOut)
+@requires("ledger.entry.post")
+def post_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID
+) -> Status[dict[str, Any]]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    status, body = idempotency.run(
+        ctx,
+        request,
+        f"post:{entry_id}",
+        {},
+        lambda: (200, _json(entries.post(ctx, entity_id, entry_id))),
+    )
+    return Status(status, body)
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/void", response=EntryOut)
+@requires("ledger.entry.create")
+def void_entry(request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID) -> EntryOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return entry_out(entries.void(ctx, entity_id, entry_id))
+
+
+@router.get(f"{BASE}/ledger-settings", response=SettingsOut)
+@requires("ledger.entry.read")
+def get_settings(request: HttpRequest, slug: str, entity_id: UUID) -> SettingsOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = entries.ledger_settings(ctx, entity_id)
+    threshold = found.approval_threshold
+    return SettingsOut(
+        approval_policy=found.approval_policy,
+        approval_threshold=f"{threshold:.2f}" if threshold is not None else None,
+    )
+
+
+@router.put(f"{BASE}/ledger-settings", response=SettingsOut)
+@requires("ledger.settings.manage")
+def put_settings(
+    request: HttpRequest, slug: str, entity_id: UUID, payload: SettingsIn
+) -> SettingsOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = entries.update_settings(
+        ctx,
+        entity_id,
+        approval_policy=payload.approval_policy,
+        threshold=payload.approval_threshold,
+    )
+    threshold = found.approval_threshold
+    return SettingsOut(
+        approval_policy=found.approval_policy,
+        approval_threshold=f"{threshold:.2f}" if threshold is not None else None,
+    )
