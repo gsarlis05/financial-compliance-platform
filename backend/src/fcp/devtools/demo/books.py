@@ -34,11 +34,23 @@ _BANK_COUNTER_ACCOUNT = {
 }
 
 
+_CONTROL_ACCOUNTS = {"1200", "2100"}
+
+
+@dataclass(frozen=True)
+class DemoCounterparty:
+    code: str
+    kind: str
+    name: str
+    payment_terms_days: int
+
+
 @dataclass
 class DemoEntry:
     accounting_date: date
     description: str
-    # account code -> (debit, credit)
+    # line key -> (debit, credit). The key is an account code, or "code@counterparty" for
+    # control-account lines (trade receivables and payables need a counterparty, M2-2).
     lines: dict[str, list[Decimal]] = field(default_factory=dict)
 
     def add(self, code: str, debit: Decimal = Decimal(0), credit: Decimal = Decimal(0)) -> None:
@@ -77,6 +89,7 @@ class DemoBooks:
     bank_closing_balance: Decimal
     entries: list[DemoEntry]
     fingerprint: str
+    counterparties: list[DemoCounterparty] = field(default_factory=list)
 
 
 def _month_end(day: date) -> date:
@@ -99,7 +112,7 @@ def _require_in_year(days: Iterable[date], start: date) -> None:
         raise ValueError(f"Dataset has dates outside the fiscal year: {outside[:3]}")
 
 
-def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:
+def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:  # noqa: PLR0915 - linear
     """Generate one year of synthetic trading for ``year`` and summarise it into entries."""
     profile = BusinessProfile(start_date=date(year, 1, 1), years=1)
     dataset = generate_business(profile, seed)
@@ -134,14 +147,14 @@ def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:
 
     for row in sales:
         e = entry(_month_key(row["issue_date"]), "Sales invoices")
-        e.add("1200", debit=Decimal(row["gross"]))
+        e.add(f"1200@{row['counterparty_id']}", debit=Decimal(row["gross"]))
         e.add("4000", credit=Decimal(row["net"]))
         e.add("2120", credit=Decimal(row["vat"]))
     for row in purchases:
         e = entry(_month_key(row["issue_date"]), "Purchase invoices")
         e.add("5000", debit=Decimal(row["net"]))
         e.add("1220", debit=Decimal(row["vat"]))
-        e.add("2100", credit=Decimal(row["gross"]))
+        e.add(f"2100@{row['counterparty_id']}", credit=Decimal(row["gross"]))
     for row in bank:
         amount = Decimal(row["amount"])
         description = row["description"]
@@ -154,6 +167,8 @@ def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:
             e.add("2010", debit=Decimal(instalment["principal"]))
         elif description in _BANK_COUNTER_ACCOUNT:
             title, counter_account = _BANK_COUNTER_ACCOUNT[description]
+            if counter_account in _CONTROL_ACCOUNTS:
+                counter_account = f"{counter_account}@{row['counterparty_id']}"
             e = entry(_month_key(row["date"]), title)
             e.signed(counter_account, -amount)
         else:
@@ -171,4 +186,8 @@ def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:
         bank_closing_balance=Decimal(bank[-1]["balance"]) if bank else opening_cash,
         entries=entries,
         fingerprint=dataset.fingerprint(),
+        counterparties=[
+            DemoCounterparty(c["id"], c["kind"], c["name"], c["payment_terms_days"])
+            for c in json.loads(files["counterparties.json"])
+        ],
     )
