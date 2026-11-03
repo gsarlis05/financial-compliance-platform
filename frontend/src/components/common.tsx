@@ -13,7 +13,7 @@ export function ProblemMessage({ error }: { error: unknown }) {
   return (
     <div role="alert" className="problem">
       <strong>{problem?.title ?? t("app.error")}</strong>
-      <p>{problem?.detail ?? (error instanceof Error ? error.message : String(error))}</p>
+      <p>{problem?.detail ?? (error instanceof Error ? error.message : t("app.retry"))}</p>
       {problem?.correlation_id ? (
         <p className="muted">
           {t("app.reference")}: <code>{problem.correlation_id}</code>

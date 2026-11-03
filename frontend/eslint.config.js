@@ -15,6 +15,9 @@ export default tseslint.config(
     plugins: { "react-hooks": reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // Event handlers like onClick={() => mutate()} are idiomatic React.
+      "@typescript-eslint/no-confusing-void-expression": ["error", { ignoreArrowShorthand: true }],
+      "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
       // Money must never be handled as a JS number (docs/adr/0003). Amounts travel as strings.
       "no-restricted-syntax": [
         "error",

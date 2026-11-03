@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import { useFiscalYears, usePeriodMutations, useUnlocks } from "../api/hooks";
 import type { Period } from "../api/types";
 import { Loading, Page, ProblemMessage, StatusBadge } from "../components/common";
@@ -51,7 +51,7 @@ export function PeriodsPage() {
   const [start, setStart] = useState(`${new Date().getFullYear()}-01-01`);
   const [months, setMonths] = useState("12");
 
-  function create(event: FormEvent) {
+  function create(event: SyntheticEvent) {
     event.preventDefault();
     createYear.mutate({ start_date: start, months: Number.parseInt(months, 10) });
   }

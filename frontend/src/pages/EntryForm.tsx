@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import type { Account, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
@@ -76,7 +76,7 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
     };
   }
 
-  function handle(event: FormEvent, submit: boolean) {
+  function handle(event: SyntheticEvent, submit: boolean) {
     event.preventDefault();
     onSave(body(), submit);
   }

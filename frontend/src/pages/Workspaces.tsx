@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type SyntheticEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useCreateWorkspace, useEntities, useWorkspaces } from "../api/hooks";
 import { FieldError, Loading, Page, ProblemMessage } from "../components/common";
@@ -14,7 +14,7 @@ export function WorkspacesPage() {
   const [kind, setKind] = useState("BUSINESS");
   const [entityName, setEntityName] = useState("");
 
-  function submit(event: FormEvent) {
+  function submit(event: SyntheticEvent) {
     event.preventDefault();
     create.mutate(
       { name, kind, ...(kind === "BUSINESS" ? { entity_name: entityName } : {}) },

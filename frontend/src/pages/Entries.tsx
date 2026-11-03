@@ -153,6 +153,9 @@ export function EntryActions({ entry, myId, onAct }: {
           <button className="primary" disabled={myId === entry.prepared_by_id} onClick={() => onAct("approve")}>
             {t("je.approve")}
           </button>
+          {/* Without an approval policy (e.g. personal books) a submitted entry can be posted;
+              otherwise the server explains that approval is required. */}
+          <button onClick={() => onAct("post")}>{t("je.post")}</button>
           <label>
             <span className="visually-hidden">{t("je.rejectReason")}</span>
             <input placeholder={t("je.rejectReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -221,7 +224,7 @@ export function EntryDetailPage() {
     );
   return (
     <Page
-      title={`${e.description}`}
+      title={e.description}
       actions={editable && !editing ? <button onClick={() => setEditing(true)}>{t("je.edit")}</button> : null}
     >
       <p>

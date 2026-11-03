@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import { useAccountMutations, useAccounts } from "../api/hooks";
 import type { Account } from "../api/types";
 import { FieldError, Loading, Page, ProblemMessage } from "../components/common";
@@ -22,7 +22,7 @@ export function AccountsPage() {
   const [form, setForm] = useState({ code: "", name: "", type: "EXPENSE", parent_code: "" });
   const byId = new Map((accounts.data ?? []).map((a) => [a.id, a]));
 
-  function add(event: FormEvent) {
+  function add(event: SyntheticEvent) {
     event.preventDefault();
     create.mutate(
       { code: form.code, name: form.name, type: form.type, ...(form.parent_code ? { parent_code: form.parent_code } : {}) },
