@@ -4,8 +4,11 @@ version = "0.0.0"
 description = "Financial Compliance Platform backend"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "authlib>=1.9,<2",
     "django>=5.2,<5.3",
+    "django-ninja>=1.7,<2",
     "psycopg[binary]>=3.2,<4",
+    "requests>=2.34,<3",
     "structlog>=25,<27",
 ]
 
@@ -40,6 +43,7 @@ known-first-party = ["fcp", "tools"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR0913"]
+"**/migrations/*.py" = ["RUF012", "E501"]
 
 [tool.importlinter]
 root_package = "fcp"
@@ -88,6 +92,11 @@ mypy_path = "src"
 files = ["src", "tests", "tools"]
 plugins = ["mypy_django_plugin.main"]
 
+[[tool.mypy.overrides]]
+# Authlib ships no type information; its use is confined to fcp.modules.identity.
+module = ["authlib.*"]
+ignore_missing_imports = true
+
 [tool.django-stubs]
 django_settings_module = "fcp.settings.test"
 
@@ -101,7 +110,9 @@ dev = [
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-django>=4.14.0",
+    "responses>=0.26,<1",
     "ruff>=0.17.3",
+    "types-requests>=2.33.0.20261030",
 ]
 
 [tool.coverage.run]

@@ -62,12 +62,28 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:8000/oidc/callback"],
+      "redirectUris": [
+        "http://localhost:8000/auth/callback"
+      ],
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8000/"
-      }
+        "post.logout.redirect.uris": "http://localhost:5173/"
+      },
+      "protocolMappers": [
+        {
+          "name": "amr",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-amr-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "smtpServer": {
@@ -75,5 +91,72 @@
     "port": "1025",
     "from": "no-reply@fcp.localhost",
     "fromDisplayName": "FCP local"
-  }
+  },
+  "browserFlow": "fcp browser",
+  "authenticationFlows": [
+    {
+      "alias": "fcp browser",
+      "description": "Browser sign-in: password + OTP, each tagged with an AMR reference",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "flowAlias": "fcp browser forms",
+          "autheticatorFlow": true,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "fcp browser forms",
+      "description": "Username/password then OTP",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorConfig": "fcp-ref-pwd",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorConfig": "fcp-ref-otp",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "fcp-ref-pwd",
+      "config": {
+        "default.reference.value": "pwd",
+        "default.reference.maxAge": "43200"
+      }
+    },
+    {
+      "alias": "fcp-ref-otp",
+      "config": {
+        "default.reference.value": "otp",
+        "default.reference.maxAge": "43200"
+      }
+    }
+  ]
 }
