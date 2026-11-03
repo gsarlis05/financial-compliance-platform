@@ -1,0 +1,35 @@
+name: Tracker sync
+
+# Keeps GitHub milestones, labels and issue-milestone assignments in line with
+# docs/tracker/milestones.json (see docs/PROCESS.md). Never deletes anything.
+on:
+  push:
+    branches: [main, claude/process-tracker]
+    paths:
+      - docs/tracker/milestones.json
+      - scripts/tracker/sync.py
+      - .github/workflows/tracker-sync.yml
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tracker-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Sync milestones, labels and issue milestones
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/tracker/sync.py

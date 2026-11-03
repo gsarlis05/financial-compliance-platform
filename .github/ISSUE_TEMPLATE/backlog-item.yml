@@ -1,0 +1,44 @@
+name: Backlog item
+description: One item of the roadmap (docs/planning/08), implemented by one PR.
+title: "M?-?: "
+labels: ["type:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: "Title starts with the backlog key (e.g. `M2-5: Bank import`) so the tracker sync puts it in the right milestone. See docs/PROCESS.md."
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Purpose
+      description: Business problem this solves, for whom.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and approach
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: input
+    id: order
+    attributes:
+      label: Order and dependencies
+      placeholder: "Order 5 in M2 · Depends on #12, #13"
+  - type: checkboxes
+    id: done
+    attributes:
+      label: Definition of done (development directive)
+      options:
+        - label: Business requirements
+        - label: Technical design
+        - label: Database changes (reviewed, reversible, none applied to deployed environments)
+        - label: Security controls
+        - label: Automated tests and edge cases
+        - label: Sample data (synthetic only)
+        - label: User-facing validation
+        - label: Documentation
+        - label: Known limitations

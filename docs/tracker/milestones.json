@@ -1,0 +1,37 @@
+{
+  "_comment": "Source of truth for GitHub milestones and labels. Synced by .github/workflows/tracker-sync.yml (scripts/tracker/sync.py). Order = roadmap order (docs/planning/08). Edit here, never only in the GitHub UI.",
+  "milestones": [
+    {"key": "M0", "title": "M0 — Foundations", "phase": 1, "description": "Repo, CI gates, local dev, Money library, errors/logging, synthetic data, Terraform skeleton. Brief: docs/planning/13-milestone-0-brief.md."},
+    {"key": "M1", "title": "M1 — Secure tenancy + core ledger", "phase": 1, "description": "OIDC+MFA, workspaces, RLS, roles, audit log, chart of accounts, periods, journal entries, corrections, TB/GL, integrity, UI, docs. Brief: docs/planning/14; acceptance: docs/planning/09; report: docs/milestone-1-report.md."},
+    {"key": "M2", "title": "M2 — Registers, banking, basic reporting", "phase": 1, "description": "Cloud packaging, dimensions, counterparties + open items, VAT codes, documents, bank import + reconciliation, taxonomy, reporting.actuals, statements, year-end. Brief: docs/planning/15-milestone-2-brief.md."},
+    {"key": "M3", "title": "M3 — Calculation framework + 13-week cash forecast", "phase": 2, "description": "Calendar, metrics core, expression evaluator, obligations and debt, tax calendar, payment behaviour, 13-week cash forecast, what-ifs, cash dashboard."},
+    {"key": "M4", "title": "M4 — Budgets, KPIs, goals, CFO dashboard v1", "phase": 2, "description": "Budgets with versions and approvals, BvA, KPI library, custom KPIs, goals and goal-seek, alerts, CFO dashboard v1, firm portfolio dashboard."},
+    {"key": "M5", "title": "M5 — Personal MVP + pilot readiness (Gate P)", "phase": 2, "description": "Personal workspace UX, personal budgets and goals, engagements, pilot environment IaC (applied only with owner approval), data export and deletion. Ends at Gate P: owner-only pilot with your own data."},
+    {"key": "M6", "title": "M6 — Three-statement projections + rolling forecasts", "phase": 3, "description": "Fixed assets + depreciation, driver/assumption sets, integrated 3-statement projection engine, rolling 12/24-month forecasts, FX (moved from M2-10)."},
+    {"key": "M7", "title": "M7 — Scenarios, sensitivity, working capital", "phase": 3, "description": "Scenario modelling, sensitivity/tornado, working-capital forecasting, goals vs scenarios, advanced KPIs."},
+    {"key": "M8", "title": "M8 — Management reporting + dashboard v2 (Gate G)", "phase": 3, "description": "Report packs, dashboard v2, email alerts. Ends at Gate G: pen-test, ASVS L2, DPA, consumer terms, DR drill — required before external customers."},
+    {"key": "M9", "title": "M9 — Rules engine + Cyprus VAT", "phase": 4, "description": "Rules engine with curated, versioned packs; CY.VAT with official examples; VAT return preparation and sign-off (never auto-submitted). Needs a verified Cyprus tax professional."},
+    {"key": "M10", "title": "M10 — Corporate income tax, SDC, IFRS statements", "phase": 4, "description": "CY.CIT, CY.SDC, IR4 preparation data, IFRS statements with notes scaffolding."},
+    {"key": "M11", "title": "M11 — Audit module + regulatory monitoring", "phase": 4, "description": "Audit engagements (materiality, working papers, PBC, sampling, sign-offs), regulatory change monitoring, evidence pack v2. No automated audit opinions."},
+    {"key": "M12", "title": "M12 — AI gateway + AI CFO (read-only)", "phase": 5, "description": "Separately deployed AI gateway, data-class policy, read-only tools, numeric-provenance validator, AI panel, red-team suite. The LLM never calculates or posts."},
+    {"key": "M13", "title": "M13 — Source-linked regulatory explanations", "phase": 5, "description": "Explanations over the verified source library, uncertainty flagging, professional-review routing."}
+  ],
+  "labels": [
+    {"name": "type:feature", "color": "1f6feb", "description": "A backlog item that adds product capability"},
+    {"name": "type:chore", "color": "8b949e", "description": "Tooling, CI, infrastructure, packaging"},
+    {"name": "type:docs", "color": "0e8a16", "description": "Documentation, planning, process"},
+    {"name": "type:epic", "color": "5319e7", "description": "A milestone-level item to be split into issues when its milestone starts"},
+    {"name": "type:decision", "color": "d93f0b", "description": "A decision only the product owner can make"},
+    {"name": "type:bug", "color": "b60205", "description": "Something does not work as specified"},
+    {"name": "status:in-review", "color": "fbca04", "description": "Implemented; PR open and waiting for product owner review"},
+    {"name": "status:blocked", "color": "000000", "description": "Cannot proceed; the issue says on what"},
+    {"name": "needs:owner", "color": "e99695", "description": "Waiting for an answer or approval from the product owner"},
+    {"name": "size:S", "color": "c5def5", "description": "Small (about 1 point)"},
+    {"name": "size:M", "color": "84b6eb", "description": "Medium (about 2 points)"},
+    {"name": "size:L", "color": "1d76db", "description": "Large (about 4 points)"},
+    {"name": "area:security", "color": "b60205", "description": "Touches authentication, authorization, isolation or secrets"},
+    {"name": "area:ledger", "color": "006b75", "description": "Ledger, postings, periods, reports"},
+    {"name": "area:ui", "color": "bfdadc", "description": "Web front end"},
+    {"name": "area:infra", "color": "c2e0c6", "description": "Deployment, CI, IaC (never applied without approval)"}
+  ]
+}
