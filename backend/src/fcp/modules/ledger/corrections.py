@@ -19,7 +19,7 @@ from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from . import entries
 from .errors import AlreadyReversedError, InvalidStateError, SegregationOfDutiesError
-from .models import JournalEntry, Period, PeriodUnlock
+from .models import JournalEntry, JournalLine, Period, PeriodUnlock
 from .periods import first_open_period_on_or_after, get_period
 
 MAX_UNLOCK_MINUTES = 8 * 60
@@ -82,7 +82,11 @@ def reverse(
         )
     mirrored = [
         entries.LineInput(
-            line.account_id, debit=f"{line.credit:.2f}", credit=f"{line.debit:.2f}", memo=line.memo
+            line.account_id,
+            debit=f"{line.credit:.2f}",
+            credit=f"{line.debit:.2f}",
+            memo=line.memo,
+            dimension_value_ids=tuple(t.value_id for t in line.dimension_tags.all()),
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
@@ -101,6 +105,7 @@ def reverse(
                 entity_id,
                 data,
                 entry_type=JournalEntry.EntryType.REVERSAL,
+                mirror=True,
                 reverses_entry=original,
                 correction_reason=reason,
             )
@@ -115,8 +120,12 @@ def link_reversal(entry: JournalEntry) -> None:
     original = JournalEntry.objects.select_for_update().get(id=entry.reverses_entry_id)
     if original.status != JournalEntry.Status.POSTED or original.reversed_by_entry_id:
         raise AlreadyReversedError("The original entry is not posted or is already reversed.")
-    expected = sorted((ln.account_id, ln.credit, ln.debit) for ln in original.lines.all())
-    actual = sorted((ln.account_id, ln.debit, ln.credit) for ln in entry.lines.all())
+
+    def tags(ln: JournalLine) -> tuple[str, ...]:
+        return tuple(sorted(str(t.value_id) for t in ln.dimension_tags.all()))
+
+    expected = sorted((ln.account_id, ln.credit, ln.debit, tags(ln)) for ln in original.lines.all())
+    actual = sorted((ln.account_id, ln.debit, ln.credit, tags(ln)) for ln in entry.lines.all())
     if expected != actual:
         raise InvalidStateError("A reversal must exactly mirror the original entry's lines.")
     original.reversed_by_entry = entry

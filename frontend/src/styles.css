@@ -117,3 +117,11 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .field-error { color: var(--danger); font-size: 0.85rem; }
 .muted { color: var(--muted); }
 .signed-out { text-align: center; padding-top: 15vh; }
+
+/* Dimension tags on journal lines (M2-1) */
+.tags { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; margin-inline-start: 0.5rem; }
+.tag { font-size: 0.8rem; padding: 0.05rem 0.4rem; border-radius: 0.6rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.lines input, .lines select { width: 100%; min-width: 0; box-sizing: border-box; }
+.lines input.amount { min-width: 7rem; }
+.lines .dimension-picker { min-width: 9rem; max-width: 14rem; }
