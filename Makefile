@@ -3,7 +3,7 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check e2e-login test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
@@ -78,3 +78,7 @@ iac-check:
 	docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/staging init -backend=false -input=false -lockfile=readonly
 	docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/staging validate
 	docker run --rm -v "$$PWD/infra/terraform:/tf" bridgecrew/checkov:3.4.3 -d /tf --framework terraform --quiet --compact --skip-path .terraform
+
+# Live MFA sign-in check against the local stack (needs `make dev` and `make run-backend`).
+e2e-login:
+	scripts/e2e/keycloak-mfa-login.sh
