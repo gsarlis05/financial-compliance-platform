@@ -39,7 +39,7 @@ synthetic:
 	cd backend && uv run python -m fcp.devtools.synthetic household --seed 7 --out ../var/synthetic/household
 
 migrate:
-	cd backend && uv run python manage.py migrate --noinput
+	cd backend && DB_ROLE=owner uv run python manage.py migrate --noinput
 
 run-backend:
 	cd backend && uv run python manage.py runserver 127.0.0.1:8000

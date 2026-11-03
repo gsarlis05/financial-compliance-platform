@@ -6,6 +6,7 @@ from ninja.security import django_auth
 
 from fcp.core.api.handlers import install_exception_handlers
 from fcp.modules.identity.api import router as identity_router
+from fcp.modules.tenancy.api import router as tenancy_router
 
 api = NinjaAPI(
     title="Financial Compliance Platform API",
@@ -16,3 +17,4 @@ api = NinjaAPI(
 )
 install_exception_handlers(api)
 api.add_router("/", identity_router)
+api.add_router("/", tenancy_router)
