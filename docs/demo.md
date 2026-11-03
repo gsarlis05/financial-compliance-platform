@@ -14,15 +14,17 @@ make demo                # or: make demo SHARE_WITH=you@example.com
 `SHARE_WITH` invites an existing user (anyone who has signed in to the web app once) as
 **finance manager**, so you can open the workspace in the UI at the printed link.
 
-Expected output (about 20 seconds; the slug and numbers depend on the seed, 42 by default):
+Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 by default):
 ```
 ✔ owner created workspace demo-trading-xxxxxx with entity Demo Trading Ltd (Demo)
 ✔ invited and joined: demo accountant (prepares) and demo reviewer (approves, posts)
 ✔ chart of accounts applied (55 accounts) and FY2026 created
+✔ 65 customers and suppliers registered
 ✔ 95 entries drafted by the accountant, approved and posted by the reviewer
 ✔ entry GJ-96 reversed with a reason and re-posted
 ✔ periods 1-11 locked; posting into January is refused (409), rejected and voided
 ✔ trial balance at 2026-12-31: 1810572.51 = 1810572.51; bank 371514.38 matches the synthetic statement
+✔ 442 payments matched to invoices; receivables 203631.60 and payables 102084.19 reconcile to the ledger
 ✔ integrity checks passed (balance, snapshots, gapless numbering, audit chain)
 ✔ shared with you@example.com as finance_manager
 ```
@@ -42,6 +44,9 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
   entries (sales, purchases, customer receipts, supplier payments, payroll, rent, operating
   expenses, loan instalments split into interest and principal, VAT payments), plus the opening
   share capital and the loan drawdown.
+- **Customers and suppliers.** The 65 synthetic counterparties are registered, and receivables
+  and payables lines are booked per customer and supplier. At year end, payments are matched to
+  invoices automatically and the ageing of both sides must reconcile to the control accounts.
 - **Cross-check.** The bank account (1300) in the trial balance must equal the synthetic bank
   statement's closing balance (less the 350.00 cleaning correction). Every euro is booked.
 - **Correction.** A December cleaning bill is posted to *Utilities* by mistake, reversed with a

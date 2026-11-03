@@ -47,7 +47,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 9
+    assert len(result.steps) == 11
     assert all(line.startswith("✔") for line in said)
 
     # The shared user sees the workspace through the API, with the granted role.

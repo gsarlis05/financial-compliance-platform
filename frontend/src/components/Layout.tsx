@@ -75,6 +75,8 @@ export function Layout() {
         [`${base}/entries`, "nav.entries"],
         [`${base}/approvals`, "nav.approvals"],
         [`${base}/accounts`, "nav.accounts"],
+        [`${base}/counterparties`, "nav.counterparties"],
+        [`${base}/receivables`, "nav.receivables"],
         [`${base}/dimensions`, "nav.dimensions"],
         [`${base}/periods`, "nav.periods"],
         [`${base}/trial-balance`, "nav.trialBalance"],

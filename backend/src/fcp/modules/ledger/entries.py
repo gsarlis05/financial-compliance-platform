@@ -14,6 +14,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from django.apps import apps
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 
@@ -27,6 +28,8 @@ from .errors import (
     AccountNotPostableError,
     ApprovalRequiredError,
     ApprovalStaleError,
+    CounterpartyInvalidError,
+    CounterpartyRequiredError,
     InvalidLineError,
     InvalidStateError,
     NoPeriodError,
@@ -62,6 +65,9 @@ class LineInput:
     credit: str = "0"
     memo: str = ""
     dimension_value_ids: tuple[UUID, ...] = ()
+    counterparty_id: UUID | None = None
+    reference: str = ""
+    due_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -202,6 +208,7 @@ def _validated_lines(
     tags = dimensions.resolve_tags(
         entity_id, [ln.dimension_value_ids for ln in lines], allow_inactive=mirror
     )
+    _counterparties(entity_id, lines, allow_inactive=mirror)
     result = []
     for i, line in enumerate(lines):
         debit = _amount(line.debit, currency, f"lines.{i}.debit")
@@ -229,10 +236,43 @@ def _validated_lines(
                 "debit": debit.amount,
                 "credit": credit.amount,
                 "memo": line.memo.strip(),
+                "counterparty_id": line.counterparty_id,
+                "reference": line.reference.strip(),
+                "due_date": line.due_date,
                 "tags": tags[i],
             }
         )
     return result
+
+
+def _counterparties(
+    entity_id: UUID, lines: Sequence[LineInput], *, allow_inactive: bool = False
+) -> dict[UUID, Any]:
+    """Counterparties referenced by the lines: must exist in this entity and be active.
+
+    The register lives in the ``registers`` module; the model is looked up by label so the ledger
+    does not import it (modules talk through public interfaces; doc 02 §1).
+    """
+    wanted = {ln.counterparty_id for ln in lines if ln.counterparty_id}
+    if not wanted:
+        return {}
+    model = apps.get_model("registers", "Counterparty")
+    found = {c.id: c for c in model.objects.filter(legal_entity_id=entity_id, id__in=wanted)}
+    for i, ln in enumerate(lines):
+        if ln.counterparty_id is None:
+            continue
+        counterparty = found.get(ln.counterparty_id)
+        if counterparty is None:
+            raise CounterpartyInvalidError(
+                "The customer or supplier does not exist in this entity.",
+                field_errors={f"lines.{i}.counterparty_id": ["not found"]},
+            )
+        if counterparty.status != "ACTIVE" and not allow_inactive:
+            raise CounterpartyInvalidError(
+                f"{counterparty.code} is inactive and cannot be used.",
+                field_errors={f"lines.{i}.counterparty_id": ["inactive"]},
+            )
+    return found
 
 
 def _check_complete(entry: JournalEntry) -> None:
@@ -253,6 +293,13 @@ def _check_complete(entry: JournalEntry) -> None:
             raise AccountNotPostableError(
                 f"Account {ln.account.code} is a heading or inactive and cannot be posted to."
             )
+    for ln in lines:
+        if ln.account.control_type and ln.counterparty_id is None:
+            raise CounterpartyRequiredError(
+                f"Line {ln.line_no}: account {ln.account.code} is a control account; "
+                "choose the customer or supplier.",
+                field_errors={f"lines.{ln.line_no - 1}.counterparty_id": ["required"]},
+            )
     if entry.entry_type != JournalEntry.EntryType.REVERSAL:  # reversals mirror the original
         dimensions.check_rules(entry.legal_entity_id, lines)
 
@@ -268,6 +315,14 @@ def _hash_line(ln: JournalLine) -> list[Any]:
     tags = sorted(str(t.value_id) for t in ln.dimension_tags.all())
     if tags:  # untagged lines hash exactly as before dimensions existed
         row.append(tags)
+    if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
+        row.append(
+            [
+                str(ln.counterparty_id or ""),
+                ln.reference,
+                ln.due_date.isoformat() if ln.due_date else "",
+            ]
+        )
     return row
 
 
@@ -330,7 +385,10 @@ def list_entries(  # noqa: PLR0913 - keyword-only filters
 ) -> list[JournalEntry]:
     get_entity(ctx, entity_id, "ledger.entry.read")
     queryset = JournalEntry.objects.filter(legal_entity_id=entity_id).prefetch_related(
-        "lines__account", "lines__dimension_tags__value", "lines__dimension_tags__dimension"
+        "lines__account",
+        "lines__counterparty",
+        "lines__dimension_tags__value",
+        "lines__dimension_tags__dimension",
     )
     if status:
         queryset = queryset.filter(status=status)
@@ -367,6 +425,8 @@ def _line_snapshot(entry: JournalEntry) -> list[list[str]]:
     for ln in sorted(entry.lines.all(), key=lambda x: x.line_no):
         row = [ln.account.code, f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
         row += _tag_codes(ln)
+        if ln.counterparty_id:
+            row += [f"counterparty={ln.counterparty_id}", f"ref={ln.reference}"]
         snapshot.append(row)
     return snapshot
 

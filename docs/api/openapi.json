@@ -24,6 +24,16 @@
             "title": "Code",
             "type": "string"
           },
+          "control_type": {
+            "default": "",
+            "enum": [
+              "",
+              "RECEIVABLE",
+              "PAYABLE"
+            ],
+            "title": "Control Type",
+            "type": "string"
+          },
           "currency": {
             "default": "",
             "pattern": "^([A-Z]{3})?$",
@@ -131,6 +141,10 @@
             "title": "Code",
             "type": "string"
           },
+          "control_type": {
+            "title": "Control Type",
+            "type": "string"
+          },
           "currency": {
             "title": "Currency",
             "type": "string"
@@ -187,13 +201,30 @@
           "parent_id",
           "is_postable",
           "status",
-          "currency"
+          "currency",
+          "control_type"
         ],
         "title": "AccountOut",
         "type": "object"
       },
       "AccountPatch": {
         "properties": {
+          "control_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "",
+                  "RECEIVABLE",
+                  "PAYABLE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Type"
+          },
           "name": {
             "anyOf": [
               {
@@ -292,6 +323,190 @@
           "reason"
         ],
         "title": "AdjustIn",
+        "type": "object"
+      },
+      "AgeingOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "control_balance": {
+            "title": "Control Balance",
+            "type": "string"
+          },
+          "reconciles": {
+            "title": "Reconciles",
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AgeingRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Totals",
+            "type": "object"
+          },
+          "unapplied": {
+            "title": "Unapplied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "side",
+          "rows",
+          "totals",
+          "unapplied",
+          "total",
+          "control_balance",
+          "reconciles"
+        ],
+        "title": "AgeingOut",
+        "type": "object"
+      },
+      "AgeingQuery": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "side": {
+            "default": "RECEIVABLE",
+            "enum": [
+              "RECEIVABLE",
+              "PAYABLE"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "AgeingQuery",
+        "type": "object"
+      },
+      "AgeingRowOut": {
+        "properties": {
+          "buckets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Buckets",
+            "type": "object"
+          },
+          "counterparty_code": {
+            "title": "Counterparty Code",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "format": "uuid",
+            "title": "Counterparty Id",
+            "type": "string"
+          },
+          "counterparty_name": {
+            "title": "Counterparty Name",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          },
+          "unapplied": {
+            "title": "Unapplied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "counterparty_id",
+          "counterparty_code",
+          "counterparty_name",
+          "buckets",
+          "unapplied",
+          "total"
+        ],
+        "title": "AgeingRowOut",
+        "type": "object"
+      },
+      "AllocationIn": {
+        "properties": {
+          "amount": {
+            "description": "Decimal string, e.g. \"120.50\"",
+            "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "invoice_line_id": {
+            "format": "uuid",
+            "title": "Invoice Line Id",
+            "type": "string"
+          },
+          "payment_line_id": {
+            "format": "uuid",
+            "title": "Payment Line Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_line_id",
+          "payment_line_id",
+          "amount"
+        ],
+        "title": "AllocationIn",
+        "type": "object"
+      },
+      "AllocationOut": {
+        "properties": {
+          "allocated_on": {
+            "format": "date",
+            "title": "Allocated On",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "credit_line_id": {
+            "format": "uuid",
+            "title": "Credit Line Id",
+            "type": "string"
+          },
+          "debit_line_id": {
+            "format": "uuid",
+            "title": "Debit Line Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "debit_line_id",
+          "credit_line_id",
+          "amount",
+          "allocated_on"
+        ],
+        "title": "AllocationOut",
         "type": "object"
       },
       "Approval": {
@@ -425,6 +640,20 @@
         "title": "AuditFilter",
         "type": "object"
       },
+      "AutoAllocateIn": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "AutoAllocateIn",
+        "type": "object"
+      },
       "ChainStatusOut": {
         "properties": {
           "broken_at_seq": {
@@ -458,6 +687,192 @@
           "reason"
         ],
         "title": "ChainStatusOut",
+        "type": "object"
+      },
+      "CounterpartyFilter": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Kind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CounterpartyFilter",
+        "type": "object"
+      },
+      "CounterpartyIn": {
+        "properties": {
+          "code": {
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "payment_terms_days": {
+            "default": 30,
+            "maximum": 365,
+            "minimum": 0,
+            "title": "Payment Terms Days",
+            "type": "integer"
+          },
+          "vat_no": {
+            "default": "",
+            "maxLength": 30,
+            "title": "Vat No",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind"
+        ],
+        "title": "CounterpartyIn",
+        "type": "object"
+      },
+      "CounterpartyOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "payment_terms_days": {
+            "title": "Payment Terms Days",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vat_no": {
+            "title": "Vat No",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "vat_no",
+          "email",
+          "payment_terms_days",
+          "status"
+        ],
+        "title": "CounterpartyOut",
+        "type": "object"
+      },
+      "CounterpartyPatch": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "payment_terms_days": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Terms Days"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vat_no": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat No"
+          }
+        },
+        "title": "CounterpartyPatch",
         "type": "object"
       },
       "DimensionIn": {
@@ -1165,6 +1580,49 @@
         "title": "FiscalYearOut",
         "type": "object"
       },
+      "FlagIn": {
+        "properties": {
+          "disputed": {
+            "title": "Disputed",
+            "type": "boolean"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "disputed"
+        ],
+        "title": "FlagIn",
+        "type": "object"
+      },
+      "FlagOut": {
+        "properties": {
+          "disputed": {
+            "title": "Disputed",
+            "type": "boolean"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "disputed",
+          "note"
+        ],
+        "title": "FlagOut",
+        "type": "object"
+      },
       "IntegrityCheckOut": {
         "properties": {
           "created_at": {
@@ -1280,10 +1738,12 @@
       },
       "Kind": {
         "enum": [
-          "DEPARTMENT",
-          "PROJECT",
-          "COST_CENTRE",
-          "CUSTOM"
+          "CUSTOMER",
+          "SUPPLIER",
+          "BOTH",
+          "EMPLOYEE",
+          "TAX_AUTHORITY",
+          "LENDER"
         ],
         "title": "Kind",
         "type": "string"
@@ -1417,6 +1877,19 @@
             "title": "Account Id",
             "type": "string"
           },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Customer or supplier; required on control-account lines",
+            "title": "Counterparty Id"
+          },
           "credit": {
             "default": "0",
             "description": "Decimal string",
@@ -1441,10 +1914,29 @@
             "title": "Dimension Value Ids",
             "type": "array"
           },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
           "memo": {
             "default": "",
             "maxLength": 300,
             "title": "Memo",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "description": "Invoice or document number",
+            "maxLength": 50,
+            "title": "Reference",
             "type": "string"
           }
         },
@@ -1465,6 +1957,29 @@
             "title": "Account Id",
             "type": "string"
           },
+          "counterparty_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Code"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
           "credit": {
             "title": "Credit",
             "type": "string"
@@ -1480,12 +1995,28 @@
             "title": "Dimensions",
             "type": "array"
           },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
           "line_no": {
             "title": "Line No",
             "type": "integer"
           },
           "memo": {
             "title": "Memo",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
             "type": "string"
           }
         },
@@ -1496,7 +2027,11 @@
           "debit",
           "credit",
           "memo",
-          "dimensions"
+          "dimensions",
+          "counterparty_id",
+          "counterparty_code",
+          "reference",
+          "due_date"
         ],
         "title": "LineOut",
         "type": "object"
@@ -1590,6 +2125,160 @@
           "roles"
         ],
         "title": "MemberOut",
+        "type": "object"
+      },
+      "OpenItemOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "accounting_date": {
+            "format": "date",
+            "title": "Accounting Date",
+            "type": "string"
+          },
+          "allocated": {
+            "title": "Allocated",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "counterparty_code": {
+            "title": "Counterparty Code",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "format": "uuid",
+            "title": "Counterparty Id",
+            "type": "string"
+          },
+          "days_overdue": {
+            "title": "Days Overdue",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "disputed": {
+            "title": "Disputed",
+            "type": "boolean"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "entry_ref": {
+            "title": "Entry Ref",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "open_amount": {
+            "title": "Open Amount",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "entry_id",
+          "entry_ref",
+          "side",
+          "kind",
+          "account_code",
+          "counterparty_id",
+          "counterparty_code",
+          "accounting_date",
+          "due_date",
+          "days_overdue",
+          "reference",
+          "description",
+          "amount",
+          "allocated",
+          "open_amount",
+          "status",
+          "disputed",
+          "note"
+        ],
+        "title": "OpenItemOut",
+        "type": "object"
+      },
+      "OpenItemQuery": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "include_settled": {
+            "default": false,
+            "title": "Include Settled",
+            "type": "boolean"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RECEIVABLE",
+                  "PAYABLE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "OpenItemQuery",
         "type": "object"
       },
       "PeriodOut": {
@@ -1823,12 +2512,8 @@
       },
       "Status": {
         "enum": [
-          "DRAFT",
-          "SUBMITTED",
-          "APPROVED",
-          "POSTED",
-          "REJECTED",
-          "VOID"
+          "ACTIVE",
+          "INACTIVE"
         ],
         "title": "Status",
         "type": "string"
@@ -3029,6 +3714,442 @@
         "summary": "Set Dimension Rules",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/allocations": {
+      "post": {
+        "operationId": "fcp_modules_registers_api_create_allocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Allocation",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/allocations/{allocation_id}": {
+      "delete": {
+        "operationId": "fcp_modules_registers_api_delete_allocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Delete Allocation",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/counterparties": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_counterparties",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Kind"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Status"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CounterpartyOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Counterparties",
+        "tags": [
+          "registers"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_registers_api_create_counterparty",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterpartyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartyOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Counterparty",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/counterparties/{counterparty_id}": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_get_counterparty",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "counterparty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Counterparty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Counterparty",
+        "tags": [
+          "registers"
+        ]
+      },
+      "patch": {
+        "operationId": "fcp_modules_registers_api_update_counterparty",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "counterparty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Counterparty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterpartyPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Update Counterparty",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/counterparties/{counterparty_id}/auto-allocate": {
+      "post": {
+        "operationId": "fcp_modules_registers_api_auto_allocate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "counterparty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Counterparty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAllocateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllocationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Auto Allocate",
+        "tags": [
+          "registers"
         ]
       }
     },
@@ -4276,6 +5397,242 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/open-items": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_open_items",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "counterparty_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Counterparty Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "RECEIVABLE",
+                    "PAYABLE"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Side"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_settled",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Settled",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OpenItemOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Open Items",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/open-items/{line_id}/allocations": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_allocations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllocationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Allocations",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/open-items/{line_id}/flag": {
+      "put": {
+        "operationId": "fcp_modules_registers_api_set_flag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlagOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Flag",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/periods/{period_id}/status": {
       "post": {
         "operationId": "fcp_modules_ledger_api_change_period_status",
@@ -4407,6 +5764,141 @@
         "summary": "Request Unlock",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/reports/ageing": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_ageing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side",
+            "required": false,
+            "schema": {
+              "default": "RECEIVABLE",
+              "enum": [
+                "RECEIVABLE",
+                "PAYABLE"
+              ],
+              "title": "Side",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgeingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Ageing",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/reports/ageing.csv": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_ageing_csv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side",
+            "required": false,
+            "schema": {
+              "default": "RECEIVABLE",
+              "enum": [
+                "RECEIVABLE",
+                "PAYABLE"
+              ],
+              "title": "Side",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Ageing Csv",
+        "tags": [
+          "registers"
         ]
       }
     },

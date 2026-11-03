@@ -45,9 +45,19 @@ class Account(TenantOwned):
     parent = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children"
     )
+
+    class Control(models.TextChoices):
+        NONE = "", "None"
+        RECEIVABLE = "RECEIVABLE"
+        PAYABLE = "PAYABLE"
+
     is_postable = models.BooleanField(default=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     currency = models.CharField(max_length=3, blank=True, help_text="Blank: any currency")
+    # Control accounts (M2-2): every line needs a counterparty; lines are the open items.
+    control_type = models.CharField(
+        max_length=10, choices=Control.choices, blank=True, default=Control.NONE
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
@@ -260,6 +270,12 @@ class JournalLine(TenantOwned):
     debit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
     credit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
     memo = models.CharField(max_length=300, blank=True)
+    # Sub-ledger fields (M2-2); required on control-account lines.
+    counterparty = models.ForeignKey(
+        "registers.Counterparty", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    reference = models.CharField(max_length=50, blank=True, help_text="Invoice or document no.")
+    due_date = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "ledger_journal_line"

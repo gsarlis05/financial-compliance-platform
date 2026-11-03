@@ -3,60 +3,396 @@
   "name": "Cyprus company (IFRS-aligned)",
   "note": "Starting structure for review by the entity's accountant; not professional advice.",
   "accounts": [
-    {"code": "1", "name": "Assets", "name_el": "Ενεργητικό", "type": "ASSET", "postable": false},
-    {"code": "10", "name": "Non-current assets", "name_el": "Μη κυκλοφορούν ενεργητικό", "type": "ASSET", "postable": false, "parent": "1"},
-    {"code": "1010", "name": "Property, plant and equipment - cost", "name_el": "Ακίνητα, εγκαταστάσεις και εξοπλισμός - κόστος", "type": "ASSET", "parent": "10"},
-    {"code": "1019", "name": "Property, plant and equipment - accumulated depreciation", "name_el": "Συσσωρευμένες αποσβέσεις", "type": "ASSET", "parent": "10"},
-    {"code": "1020", "name": "Intangible assets", "name_el": "Άυλα περιουσιακά στοιχεία", "type": "ASSET", "parent": "10"},
-    {"code": "1030", "name": "Investments", "name_el": "Επενδύσεις", "type": "ASSET", "parent": "10"},
-    {"code": "11", "name": "Current assets", "name_el": "Κυκλοφορούν ενεργητικό", "type": "ASSET", "postable": false, "parent": "1"},
-    {"code": "1100", "name": "Inventory", "name_el": "Αποθέματα", "type": "ASSET", "parent": "11"},
-    {"code": "1200", "name": "Trade receivables", "name_el": "Εμπορικοί χρεώστες", "type": "ASSET", "parent": "11"},
-    {"code": "1210", "name": "Other receivables and prepayments", "name_el": "Άλλοι χρεώστες και προπληρωμές", "type": "ASSET", "parent": "11"},
-    {"code": "1220", "name": "VAT receivable (input VAT)", "name_el": "ΦΠΑ εισροών", "type": "ASSET", "parent": "11"},
-    {"code": "1300", "name": "Bank - current account", "name_el": "Τράπεζα - τρεχούμενος λογαριασμός", "type": "ASSET", "parent": "11"},
-    {"code": "1310", "name": "Bank - savings account", "name_el": "Τράπεζα - λογαριασμός ταμιευτηρίου", "type": "ASSET", "parent": "11"},
-    {"code": "1350", "name": "Cash in hand", "name_el": "Μετρητά", "type": "ASSET", "parent": "11"},
-    {"code": "2", "name": "Liabilities", "name_el": "Υποχρεώσεις", "type": "LIABILITY", "postable": false},
-    {"code": "20", "name": "Non-current liabilities", "name_el": "Μακροπρόθεσμες υποχρεώσεις", "type": "LIABILITY", "postable": false, "parent": "2"},
-    {"code": "2010", "name": "Bank loans - non-current", "name_el": "Τραπεζικά δάνεια - μακροπρόθεσμα", "type": "LIABILITY", "parent": "20"},
-    {"code": "2020", "name": "Director loans", "name_el": "Δάνεια συμβούλων", "type": "LIABILITY", "parent": "20"},
-    {"code": "21", "name": "Current liabilities", "name_el": "Τρέχουσες υποχρεώσεις", "type": "LIABILITY", "postable": false, "parent": "2"},
-    {"code": "2100", "name": "Trade payables", "name_el": "Εμπορικοί πιστωτές", "type": "LIABILITY", "parent": "21"},
-    {"code": "2110", "name": "Accruals and other payables", "name_el": "Οφειλόμενα έξοδα και άλλοι πιστωτές", "type": "LIABILITY", "parent": "21"},
-    {"code": "2120", "name": "VAT payable (output VAT)", "name_el": "ΦΠΑ εκροών", "type": "LIABILITY", "parent": "21"},
-    {"code": "2130", "name": "Corporate income tax payable", "name_el": "Φόρος εισοδήματος πληρωτέος", "type": "LIABILITY", "parent": "21"},
-    {"code": "2140", "name": "Payroll liabilities", "name_el": "Υποχρεώσεις μισθοδοσίας", "type": "LIABILITY", "parent": "21"},
-    {"code": "2150", "name": "Bank loans - current portion", "name_el": "Τραπεζικά δάνεια - βραχυπρόθεσμο μέρος", "type": "LIABILITY", "parent": "21"},
-    {"code": "3", "name": "Equity", "name_el": "Ίδια κεφάλαια", "type": "EQUITY", "postable": false},
-    {"code": "3000", "name": "Share capital", "name_el": "Μετοχικό κεφάλαιο", "type": "EQUITY", "parent": "3"},
-    {"code": "3100", "name": "Share premium", "name_el": "Αποθεματικό από έκδοση μετοχών υπέρ το άρτιο", "type": "EQUITY", "parent": "3"},
-    {"code": "3200", "name": "Retained earnings", "name_el": "Αποθεματικό προσόδου", "type": "EQUITY", "parent": "3"},
-    {"code": "3300", "name": "Dividends declared", "name_el": "Μερίσματα", "type": "EQUITY", "parent": "3"},
-    {"code": "4", "name": "Income", "name_el": "Έσοδα", "type": "INCOME", "postable": false},
-    {"code": "4000", "name": "Sales revenue", "name_el": "Πωλήσεις", "type": "INCOME", "parent": "4"},
-    {"code": "4100", "name": "Services revenue", "name_el": "Έσοδα από υπηρεσίες", "type": "INCOME", "parent": "4"},
-    {"code": "4900", "name": "Other income", "name_el": "Άλλα έσοδα", "type": "INCOME", "parent": "4"},
-    {"code": "4910", "name": "Interest income", "name_el": "Έσοδα από τόκους", "type": "INCOME", "parent": "4"},
-    {"code": "5", "name": "Cost of sales", "name_el": "Κόστος πωλήσεων", "type": "EXPENSE", "postable": false},
-    {"code": "5000", "name": "Purchases and direct costs", "name_el": "Αγορές και άμεσα κόστη", "type": "EXPENSE", "parent": "5"},
-    {"code": "6", "name": "Operating expenses", "name_el": "Έξοδα λειτουργίας", "type": "EXPENSE", "postable": false},
-    {"code": "6000", "name": "Salaries and wages", "name_el": "Μισθοί και ημερομίσθια", "type": "EXPENSE", "parent": "6"},
-    {"code": "6010", "name": "Employer social insurance and contributions", "name_el": "Εισφορές εργοδότη", "type": "EXPENSE", "parent": "6"},
-    {"code": "6100", "name": "Rent", "name_el": "Ενοίκια", "type": "EXPENSE", "parent": "6"},
-    {"code": "6110", "name": "Utilities", "name_el": "Ηλεκτρισμός, νερό και τηλεπικοινωνίες", "type": "EXPENSE", "parent": "6"},
-    {"code": "6200", "name": "Professional fees", "name_el": "Επαγγελματικά δικαιώματα", "type": "EXPENSE", "parent": "6"},
-    {"code": "6210", "name": "Audit and accounting fees", "name_el": "Αμοιβή ελεγκτών και λογιστών", "type": "EXPENSE", "parent": "6"},
-    {"code": "6300", "name": "Marketing and advertising", "name_el": "Διαφήμιση", "type": "EXPENSE", "parent": "6"},
-    {"code": "6400", "name": "Travel", "name_el": "Έξοδα ταξιδιών", "type": "EXPENSE", "parent": "6"},
-    {"code": "6500", "name": "Insurance", "name_el": "Ασφάλιστρα", "type": "EXPENSE", "parent": "6"},
-    {"code": "6600", "name": "Depreciation", "name_el": "Αποσβέσεις", "type": "EXPENSE", "parent": "6"},
-    {"code": "6900", "name": "Other operating expenses", "name_el": "Άλλα έξοδα λειτουργίας", "type": "EXPENSE", "parent": "6"},
-    {"code": "7", "name": "Finance costs and taxation", "name_el": "Χρηματοδοτικά έξοδα και φορολογία", "type": "EXPENSE", "postable": false},
-    {"code": "7000", "name": "Interest expense", "name_el": "Τόκοι πληρωτέοι", "type": "EXPENSE", "parent": "7"},
-    {"code": "7010", "name": "Bank charges", "name_el": "Τραπεζικά έξοδα", "type": "EXPENSE", "parent": "7"},
-    {"code": "7020", "name": "Foreign exchange differences", "name_el": "Συναλλαγματικές διαφορές", "type": "EXPENSE", "parent": "7"},
-    {"code": "7500", "name": "Corporate income tax expense", "name_el": "Φορολογία", "type": "EXPENSE", "parent": "7"},
-    {"code": "9999", "name": "Suspense (to be cleared before period close)", "name_el": "Μεταβατικός λογαριασμός", "type": "ASSET", "parent": "11"}
+    {
+      "code": "1",
+      "name": "Assets",
+      "name_el": "Ενεργητικό",
+      "type": "ASSET",
+      "postable": false
+    },
+    {
+      "code": "10",
+      "name": "Non-current assets",
+      "name_el": "Μη κυκλοφορούν ενεργητικό",
+      "type": "ASSET",
+      "postable": false,
+      "parent": "1"
+    },
+    {
+      "code": "1010",
+      "name": "Property, plant and equipment - cost",
+      "name_el": "Ακίνητα, εγκαταστάσεις και εξοπλισμός - κόστος",
+      "type": "ASSET",
+      "parent": "10"
+    },
+    {
+      "code": "1019",
+      "name": "Property, plant and equipment - accumulated depreciation",
+      "name_el": "Συσσωρευμένες αποσβέσεις",
+      "type": "ASSET",
+      "parent": "10"
+    },
+    {
+      "code": "1020",
+      "name": "Intangible assets",
+      "name_el": "Άυλα περιουσιακά στοιχεία",
+      "type": "ASSET",
+      "parent": "10"
+    },
+    {
+      "code": "1030",
+      "name": "Investments",
+      "name_el": "Επενδύσεις",
+      "type": "ASSET",
+      "parent": "10"
+    },
+    {
+      "code": "11",
+      "name": "Current assets",
+      "name_el": "Κυκλοφορούν ενεργητικό",
+      "type": "ASSET",
+      "postable": false,
+      "parent": "1"
+    },
+    {
+      "code": "1100",
+      "name": "Inventory",
+      "name_el": "Αποθέματα",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "1200",
+      "name": "Trade receivables",
+      "name_el": "Εμπορικοί χρεώστες",
+      "type": "ASSET",
+      "parent": "11",
+      "control": "RECEIVABLE"
+    },
+    {
+      "code": "1210",
+      "name": "Other receivables and prepayments",
+      "name_el": "Άλλοι χρεώστες και προπληρωμές",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "1220",
+      "name": "VAT receivable (input VAT)",
+      "name_el": "ΦΠΑ εισροών",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "1300",
+      "name": "Bank - current account",
+      "name_el": "Τράπεζα - τρεχούμενος λογαριασμός",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "1310",
+      "name": "Bank - savings account",
+      "name_el": "Τράπεζα - λογαριασμός ταμιευτηρίου",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "1350",
+      "name": "Cash in hand",
+      "name_el": "Μετρητά",
+      "type": "ASSET",
+      "parent": "11"
+    },
+    {
+      "code": "2",
+      "name": "Liabilities",
+      "name_el": "Υποχρεώσεις",
+      "type": "LIABILITY",
+      "postable": false
+    },
+    {
+      "code": "20",
+      "name": "Non-current liabilities",
+      "name_el": "Μακροπρόθεσμες υποχρεώσεις",
+      "type": "LIABILITY",
+      "postable": false,
+      "parent": "2"
+    },
+    {
+      "code": "2010",
+      "name": "Bank loans - non-current",
+      "name_el": "Τραπεζικά δάνεια - μακροπρόθεσμα",
+      "type": "LIABILITY",
+      "parent": "20"
+    },
+    {
+      "code": "2020",
+      "name": "Director loans",
+      "name_el": "Δάνεια συμβούλων",
+      "type": "LIABILITY",
+      "parent": "20"
+    },
+    {
+      "code": "21",
+      "name": "Current liabilities",
+      "name_el": "Τρέχουσες υποχρεώσεις",
+      "type": "LIABILITY",
+      "postable": false,
+      "parent": "2"
+    },
+    {
+      "code": "2100",
+      "name": "Trade payables",
+      "name_el": "Εμπορικοί πιστωτές",
+      "type": "LIABILITY",
+      "parent": "21",
+      "control": "PAYABLE"
+    },
+    {
+      "code": "2110",
+      "name": "Accruals and other payables",
+      "name_el": "Οφειλόμενα έξοδα και άλλοι πιστωτές",
+      "type": "LIABILITY",
+      "parent": "21"
+    },
+    {
+      "code": "2120",
+      "name": "VAT payable (output VAT)",
+      "name_el": "ΦΠΑ εκροών",
+      "type": "LIABILITY",
+      "parent": "21"
+    },
+    {
+      "code": "2130",
+      "name": "Corporate income tax payable",
+      "name_el": "Φόρος εισοδήματος πληρωτέος",
+      "type": "LIABILITY",
+      "parent": "21"
+    },
+    {
+      "code": "2140",
+      "name": "Payroll liabilities",
+      "name_el": "Υποχρεώσεις μισθοδοσίας",
+      "type": "LIABILITY",
+      "parent": "21"
+    },
+    {
+      "code": "2150",
+      "name": "Bank loans - current portion",
+      "name_el": "Τραπεζικά δάνεια - βραχυπρόθεσμο μέρος",
+      "type": "LIABILITY",
+      "parent": "21"
+    },
+    {
+      "code": "3",
+      "name": "Equity",
+      "name_el": "Ίδια κεφάλαια",
+      "type": "EQUITY",
+      "postable": false
+    },
+    {
+      "code": "3000",
+      "name": "Share capital",
+      "name_el": "Μετοχικό κεφάλαιο",
+      "type": "EQUITY",
+      "parent": "3"
+    },
+    {
+      "code": "3100",
+      "name": "Share premium",
+      "name_el": "Αποθεματικό από έκδοση μετοχών υπέρ το άρτιο",
+      "type": "EQUITY",
+      "parent": "3"
+    },
+    {
+      "code": "3200",
+      "name": "Retained earnings",
+      "name_el": "Αποθεματικό προσόδου",
+      "type": "EQUITY",
+      "parent": "3"
+    },
+    {
+      "code": "3300",
+      "name": "Dividends declared",
+      "name_el": "Μερίσματα",
+      "type": "EQUITY",
+      "parent": "3"
+    },
+    {
+      "code": "4",
+      "name": "Income",
+      "name_el": "Έσοδα",
+      "type": "INCOME",
+      "postable": false
+    },
+    {
+      "code": "4000",
+      "name": "Sales revenue",
+      "name_el": "Πωλήσεις",
+      "type": "INCOME",
+      "parent": "4"
+    },
+    {
+      "code": "4100",
+      "name": "Services revenue",
+      "name_el": "Έσοδα από υπηρεσίες",
+      "type": "INCOME",
+      "parent": "4"
+    },
+    {
+      "code": "4900",
+      "name": "Other income",
+      "name_el": "Άλλα έσοδα",
+      "type": "INCOME",
+      "parent": "4"
+    },
+    {
+      "code": "4910",
+      "name": "Interest income",
+      "name_el": "Έσοδα από τόκους",
+      "type": "INCOME",
+      "parent": "4"
+    },
+    {
+      "code": "5",
+      "name": "Cost of sales",
+      "name_el": "Κόστος πωλήσεων",
+      "type": "EXPENSE",
+      "postable": false
+    },
+    {
+      "code": "5000",
+      "name": "Purchases and direct costs",
+      "name_el": "Αγορές και άμεσα κόστη",
+      "type": "EXPENSE",
+      "parent": "5"
+    },
+    {
+      "code": "6",
+      "name": "Operating expenses",
+      "name_el": "Έξοδα λειτουργίας",
+      "type": "EXPENSE",
+      "postable": false
+    },
+    {
+      "code": "6000",
+      "name": "Salaries and wages",
+      "name_el": "Μισθοί και ημερομίσθια",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6010",
+      "name": "Employer social insurance and contributions",
+      "name_el": "Εισφορές εργοδότη",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6100",
+      "name": "Rent",
+      "name_el": "Ενοίκια",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6110",
+      "name": "Utilities",
+      "name_el": "Ηλεκτρισμός, νερό και τηλεπικοινωνίες",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6200",
+      "name": "Professional fees",
+      "name_el": "Επαγγελματικά δικαιώματα",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6210",
+      "name": "Audit and accounting fees",
+      "name_el": "Αμοιβή ελεγκτών και λογιστών",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6300",
+      "name": "Marketing and advertising",
+      "name_el": "Διαφήμιση",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6400",
+      "name": "Travel",
+      "name_el": "Έξοδα ταξιδιών",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6500",
+      "name": "Insurance",
+      "name_el": "Ασφάλιστρα",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6600",
+      "name": "Depreciation",
+      "name_el": "Αποσβέσεις",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "6900",
+      "name": "Other operating expenses",
+      "name_el": "Άλλα έξοδα λειτουργίας",
+      "type": "EXPENSE",
+      "parent": "6"
+    },
+    {
+      "code": "7",
+      "name": "Finance costs and taxation",
+      "name_el": "Χρηματοδοτικά έξοδα και φορολογία",
+      "type": "EXPENSE",
+      "postable": false
+    },
+    {
+      "code": "7000",
+      "name": "Interest expense",
+      "name_el": "Τόκοι πληρωτέοι",
+      "type": "EXPENSE",
+      "parent": "7"
+    },
+    {
+      "code": "7010",
+      "name": "Bank charges",
+      "name_el": "Τραπεζικά έξοδα",
+      "type": "EXPENSE",
+      "parent": "7"
+    },
+    {
+      "code": "7020",
+      "name": "Foreign exchange differences",
+      "name_el": "Συναλλαγματικές διαφορές",
+      "type": "EXPENSE",
+      "parent": "7"
+    },
+    {
+      "code": "7500",
+      "name": "Corporate income tax expense",
+      "name_el": "Φορολογία",
+      "type": "EXPENSE",
+      "parent": "7"
+    },
+    {
+      "code": "9999",
+      "name": "Suspense (to be cleared before period close)",
+      "name_el": "Μεταβατικός λογαριασμός",
+      "type": "ASSET",
+      "parent": "11"
+    }
   ]
 }

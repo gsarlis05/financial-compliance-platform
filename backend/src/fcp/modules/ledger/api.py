@@ -24,12 +24,13 @@ from .models import (
     FiscalYear,
     IntegrityCheckRun,
     JournalEntry,
+    JournalLine,
     LedgerSettings,
     Period,
     PeriodUnlock,
 )
 
-__all__ = ["Account", "FiscalYear", "JournalEntry", "Period", "router"]
+__all__ = ["Account", "FiscalYear", "JournalEntry", "JournalLine", "Period", "router"]
 
 router = Router(tags=["ledger"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
@@ -43,12 +44,14 @@ class AccountIn(Schema):
     parent_code: str | None = Field(default=None, max_length=20)
     is_postable: bool = True
     currency: str = Field(default="", pattern=r"^([A-Z]{3})?$")
+    control_type: Literal["", "RECEIVABLE", "PAYABLE"] = ""
 
 
 class AccountPatch(Schema):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     name_el: str | None = Field(default=None, max_length=200)
     status: Account.Status | None = None
+    control_type: Literal["", "RECEIVABLE", "PAYABLE"] | None = None
 
 
 class AccountOut(Schema):
@@ -62,6 +65,7 @@ class AccountOut(Schema):
     is_postable: bool
     status: str
     currency: str
+    control_type: str
 
 
 class TemplateIn(Schema):
@@ -337,6 +341,11 @@ class LineIn(Schema):
     dimension_value_ids: list[UUID] = Field(
         default_factory=list, max_length=10, description="At most one value per dimension"
     )
+    counterparty_id: UUID | None = Field(
+        default=None, description="Customer or supplier; required on control-account lines"
+    )
+    reference: str = Field(default="", max_length=50, description="Invoice or document number")
+    due_date: date | None = None
 
 
 class EntryIn(Schema):
@@ -364,6 +373,10 @@ class LineOut(Schema):
     credit: str
     memo: str
     dimensions: list[LineDimensionOut]
+    counterparty_id: UUID | None
+    counterparty_code: str | None
+    reference: str
+    due_date: date | None
 
 
 class EntryOut(Schema):
@@ -453,6 +466,10 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                     )
                     for t in sorted(ln.dimension_tags.all(), key=lambda t: t.dimension.code)
                 ],
+                counterparty_id=ln.counterparty_id,
+                counterparty_code=ln.counterparty.code if ln.counterparty else None,
+                reference=ln.reference,
+                due_date=ln.due_date,
             )
             for ln in lines
         ],
@@ -468,7 +485,14 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
         use_adjustment_period=payload.use_adjustment_period,
         lines=[
             entries.LineInput(
-                ln.account_id, ln.debit, ln.credit, ln.memo, tuple(ln.dimension_value_ids)
+                ln.account_id,
+                ln.debit,
+                ln.credit,
+                ln.memo,
+                tuple(ln.dimension_value_ids),
+                ln.counterparty_id,
+                ln.reference,
+                ln.due_date,
             )
             for ln in payload.lines
         ],
