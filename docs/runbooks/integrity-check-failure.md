@@ -45,3 +45,12 @@ security incident until the cause is known.
 - If tampering is suspected: rotate database credentials, review access, and assess GDPR breach
   notification (72 hours, Art. 33) with the data protection contact.
 - Close the incident only after a PASSED run. Write a short post-mortem.
+
+
+## Related: actuals read model drift (`actuals_verify`)
+`make ops-checks` also runs `actuals_verify`, which compares the `reporting.actuals` read model
+(monthly and daily facts used by statements, budgets and forecasts) with the ledger. A drift is
+logged as `reporting.actuals_drift`. The facts are derived data, so the ledger is always right:
+after recording the drift (`GET /api/w/{slug}/actuals/verify`), repair it with
+`POST /api/w/{slug}/actuals/rebuild` (owners and finance managers; audited), then find the cause
+(a drift means facts were changed outside the application, or a code bug) before closing.
