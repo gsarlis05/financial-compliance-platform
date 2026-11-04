@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 17
+    assert len(result.steps) == 18
     assert all(line.startswith("✔") for line in said)
     _assert_golden_statements(result.statements)
 
@@ -60,6 +60,8 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     slugs = [w["slug"] for w in client.call("GET", "/api/workspaces")]
     assert result.slug in slugs
     base = f"/api/w/{result.slug}/entities/{result.entity_id}"
+    forecast_run = client.call("GET", f"{base}/calc-runs/{result.forecast['run_id']}")
+    _assert_golden_forecast(result.forecast, forecast_run["input_refs"])
     entries: list[dict[str, Any]] = client.call("GET", f"{base}/journal-entries?limit=500")
     statuses = {e["status"] for e in entries}
     assert statuses == {"POSTED", "VOID"}
@@ -106,3 +108,49 @@ def test_demo_client_reports_unexpected_status() -> None:
 def test_demo_cli_refuses_without_debug(capsys: pytest.CaptureFixture[str]) -> None:
     assert demo_cli.main([]) == 2
     assert "only allowed with DEBUG" in capsys.readouterr().err
+
+
+GOLDEN_FORECAST = Path(__file__).parent / "golden" / "demo_cash_13w.json"
+
+
+def _assert_golden_forecast(forecast: dict[str, Any], refs: dict[str, Any]) -> None:
+    """AC-CW5 (pending sign-off): the 13-week forecast for Demo Trading.
+
+    1. Independently of the engine, recompute each week's closing from the run's stored inputs
+       with the plain reference calculation (tests/cashflow/test_engine.py).
+    2. Compare with the reviewed golden file. It is marked ``signed_off: false`` until a finance
+       professional has checked it (brief §3); regenerate with ``UPDATE_GOLDEN=1`` only after
+       reviewing the change.
+    """
+    from datetime import date  # noqa: PLC0415
+
+    from ..cashflow.test_engine import reference  # noqa: PLC0415
+
+    closings, shortfall = reference(
+        Decimal(forecast["opening_cash"]),
+        refs["flows"],
+        date.fromisoformat(forecast["as_of"]),
+        Decimal(refs["minimum_cash"]),
+    )
+    assert [Decimal(w["closing"]) for w in forecast["weeks"]] == closings
+    first = forecast["first_shortfall"]
+    assert (
+        None if first is None else (date.fromisoformat(first["date"]), Decimal(first["balance"]))
+    ) == shortfall
+    compact = {
+        "signed_off": False,
+        "note": "Computed by the engine and cross-checked against the independent reference; "
+        "not yet signed off by a finance professional.",
+        "as_of": forecast["as_of"],
+        "opening_cash": forecast["opening_cash"],
+        "weeks": [
+            [w["label"], w["opening"], w["inflows"], w["outflows"], w["closing"], w["shortfall"]]
+            for w in forecast["weeks"]
+        ],
+        "first_shortfall": forecast["first_shortfall"],
+        "overdue": forecast["overdue"],
+        "warnings": sorted(w["code"] for w in forecast["warnings"]),
+    }
+    if os.environ.get("UPDATE_GOLDEN") == "1":
+        GOLDEN_FORECAST.write_text(json.dumps(compact, indent=1) + "\n", encoding="utf-8")
+    assert compact == json.loads(GOLDEN_FORECAST.read_text(encoding="utf-8"))

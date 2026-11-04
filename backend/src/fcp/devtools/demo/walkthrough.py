@@ -112,6 +112,7 @@ class DemoResult:
     locked_periods: int
     steps: list[str] = field(default_factory=list)
     statements: dict[str, Any] = field(default_factory=dict)
+    forecast: dict[str, Any] = field(default_factory=dict)
 
 
 def _demo_invoice_pdf(text: str, amount: str) -> bytes:
@@ -128,6 +129,113 @@ def _demo_invoice_pdf(text: str, amount: str) -> bytes:
     pdf.drawString(72, 700, f"Total EUR {amount}")
     pdf.save()
     return buffer.getvalue()
+
+
+def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
+    """Synthetic commitments for Demo Trading, then the 13-week forecast from 4 January."""
+    following = year + 1
+    for path, body in (
+        (
+            "obligations",
+            {
+                "name": "Warehouse rent (Demo)",
+                "category": "RENT",
+                "direction": "OUTFLOW",
+                "amount": "2500.00",
+                "frequency": "MONTHLY",
+                "day_of_month": 1,
+                "start_date": f"{year}-01-01",
+                "adjust": "FOLLOWING",
+                "contractual": True,
+            },
+        ),
+        (
+            "obligations",
+            {
+                "name": "Payroll (Demo)",
+                "category": "PAYROLL",
+                "direction": "OUTFLOW",
+                "amount": "9000.00",
+                "frequency": "MONTHLY",
+                "day_of_month": 25,
+                "start_date": f"{year}-01-25",
+                "adjust": "PRECEDING",
+                "contractual": True,
+            },
+        ),
+        (
+            "obligations",
+            {
+                "name": "Utilities estimate (Demo)",
+                "category": "UTILITIES",
+                "direction": "OUTFLOW",
+                "amount": "450.00",
+                "frequency": "MONTHLY",
+                "day_of_month": 12,
+                "start_date": f"{year}-01-12",
+                "adjust": "FOLLOWING",
+                "contractual": False,
+            },
+        ),
+        (
+            "debt-instruments",
+            {
+                "name": "Term loan (Demo)",
+                "kind": "TERM_LOAN",
+                "principal": "50000.00",
+                "start_date": f"{year}-07-01",
+                "maturity_date": f"{year + 5}-07-01",
+                "rate_type": "FIXED",
+                "fixed_rate": "0.05",
+                "day_count": "ACT_365",
+                "repayment_type": "ANNUITY",
+            },
+        ),
+        (
+            "debt-instruments",
+            {
+                "name": "Overdraft (Demo)",
+                "kind": "OVERDRAFT",
+                "facility_limit": "20000.00",
+                "start_date": f"{year}-01-01",
+                "rate_type": "FIXED",
+                "fixed_rate": "0.08",
+            },
+        ),
+        (
+            "tax-payments",
+            {
+                "kind": "VAT",
+                "period_label": f"{year}-Q4",
+                "amount": "6200.00",
+                "due_date": f"{following}-02-10",
+                "nature": "EXPECTED",
+                "reference": "Synthetic estimate (Demo)",
+            },
+        ),
+        (
+            "cash-items",
+            {
+                "day": f"{following}-01-20",
+                "amount": "5000.00",
+                "category": "GRANT",
+                "reason": "Synthetic export grant (Demo)",
+            },
+        ),
+    ):
+        owner.call("POST", f"{base}/{path}", body, 201)
+    owner.call(
+        "PUT",
+        f"{base}/cash-forecast-settings",
+        {"minimum_cash": "30000.00", "unreconciled_warning_days": 7},
+    )
+    forecast: dict[str, Any] = owner.call(
+        "POST", f"{base}/cash-forecasts", {"as_of": f"{following}-01-04"}, 201
+    )
+    replay = owner.call("POST", f"{base}/calc-runs/{forecast['run_id']}/reproduce", {})
+    if forecast["status"] != "VALID" or not replay["reproduced"]:
+        raise DemoStepError(f"The cash forecast is not valid or not reproducible: {replay}")
+    return forecast
 
 
 def _demo_user(role: str) -> User:
@@ -408,6 +516,19 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         "integrity checks passed (balance, snapshots, gapless numbering, closed years, audit chain)"
     )
 
+    forecast = _cash_forecast(owner, base, year)
+    first = forecast["first_shortfall"]
+    step(
+        f"13-week cash forecast from {forecast['as_of']}: opening cash "
+        f"{forecast['opening_cash']}, week 13 closing {forecast['weeks'][-1]['closing']}; "
+        + (
+            f"first shortfall below the minimum on {first['date']}"
+            if first
+            else "no shortfall below the minimum"
+        )
+        + f"; run {forecast['status']} and reproducible"
+    )
+
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()
         if viewer is None:
@@ -428,6 +549,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         bank_balance=bank_row["balance"],
         integrity_status=check["status"],
         locked_periods=len(to_lock),
+        forecast=forecast,
         steps=steps,
         statements=statements,
     )
