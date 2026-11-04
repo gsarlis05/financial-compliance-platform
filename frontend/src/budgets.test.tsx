@@ -53,6 +53,8 @@ const line = (amount: string) => ({
   account_id: null,
   dimension_value_id: null,
   method: "MANUAL",
+  method_params: {},
+  phasing_note: "",
   note: "",
   nature: "BUDGET",
   amounts: months.map(() => amount),
@@ -87,7 +89,7 @@ describe("Budgets (M4-1)", () => {
         calls.push({
           url,
           method,
-          body: init.body ? JSON.parse(init.body as string) : null,
+          body: typeof init.body === "string" ? JSON.parse(init.body) : null,
         });
         if (url.endsWith("/fiscal-years"))
           return Promise.resolve(
@@ -120,6 +122,35 @@ describe("Budgets (M4-1)", () => {
           );
         if (url.endsWith("/budget-settings"))
           return Promise.resolve(respond({ sod_required: true }));
+        if (url.endsWith("/budget-versions/v2/phase"))
+          return Promise.resolve(
+            respond({
+              months,
+              amounts: months.map((_, i) => (i === 11 ? "8333.37" : "8333.33")),
+              total: "100000.00",
+              note: "",
+            }),
+          );
+        if (url.includes("/budget-versions/v2/import"))
+          return Promise.resolve(
+            respond({
+              applied: url.includes("apply=true"),
+              problems: [],
+              changes: [
+                {
+                  line: "REV.SALES",
+                  kind: "CHANGED",
+                  before: "1200.00",
+                  after: "1800.00",
+                  months_changed: 12,
+                },
+              ],
+              unchanged: 0,
+              draft_hash: "h1",
+            }),
+          );
+        if (url.endsWith("/budgets/b1/owners"))
+          return Promise.resolve(respond({ code: "permission_denied" }, 403));
         if (url.endsWith("/budget-versions/v2/lines"))
           return Promise.resolve(respond(detail("v2", 2, "DRAFT")));
         if (url.endsWith("/budget-versions/v2"))
@@ -191,6 +222,66 @@ describe("Budgets (M4-1)", () => {
     expect(sent.lines[0]?.taxonomy_code).toBe("REV.SALES");
     expect(sent.lines[0]?.amounts["2026-01-01"]).toBe("150.50");
     expect(sent.lines[0]?.amounts["2026-12-01"]).toBe("100.00");
+
+    // Phasing: even spread of an annual amount, previewed by the server.
+    fireEvent.change(screen.getByLabelText("Phasing REV.SALES · Sales"), {
+      target: { value: "EVEN" },
+    });
+    fireEvent.change(screen.getByLabelText("Annual amount"), {
+      target: { value: "100000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Show months" }));
+    await waitFor(() =>
+      expect(
+        within(grid).getByRole("row", { name: /REV.SALES/ }),
+      ).toHaveTextContent("8,333.37"),
+    );
+    const phaseCall = calls.find((c) => c.url.endsWith("/phase"));
+    expect(phaseCall?.body).toEqual({
+      taxonomy_code: "REV.SALES",
+      account_id: null,
+      method: "EVEN",
+      params: { annual: "100000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save lines" }));
+    await waitFor(() =>
+      expect(calls.filter((c) => c.method === "PUT").length).toBe(2),
+    );
+    const phasedSave = calls.filter((c) => c.method === "PUT")[1]?.body as {
+      lines: { method: string; params: unknown; amounts: object }[];
+    };
+    expect(phasedSave.lines[0]).toMatchObject({
+      method: "EVEN",
+      params: { annual: "100000" },
+      amounts: {},
+    });
+
+    // Import: preview the changes, then apply with the preview's hash.
+    const file = new File(["x"], "b.xlsx");
+    fireEvent.change(screen.getByLabelText("Workbook (.xlsx)"), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Check and preview" }));
+    const changes = await screen.findByRole("table", {
+      name: /Changes this file would make/,
+    });
+    expect(changes).toHaveTextContent("1,800.00");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Replace the lines with this file" }),
+    );
+    expect(await screen.findByText("Imported.")).toBeInTheDocument();
+    expect(
+      calls.some(
+        (c) =>
+          c.url.includes("apply=true") && c.url.includes("expected_hash=h1"),
+      ),
+    ).toBe(true);
+    expect(
+      screen.getByRole("link", { name: /Download as Excel/ }),
+    ).toHaveAttribute(
+      "href",
+      "/api/w/demo/entities/ent/budget-versions/v2/export",
+    );
 
     // The approved original is read-only, with quarters and its nature.
     fireEvent.click(

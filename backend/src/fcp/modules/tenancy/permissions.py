@@ -53,6 +53,10 @@ PERMISSIONS: dict[str, str] = {
     "budget.edit": "Create budgets, edit draft versions, submit them and start revisions",
     "budget.approve": "Approve, return or lock submitted budget versions",
     "budget.settings.manage": "Change budget controls such as segregation of duties",
+    "budget.department": (
+        "Open budgets: with budget.read and budget.edit everything, otherwise only the "
+        "departments you are named owner of"
+    ),
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -73,6 +77,7 @@ _READ = frozenset(
         "documents.read",
         "planning.read",
         "budget.read",
+        "budget.department",
     }
 )
 _PREPARE = _READ | {
@@ -126,6 +131,10 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     # Personal finances: no approval workflow, so household members prepare and post.
     Role.HOUSEHOLD_MEMBER: _PREPARE | {"ledger.entry.post"},
     Role.READ_ONLY: _READ,
+    # A department's budget owner: only the budgets and departments named for them (AC-BU6).
+    Role.BUDGET_HOLDER: frozenset(
+        {"tenancy.workspace.read", "ledger.account.read", "ledger.period.read", "budget.department"}
+    ),
 }
 
 

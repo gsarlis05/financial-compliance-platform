@@ -1,6 +1,6 @@
 // Budgets (M4-1): response shapes and hooks.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "./client";
+import { api, apiUrl } from "./client";
 import { useScope } from "./hooks";
 
 export type BudgetKind = "ANNUAL" | "DEPARTMENTAL" | "PROJECT";
@@ -50,7 +50,9 @@ export interface BudgetLine {
   direction: string | null;
   account_id: string | null;
   dimension_value_id: string | null;
-  method: string;
+  method: PhasingMethod;
+  method_params: PhasingParams & { note?: string };
+  phasing_note: string;
   note: string;
   nature: "BUDGET";
   amounts: string[];
@@ -76,12 +78,74 @@ export interface BudgetEvent {
   at: string;
 }
 
+export type PhasingMethod =
+  | "MANUAL"
+  | "EVEN"
+  | "SEASONAL"
+  | "PROFILE"
+  | "DRIVER";
+
+export interface PhasingParams {
+  annual?: string;
+  weights?: string[];
+  quantity?: string;
+  rate?: string;
+}
+
 export interface LineIn {
   taxonomy_code: string | null;
   account_id: string | null;
   dimension_value_id: string | null;
   amounts: Record<string, string>;
+  method: PhasingMethod;
+  params: PhasingParams | null;
   note: string;
+}
+
+export interface ImportResult {
+  applied: boolean;
+  problems: { row: number; column: string; message: string }[];
+  changes: {
+    line: string;
+    kind: "ADDED" | "REMOVED" | "CHANGED";
+    before: string;
+    after: string;
+    months_changed: number;
+  }[];
+  unchanged: number;
+  draft_hash: string;
+}
+
+export interface BudgetOwner {
+  dimension_value_id: string;
+  user_id: string;
+  user_name: string;
+}
+
+export function useBudgetOwners(budgetId: string | null, enabled = true) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["budgets", entityId, "owners", budgetId],
+    queryFn: () => api<BudgetOwner[]>(`${base}/budgets/${budgetId}/owners`),
+    enabled: !!budgetId && enabled,
+    retry: false,
+  });
+}
+
+export function useBudgetMembers(enabled: boolean) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["budget-members", entityId],
+    queryFn: () =>
+      api<{ user_id: string; name: string }[]>(`${base}/budget-members`),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useExportUrl(versionId: string): string {
+  const { base } = useScope();
+  return apiUrl(`${base}/budget-versions/${versionId}/export`);
 }
 
 export function useBudgets(fiscalYearId: string) {
@@ -161,6 +225,71 @@ export function useBudgetMutations() {
           body: { lines },
         }),
       onSuccess: refresh,
+    }),
+    preview: useMutation({
+      mutationFn: ({
+        versionId,
+        body,
+      }: {
+        versionId: string;
+        body: {
+          taxonomy_code: string | null;
+          account_id: string | null;
+          method: Exclude<PhasingMethod, "MANUAL">;
+          params: PhasingParams;
+        };
+      }) =>
+        api<{
+          months: string[];
+          amounts: string[];
+          total: string;
+          note: string;
+        }>(`${base}/budget-versions/${versionId}/phase`, {
+          method: "POST",
+          body,
+        }),
+    }),
+    importFile: useMutation({
+      mutationFn: ({
+        versionId,
+        file,
+        apply,
+        expectedHash,
+      }: {
+        versionId: string;
+        file: File;
+        apply: boolean;
+        expectedHash: string;
+      }) => {
+        const body = new FormData();
+        body.append("file", file);
+        return api<ImportResult>(
+          `${base}/budget-versions/${versionId}/import`,
+          {
+            method: "POST",
+            body,
+            query: { apply, expected_hash: expectedHash },
+          },
+        );
+      },
+      onSuccess: async (result) => {
+        if (result.applied) await refresh();
+      },
+    }),
+    saveOwners: useMutation({
+      mutationFn: ({
+        budgetId,
+        owners,
+      }: {
+        budgetId: string;
+        owners: { dimension_value_id: string; user_id: string }[];
+      }) =>
+        api<BudgetOwner[]>(`${base}/budgets/${budgetId}/owners`, {
+          method: "PUT",
+          body: { owners },
+        }),
+      onSuccess: () =>
+        client.invalidateQueries({ queryKey: ["budgets", entityId] }),
     }),
     submit: useAction("submit"),
     approve: useAction("approve"),
