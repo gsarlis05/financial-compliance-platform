@@ -33,7 +33,7 @@ Inside a workspace, the menu bar groups the pages:
 
 | Menu | Pages |
 |---|---|
-| Bookkeeping | Journal entries, Approvals |
+| Bookkeeping | Journal entries, Approvals, Bank |
 | Customers & suppliers | Customers & suppliers, Receivables & payables |
 | Reports | Trial balance, Statements |
 | Setup | Chart of accounts, Dimensions, Statement mapping, Periods |
@@ -174,11 +174,33 @@ On **Statement mapping**, *Apply default mapping* maps the whole Cyprus business
 liabilities and equity to the balance sheet, income and expenses to the profit and loss.
 
 At any date, the page says whether the mapping is **complete**. An account with a balance but no
-mapping blocks the statements (section 12) until it is mapped; *9999 Suspense* is deliberately unmapped, so
+mapping blocks the statements (section 13) until it is mapped; *9999 Suspense* is deliberately unmapped, so
 statements stay blocked while it holds a balance. Every change keeps the previous version (history
 per account) and is recorded in the audit trail.
 
-## 12. Financial statements
+## 12. Bank statements and reconciliation
+**Bookkeeping → Bank** holds your bank accounts. Each one is linked to its ledger account (for example
+*1300 Bank*).
+- **Import** a statement file: ISO 20022 **CAMT.053** (XML), which most EU banks export, or **CSV**.
+  - For a CSV, the column layout can be saved per bank account (API for now; the default reads
+    `date, description, amount, balance, …, reference`).
+  - Files of up to 5 MB are accepted. They are checked for safety and imported in the background.
+  - Importing the same file again is refused. A statement that overlaps an earlier one adds only
+    the new transactions.
+- **Match automatically** links each statement line to the posted ledger line with the same amount
+  within 7 days, when the reference agrees or only one candidate exists. It never guesses between
+  equal amounts.
+- For each remaining line, choose **Resolve**:
+  - match it to one of the ledger lines offered;
+  - **book** it: a draft entry against the account you choose (for a customer payment, use the
+    open invoice suggested), which you then submit for approval as usual;
+  - or **ignore** it, with a reason.
+- **Reconcile** at a date: the bank is reconciled when the ledger balance equals the statement
+  balance at that date. This is the closing balance of an imported statement ending that day, or a
+  balance you enter. The page shows the difference and how many lines are still unmatched. The last
+  reconciled date is shown on the account.
+
+## 13. Financial statements
 **Statements** shows the *profit and loss*, *balance sheet* and *cash flow statement* for the
 period you choose (the balance sheet is at the end date). It also shows the same period one year
 earlier unless you untick *Compare with the prior year*. These are **management statements**
@@ -204,13 +226,13 @@ built from the statement mapping, not statutory financial statements.
 - **Export** as PDF (one page per statement), XLSX (one sheet each) or CSV, in the language you
   are using. Exports need the export permission and are recorded in the audit trail.
 
-## 13. Integrity checks
+## 14. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on **Controls → Integrity**
 (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 14. Try it with demo data
+## 15. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).

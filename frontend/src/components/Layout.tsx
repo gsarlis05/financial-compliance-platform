@@ -189,6 +189,7 @@ function MainNav({ base }: { base: string }) {
       links: [
         [`${base}/entries`, "nav.entries"],
         [`${base}/approvals`, "nav.approvals"],
+        [`${base}/bank`, "nav.bank"],
       ],
     },
     {
