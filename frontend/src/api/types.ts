@@ -298,3 +298,74 @@ export interface MappingCompleteness {
   unmapped_warning: MappingRow[];
   unmapped_idle: number;
 }
+
+export interface StatementAccount {
+  account_id: string | null;
+  code: string;
+  name: string;
+  name_el: string;
+  current: Amount;
+  comparative: Amount | null;
+}
+
+export interface StatementRow {
+  kind: "heading" | "line" | "subtotal" | "total";
+  code: string;
+  name: string;
+  name_el: string;
+  current: Amount | null;
+  comparative: Amount | null;
+  accounts: StatementAccount[];
+}
+
+export interface StatementCheck {
+  code: string;
+  column: "current" | "comparative";
+  ok: boolean;
+  values: Record<string, Amount>;
+}
+
+export interface Statement {
+  kind: "PL" | "BS" | "CF";
+  name: string;
+  name_el: string;
+  rows: StatementRow[];
+  checks: StatementCheck[];
+}
+
+export interface Statements {
+  entity_name: string;
+  taxonomy: string;
+  watermark: number;
+  date_from: string;
+  date_to: string;
+  comparative_from: string | null;
+  comparative_to: string | null;
+  ok: boolean;
+  profit_and_loss: Statement;
+  balance_sheet: Statement;
+  cash_flow: Statement;
+}
+
+export interface AccountLedgerLine {
+  entry_id: string;
+  entry_ref: string;
+  accounting_date: string;
+  description: string;
+  memo: string;
+  debit: Amount;
+  credit: Amount;
+  running_balance: Amount;
+  restated_after_lock: boolean;
+}
+
+export interface AccountLedger {
+  account_id: string;
+  code: string;
+  name: string;
+  date_from: string;
+  date_to: string;
+  opening_balance: Amount;
+  lines: AccountLedgerLine[];
+  closing_balance: Amount;
+}

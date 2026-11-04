@@ -14,6 +14,7 @@ from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.core.export import safe_text
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import workspace_ctx
 
@@ -293,14 +294,6 @@ def ageing(request: HttpRequest, slug: str, entity_id: UUID, q: Query[AgeingQuer
     )  # fmt: skip
 
 
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
-
-
-def _safe(value: str) -> str:
-    """Neutralise spreadsheet formula injection in text cells (threat T9)."""
-    return "'" + value if value.startswith(_FORMULA_PREFIXES) else value
-
-
 @router.get(f"{BASE}/reports/ageing.csv")
 @requires("reports.export")
 def ageing_csv(
@@ -312,7 +305,7 @@ def ageing_csv(
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerow(["code", "name", *services.BUCKETS, "unapplied", "total"])
     for r in report.rows:
-        writer.writerow([_safe(r.counterparty_code), _safe(r.counterparty_name),
+        writer.writerow([safe_text(r.counterparty_code), safe_text(r.counterparty_name),
                          *(f"{r.buckets[b]:.2f}" for b in services.BUCKETS),
                          f"{r.unapplied:.2f}", f"{r.total:.2f}"])  # fmt: skip
     filename = f"ageing-{q.side.lower()}-{q.as_of.isoformat()}.csv"

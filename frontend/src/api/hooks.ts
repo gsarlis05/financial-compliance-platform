@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { api, newIdempotencyKey } from "./client";
 import type {
   Account,
+  AccountLedger,
   Ageing,
   Counterparty,
   CounterpartyKind,
@@ -21,6 +22,7 @@ import type {
   PeriodStatus,
   PeriodUnlock,
   Side,
+  Statements,
   TaxonomyLine,
   TrialBalance,
   VatCode,
@@ -327,6 +329,7 @@ export function useMappingMutations() {
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["mapping", entityId] });
     void client.invalidateQueries({ queryKey: ["mapping-completeness", entityId] });
+    void client.invalidateQueries({ queryKey: ["statements", entityId] });
   };
   return {
     set: useMutation({
@@ -343,4 +346,27 @@ export function useMappingMutations() {
       onSuccess: refresh,
     }),
   };
+}
+
+export function useStatements(dateFrom: string, dateTo: string, comparative: "prior_year" | "none") {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["statements", entityId, dateFrom, dateTo, comparative],
+    queryFn: () =>
+      api<Statements>(`${base}/statements`, { query: { date_from: dateFrom, date_to: dateTo, comparative } }),
+    enabled: !!dateFrom && !!dateTo && dateFrom <= dateTo,
+    retry: false,
+  });
+}
+
+export function useGeneralLedger(accountId: string, dateFrom: string, dateTo: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["general-ledger", entityId, accountId, dateFrom, dateTo],
+    queryFn: () =>
+      api<AccountLedger>(`${base}/reports/general-ledger/${accountId}`, {
+        query: { date_from: dateFrom, date_to: dateTo },
+      }),
+    enabled: !!accountId,
+  });
 }

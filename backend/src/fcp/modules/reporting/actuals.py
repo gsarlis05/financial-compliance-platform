@@ -10,12 +10,15 @@ facts are therefore only ever computed from, and written for, that tenant.
 """
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 from django.db import connection
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 
 from .models import ActualsState, FactDaily, FactMonthly
@@ -135,6 +138,32 @@ def net_before(
     for r in FactDaily.objects.filter(legal_entity_id=entity_id, day__lt=before):
         totals[r.account_id] += r.debit_total - r.credit_total
     return watermark, dict(totals)
+
+
+def net_before_many(
+    entity_id: UUID, tenant_id: UUID, *, cutoffs: list[date]
+) -> tuple[int, dict[date, dict[UUID, Decimal]]]:
+    """Net debit balance per account before each cut-off date, in one pass over the daily facts.
+
+    Accounts without postings before a cut-off are absent from that cut-off's mapping."""
+    watermark = refresh(tenant_id)
+    unique = sorted(set(cutoffs))
+    net = F("debit_total") - F("credit_total")
+    result: dict[date, dict[UUID, Decimal]] = {d: {} for d in unique}
+    if not unique:
+        return watermark, result
+    rows = cast(
+        Iterable[dict[str, Any]],
+        FactDaily.objects.filter(legal_entity_id=entity_id, day__lt=unique[-1])
+        .values("account_id")
+        .annotate(**{f"c{i}": Sum(net, filter=Q(day__lt=d)) for i, d in enumerate(unique)}),
+    )
+    for row in rows:
+        for i, d in enumerate(unique):
+            value = row[f"c{i}"]
+            if value is not None:
+                result[d][row["account_id"]] = value
+    return watermark, result
 
 
 # --- verification ---------------------------------------------------------------------------------

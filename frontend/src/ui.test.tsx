@@ -68,6 +68,9 @@ describe("money helpers", () => {
     expect(sum(["1190.00", "", "abc"]).toFixed(2)).toBe("1190.00");
     expect(formatAmount("1234567.5")).toBe("1,234,567.50");
     expect(formatAmount("1234567.5", "el")).toBe("1.234.567,50");
+    expect(formatAmount("-660000.00")).toBe("-660,000.00");
+    expect(formatAmount("-0.50", "el")).toBe("-0,50");
+    expect(formatAmount("n/a")).toBe("n/a");
     expect(isAmount("10.005")).toBe(true);
     expect(isAmount("-1")).toBe(false);
     expect(isAmount("1e3")).toBe(false);
