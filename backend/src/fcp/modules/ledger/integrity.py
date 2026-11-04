@@ -114,6 +114,26 @@ def _locked_periods_untouched(tenant_id: UUID) -> CheckResult:
     )
 
 
+def _closed_years_have_no_result(tenant_id: UUID) -> CheckResult:
+    """A CLOSED fiscal year has no income or expense balance left at its year-end (M2-9)."""
+    rows = _rows(
+        "SELECT y.id, a.code, sum(l.debit - l.credit) "
+        "FROM ledger_fiscal_year y "
+        "JOIN ledger_journal_entry e ON e.legal_entity_id = y.legal_entity_id "
+        " AND e.status = 'POSTED' AND e.accounting_date <= y.end_date "
+        "JOIN ledger_journal_line l ON l.entry_id = e.id "
+        "JOIN ledger_account a ON a.id = l.account_id AND a.type IN ('INCOME', 'EXPENSE') "
+        "WHERE y.tenant_id = %s AND y.status = 'CLOSED' "
+        "GROUP BY y.id, a.code HAVING sum(l.debit - l.credit) <> 0",
+        [tenant_id],
+    )
+    return CheckResult(
+        "closed_years_have_no_result",
+        not rows,
+        [f"fiscal year {r[0]}: account {r[1]} still has {r[2]}" for r in rows],
+    )
+
+
 def _audit_chain(tenant_id: UUID) -> CheckResult:
     status = verify_audit_chain(tenant_id)
     details = [] if status.ok else [f"seq {status.broken_at_seq}: {status.reason}"]
@@ -125,6 +145,7 @@ CHECKS = (
     _snapshots_match_lines,
     _gapless_numbers,
     _locked_periods_untouched,
+    _closed_years_have_no_result,
     _audit_chain,
 )
 

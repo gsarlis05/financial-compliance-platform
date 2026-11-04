@@ -42,7 +42,8 @@ in order.
 | M2-6 Taxonomy + account mapping (issue #49) | `claude/m2-6-taxonomy` | #98 | Open |
 | M2-7 reporting.actuals read model (issue #50) | `claude/m2-7-actuals` | #100 | Open |
 | M2-8 Statements: P&L, balance sheet, cash flow, exports (issue #51) | `claude/m2-8-statements` | #101 | Open |
-| M2-9 Year-end close (issue #52) | — | — | Next |
+| M2-9 Year-end close and re-open (issue #52) | `claude/m2-9-year-end` | #102 | Open |
+| M2-11 Grouped navigation (issue #99) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

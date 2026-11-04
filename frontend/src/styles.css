@@ -138,3 +138,8 @@ table.statement tr.subtotal th, table.statement tr.subtotal td { font-weight: 60
 table.statement tr.total th, table.statement tr.total td { font-weight: 700; border-top: 1px solid var(--text); border-bottom: 3px double var(--text); }
 table.statement tr.account td { font-size: 0.875rem; background: var(--bg); }
 table.statement tr.account td:first-child { padding-inline-start: 2.25rem; }
+
+/* Year-end close (M2-9) */
+details.year-end { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+details.year-end summary { cursor: pointer; font-weight: 600; }
+h2 .badge { margin-inline-start: 0.5rem; vertical-align: middle; }

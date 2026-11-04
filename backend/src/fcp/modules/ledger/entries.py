@@ -30,6 +30,7 @@ from .errors import (
     ApprovalStaleError,
     CounterpartyInvalidError,
     CounterpartyRequiredError,
+    FiscalYearClosedError,
     InvalidLineError,
     InvalidStateError,
     NoPeriodError,
@@ -45,6 +46,7 @@ from .errors import (
 from .models import (
     Account,
     EntrySequence,
+    FiscalYear,
     Journal,
     JournalEntry,
     JournalLine,
@@ -355,7 +357,8 @@ def _check_complete(entry: JournalEntry) -> None:
                 field_errors={f"lines.{ln.line_no - 1}.counterparty_id": ["required"]},
             )
     _check_vat(entry, lines)
-    if entry.entry_type != JournalEntry.EntryType.REVERSAL:  # reversals mirror the original
+    # Reversals mirror the original, closing entries mirror posted balances (checked at posting).
+    if entry.entry_type not in (JournalEntry.EntryType.REVERSAL, JournalEntry.EntryType.CLOSING):
         dimensions.check_rules(entry.legal_entity_id, lines)
 
 
@@ -568,6 +571,11 @@ def update_draft(
     entry = get_entry(ctx, entity_id, entry_id, lock=True)
     if entry.status not in EDITABLE:
         raise InvalidStateError(f"A {entry.status.lower()} entry cannot be edited.")
+    if entry.entry_type == JournalEntry.EntryType.CLOSING:
+        raise InvalidStateError(
+            "A closing entry is generated from the ledger and cannot be edited. Void it and "
+            "generate it again."
+        )
     lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
     before = {
         "accounting_date": entry.accounting_date,
@@ -689,6 +697,12 @@ def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
             f"{entry.accounting_date}. Create the fiscal year first.",
             field_errors={"accounting_date": ["no period"]},
         )
+    year = period.fiscal_year
+    if year.status == FiscalYear.Status.CLOSED and not _reopens(entry, year):
+        raise FiscalYearClosedError(
+            f"Fiscal year {year.name} is closed. Re-open it (which reverses its closing entry) "
+            "before posting into it."
+        )
     if period.status == Period.Status.LOCKED:
         from .corrections import active_unlock  # noqa: PLC0415 - avoids an import cycle
 
@@ -707,6 +721,17 @@ def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
             "with permission to post into soft-closed periods."
         )
     return period
+
+
+def _reopens(entry: JournalEntry, year: FiscalYear) -> bool:
+    """The reversal of the year's closing entry, the only posting a closed year accepts."""
+    if entry.entry_type != JournalEntry.EntryType.REVERSAL or entry.reverses_entry_id is None:
+        return False
+    return JournalEntry.objects.filter(
+        id=entry.reverses_entry_id,
+        entry_type=JournalEntry.EntryType.CLOSING,
+        fiscal_year_id=year.id,
+    ).exists()
 
 
 def _next_number(ctx: WorkspaceContext, entry: JournalEntry, period: Period) -> int:
@@ -758,6 +783,9 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
         raise InvalidStateError(f"A {entry.status.lower()} entry cannot be posted.")
 
     _check_complete(entry)
+    from . import closing  # noqa: PLC0415 - closing builds on this module
+
+    closing.verify_before_posting(entry)
     period = _posting_period(ctx, entry)
     entry.period = period
     entry.fiscal_year = period.fiscal_year
@@ -783,6 +811,7 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
     if entry.reverses_entry_id:
         link_reversal(entry)
     apply_posting(entry)
+    closing.after_posting(ctx, entry)
     _audit(
         ctx,
         entry,
