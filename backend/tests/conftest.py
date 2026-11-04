@@ -34,6 +34,9 @@ class ApiClient(Client):
     def put_json(self, path: str, data: Any) -> Any:
         return self.put(path, data, content_type="application/json", headers=self._csrf())
 
+    def patch_json(self, path: str, data: Any) -> Any:
+        return self.patch(path, data, content_type="application/json", headers=self._csrf())
+
     def delete_json(self, path: str) -> Any:
         return self.delete(path, headers=self._csrf())
 

@@ -210,8 +210,8 @@ const arAccount: Account = {
   parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "RECEIVABLE", vat_role: "",
 };
 const parties: Counterparty[] = [
-  { id: "c1", code: "C1", name: "Alpha (Demo)", kind: "CUSTOMER", vat_no: "", email: "", payment_terms_days: 30, status: "ACTIVE" },
-  { id: "s1", code: "S1", name: "Beta (Demo)", kind: "SUPPLIER", vat_no: "", email: "", payment_terms_days: 45, status: "ACTIVE" },
+  { id: "c1", code: "C1", name: "Alpha (Demo)", kind: "CUSTOMER", vat_no: "", email: "", payment_terms_days: 30, status: "ACTIVE", days_late_override: null },
+  { id: "s1", code: "S1", name: "Beta (Demo)", kind: "SUPPLIER", vat_no: "", email: "", payment_terms_days: 45, status: "ACTIVE", days_late_override: null },
 ];
 
 describe("EntryForm customers and suppliers (M2-2)", () => {
