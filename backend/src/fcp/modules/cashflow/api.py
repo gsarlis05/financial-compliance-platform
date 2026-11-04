@@ -37,7 +37,7 @@ class RunIn(Schema):
     as_of: date | None = Field(None, description="Defaults to today")
 
 
-class FlowOut(Schema):
+class ForecastFlowOut(Schema):
     direction: Literal["IN", "OUT"]
     category: str
     nature: Nature
@@ -61,7 +61,7 @@ class WeekOut(Schema):
     liquidity: str
     shortfall: bool
     nature: Nature = Field(description="Totals mix natures, so they are FORECAST")
-    flows: list[FlowOut]
+    flows: list[ForecastFlowOut]
 
 
 class ShortfallOut(Schema):
@@ -113,7 +113,7 @@ def _out(f: Forecast) -> ForecastOut:
                 shortfall=a.get("shortfall", Decimal(0)) > 0,
                 nature=Nature.FORECAST,
                 flows=[
-                    FlowOut(direction=d, category=c, nature=Nature(n), amount=_money(v))  # type: ignore[arg-type]
+                    ForecastFlowOut(direction=d, category=c, nature=Nature(n), amount=_money(v))  # type: ignore[arg-type]
                     for d, c, n, v in w.flows
                 ],
             )
@@ -176,7 +176,7 @@ def refresh_forecast(request: HttpRequest, slug: str, entity_id: UUID) -> Any:
     return Status(200, _out(services.forecast_of(made)))
 
 
-class HistoryOut(Schema):
+class ForecastHistoryOut(Schema):
     run_id: UUID
     as_of: date
     created_at: datetime
@@ -194,18 +194,18 @@ class HistoryQuery(Schema):
     limit: int = Field(20, ge=1, le=100)
 
 
-@router.get(f"{BASE}/cash-forecasts/history", response=list[HistoryOut])
+@router.get(f"{BASE}/cash-forecasts/history", response=list[ForecastHistoryOut])
 @requires("planning.read")
 def forecast_history(
     request: HttpRequest, slug: str, entity_id: UUID, q: Query[HistoryQuery]
-) -> list[HistoryOut]:
+) -> list[ForecastHistoryOut]:
     """Earlier forecasts, newest first: every run is kept (doc 10 §3.4)."""
     ctx = workspace_ctx(request, slug, entity_id)
     rows = []
     for f in tracking.history(ctx, entity_id, q.limit):
         row = tracking.summary(f)
         rows.append(
-            HistoryOut(
+            ForecastHistoryOut(
                 **{
                     **row,
                     "opening_cash": _money(row["opening_cash"]),

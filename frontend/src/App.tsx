@@ -7,6 +7,7 @@ import { Layout } from "./components/Layout";
 import { I18nProvider, useI18n } from "./i18n/I18n";
 import { AccountsPage } from "./pages/Accounts";
 import { BankPage } from "./pages/Bank";
+import { BudgetsPage } from "./pages/Budgets";
 import { CashForecastPage } from "./pages/CashForecast";
 import { CommitmentsPage } from "./pages/Commitments";
 import { CounterpartiesPage } from "./pages/Counterparties";
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/approvals", element: <ApprovalsPage /> },
       { path: "w/:slug/e/:entityId/bank", element: <BankPage /> },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
+      {
+        path: "w/:slug/e/:entityId/budgets",
+        element: <BudgetsPage />,
+      },
       {
         path: "w/:slug/e/:entityId/cash-forecast",
         element: <CashForecastPage />,
