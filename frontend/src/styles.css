@@ -177,3 +177,5 @@ ul.documents a { overflow-wrap: anywhere; }
 .badge-expected { border-style: dashed; }
 .plain-list { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.25rem; }
 .table-actions { margin-top: 0; }
+input.narrow { width: 6rem; }
+.small { font-size: 0.8rem; }

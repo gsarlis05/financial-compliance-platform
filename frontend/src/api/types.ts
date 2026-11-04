@@ -218,6 +218,17 @@ export interface Counterparty {
   email: string;
   payment_terms_days: number;
   status: "ACTIVE" | "INACTIVE";
+  days_late_override: number | null;
+}
+
+export interface PaymentBehaviour {
+  counterparty_id: string;
+  counterparty_code: string;
+  observed_days_late: number | null;
+  sample: number;
+  override: number | null;
+  days_late: number;
+  note: string;
 }
 
 export type Side = "RECEIVABLE" | "PAYABLE";

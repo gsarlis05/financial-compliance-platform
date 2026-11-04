@@ -450,6 +450,18 @@ export const en = {
   "cm.tax.SOCIAL_INSURANCE": "Social insurance",
   "cm.tax.PAYE": "PAYE (employee income tax)",
   "cm.tax.OTHER": "Other",
+  "pb.title": "Payment behaviour",
+  "pb.help":
+    "How late each customer pays, from invoices fully settled in the last 12 months (amount-weighted; at least 3 invoices). The cash forecast dates open invoices at their due date plus these days. An override replaces the observed value.",
+  "pb.customer": "Customer",
+  "pb.observed": "Observed days late",
+  "pb.sample": "Invoices",
+  "pb.override": "Override (days)",
+  "pb.used": "Used by the forecast",
+  "pb.save": "Save",
+  "pb.clear": "Clear",
+  "pb.none": "No customers yet.",
+  "pb.notEnough": "not enough data",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -909,6 +921,18 @@ export const el: Record<MessageKey, string> = {
   "cm.tax.SOCIAL_INSURANCE": "Κοινωνικές ασφαλίσεις",
   "cm.tax.PAYE": "ΦΜΥ (φόρος εισοδήματος εργοδοτουμένων)",
   "cm.tax.OTHER": "Άλλο",
+  "pb.title": "Συμπεριφορά πληρωμών",
+  "pb.help":
+    "Πόσο καθυστερεί να πληρώσει κάθε πελάτης, από τιμολόγια που εξοφλήθηκαν πλήρως τους τελευταίους 12 μήνες (σταθμισμένα με το ποσό· τουλάχιστον 3 τιμολόγια). Η πρόβλεψη ταμείου τοποθετεί τα ανοιχτά τιμολόγια στη λήξη τους συν αυτές τις ημέρες. Μια παράκαμψη αντικαθιστά την παρατηρούμενη τιμή.",
+  "pb.customer": "Πελάτης",
+  "pb.observed": "Παρατηρούμενες ημέρες καθυστέρησης",
+  "pb.sample": "Τιμολόγια",
+  "pb.override": "Παράκαμψη (ημέρες)",
+  "pb.used": "Χρήση στην πρόβλεψη",
+  "pb.save": "Αποθήκευση",
+  "pb.clear": "Καθαρισμός",
+  "pb.none": "Δεν υπάρχουν ακόμη πελάτες.",
+  "pb.notEnough": "ανεπαρκή δεδομένα",
 };
 
 export const catalogs = { en, el } as const;

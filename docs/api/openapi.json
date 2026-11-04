@@ -849,6 +849,79 @@
         "title": "BankAccountOut",
         "type": "object"
       },
+      "BehaviourOut": {
+        "properties": {
+          "counterparty_code": {
+            "title": "Counterparty Code",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "format": "uuid",
+            "title": "Counterparty Id",
+            "type": "string"
+          },
+          "days_late": {
+            "description": "Used by the forecast: override, else observed, else 0",
+            "title": "Days Late",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "observed_days_late": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Days Late"
+          },
+          "override": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override"
+          },
+          "sample": {
+            "title": "Sample",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "counterparty_id",
+          "counterparty_code",
+          "observed_days_late",
+          "sample",
+          "override",
+          "days_late",
+          "note"
+        ],
+        "title": "BehaviourOut",
+        "type": "object"
+      },
+      "BehaviourQuery": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "BehaviourQuery",
+        "type": "object"
+      },
       "CandidateOut": {
         "properties": {
           "accounting_date": {
@@ -1263,6 +1336,17 @@
             "title": "Code",
             "type": "string"
           },
+          "days_late_override": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Late Override"
+          },
           "email": {
             "title": "Email",
             "type": "string"
@@ -1301,13 +1385,27 @@
           "vat_no",
           "email",
           "payment_terms_days",
-          "status"
+          "status",
+          "days_late_override"
         ],
         "title": "CounterpartyOut",
         "type": "object"
       },
       "CounterpartyPatch": {
         "properties": {
+          "days_late_override": {
+            "anyOf": [
+              {
+                "maximum": 365,
+                "minimum": -60,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Late Override"
+          },
           "email": {
             "anyOf": [
               {
@@ -11665,6 +11763,68 @@
           }
         ],
         "summary": "Set Flag",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/payment-behaviour": {
+      "get": {
+        "description": "How late each customer pays, from invoices settled in the 12 months before ``as_of``.",
+        "operationId": "fcp_modules_registers_api_get_payment_behaviour",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BehaviourOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Payment Behaviour",
         "tags": [
           "registers"
         ]
