@@ -169,7 +169,11 @@ def test_segregation_of_duties_is_configurable(bu: dict[str, Any]) -> None:
     assert refused.status_code == 409
     assert refused.json()["code"] == "budgeting.segregation_of_duties"
     settings = f"{bu['base']}/budget-settings"
-    assert bu["viewer"].get(settings).json() == {"sod_required": True}
+    assert bu["viewer"].get(settings).json() == {
+        "sod_required": True,
+        "explain_above_amount": "1000.00",
+        "explain_above_percent": "10.00",
+    }
     assert bu["preparer"].put_json(settings, {"sod_required": False}).status_code == 403
     with transaction.atomic():  # the database refuses it too
         set_context(tenant_id=bu["ws"]["id"])
@@ -390,7 +394,9 @@ def test_reason_filter_and_service_level_checks(bu: dict[str, Any]) -> None:
             )
         with pytest.raises(ValidationFailedError):
             services.set_reason(ctx, entity, v2, "x" * 501)
-        assert services.set_settings(ctx, entity, sod_required=True).sod_required
+        assert services.set_settings(ctx, entity, services.Settings(sod_required=True)).sod_required
+        with pytest.raises(ValidationFailedError):
+            services.set_settings(ctx, entity, services.Settings(True, Decimal(-1)))
     # A short first fiscal year: the last quarter holds what is left.
     seven = [date(2026, m, 1) for m in range(6, 13)]
     assert services.quarters(seven, [Decimal(1)] * 7) == [Decimal(3), Decimal(3), Decimal(1)]

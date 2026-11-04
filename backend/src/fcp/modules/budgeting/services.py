@@ -132,36 +132,42 @@ def fiscal_months(start: date, end: date) -> list[date]:
 @dataclass(frozen=True)
 class Settings:
     sod_required: bool
+    explain_above_amount: Decimal = Decimal(1000)
+    explain_above_percent: Decimal = Decimal(10)
 
 
 def get_settings(ctx: WorkspaceContext, entity_id: UUID) -> Settings:
     entity = get_entity(ctx, entity_id, READ)
     row = BudgetSettings.objects.filter(legal_entity=entity).first()
-    return Settings(sod_required=row.sod_required if row else True)
+    if row is None:
+        return Settings(sod_required=True)
+    return Settings(row.sod_required, row.explain_above_amount, row.explain_above_percent)
 
 
 @transaction.atomic
-def set_settings(ctx: WorkspaceContext, entity_id: UUID, *, sod_required: bool) -> Settings:
+def set_settings(ctx: WorkspaceContext, entity_id: UUID, new: Settings) -> Settings:
     entity = get_entity(ctx, entity_id, SETTINGS)
+    if new.explain_above_amount < 0 or not 0 <= new.explain_above_percent <= 10000:
+        raise _invalid("explain_above_amount", "Thresholds cannot be negative.")
     before = get_settings(ctx, entity_id)
     BudgetSettings.objects.update_or_create(
         legal_entity=entity,
         defaults={
             "tenant_id": ctx.tenant.id,
-            "sod_required": sod_required,
+            "sod_required": new.sod_required,
+            "explain_above_amount": new.explain_above_amount,
+            "explain_above_percent": new.explain_above_percent,
             "updated_by_id": ctx.user.id,
         },
     )
-    if before.sod_required != sod_required:
-        _audit(
-            ctx,
-            entity.id,
-            "budget_settings",
-            entity.id,
-            "budgeting.settings.changed",
-            {"sod_required": [before.sod_required, sod_required]},
-        )
-    return Settings(sod_required)
+    changes = {
+        name: [str(getattr(before, name)), str(getattr(new, name))]
+        for name in ("sod_required", "explain_above_amount", "explain_above_percent")
+        if getattr(before, name) != getattr(new, name)
+    }
+    if changes:
+        _audit(ctx, entity.id, "budget_settings", entity.id, "budgeting.settings.changed", changes)
+    return new
 
 
 # --- access ---------------------------------------------------------------------------------------

@@ -27,6 +27,9 @@ class BudgetSettings(TenantOwned):
     sod_required = models.BooleanField(
         default=True, help_text="The person who submitted a version cannot approve it"
     )
+    # A variance needs an explanation when both thresholds are reached (M4-3, AC-BU5).
+    explain_above_amount = models.DecimalField(max_digits=19, decimal_places=2, default=1000)
+    explain_above_percent = models.DecimalField(max_digits=7, decimal_places=2, default=10)
     updated_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -231,4 +234,54 @@ class BudgetOwner(TenantOwned):
             models.UniqueConstraint(
                 fields=["budget", "dimension_value_id", "user"], name="budgeting_owner_unique"
             ),
+        ]
+
+
+class VarianceExplanation(TenantOwned):
+    """Why a budget line's variance happened, for one period view (M4-3, AC-BU5). Append-only:
+    a change adds a row, and the latest row is the current explanation."""
+
+    class View(models.TextChoices):
+        MONTH = "MONTH"
+        QTD = "QTD"
+        YTD = "YTD"
+        FULL_YEAR = "FULL_YEAR"
+
+    version = models.ForeignKey(BudgetVersion, on_delete=models.PROTECT, related_name="+")
+    line = models.ForeignKey(BudgetLine, on_delete=models.PROTECT, related_name="+")
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    month = models.DateField()
+    view = models.CharField(max_length=10, choices=View.choices)
+    comparison = models.CharField(max_length=24)
+    comment = models.CharField(max_length=1000)
+    seq = models.PositiveIntegerField()
+    author = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        db_table = "budgeting_explanation"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["line", "month", "view", "comparison", "seq"],
+                name="budgeting_explanation_seq",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(comment=""), name="budgeting_explanation_comment"
+            ),
+        ]
+
+
+class PeriodReview(TenantOwned):
+    """A month's budget review marked complete: every variance above the thresholds was
+    explained at that moment (AC-BU5). Append-only."""
+
+    version = models.ForeignKey(BudgetVersion, on_delete=models.PROTECT, related_name="+")
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    month = models.DateField()
+    actuals_watermark = models.BigIntegerField()
+    completed_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        db_table = "budgeting_review"
+        constraints = [
+            models.UniqueConstraint(fields=["version", "month"], name="budgeting_review_month"),
         ]
