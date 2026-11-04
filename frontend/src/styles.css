@@ -207,3 +207,9 @@ button.link { background: none; border: none; padding: 0; color: var(--link, inh
 .budget-grid input { width: 7.5rem; min-width: 0; }
 .budget-grid tbody th, .budget-grid tfoot th { min-width: 12rem; }
 a.download { text-decoration: underline; font-weight: 600; }
+
+/* KPI cards (M4-4) */
+.kpi-cards { list-style: none; padding: 0; display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.kpi-card { border: 1px solid var(--border, #d0d7de); border-radius: 0.5rem; padding: 0.75rem; background: var(--surface, #fff); }
+.kpi-card h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.kpi-value { font-size: 1.5rem; font-weight: 600; margin: 0.25rem 0; }

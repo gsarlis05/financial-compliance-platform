@@ -204,6 +204,7 @@ function MainNav({ base }: { base: string }) {
       links: [
         [`${base}/cash-forecast`, "nav.cashForecast"],
         [`${base}/budgets`, "nav.budgets"],
+        [`${base}/kpis`, "nav.kpis"],
         [`${base}/commitments`, "nav.commitments"],
       ],
     },
