@@ -1,6 +1,9 @@
 """AC-G5: the sample dataset loads and the demo script runs end to end through the API."""
 
+import json
+import os
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -48,8 +51,9 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 13
+    assert len(result.steps) == 14
     assert all(line.startswith("✔") for line in said)
+    _assert_golden_statements(result.statements)
 
     # The shared user sees the workspace through the API, with the granted role.
     client = DemoClient(viewer, "testserver")
@@ -62,6 +66,25 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     reversed_ = [e for e in entries if e["entry_type"] == "REVERSAL"]
     assert len(reversed_) == 1
     assert reversed_[0]["reverses_entry_id"]
+
+
+GOLDEN = Path(__file__).parent / "golden" / "demo_statements_2026.json"
+
+
+def _assert_golden_statements(statements: dict[str, Any]) -> None:
+    """AC-M2-8: Demo Trading's statements match the reviewed golden file (rows and checks).
+    Regenerate with ``UPDATE_GOLDEN=1`` only after reviewing the change."""
+    compact = {
+        key: {
+            "rows": [[r["kind"], r["code"], r["current"]] for r in statements[key]["rows"]],
+            "checks": {c["code"]: c["values"] for c in statements[key]["checks"]},
+        }
+        for key in ("profit_and_loss", "balance_sheet", "cash_flow")
+    }
+    if os.environ.get("UPDATE_GOLDEN") == "1":
+        GOLDEN.parent.mkdir(exist_ok=True)
+        GOLDEN.write_text(json.dumps(compact, indent=1) + "\n", encoding="utf-8")
+    assert compact == json.loads(GOLDEN.read_text(encoding="utf-8"))
 
 
 @pytest.mark.django_db(transaction=True)

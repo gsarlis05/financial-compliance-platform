@@ -16,6 +16,7 @@ import structlog
 from django.db import connection
 
 from fcp.core.errors import DomainError, NotFoundError
+from fcp.core.export import safe_text
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from .models import Account, DimensionValue, JournalEntry
@@ -277,13 +278,6 @@ def general_ledger(
 
 
 # --- CSV export ----------------------------------------------------------------------------------
-
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
-
-
-def safe_text(value: str) -> str:
-    """Neutralise spreadsheet formula injection in text cells (threat T9)."""
-    return "'" + value if value.startswith(_FORMULA_PREFIXES) else value
 
 
 def _money(value: Decimal) -> str:

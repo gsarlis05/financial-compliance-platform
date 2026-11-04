@@ -125,3 +125,16 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .lines input, .lines select { width: 100%; min-width: 0; box-sizing: border-box; }
 .lines input.amount { min-width: 7rem; }
 .lines .dimension-picker { min-width: 9rem; max-width: 14rem; }
+
+/* Financial statements (M2-8) */
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); margin: 1rem 0 0.5rem; overflow: hidden; }
+.segmented button { border: none; border-radius: 0; background: var(--surface); color: var(--muted); padding: 0.45rem 0.9rem; }
+.segmented button.active { background: var(--primary); color: #fff; font-weight: 600; }
+table.statement { min-width: 32rem; }
+table.statement th[scope="row"], table.statement td:first-child { font-weight: normal; text-align: start; }
+table.statement tr.heading th { padding-top: 0.9rem; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.03em; color: var(--muted); }
+table.statement tr.line th { padding-inline-start: 1rem; }
+table.statement tr.subtotal th, table.statement tr.subtotal td { font-weight: 600; border-top: 1px solid var(--border); }
+table.statement tr.total th, table.statement tr.total td { font-weight: 700; border-top: 1px solid var(--text); border-bottom: 3px double var(--text); }
+table.statement tr.account td { font-size: 0.875rem; background: var(--bg); }
+table.statement tr.account td:first-child { padding-inline-start: 2.25rem; }

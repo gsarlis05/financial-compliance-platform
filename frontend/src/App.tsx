@@ -12,6 +12,7 @@ import { MappingPage } from "./pages/Mapping";
 import { ReceivablesPage } from "./pages/Receivables";
 import { ApprovalsPage, EntriesPage, EntryDetailPage, NewEntryPage } from "./pages/Entries";
 import { PeriodsPage } from "./pages/Periods";
+import { StatementsPage } from "./pages/Statements";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
 import { WorkspaceHome, WorkspacesPage } from "./pages/Workspaces";
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
       { path: "w/:slug/e/:entityId/trial-balance", element: <TrialBalancePage /> },
+      { path: "w/:slug/e/:entityId/statements", element: <StatementsPage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
     ],
   },

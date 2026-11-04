@@ -82,6 +82,7 @@ class DemoResult:
     integrity_status: str
     locked_periods: int
     steps: list[str] = field(default_factory=list)
+    statements: dict[str, Any] = field(default_factory=dict)
 
 
 def _demo_user(role: str) -> User:
@@ -269,6 +270,20 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         raise DemoStepError(f"Actuals read model differs from the ledger: {actuals_check}")
     step(f"actuals read model up to posting {actuals_check['watermark']} matches the ledger")
 
+    statements = reviewer.call(
+        "GET", f"{base}/statements?date_from={books.fiscal_year_start}&date_to={december}"
+        "&comparative=none")  # fmt: skip
+    if not statements["ok"]:
+        raise DemoStepError(f"Statement checks failed: {statements}")
+    totals = {r["code"]: r["current"] for r in statements["balance_sheet"]["rows"]}
+    result = {r["code"]: r["current"] for r in statements["profit_and_loss"]["rows"]}
+    cash = {r["code"]: r["current"] for r in statements["cash_flow"]["rows"]}
+    if cash["CF.CASH_CLOSING"] != bank_row["balance"]:
+        raise DemoStepError("The cash flow statement does not end at the bank balance")
+    step(f"statements for {year}: balance sheet balances at {totals['BS.TOTAL_ASSETS']}; "
+         f"profit {result['PL.RESULT']} = movement in equity; cash flow ends at the bank "
+         f"balance {cash['CF.CASH_CLOSING']}")  # fmt: skip
+
     check = owner.call("POST", f"/api/w/{slug}/integrity-checks", None, 201)
     if check["status"] != "PASSED":
         raise DemoStepError(f"Integrity check {check['status']}: {check['results']}")
@@ -295,6 +310,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         integrity_status=check["status"],
         locked_periods=len(to_lock),
         steps=steps,
+        statements=statements,
     )
 
 
