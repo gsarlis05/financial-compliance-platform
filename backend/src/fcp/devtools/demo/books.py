@@ -91,6 +91,8 @@ class DemoBooks:
     entries: list[DemoEntry]
     fingerprint: str
     counterparties: list[DemoCounterparty] = field(default_factory=list)
+    # The synthetic bank statement: (date, signed amount, description, reference), in order.
+    bank_transactions: list[tuple[date, Decimal, str, str]] = field(default_factory=list)
 
 
 def _month_end(day: date) -> date:
@@ -187,6 +189,10 @@ def build_demo_books(seed: int = 42, year: int = 2026) -> DemoBooks:  # noqa: PL
         bank_closing_balance=Decimal(bank[-1]["balance"]) if bank else opening_cash,
         entries=entries,
         fingerprint=dataset.fingerprint(),
+        bank_transactions=[
+            (date.fromisoformat(r["date"]), Decimal(r["amount"]), r["description"], r["reference"])
+            for r in bank
+        ],
         counterparties=[
             DemoCounterparty(c["id"], c["kind"], c["name"], c["payment_terms_days"])
             for c in json.loads(files["counterparties.json"])

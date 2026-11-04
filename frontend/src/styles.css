@@ -158,3 +158,12 @@ h2 .badge { margin-inline-start: 0.5rem; vertical-align: middle; }
   .nav-group > ul { inset-inline: 0.5rem; min-width: 0; }
   .main-nav > ul { position: relative; }
 }
+
+/* Bank (M2-5) */
+.resolve { display: grid; gap: 0.5rem; padding: 0.5rem 0; }
+.resolve h3, form.reconcile h3 { margin: 0.25rem 0; font-size: 0.95rem; width: 100%; }
+form.reconcile { margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+
+/* Form controls never overflow narrow screens (long option texts in selects). */
+.form label, .inline-form label { min-width: 0; max-width: 100%; }
+.form select, .form input, .inline-form select, .inline-form input { max-width: 100%; }

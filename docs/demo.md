@@ -25,6 +25,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ periods 1-11 locked; posting into January is refused (409), rejected and voided
 ✔ trial balance at 2026-12-31: 1810572.51 = 1810572.51; bank 371514.38 matches the synthetic statement
 ✔ 442 payments matched to invoices; receivables 203631.60 and payables 102084.19 reconcile to the ledger
+✔ bank statement imported (633 lines); importing it again created no duplicates; 17 matched to ledger entries automatically; reconciled at 2026-12-31: ledger 371514.38 = statement 371514.38
 ✔ 43 accounts mapped to the financial taxonomy; mapping complete for statements
 ✔ actuals read model up to posting 98 matches the ledger
 ✔ statements for 2026: balance sheet balances at 700545.98; profit 89973.47 = movement in equity; cash flow ends at the bank balance 371514.38
@@ -59,6 +60,10 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
   attempt to post a late January invoice is refused by the API (409, `ledger.period.locked`); the
   reviewer rejects it and the accountant voids it.
 
+- **Bank.** A CAMT.053 statement is built from the synthetic bank transactions (plus the December
+  cleaning payment) and imported. Importing it again is refused, the lines that correspond to single
+  ledger entries are matched automatically, and the bank reconciles to the ledger at year end. The
+  monthly summary entries cannot be matched line by line; the balances still prove agreement.
 - **Statements.** The P&L, balance sheet and cash flow for 2026 are built from the read model and
   must pass their checks. The cash flow must end at the bank balance. The figures are pinned in
   `backend/tests/devtools/golden/demo_statements_2026.json` (AC-M2-8).
