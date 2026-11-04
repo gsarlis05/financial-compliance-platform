@@ -27,6 +27,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.reporting.api import current_watermark
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
+from .expr import Evaluation, NotMeaningful
 from .hashing import digest, jsonable
 from .models import VALUE_DIGITS, VALUE_PLACES, CalcLineage, CalcResult, CalcRun
 from .nature import Nature
@@ -131,6 +132,25 @@ def engine_for(kind: str) -> Engine:
         return _ENGINES[kind]
     except KeyError:
         raise NotFoundError(f"No calculation engine for {kind}.") from None
+
+
+def formula_value(series_key: str, period_start: date, nature: Nature, formula_ref: str,
+                  evaluation: Evaluation, **fields: Any) -> Value:  # fmt: skip
+    """A run value from an evaluated formula: a value that is not meaningful keeps its reason,
+    and the lineage names the formula and every reference call it made (AC-CF4)."""
+    result = evaluation.value
+    if isinstance(result, bool):
+        raise EngineOutputError(f"{series_key}: a true/false formula is not a stored value")
+    lineage = (
+        Source("FORMULA", formula_ref),
+        *(Source("FORMULA", call[:200], note="reference") for call in evaluation.calls),
+        *fields.pop("lineage", ()),
+    )
+    if isinstance(result, NotMeaningful):
+        return Value(series_key, period_start, nature, None, evaluation.unit,
+                     nm_reason=result.reason, lineage=lineage, **fields)  # fmt: skip
+    return Value(series_key, period_start, nature, result, evaluation.unit, lineage=lineage,
+                 **fields)  # fmt: skip
 
 
 # --- checking an engine's output ------------------------------------------------------------------
