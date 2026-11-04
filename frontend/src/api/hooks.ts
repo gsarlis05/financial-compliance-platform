@@ -47,6 +47,8 @@ import type {
   Instalment,
   Obligation,
   ObligationInput,
+  TaxPayment,
+  TaxPaymentInput,
 } from "./types";
 
 export function useScope(): { slug: string; entityId: string; base: string } {
@@ -788,6 +790,14 @@ export function useDebtSchedule(seriesId: string | null) {
   });
 }
 
+export function useTaxPayments() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["tax-payments", entityId],
+    queryFn: () => api<TaxPayment[]>(`${base}/tax-payments`),
+  });
+}
+
 export function useHolidays() {
   const { base, entityId } = useScope();
   return useQuery({
@@ -818,6 +828,7 @@ export function useCommitmentMutations() {
         "debt-schedule",
         "holidays",
         "commitment-flows",
+        "tax-payments",
       ].map((key) => client.invalidateQueries({ queryKey: [key, entityId] })),
     );
   return {
@@ -853,12 +864,28 @@ export function useCommitmentMutations() {
           : api<Debt>(`${base}/debt-instruments`, { method: "POST", body }),
       onSuccess: refresh,
     }),
+    saveTaxPayment: useMutation({
+      mutationFn: ({
+        seriesId,
+        body,
+      }: {
+        seriesId: string | null;
+        body: TaxPaymentInput;
+      }) =>
+        seriesId
+          ? api<TaxPayment>(`${base}/tax-payments/${seriesId}`, {
+              method: "PUT",
+              body,
+            })
+          : api<TaxPayment>(`${base}/tax-payments`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
     retire: useMutation({
       mutationFn: ({
         kind,
         seriesId,
       }: {
-        kind: "obligations" | "debt-instruments";
+        kind: "obligations" | "debt-instruments" | "tax-payments";
         seriesId: string;
       }) =>
         api<unknown>(`${base}/${kind}/${seriesId}/retire`, {

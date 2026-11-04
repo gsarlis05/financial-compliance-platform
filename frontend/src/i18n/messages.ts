@@ -6,7 +6,8 @@ export const en = {
   "app.signIn": "Sign in",
   "app.signOut": "Sign out",
   "app.signedOutTitle": "Sign in to continue",
-  "app.signedOutBody": "You need to sign in with multi-factor authentication to use the platform.",
+  "app.signedOutBody":
+    "You need to sign in with multi-factor authentication to use the platform.",
   "app.loading": "Loading…",
   "app.language": "Language",
   "app.error": "Something went wrong",
@@ -29,7 +30,8 @@ export const en = {
 
   "nav.dimensions": "Dimensions",
   "dim.title": "Dimensions",
-  "dim.help": "Analyse postings by department, project or cost centre. Rules per account can make a dimension required or blocked.",
+  "dim.help":
+    "Analyse postings by department, project or cost centre. Rules per account can make a dimension required or blocked.",
   "dim.none": "No dimensions yet.",
   "dim.add": "Add dimension",
   "dim.code": "Code",
@@ -46,7 +48,8 @@ export const en = {
   "dim.inactive": "inactive",
   "tb.dimension": "Dimension value",
   "tb.allLines": "All lines",
-  "tb.partial": "Only lines tagged with this value are included, so debits and credits need not be equal.",
+  "tb.partial":
+    "Only lines tagged with this value are included, so debits and credits need not be equal.",
   "nav.counterparties": "Customers & suppliers",
   "nav.receivables": "Receivables & payables",
   "cp.title": "Customers & suppliers",
@@ -69,7 +72,8 @@ export const en = {
   "ar.side.RECEIVABLE": "Receivables (customers)",
   "ar.side.PAYABLE": "Payables (suppliers)",
   "ar.reconciles": "Open items reconcile to the control accounts:",
-  "ar.doesNotReconcile": "Open items do not reconcile to the control accounts. Contact support. Control balance:",
+  "ar.doesNotReconcile":
+    "Open items do not reconcile to the control accounts. Contact support. Control balance:",
   "ar.none": "Nothing is open at this date.",
   "ar.bucket.current": "Not yet due",
   "ar.bucket.1_30": "1–30 days",
@@ -93,20 +97,24 @@ export const en = {
   "je.reference": "Invoice no.",
   "je.vat": "VAT",
   "vat.unverified": "unverified",
-  "vat.unverifiedHelp": "VAT rates are not yet verified by a Cyprus tax professional. Check them before relying on any VAT figure.",
+  "vat.unverifiedHelp":
+    "VAT rates are not yet verified by a Cyprus tax professional. Check them before relying on any VAT figure.",
   "nav.mapping": "Statement mapping",
   "map.title": "Statement mapping",
-  "map.help": "Each account feeds one line of the financial statements, KPIs and budgets. Statements are blocked while an account with a balance is unmapped.",
+  "map.help":
+    "Each account feeds one line of the financial statements, KPIs and budgets. Statements are blocked while an account with a balance is unmapped.",
   "map.applyDefaults": "Apply default mapping",
   "map.complete": "Mapping complete: statements can be produced for this date.",
-  "map.blocking": "Statements are blocked. Map these accounts (they have a balance):",
+  "map.blocking":
+    "Statements are blocked. Map these accounts (they have a balance):",
   "map.warning": "Also unmapped, with activity but zero balance:",
   "map.balance": "Balance (debit − credit)",
   "map.line": "Statement line",
   "map.unmapped": "— not mapped —",
   "nav.statements": "Statements",
   "st.title": "Financial statements",
-  "st.help": "Management statements built from the statement mapping. They are not statutory financial statements.",
+  "st.help":
+    "Management statements built from the statement mapping. They are not statutory financial statements.",
   "st.from": "From",
   "st.to": "To",
   "st.comparative": "Compare with the prior year",
@@ -119,8 +127,10 @@ export const en = {
   "st.blocked": "Statements are blocked until these accounts are mapped:",
   "st.openMapping": "Open statement mapping",
   "st.watermark": "Includes postings up to #",
-  "st.checksOk": "Checks passed: the balance sheet balances, the result equals the movement in equity and the cash flow reconciles to cash.",
-  "st.checksFailed": "A statement check failed. This is a defect: please report it with the reference below.",
+  "st.checksOk":
+    "Checks passed: the balance sheet balances, the result equals the movement in equity and the cash flow reconciles to cash.",
+  "st.checksFailed":
+    "A statement check failed. This is a defect: please report it with the reference below.",
   "st.drill": "Show accounts",
   "st.ledger": "Ledger lines",
   "st.computed": "computed",
@@ -136,7 +146,8 @@ export const en = {
   "nav.group.controls": "Controls",
   "nav.bank": "Bank",
   "bank.title": "Bank",
-  "bank.help": "Import statements from your bank (ISO 20022 CAMT.053 or CSV), match them to the ledger and reconcile. The same file is never imported twice.",
+  "bank.help":
+    "Import statements from your bank (ISO 20022 CAMT.053 or CSV), match them to the ledger and reconcile. The same file is never imported twice.",
   "bank.account": "Bank account",
   "bank.new": "New bank account",
   "bank.ledgerAccount": "Ledger account",
@@ -149,7 +160,8 @@ export const en = {
   "bank.format": "Format",
   "bank.import": "Import",
   "bank.importFailed": "The statement was not imported:",
-  "bank.importPending": "The statement is queued and will be imported in a moment.",
+  "bank.importPending":
+    "The statement is queued and will be imported in a moment.",
   "bank.linesImported": "lines imported",
   "bank.linesDuplicate": "already imported (skipped)",
   "bank.imports": "Imports",
@@ -187,7 +199,8 @@ export const en = {
   "doc.none": "No documents attached yet.",
   "doc.file": "Attach a document",
   "doc.upload": "Upload",
-  "doc.help": "PDF, PNG, JPEG, XLSX, CSV, TXT or XML, up to 10 MB. Every file is checked for viruses and must really be the type its name says. Documents are kept as evidence and cannot be deleted.",
+  "doc.help":
+    "PDF, PNG, JPEG, XLSX, CSV, TXT or XML, up to 10 MB. Every file is checked for viruses and must really be the type its name says. Documents are kept as evidence and cannot be deleted.",
   "nav.accounts": "Chart of accounts",
   "nav.periods": "Periods",
   "nav.entries": "Journal entries",
@@ -218,7 +231,8 @@ export const en = {
   "per.status": "Status",
   "per.adjustment": "Adjustment",
   "ye.title": "Year-end close",
-  "ye.help": "The closing entry moves every income and expense balance to retained earnings. It follows the approval workflow. Posting it closes the year: nothing more can be posted into it until it is re-opened.",
+  "ye.help":
+    "The closing entry moves every income and expense balance to retained earnings. It follows the approval workflow. Posting it closes the year: nothing more can be posted into it until it is re-opened.",
   "ye.result": "Result to close (profit positive)",
   "ye.account": "Retained earnings account",
   "ye.generate": "Generate closing entry",
@@ -226,8 +240,10 @@ export const en = {
   "ye.entry": "Closing entry",
   "ye.closed": "Closed",
   "ye.checks": "Year-end checks",
-  "ye.check.result_closed": "Income and expense accounts are zero at the year-end",
-  "ye.check.opening_equals_closing_balance_sheet": "Next year's opening balances equal the closing balance sheet",
+  "ye.check.result_closed":
+    "Income and expense accounts are zero at the year-end",
+  "ye.check.opening_equals_closing_balance_sheet":
+    "Next year's opening balances equal the closing balance sheet",
   "ye.reopenReason": "Reason for re-opening",
   "ye.reopen": "Re-open the year",
   "ye.reopenEntry": "Re-opening entry",
@@ -260,7 +276,8 @@ export const en = {
   "je.totals": "Totals",
   "je.difference": "Difference",
   "je.balanced": "Balanced",
-  "je.unbalanced": "Debits and credits must be equal before the entry can be submitted.",
+  "je.unbalanced":
+    "Debits and credits must be equal before the entry can be submitted.",
   "je.adjustmentPeriod": "Post to the adjustment period",
   "je.saveDraft": "Save draft",
   "je.saveAndSubmit": "Save and submit",
@@ -276,7 +293,8 @@ export const en = {
   "je.number": "No.",
   "je.status": "Status",
   "je.amount": "Amount",
-  "je.postedReadOnly": "Posted entries cannot be changed. Reverse the entry to correct it.",
+  "je.postedReadOnly":
+    "Posted entries cannot be changed. Reverse the entry to correct it.",
   "je.reversedBy": "Reversed by",
   "je.reverses": "Reverses",
   "je.restated": "Posted while the period was unlocked",
@@ -308,12 +326,13 @@ export const en = {
   "int.none": "No checks have run yet.",
 
   "nav.group.planning": "Cash & planning",
-  "nav.commitments": "Obligations & loans",
+  "nav.commitments": "Obligations, loans & tax",
   "nature.COMMITTED": "Committed",
   "nature.EXPECTED": "Expected",
-  "cm.title": "Obligations, loans and holidays",
+  "cm.title": "Obligations, loans, tax payments and holidays",
   "cm.obligations": "Recurring obligations",
-  "cm.obligationsHelp": "Rent, payroll, subscriptions and other regular payments or receipts. Contractual ones are committed; the others are expected. A change keeps the previous version.",
+  "cm.obligationsHelp":
+    "Rent, payroll, subscriptions and other regular payments or receipts. Contractual ones are committed; the others are expected. A change keeps the previous version.",
   "cm.noObligations": "No recurring obligations yet.",
   "cm.name": "Name",
   "cm.category": "Category",
@@ -359,7 +378,8 @@ export const en = {
   "cm.adj.MODIFIED_FOLLOWING": "Next business day in the same month",
   "cm.adj.PRECEDING": "Previous business day",
   "cm.debts": "Loans and facilities",
-  "cm.debtsHelp": "Principal is committed. Interest is committed at a fixed rate and expected at a variable rate (the reference rate is an assumption). Facilities have a limit only.",
+  "cm.debtsHelp":
+    "Principal is committed. Interest is committed at a fixed rate and expected at a variable rate (the reference rate is an assumption). Facilities have a limit only.",
   "cm.noDebts": "No loans or facilities yet.",
   "cm.kind": "Kind",
   "cm.rate": "Rate",
@@ -401,7 +421,8 @@ export const en = {
   "cm.payment": "Payment",
   "cm.closing": "Closing",
   "cm.holidays": "Holidays",
-  "cm.holidaysHelp": "Days that are not business days for this entity. No public holidays are built in: add the ones that apply.",
+  "cm.holidaysHelp":
+    "Days that are not business days for this entity. No public holidays are built in: add the ones that apply.",
   "cm.remove": "Remove",
   "cm.addHoliday": "Add holiday",
   "cm.upcoming": "Upcoming flows (next 90 days)",
@@ -410,6 +431,25 @@ export const en = {
   "cm.comp.PAYMENT": "Payment",
   "cm.comp.PRINCIPAL": "Principal",
   "cm.comp.INTEREST": "Interest",
+  "cm.taxes": "Tax payments",
+  "cm.taxesHelp":
+    "Enter tax payments by hand: no due dates are built in until a tax professional has verified them. Committed when assessed or returned, expected when estimated. A paid one no longer counts as a future flow.",
+  "cm.noTaxes": "No tax payments yet.",
+  "cm.taxKind": "Tax",
+  "cm.period": "Period",
+  "cm.dueDate": "Due date",
+  "cm.reference": "Reference",
+  "cm.paidOn": "Paid on",
+  "cm.markPaid": "Mark paid today",
+  "cm.addTax": "Add tax payment",
+  "cm.changeTax": "Change tax payment (new version)",
+  "cm.natureField": "Nature",
+  "cm.tax.VAT": "VAT",
+  "cm.tax.CORPORATE_TAX": "Corporate tax",
+  "cm.tax.SPECIAL_DEFENCE": "Special defence contribution",
+  "cm.tax.SOCIAL_INSURANCE": "Social insurance",
+  "cm.tax.PAYE": "PAYE (employee income tax)",
+  "cm.tax.OTHER": "Other",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -419,7 +459,8 @@ export const el: Record<MessageKey, string> = {
   "app.signIn": "Σύνδεση",
   "app.signOut": "Αποσύνδεση",
   "app.signedOutTitle": "Συνδεθείτε για να συνεχίσετε",
-  "app.signedOutBody": "Απαιτείται σύνδεση με έλεγχο ταυτότητας πολλαπλών παραγόντων.",
+  "app.signedOutBody":
+    "Απαιτείται σύνδεση με έλεγχο ταυτότητας πολλαπλών παραγόντων.",
   "app.loading": "Φόρτωση…",
   "app.language": "Γλώσσα",
   "app.error": "Κάτι πήγε στραβά",
@@ -442,7 +483,8 @@ export const el: Record<MessageKey, string> = {
 
   "nav.dimensions": "Διαστάσεις",
   "dim.title": "Διαστάσεις",
-  "dim.help": "Ανάλυση εγγραφών ανά τμήμα, έργο ή κέντρο κόστους. Κανόνες ανά λογαριασμό μπορούν να κάνουν μια διάσταση υποχρεωτική ή να την αποκλείουν.",
+  "dim.help":
+    "Ανάλυση εγγραφών ανά τμήμα, έργο ή κέντρο κόστους. Κανόνες ανά λογαριασμό μπορούν να κάνουν μια διάσταση υποχρεωτική ή να την αποκλείουν.",
   "dim.none": "Δεν υπάρχουν διαστάσεις ακόμη.",
   "dim.add": "Προσθήκη διάστασης",
   "dim.code": "Κωδικός",
@@ -459,7 +501,8 @@ export const el: Record<MessageKey, string> = {
   "dim.inactive": "ανενεργή",
   "tb.dimension": "Τιμή διάστασης",
   "tb.allLines": "Όλες οι γραμμές",
-  "tb.partial": "Περιλαμβάνονται μόνο οι γραμμές με αυτή την τιμή, οπότε χρεώσεις και πιστώσεις δεν χρειάζεται να ισούνται.",
+  "tb.partial":
+    "Περιλαμβάνονται μόνο οι γραμμές με αυτή την τιμή, οπότε χρεώσεις και πιστώσεις δεν χρειάζεται να ισούνται.",
   "nav.counterparties": "Πελάτες & προμηθευτές",
   "nav.receivables": "Απαιτήσεις & υποχρεώσεις",
   "cp.title": "Πελάτες & προμηθευτές",
@@ -481,8 +524,10 @@ export const el: Record<MessageKey, string> = {
   "ar.side": "Εμφάνιση",
   "ar.side.RECEIVABLE": "Απαιτήσεις (πελάτες)",
   "ar.side.PAYABLE": "Υποχρεώσεις (προμηθευτές)",
-  "ar.reconciles": "Τα ανοικτά στοιχεία συμφωνούν με τους λογαριασμούς ελέγχου:",
-  "ar.doesNotReconcile": "Τα ανοικτά στοιχεία δεν συμφωνούν με τους λογαριασμούς ελέγχου. Επικοινωνήστε με την υποστήριξη. Υπόλοιπο:",
+  "ar.reconciles":
+    "Τα ανοικτά στοιχεία συμφωνούν με τους λογαριασμούς ελέγχου:",
+  "ar.doesNotReconcile":
+    "Τα ανοικτά στοιχεία δεν συμφωνούν με τους λογαριασμούς ελέγχου. Επικοινωνήστε με την υποστήριξη. Υπόλοιπο:",
   "ar.none": "Δεν υπάρχει τίποτα ανοικτό σε αυτή την ημερομηνία.",
   "ar.bucket.current": "Μη ληξιπρόθεσμα",
   "ar.bucket.1_30": "1–30 ημέρες",
@@ -506,20 +551,26 @@ export const el: Record<MessageKey, string> = {
   "je.reference": "Αρ. τιμολογίου",
   "je.vat": "ΦΠΑ",
   "vat.unverified": "μη επαληθευμένο",
-  "vat.unverifiedHelp": "Οι συντελεστές ΦΠΑ δεν έχουν ακόμη επαληθευτεί από φοροτεχνικό στην Κύπρο. Ελέγξτε τους πριν βασιστείτε σε οποιοδήποτε ποσό ΦΠΑ.",
+  "vat.unverifiedHelp":
+    "Οι συντελεστές ΦΠΑ δεν έχουν ακόμη επαληθευτεί από φοροτεχνικό στην Κύπρο. Ελέγξτε τους πριν βασιστείτε σε οποιοδήποτε ποσό ΦΠΑ.",
   "nav.mapping": "Αντιστοίχιση καταστάσεων",
   "map.title": "Αντιστοίχιση καταστάσεων",
-  "map.help": "Κάθε λογαριασμός τροφοδοτεί μία γραμμή των οικονομικών καταστάσεων, των δεικτών και των προϋπολογισμών. Οι καταστάσεις μπλοκάρονται όσο ένας λογαριασμός με υπόλοιπο δεν έχει αντιστοιχιστεί.",
+  "map.help":
+    "Κάθε λογαριασμός τροφοδοτεί μία γραμμή των οικονομικών καταστάσεων, των δεικτών και των προϋπολογισμών. Οι καταστάσεις μπλοκάρονται όσο ένας λογαριασμός με υπόλοιπο δεν έχει αντιστοιχιστεί.",
   "map.applyDefaults": "Εφαρμογή προεπιλεγμένης αντιστοίχισης",
-  "map.complete": "Η αντιστοίχιση είναι πλήρης: μπορούν να παραχθούν καταστάσεις για αυτή την ημερομηνία.",
-  "map.blocking": "Οι καταστάσεις είναι μπλοκαρισμένες. Αντιστοιχίστε αυτούς τους λογαριασμούς (έχουν υπόλοιπο):",
-  "map.warning": "Επίσης χωρίς αντιστοίχιση, με κινήσεις αλλά μηδενικό υπόλοιπο:",
+  "map.complete":
+    "Η αντιστοίχιση είναι πλήρης: μπορούν να παραχθούν καταστάσεις για αυτή την ημερομηνία.",
+  "map.blocking":
+    "Οι καταστάσεις είναι μπλοκαρισμένες. Αντιστοιχίστε αυτούς τους λογαριασμούς (έχουν υπόλοιπο):",
+  "map.warning":
+    "Επίσης χωρίς αντιστοίχιση, με κινήσεις αλλά μηδενικό υπόλοιπο:",
   "map.balance": "Υπόλοιπο (χρέωση − πίστωση)",
   "map.line": "Γραμμή κατάστασης",
   "map.unmapped": "— χωρίς αντιστοίχιση —",
   "nav.statements": "Καταστάσεις",
   "st.title": "Οικονομικές καταστάσεις",
-  "st.help": "Διοικητικές καταστάσεις από την αντιστοίχιση καταστάσεων. Δεν είναι καταστατικές οικονομικές καταστάσεις.",
+  "st.help":
+    "Διοικητικές καταστάσεις από την αντιστοίχιση καταστάσεων. Δεν είναι καταστατικές οικονομικές καταστάσεις.",
   "st.from": "Από",
   "st.to": "Έως",
   "st.comparative": "Σύγκριση με την προηγούμενη χρήση",
@@ -529,11 +580,14 @@ export const el: Record<MessageKey, string> = {
   "st.bs": "Οικονομική θέση",
   "st.cf": "Ταμειακές ροές",
   "st.export": "Εξαγωγή",
-  "st.blocked": "Οι καταστάσεις είναι μπλοκαρισμένες μέχρι να αντιστοιχιστούν αυτοί οι λογαριασμοί:",
+  "st.blocked":
+    "Οι καταστάσεις είναι μπλοκαρισμένες μέχρι να αντιστοιχιστούν αυτοί οι λογαριασμοί:",
   "st.openMapping": "Άνοιγμα αντιστοίχισης καταστάσεων",
   "st.watermark": "Περιλαμβάνει καταχωρίσεις έως #",
-  "st.checksOk": "Οι έλεγχοι πέρασαν: ο ισολογισμός ισοσκελίζεται, το αποτέλεσμα ισούται με τη μεταβολή των ιδίων κεφαλαίων και οι ταμειακές ροές συμφωνούν με τα διαθέσιμα.",
-  "st.checksFailed": "Ένας έλεγχος καταστάσεων απέτυχε. Πρόκειται για σφάλμα: αναφέρετέ το με την παρακάτω αναφορά.",
+  "st.checksOk":
+    "Οι έλεγχοι πέρασαν: ο ισολογισμός ισοσκελίζεται, το αποτέλεσμα ισούται με τη μεταβολή των ιδίων κεφαλαίων και οι ταμειακές ροές συμφωνούν με τα διαθέσιμα.",
+  "st.checksFailed":
+    "Ένας έλεγχος καταστάσεων απέτυχε. Πρόκειται για σφάλμα: αναφέρετέ το με την παρακάτω αναφορά.",
   "st.drill": "Εμφάνιση λογαριασμών",
   "st.ledger": "Κινήσεις λογαριασμού",
   "st.computed": "υπολογισμένο",
@@ -549,7 +603,8 @@ export const el: Record<MessageKey, string> = {
   "nav.group.controls": "Έλεγχοι",
   "nav.bank": "Τράπεζα",
   "bank.title": "Τράπεζα",
-  "bank.help": "Εισαγάγετε κινήσεις από την τράπεζά σας (ISO 20022 CAMT.053 ή CSV), αντιστοιχίστε τις με το καθολικό και συμφωνήστε. Το ίδιο αρχείο δεν εισάγεται ποτέ δύο φορές.",
+  "bank.help":
+    "Εισαγάγετε κινήσεις από την τράπεζά σας (ISO 20022 CAMT.053 ή CSV), αντιστοιχίστε τις με το καθολικό και συμφωνήστε. Το ίδιο αρχείο δεν εισάγεται ποτέ δύο φορές.",
   "bank.account": "Τραπεζικός λογαριασμός",
   "bank.new": "Νέος τραπεζικός λογαριασμός",
   "bank.ledgerAccount": "Λογαριασμός καθολικού",
@@ -562,7 +617,8 @@ export const el: Record<MessageKey, string> = {
   "bank.format": "Μορφή",
   "bank.import": "Εισαγωγή",
   "bank.importFailed": "Οι κινήσεις δεν εισήχθησαν:",
-  "bank.importPending": "Οι κινήσεις είναι σε αναμονή και θα εισαχθούν σε λίγο.",
+  "bank.importPending":
+    "Οι κινήσεις είναι σε αναμονή και θα εισαχθούν σε λίγο.",
   "bank.linesImported": "γραμμές εισήχθησαν",
   "bank.linesDuplicate": "είχαν ήδη εισαχθεί (παραλείφθηκαν)",
   "bank.imports": "Εισαγωγές",
@@ -586,7 +642,8 @@ export const el: Record<MessageKey, string> = {
   "bank.bookTo": "Καταχώριση σε λογαριασμό",
   "bank.counterparty": "Πελάτης ή προμηθευτής",
   "bank.book": "Δημιουργία πρόχειρης εγγραφής",
-  "bank.draftCreated": "Δημιουργήθηκε πρόχειρη εγγραφή: ανοίξτε την για υποβολή προς έγκριση",
+  "bank.draftCreated":
+    "Δημιουργήθηκε πρόχειρη εγγραφή: ανοίξτε την για υποβολή προς έγκριση",
   "bank.ignoreNote": "Γιατί αγνοείται η γραμμή;",
   "bank.ignore": "Αγνόηση",
   "bank.reconcile": "Συμφωνία",
@@ -600,7 +657,8 @@ export const el: Record<MessageKey, string> = {
   "doc.none": "Δεν έχουν επισυναφθεί έγγραφα ακόμη.",
   "doc.file": "Επισύναψη εγγράφου",
   "doc.upload": "Μεταφόρτωση",
-  "doc.help": "PDF, PNG, JPEG, XLSX, CSV, TXT ή XML, έως 10 MB. Κάθε αρχείο ελέγχεται για ιούς και πρέπει να είναι πράγματι του τύπου που δηλώνει το όνομά του. Τα έγγραφα φυλάσσονται ως τεκμήρια και δεν διαγράφονται.",
+  "doc.help":
+    "PDF, PNG, JPEG, XLSX, CSV, TXT ή XML, έως 10 MB. Κάθε αρχείο ελέγχεται για ιούς και πρέπει να είναι πράγματι του τύπου που δηλώνει το όνομά του. Τα έγγραφα φυλάσσονται ως τεκμήρια και δεν διαγράφονται.",
   "nav.accounts": "Λογιστικό σχέδιο",
   "nav.periods": "Περίοδοι",
   "nav.entries": "Εγγραφές ημερολογίου",
@@ -609,7 +667,8 @@ export const el: Record<MessageKey, string> = {
   "nav.integrity": "Ακεραιότητα",
 
   "acc.title": "Λογιστικό σχέδιο",
-  "acc.empty": "Η οντότητα δεν έχει ακόμη λογαριασμούς. Ξεκινήστε από ένα πρότυπο:",
+  "acc.empty":
+    "Η οντότητα δεν έχει ακόμη λογαριασμούς. Ξεκινήστε από ένα πρότυπο:",
   "acc.template.cy_business": "Κυπριακή εταιρεία (σύμφωνα με ΔΠΧΑ)",
   "acc.template.personal": "Προσωπικά οικονομικά",
   "acc.apply": "Εφαρμογή προτύπου",
@@ -631,7 +690,8 @@ export const el: Record<MessageKey, string> = {
   "per.status": "Κατάσταση",
   "per.adjustment": "Προσαρμογών",
   "ye.title": "Κλείσιμο χρήσης",
-  "ye.help": "Η εγγραφή κλεισίματος μεταφέρει όλα τα υπόλοιπα εσόδων και εξόδων στα αδιανέμητα κέρδη. Ακολουθεί τη διαδικασία έγκρισης. Η καταχώρισή της κλείνει τη χρήση: δεν μπορεί να καταχωριστεί τίποτα άλλο σε αυτή μέχρι να ανοίξει ξανά.",
+  "ye.help":
+    "Η εγγραφή κλεισίματος μεταφέρει όλα τα υπόλοιπα εσόδων και εξόδων στα αδιανέμητα κέρδη. Ακολουθεί τη διαδικασία έγκρισης. Η καταχώρισή της κλείνει τη χρήση: δεν μπορεί να καταχωριστεί τίποτα άλλο σε αυτή μέχρι να ανοίξει ξανά.",
   "ye.result": "Αποτέλεσμα προς κλείσιμο (κέρδος θετικό)",
   "ye.account": "Λογαριασμός αδιανέμητων κερδών",
   "ye.generate": "Δημιουργία εγγραφής κλεισίματος",
@@ -639,8 +699,10 @@ export const el: Record<MessageKey, string> = {
   "ye.entry": "Εγγραφή κλεισίματος",
   "ye.closed": "Κλειστή",
   "ye.checks": "Έλεγχοι κλεισίματος",
-  "ye.check.result_closed": "Οι λογαριασμοί εσόδων και εξόδων είναι μηδενικοί στο τέλος της χρήσης",
-  "ye.check.opening_equals_closing_balance_sheet": "Τα υπόλοιπα έναρξης της επόμενης χρήσης ισούνται με τον ισολογισμό κλεισίματος",
+  "ye.check.result_closed":
+    "Οι λογαριασμοί εσόδων και εξόδων είναι μηδενικοί στο τέλος της χρήσης",
+  "ye.check.opening_equals_closing_balance_sheet":
+    "Τα υπόλοιπα έναρξης της επόμενης χρήσης ισούνται με τον ισολογισμό κλεισίματος",
   "ye.reopenReason": "Αιτιολογία επανανοίγματος",
   "ye.reopen": "Επανάνοιγμα χρήσης",
   "ye.reopenEntry": "Εγγραφή επανανοίγματος",
@@ -673,7 +735,8 @@ export const el: Record<MessageKey, string> = {
   "je.totals": "Σύνολα",
   "je.difference": "Διαφορά",
   "je.balanced": "Ισοσκελισμένη",
-  "je.unbalanced": "Οι χρεώσεις και οι πιστώσεις πρέπει να είναι ίσες πριν από την υποβολή.",
+  "je.unbalanced":
+    "Οι χρεώσεις και οι πιστώσεις πρέπει να είναι ίσες πριν από την υποβολή.",
   "je.adjustmentPeriod": "Καταχώρηση στην περίοδο προσαρμογών",
   "je.saveDraft": "Αποθήκευση πρόχειρου",
   "je.saveAndSubmit": "Αποθήκευση και υποβολή",
@@ -722,12 +785,13 @@ export const el: Record<MessageKey, string> = {
   "int.none": "Δεν έχουν εκτελεστεί ακόμη έλεγχοι.",
 
   "nav.group.planning": "Ταμείο & σχεδιασμός",
-  "nav.commitments": "Υποχρεώσεις & δάνεια",
+  "nav.commitments": "Υποχρεώσεις, δάνεια & φόροι",
   "nature.COMMITTED": "Δεσμευμένο",
   "nature.EXPECTED": "Αναμενόμενο",
-  "cm.title": "Υποχρεώσεις, δάνεια και αργίες",
+  "cm.title": "Υποχρεώσεις, δάνεια, φόροι και αργίες",
   "cm.obligations": "Επαναλαμβανόμενες υποχρεώσεις",
-  "cm.obligationsHelp": "Ενοίκιο, μισθοδοσία, συνδρομές και άλλες τακτικές πληρωμές ή εισπράξεις. Οι συμβατικές είναι δεσμευμένες, οι υπόλοιπες αναμενόμενες. Μια αλλαγή κρατά την προηγούμενη έκδοση.",
+  "cm.obligationsHelp":
+    "Ενοίκιο, μισθοδοσία, συνδρομές και άλλες τακτικές πληρωμές ή εισπράξεις. Οι συμβατικές είναι δεσμευμένες, οι υπόλοιπες αναμενόμενες. Μια αλλαγή κρατά την προηγούμενη έκδοση.",
   "cm.noObligations": "Δεν υπάρχουν ακόμη επαναλαμβανόμενες υποχρεώσεις.",
   "cm.name": "Όνομα",
   "cm.category": "Κατηγορία",
@@ -773,7 +837,8 @@ export const el: Record<MessageKey, string> = {
   "cm.adj.MODIFIED_FOLLOWING": "Επόμενη εργάσιμη στον ίδιο μήνα",
   "cm.adj.PRECEDING": "Προηγούμενη εργάσιμη",
   "cm.debts": "Δάνεια και πιστωτικά όρια",
-  "cm.debtsHelp": "Το κεφάλαιο είναι δεσμευμένο. Ο τόκος είναι δεσμευμένος με σταθερό επιτόκιο και αναμενόμενος με κυμαινόμενο (το επιτόκιο αναφοράς είναι υπόθεση). Τα πιστωτικά όρια έχουν μόνο όριο.",
+  "cm.debtsHelp":
+    "Το κεφάλαιο είναι δεσμευμένο. Ο τόκος είναι δεσμευμένος με σταθερό επιτόκιο και αναμενόμενος με κυμαινόμενο (το επιτόκιο αναφοράς είναι υπόθεση). Τα πιστωτικά όρια έχουν μόνο όριο.",
   "cm.noDebts": "Δεν υπάρχουν ακόμη δάνεια ή πιστωτικά όρια.",
   "cm.kind": "Είδος",
   "cm.rate": "Επιτόκιο",
@@ -815,7 +880,8 @@ export const el: Record<MessageKey, string> = {
   "cm.payment": "Πληρωμή",
   "cm.closing": "Τελικό",
   "cm.holidays": "Αργίες",
-  "cm.holidaysHelp": "Ημέρες που δεν είναι εργάσιμες για αυτή την οντότητα. Δεν περιλαμβάνονται έτοιμες δημόσιες αργίες: προσθέστε όσες ισχύουν.",
+  "cm.holidaysHelp":
+    "Ημέρες που δεν είναι εργάσιμες για αυτή την οντότητα. Δεν περιλαμβάνονται έτοιμες δημόσιες αργίες: προσθέστε όσες ισχύουν.",
   "cm.remove": "Αφαίρεση",
   "cm.addHoliday": "Προσθήκη αργίας",
   "cm.upcoming": "Επερχόμενες ροές (επόμενες 90 ημέρες)",
@@ -824,6 +890,25 @@ export const el: Record<MessageKey, string> = {
   "cm.comp.PAYMENT": "Πληρωμή",
   "cm.comp.PRINCIPAL": "Κεφάλαιο",
   "cm.comp.INTEREST": "Τόκος",
+  "cm.taxes": "Πληρωμές φόρων",
+  "cm.taxesHelp":
+    "Καταχωρίστε τις πληρωμές φόρων χειροκίνητα: δεν υπάρχουν έτοιμες ημερομηνίες λήξης μέχρι να τις επαληθεύσει φοροτεχνικός. Δεσμευμένες όταν έχουν βεβαιωθεί ή δηλωθεί, αναμενόμενες όταν είναι εκτίμηση. Μια πληρωμένη δεν μετρά πλέον ως μελλοντική ροή.",
+  "cm.noTaxes": "Δεν υπάρχουν ακόμη πληρωμές φόρων.",
+  "cm.taxKind": "Φόρος",
+  "cm.period": "Περίοδος",
+  "cm.dueDate": "Ημερομηνία λήξης",
+  "cm.reference": "Αναφορά",
+  "cm.paidOn": "Πληρώθηκε",
+  "cm.markPaid": "Πληρώθηκε σήμερα",
+  "cm.addTax": "Προσθήκη πληρωμής φόρου",
+  "cm.changeTax": "Αλλαγή πληρωμής φόρου (νέα έκδοση)",
+  "cm.natureField": "Φύση",
+  "cm.tax.VAT": "ΦΠΑ",
+  "cm.tax.CORPORATE_TAX": "Εταιρικός φόρος",
+  "cm.tax.SPECIAL_DEFENCE": "Έκτακτη εισφορά για την άμυνα",
+  "cm.tax.SOCIAL_INSURANCE": "Κοινωνικές ασφαλίσεις",
+  "cm.tax.PAYE": "ΦΜΥ (φόρος εισοδήματος εργοδοτουμένων)",
+  "cm.tax.OTHER": "Άλλο",
 };
 
 export const catalogs = { en, el } as const;

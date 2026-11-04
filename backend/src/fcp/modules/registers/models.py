@@ -247,3 +247,46 @@ class EntityHoliday(TenantOwned):
         constraints = [
             models.UniqueConstraint(fields=["legal_entity", "day"], name="registers_holiday_once"),
         ]
+
+
+class TaxPayment(Versioned):
+    """A tax payment entered by hand (M3-5): no due dates are built in until a tax professional
+    has verified them (decision #93). COMMITTED when assessed or returned, EXPECTED when
+    estimated. A paid one is no longer a forecast flow (the bank shows the actual payment)."""
+
+    class Kind(models.TextChoices):
+        VAT = "VAT"
+        CORPORATE_TAX = "CORPORATE_TAX"  # provisional or final instalments
+        SPECIAL_DEFENCE = "SPECIAL_DEFENCE"
+        SOCIAL_INSURANCE = "SOCIAL_INSURANCE"
+        PAYE = "PAYE"
+        OTHER = "OTHER"
+
+    class Nature(models.TextChoices):
+        COMMITTED = "COMMITTED"
+        EXPECTED = "EXPECTED"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    period_label = models.CharField(max_length=40, help_text="e.g. 2026-Q3 or 2026 instalment 1")
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=19, decimal_places=2)
+    nature = models.CharField(max_length=10, choices=Nature.choices)
+    reference = models.CharField(max_length=100, blank=True)
+    paid_on = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "registers_tax_payment"
+        constraints = [
+            models.UniqueConstraint(fields=["series_id", "version"], name="registers_tax_version"),
+            models.UniqueConstraint(
+                fields=["series_id"], condition=models.Q(superseded_at__isnull=True),
+                name="registers_tax_one_current",
+            ),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="registers_tax_amount"),
+            models.CheckConstraint(
+                condition=models.Q(nature__in=["COMMITTED", "EXPECTED"]),
+                name="registers_tax_nature",
+            ),
+        ]  # fmt: skip
+        indexes = [models.Index(fields=["legal_entity", "superseded_at", "due_date"])]

@@ -53,7 +53,8 @@ brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 | M3-2 Metrics core: natures, calc runs, lineage, reproducibility (issue #56) | `claude/m3-2-metrics-core` | #109 | Open |
 | M3-3 Expression evaluator (issue #57) | `claude/m3-3-expressions` | #110 | Open |
 | M3-4 Obligations, loans, facilities and holidays (issue #58) | `claude/m3-4-commitments` | #111 | Open |
-| M3-5 Tax payment calendar (issue #59) | — | — | Next |
+| M3-5 Tax payment calendar, manual entry (issue #59) | `claude/m3-5-tax-calendar` | #112 | Open |
+| M3-6 Payment behaviour (issue #60) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

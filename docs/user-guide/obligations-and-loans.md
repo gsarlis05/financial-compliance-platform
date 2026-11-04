@@ -1,6 +1,6 @@
-# Obligations, loans and holidays
+# Obligations, loans, tax payments and holidays
 
-**Cash & planning → Obligations & loans** records the payments you already know about. The cash
+**Cash & planning → Obligations, loans & tax** records the payments you already know about. The cash
 forecast (Milestone 3) uses them, and each amount is labelled with its nature:
 - **Committed:** contractually due, such as rent under a lease, loan principal, or interest at a
   fixed rate;
@@ -38,6 +38,19 @@ the obligation.
   liquidity in the forecast.
 
 The conventions used (day counts, rounding, payment dates) are in ADR-0019.
+
+## Tax payments
+Enter each tax payment by hand: VAT, corporate tax instalments, special defence contribution,
+social insurance, PAYE or other. Give it a period label (e.g. 2026-Q3), a due date, an amount and
+its nature:
+- **Committed** when it has been assessed or returned;
+- **Expected** when it is an estimate.
+
+No due dates are built in or pre-filled. Templates with Cyprus due dates will be added only after
+a tax professional has verified them (decision #93). **Mark paid today** records the payment
+date: a paid tax payment no longer counts as a future flow, because the bank statement shows the
+actual payment. **Change** saves a new version, for example when the assessed amount replaces
+the estimate.
 
 ## Holidays
 No public holidays are built in. Add the days that are not business days for this entity; payment
