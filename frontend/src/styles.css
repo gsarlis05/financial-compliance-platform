@@ -179,3 +179,26 @@ ul.documents a { overflow-wrap: anywhere; }
 .table-actions { margin-top: 0; }
 input.narrow { width: 6rem; }
 .small { font-size: 0.8rem; }
+
+/* Cash forecast chart (doc 10 §10.1): the line style carries the nature, colour only supports it. */
+.chart { margin: 1rem 0; }
+.chart > svg { width: 100%; height: auto; max-width: 900px; display: block; }
+.chart-grid { stroke: var(--border); stroke-width: 1; }
+.chart-axis { font-size: 11px; fill: var(--muted); }
+.chart-forecast { fill: none; stroke: var(--text); stroke-width: 2; stroke-dasharray: 6 4; }
+.chart-whatif { fill: none; stroke: #8a3ffc; stroke-width: 2.5; stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.chart-minimum { stroke: var(--warn); stroke-width: 1; }
+.chart-today { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+.chart-actual { fill: var(--text); }
+.chart-point { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; }
+.chart-short { fill: var(--warn); stroke: var(--warn); }
+.chart-short-text { font-size: 13px; font-weight: 700; fill: var(--warn); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.85rem; margin-top: 0.25rem; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.nature-actual { border-style: solid; border-color: var(--text); font-weight: 600; }
+.nature-forecast, .nature-expected { border-style: dashed; }
+.nature-hypothetical { border-style: dotted; border-color: #8a3ffc; }
+.nature-committed { border-style: solid; }
+.nature-target { border-style: double; }
+tr.shortfall td, tr.shortfall th { background: color-mix(in srgb, var(--warn) 8%, transparent); }
+button.link { background: none; border: none; padding: 0; color: var(--link, inherit); text-decoration: underline; cursor: pointer; font: inherit; }

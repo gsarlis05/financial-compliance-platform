@@ -201,7 +201,10 @@ function MainNav({ base }: { base: string }) {
     },
     {
       label: "nav.group.planning",
-      links: [[`${base}/commitments`, "nav.commitments"]],
+      links: [
+        [`${base}/cash-forecast`, "nav.cashForecast"],
+        [`${base}/commitments`, "nav.commitments"],
+      ],
     },
     {
       label: "nav.group.reports",
