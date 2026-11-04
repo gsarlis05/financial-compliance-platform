@@ -16,7 +16,7 @@ from ninja.files import UploadedFile
 from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import excel, services
+from . import excel, services, variance
 from .models import Budget, BudgetEvent, BudgetVersion
 from .services import BudgetInput, BudgetView, LineInput, VersionView, fiscal_months
 
@@ -33,6 +33,24 @@ def _money(value: Decimal) -> str:
 
 class BudgetSettingsIO(Schema):
     sod_required: bool = Field(description="The submitter of a version cannot approve it")
+    explain_above_amount: str = Field(description="Explain variances of at least this amount")
+    explain_above_percent: str = Field(description="... and at least this percentage")
+
+
+class BudgetSettingsIn(Schema):
+    """Fields left out keep their value."""
+
+    sod_required: bool | None = None
+    explain_above_amount: Annotated[str, Field(pattern=r"^\d{1,15}(\.\d{1,2})?$")] | None = None
+    explain_above_percent: Annotated[str, Field(pattern=r"^\d{1,5}(\.\d{1,2})?$")] | None = None
+
+
+def _settings_out(s: services.Settings) -> BudgetSettingsIO:
+    return BudgetSettingsIO(
+        sod_required=s.sod_required,
+        explain_above_amount=_money(s.explain_above_amount),
+        explain_above_percent=_money(s.explain_above_percent),
+    )
 
 
 class BudgetVersionOut(Schema):
@@ -227,18 +245,26 @@ class BudgetEventOut(Schema):
 @router.get(f"{BASE}/budget-settings", response=BudgetSettingsIO)
 @requires("budget.read")
 def get_settings(request: HttpRequest, slug: str, entity_id: UUID) -> BudgetSettingsIO:
-    s = services.get_settings(workspace_ctx(request, slug, entity_id), entity_id)
-    return BudgetSettingsIO(sod_required=s.sod_required)
+    return _settings_out(services.get_settings(workspace_ctx(request, slug, entity_id), entity_id))
 
 
 @router.put(f"{BASE}/budget-settings", response=BudgetSettingsIO)
 @requires("budget.settings.manage")
 def put_settings(
-    request: HttpRequest, slug: str, entity_id: UUID, payload: BudgetSettingsIO
+    request: HttpRequest, slug: str, entity_id: UUID, payload: BudgetSettingsIn
 ) -> BudgetSettingsIO:
     ctx = workspace_ctx(request, slug, entity_id)
-    s = services.set_settings(ctx, entity_id, sod_required=payload.sod_required)
-    return BudgetSettingsIO(sod_required=s.sod_required)
+    old = services.get_settings(ctx, entity_id)
+    new = services.Settings(
+        old.sod_required if payload.sod_required is None else payload.sod_required,
+        old.explain_above_amount
+        if payload.explain_above_amount is None
+        else Decimal(payload.explain_above_amount),
+        old.explain_above_percent
+        if payload.explain_above_percent is None
+        else Decimal(payload.explain_above_percent),
+    )
+    return _settings_out(services.set_settings(ctx, entity_id, new))
 
 
 @router.get(f"{BASE}/budgets", response=list[BudgetOut])
@@ -557,3 +583,198 @@ def budget_members(request: HttpRequest, slug: str, entity_id: UUID) -> list[Bud
         BudgetMemberOut(user_id=m.user_id, name=m.display_name or m.email)
         for m in services.members(ctx, entity_id)
     ]
+
+
+# --- variance (M4-3) ------------------------------------------------------------------------------
+
+ViewName = Literal["MONTH", "QTD", "YTD", "FULL_YEAR"]
+ComparisonName = Literal["ACTUAL_VS_BUDGET", "ACTUAL_VS_PRIOR_YEAR", "CURRENT_VS_ORIGINAL"]
+
+
+class VarianceQuery(Schema):
+    month: date = Field(description="First day of the month the view ends in")
+    view: ViewName = "MONTH"
+    comparison: ComparisonName = "ACTUAL_VS_BUDGET"
+
+
+class VarianceExplanationOut(Schema):
+    line_id: UUID
+    month: date
+    view: str
+    comparison: str
+    comment: str
+    seq: int
+    author_name: str
+    at: datetime
+
+
+def _explanation_out(e: Any) -> VarianceExplanationOut:
+    return VarianceExplanationOut(
+        line_id=e.line_id,
+        month=e.month,
+        view=e.view,
+        comparison=e.comparison,
+        comment=e.comment,
+        seq=e.seq,
+        author_name=e.author.display_name or e.author.email,
+        at=e.created_at,
+    )
+
+
+class VarianceRowOut(Schema):
+    line_id: UUID | None = Field(description="None for a line only in the original budget")
+    taxonomy_code: str | None
+    account_id: UUID | None
+    dimension_value_id: UUID | None
+    direction: str
+    subject: str
+    subject_nature: Literal["ACTUAL", "BLENDED", "BUDGET"]
+    comparison: str
+    comparison_nature: Literal["ACTUAL", "BUDGET"]
+    variance: str
+    percent: str | None = Field(description="None: not meaningful (the comparison is zero)")
+    favourable: bool | None = Field(description="None when there is no variance")
+    requires_explanation: bool
+    explanation: VarianceExplanationOut | None
+
+
+class PeriodReviewOut(Schema):
+    month: date
+    actuals_watermark: int
+    completed_by_name: str
+    at: datetime
+
+
+class VarianceOut(Schema):
+    version_id: UUID
+    month: date
+    view: str
+    comparison: str
+    window: list[date]
+    cutover: date | None = Field(description="Blended views: actuals up to this month")
+    actuals_watermark: int
+    unposted_entries: int | None = Field(description="Entries in the period not yet posted")
+    explain_above_amount: str
+    explain_above_percent: str
+    rows: list[VarianceRowOut]
+    review: PeriodReviewOut | None
+
+
+@router.get(f"{BASE}/budget-versions/{{uuid:version_id}}/variance", response=VarianceOut)
+@requires("budget.department")
+def get_variance(
+    request: HttpRequest, slug: str, entity_id: UUID, version_id: UUID, q: Query[VarianceQuery]
+) -> VarianceOut:
+    """Actual vs budget (or prior year, or current vs original budget) for every visible line;
+    actuals from posted entries only, pinned to one ledger watermark."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    v = variance.compute(
+        ctx, entity_id, version_id, month=q.month, view=q.view, comparison=q.comparison
+    )
+    review = None
+    if v.review is not None:
+        by = v.review.completed_by
+        review = PeriodReviewOut(
+            month=v.review.month,
+            actuals_watermark=v.review.actuals_watermark,
+            completed_by_name=by.display_name or by.email,
+            at=v.review.created_at,
+        )
+    return VarianceOut(
+        version_id=v.version.id,
+        month=v.month,
+        view=v.view,
+        comparison=v.comparison,
+        window=v.window,
+        cutover=v.cutover,
+        actuals_watermark=v.watermark,
+        unposted_entries=v.unposted,
+        explain_above_amount=_money(v.thresholds.amount),
+        explain_above_percent=_money(v.thresholds.percent),
+        rows=[
+            VarianceRowOut(
+                line_id=r.line_id,
+                taxonomy_code=r.taxonomy_code,
+                account_id=r.account_id,
+                dimension_value_id=r.dimension_value_id,
+                direction=r.direction,
+                subject=_money(r.subject),
+                subject_nature=r.subject_nature,  # type: ignore[arg-type]
+                comparison=_money(r.comparison),
+                comparison_nature=r.comparison_nature,  # type: ignore[arg-type]
+                variance=_money(r.variance),
+                percent=None if r.percent is None else _money(r.percent),
+                favourable=r.favourable,
+                requires_explanation=r.requires_explanation,
+                explanation=_explanation_out(r.explanation) if r.explanation else None,
+            )
+            for r in v.rows
+        ],
+        review=review,
+    )
+
+
+class VarianceExplainIn(Schema):
+    line_id: UUID
+    month: date
+    view: ViewName = "MONTH"
+    comparison: ComparisonName = "ACTUAL_VS_BUDGET"
+    comment: str = Field(max_length=1000)
+
+
+@router.post(
+    f"{BASE}/budget-versions/{{uuid:version_id}}/explanations",
+    response={201: VarianceExplanationOut},
+)
+@requires("budget.department")
+def explain_variance(
+    request: HttpRequest, slug: str, entity_id: UUID, version_id: UUID, payload: VarianceExplainIn
+) -> Status[VarianceExplanationOut]:
+    """Explain (or re-explain) a line's variance; earlier explanations are kept."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = variance.explain(
+        ctx,
+        entity_id,
+        version_id,
+        payload.line_id,
+        month=payload.month,
+        view=payload.view,
+        comparison=payload.comparison,
+        comment=payload.comment,
+    )
+    return Status(201, _explanation_out(made))
+
+
+@router.get(
+    f"{BASE}/budget-versions/{{uuid:version_id}}/lines/{{uuid:line_id}}/explanations",
+    response=list[VarianceExplanationOut],
+)
+@requires("budget.department")
+def explanation_history(
+    request: HttpRequest, slug: str, entity_id: UUID, version_id: UUID, line_id: UUID
+) -> list[VarianceExplanationOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_explanation_out(e) for e in variance.history(ctx, entity_id, version_id, line_id)]
+
+
+class PeriodReviewIn(Schema):
+    month: date
+
+
+@router.post(f"{BASE}/budget-versions/{{uuid:version_id}}/reviews", response={201: PeriodReviewOut})
+@requires("budget.approve")
+def complete_review(
+    request: HttpRequest, slug: str, entity_id: UUID, version_id: UUID, payload: PeriodReviewIn
+) -> Status[PeriodReviewOut]:
+    """Mark a month's budget review complete (refused while explanations are missing)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    review = variance.complete_review(ctx, entity_id, version_id, payload.month)
+    return Status(
+        201,
+        PeriodReviewOut(
+            month=review.month,
+            actuals_watermark=review.actuals_watermark,
+            completed_by_name=ctx.user.display_name or ctx.user.email,
+            at=review.created_at,
+        ),
+    )

@@ -1838,6 +1838,16 @@
       },
       "BudgetSettingsIO": {
         "properties": {
+          "explain_above_amount": {
+            "description": "Explain variances of at least this amount",
+            "title": "Explain Above Amount",
+            "type": "string"
+          },
+          "explain_above_percent": {
+            "description": "... and at least this percentage",
+            "title": "Explain Above Percent",
+            "type": "string"
+          },
           "sod_required": {
             "description": "The submitter of a version cannot approve it",
             "title": "Sod Required",
@@ -1845,9 +1855,53 @@
           }
         },
         "required": [
-          "sod_required"
+          "sod_required",
+          "explain_above_amount",
+          "explain_above_percent"
         ],
         "title": "BudgetSettingsIO",
+        "type": "object"
+      },
+      "BudgetSettingsIn": {
+        "description": "Fields left out keep their value.",
+        "properties": {
+          "explain_above_amount": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explain Above Amount"
+          },
+          "explain_above_percent": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,5}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explain Above Percent"
+          },
+          "sod_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sod Required"
+          }
+        },
+        "title": "BudgetSettingsIn",
         "type": "object"
       },
       "BudgetVersionDetailOut": {
@@ -6349,6 +6403,50 @@
         "title": "PeriodOut",
         "type": "object"
       },
+      "PeriodReviewIn": {
+        "properties": {
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "PeriodReviewIn",
+        "type": "object"
+      },
+      "PeriodReviewOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "completed_by_name": {
+            "title": "Completed By Name",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "actuals_watermark",
+          "completed_by_name",
+          "at"
+        ],
+        "title": "PeriodReviewOut",
+        "type": "object"
+      },
       "PeriodStatusIn": {
         "properties": {
           "status": {
@@ -7949,6 +8047,381 @@
           "decision_note"
         ],
         "title": "UnlockOut",
+        "type": "object"
+      },
+      "VarianceExplainIn": {
+        "properties": {
+          "comment": {
+            "maxLength": 1000,
+            "title": "Comment",
+            "type": "string"
+          },
+          "comparison": {
+            "default": "ACTUAL_VS_BUDGET",
+            "enum": [
+              "ACTUAL_VS_BUDGET",
+              "ACTUAL_VS_PRIOR_YEAR",
+              "CURRENT_VS_ORIGINAL"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "view": {
+            "default": "MONTH",
+            "enum": [
+              "MONTH",
+              "QTD",
+              "YTD",
+              "FULL_YEAR"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "month",
+          "comment"
+        ],
+        "title": "VarianceExplainIn",
+        "type": "object"
+      },
+      "VarianceExplanationOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "author_name": {
+            "title": "Author Name",
+            "type": "string"
+          },
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "month",
+          "view",
+          "comparison",
+          "comment",
+          "seq",
+          "author_name",
+          "at"
+        ],
+        "title": "VarianceExplanationOut",
+        "type": "object"
+      },
+      "VarianceOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "cutover": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Blended views: actuals up to this month",
+            "title": "Cutover"
+          },
+          "explain_above_amount": {
+            "title": "Explain Above Amount",
+            "type": "string"
+          },
+          "explain_above_percent": {
+            "title": "Explain Above Percent",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeriodReviewOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/VarianceRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "unposted_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Entries in the period not yet posted",
+            "title": "Unposted Entries"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          },
+          "window": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Window",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version_id",
+          "month",
+          "view",
+          "comparison",
+          "window",
+          "cutover",
+          "actuals_watermark",
+          "unposted_entries",
+          "explain_above_amount",
+          "explain_above_percent",
+          "rows",
+          "review"
+        ],
+        "title": "VarianceOut",
+        "type": "object"
+      },
+      "VarianceQuery": {
+        "properties": {
+          "comparison": {
+            "default": "ACTUAL_VS_BUDGET",
+            "enum": [
+              "ACTUAL_VS_BUDGET",
+              "ACTUAL_VS_PRIOR_YEAR",
+              "CURRENT_VS_ORIGINAL"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "month": {
+            "description": "First day of the month the view ends in",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "view": {
+            "default": "MONTH",
+            "enum": [
+              "MONTH",
+              "QTD",
+              "YTD",
+              "FULL_YEAR"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "VarianceQuery",
+        "type": "object"
+      },
+      "VarianceRowOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "comparison_nature": {
+            "enum": [
+              "ACTUAL",
+              "BUDGET"
+            ],
+            "title": "Comparison Nature",
+            "type": "string"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VarianceExplanationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "favourable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None when there is no variance",
+            "title": "Favourable"
+          },
+          "line_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for a line only in the original budget",
+            "title": "Line Id"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None: not meaningful (the comparison is zero)",
+            "title": "Percent"
+          },
+          "requires_explanation": {
+            "title": "Requires Explanation",
+            "type": "boolean"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "subject_nature": {
+            "enum": [
+              "ACTUAL",
+              "BLENDED",
+              "BUDGET"
+            ],
+            "title": "Subject Nature",
+            "type": "string"
+          },
+          "taxonomy_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Code"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "taxonomy_code",
+          "account_id",
+          "dimension_value_id",
+          "direction",
+          "subject",
+          "subject_nature",
+          "comparison",
+          "comparison_nature",
+          "variance",
+          "percent",
+          "favourable",
+          "requires_explanation",
+          "explanation"
+        ],
+        "title": "VarianceRowOut",
         "type": "object"
       },
       "VatCodeOut": {
@@ -10504,7 +10977,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BudgetSettingsIO"
+                "$ref": "#/components/schemas/BudgetSettingsIn"
               }
             }
           },
@@ -10652,6 +11125,74 @@
           }
         ],
         "summary": "Approve",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/explanations": {
+      "post": {
+        "description": "Explain (or re-explain) a line's variance; earlier explanations are kept.",
+        "operationId": "fcp_modules_budgeting_api_explain_variance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VarianceExplainIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VarianceExplanationOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Explain Variance",
         "tags": [
           "budgeting"
         ]
@@ -10871,6 +11412,77 @@
           }
         ],
         "summary": "Save Lines",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/lines/{line_id}/explanations": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_explanation_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VarianceExplanationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Explanation History",
         "tags": [
           "budgeting"
         ]
@@ -11135,6 +11747,74 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/reviews": {
+      "post": {
+        "description": "Mark a month's budget review complete (refused while explanations are missing).",
+        "operationId": "fcp_modules_budgeting_api_complete_review",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodReviewOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Complete Review",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/revise": {
       "post": {
         "description": "Start a revision of the current version (a new draft with its lines and a reason).",
@@ -11255,6 +11935,107 @@
           }
         ],
         "summary": "Submit",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/variance": {
+      "get": {
+        "description": "Actual vs budget (or prior year, or current vs original budget) for every visible line;\nactuals from posted entries only, pinned to one ledger watermark.",
+        "operationId": "fcp_modules_budgeting_api_get_variance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "First day of the month the view ends in",
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "description": "First day of the month the view ends in",
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "MONTH",
+              "enum": [
+                "MONTH",
+                "QTD",
+                "YTD",
+                "FULL_YEAR"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "comparison",
+            "required": false,
+            "schema": {
+              "default": "ACTUAL_VS_BUDGET",
+              "enum": [
+                "ACTUAL_VS_BUDGET",
+                "ACTUAL_VS_PRIOR_YEAR",
+                "CURRENT_VS_ORIGINAL"
+              ],
+              "title": "Comparison",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VarianceOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Variance",
         "tags": [
           "budgeting"
         ]

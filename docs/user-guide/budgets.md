@@ -69,5 +69,36 @@ A preparer can name an **owner** for each department (or project) of a budget. A
 - can edit and import those lines while the version is a draft, and nothing else;
 - cannot submit, approve or see other departments.
 
-## Coming next
-Budget-versus-actual variance with explanations (M4-3).
+## Variance
+Under **Variance**, choose a month, a period and a comparison:
+- **Periods:**
+  - **month**;
+  - **quarter to date**;
+  - **year to date**;
+  - **full-year outlook**: actuals up to the month, plus the budget for the remaining months. It
+    is labelled *Blended*.
+- **Comparisons:**
+  - **actual vs budget**;
+  - **actual vs prior year**;
+  - **current vs original budget**: after a revision, what changed since the first approval.
+
+How the figures work:
+- **Actuals come only from posted entries.** How many entries in the period are not posted yet is
+  shown as a warning; they are not counted. Year-end closing entries are left out.
+- **Department and project lines** compare with entries tagged with that department or project.
+- **Variance** is the actual minus the comparison.
+- **Favourable or unfavourable** follows the line: more revenue than planned is favourable, more
+  cost is not.
+- **The percentage** is the variance divided by the comparison. When the comparison is zero, it is
+  shown as *Not meaningful*, never 0 or ∞.
+
+### Explanations and the monthly review
+A variance needs an explanation when it reaches **both** thresholds: by default 1,000 and 10%.
+They can be changed in the budget settings (API).
+
+Write the explanation in the row. A changed explanation keeps the earlier ones, with who wrote
+each and when.
+
+**Complete the review** of a month (finance manager, partner or owner) is refused while any
+actual-vs-budget variance above the thresholds, for the month or the year to date, is still
+unexplained. Department owners explain their own departments' lines.

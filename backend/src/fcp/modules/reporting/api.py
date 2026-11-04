@@ -17,10 +17,13 @@ from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.ledger.api import (
+    DimensionTotal,
     account_list,
     dimension_list,
     fiscal_year_list,
+    posted_dimension_totals,
     trial_balance_rows,
+    unposted_entries,
 )
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
@@ -31,6 +34,7 @@ __all__ = [
     "AccountActivity",
     "AccountRef",
     "Actuals",
+    "DimensionTotal",
     "DimensionValueRef",
     "Fact",
     "FiscalYearRef",
@@ -41,12 +45,14 @@ __all__ = [
     "balances_before",
     "cash_daily",
     "current_watermark",
+    "dimension_actuals",
     "dimension_values",
     "fiscal_year_start",
     "fiscal_years",
     "opening_net",
     "posted_since",
     "router",
+    "unposted_count",
 ]
 
 router = Router(tags=["reporting"])
@@ -125,6 +131,29 @@ def dimension_values(ctx: WorkspaceContext, entity_id: UUID) -> list[DimensionVa
     ]
 
 
+def dimension_actuals(  # noqa: PLR0913 (keyword-only filters)
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    *,
+    date_from: date,
+    date_to: date,
+    value_ids: list[UUID],
+    watermark: int | None = None,
+    permission: str = "reports.read",
+) -> list[DimensionTotal]:
+    """Monthly posted totals per account for lines tagged with these dimension values (closing
+    entries excluded), for department and project actuals (M4-3)."""
+    return posted_dimension_totals(ctx, entity_id, date_from=date_from, date_to=date_to,
+                                   value_ids=value_ids, watermark=watermark,
+                                   permission=permission)  # fmt: skip
+
+
+def unposted_count(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,
+                   date_to: date) -> int:  # fmt: skip
+    """How many entries dated in the range are not posted (they are not in any actuals)."""
+    return unposted_entries(ctx, entity_id, date_from=date_from, date_to=date_to)
+
+
 def account_activity(
     ctx: WorkspaceContext, entity_id: UUID, *, as_of: date
 ) -> dict[UUID, AccountActivity]:
@@ -142,9 +171,13 @@ def account_activity(
 # (``WatermarkError`` if it was never reached): calculation runs pin it to be reproducible.
 
 
-def current_watermark(ctx: WorkspaceContext, entity_id: UUID) -> int:
-    """The highest posting sequence included in the actuals now (refreshing them first)."""
-    get_entity(ctx, entity_id, "reports.read")
+def current_watermark(ctx: WorkspaceContext, entity_id: UUID,
+                      permission: str = "reports.read") -> int:  # fmt: skip
+    """The highest posting sequence included in the actuals now (refreshing them first).
+    ``budget.department`` lets a department owner pin their department's actuals."""
+    if permission not in ("reports.read", "budget.department"):
+        raise ValueError(f"unsupported permission {permission!r}")
+    get_entity(ctx, entity_id, permission)
     return actuals.refresh(ctx.tenant.id)
 
 
