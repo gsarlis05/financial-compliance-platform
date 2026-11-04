@@ -200,6 +200,10 @@ function MainNav({ base }: { base: string }) {
       ],
     },
     {
+      label: "nav.group.planning",
+      links: [[`${base}/commitments`, "nav.commitments"]],
+    },
+    {
       label: "nav.group.reports",
       links: [
         [`${base}/trial-balance`, "nav.trialBalance"],

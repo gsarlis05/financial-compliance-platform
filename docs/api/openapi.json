@@ -895,6 +895,21 @@
         "title": "CandidateOut",
         "type": "object"
       },
+      "Category": {
+        "enum": [
+          "RENT",
+          "PAYROLL",
+          "SOCIAL_INSURANCE",
+          "SUBSCRIPTION",
+          "LEASE",
+          "INSURANCE",
+          "UTILITIES",
+          "INCOME",
+          "OTHER"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
       "ChainStatusOut": {
         "properties": {
           "broken_at_seq": {
@@ -1504,6 +1519,368 @@
         "title": "CsvMappingIn",
         "type": "object"
       },
+      "DebtIn": {
+        "properties": {
+          "adjust": {
+            "default": "MODIFIED_FOLLOWING",
+            "enum": [
+              "NONE",
+              "FOLLOWING",
+              "MODIFIED_FOLLOWING",
+              "PRECEDING"
+            ],
+            "title": "Adjust",
+            "type": "string"
+          },
+          "assumed_reference_rate": {
+            "anyOf": [
+              {
+                "pattern": "^0(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assumed Reference Rate"
+          },
+          "day_count": {
+            "default": "ACT_365",
+            "enum": [
+              "ACT_360",
+              "ACT_365",
+              "30_360"
+            ],
+            "title": "Day Count",
+            "type": "string"
+          },
+          "facility_limit": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facility Limit"
+          },
+          "fixed_rate": {
+            "anyOf": [
+              {
+                "pattern": "^0(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Rate"
+          },
+          "interest_only_periods": {
+            "default": 0,
+            "maximum": 599,
+            "minimum": 0,
+            "title": "Interest Only Periods",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "lender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lender Id"
+          },
+          "margin": {
+            "anyOf": [
+              {
+                "pattern": "^0(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin"
+          },
+          "maturity_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturity Date"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_frequency_months": {
+            "default": 1,
+            "enum": [
+              1,
+              3,
+              6,
+              12
+            ],
+            "title": "Payment Frequency Months",
+            "type": "integer"
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal"
+          },
+          "rate_type": {
+            "$ref": "#/components/schemas/RateType"
+          },
+          "reference_rate_key": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Reference Rate Key",
+            "type": "string"
+          },
+          "repayment_type": {
+            "default": "",
+            "enum": [
+              "",
+              "ANNUITY",
+              "LINEAR",
+              "BULLET",
+              "IO_THEN_ANNUITY"
+            ],
+            "title": "Repayment Type",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "start_date",
+          "rate_type"
+        ],
+        "title": "DebtIn",
+        "type": "object"
+      },
+      "DebtOut": {
+        "properties": {
+          "adjust": {
+            "title": "Adjust",
+            "type": "string"
+          },
+          "assumed_reference_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assumed Reference Rate"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "day_count": {
+            "title": "Day Count",
+            "type": "string"
+          },
+          "facility_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facility Limit"
+          },
+          "fixed_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Rate"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interest_only_periods": {
+            "title": "Interest Only Periods",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lender Id"
+          },
+          "margin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin"
+          },
+          "maturity_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturity Date"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_frequency_months": {
+            "title": "Payment Frequency Months",
+            "type": "integer"
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal"
+          },
+          "rate_type": {
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "reference_rate_key": {
+            "title": "Reference Rate Key",
+            "type": "string"
+          },
+          "repayment_type": {
+            "title": "Repayment Type",
+            "type": "string"
+          },
+          "series_id": {
+            "format": "uuid",
+            "title": "Series Id",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "series_id",
+          "version",
+          "name",
+          "kind",
+          "principal",
+          "facility_limit",
+          "start_date",
+          "maturity_date",
+          "payment_frequency_months",
+          "rate_type",
+          "fixed_rate",
+          "reference_rate_key",
+          "margin",
+          "assumed_reference_rate",
+          "day_count",
+          "repayment_type",
+          "interest_only_periods",
+          "adjust",
+          "lender_id",
+          "note",
+          "superseded_at",
+          "created_at"
+        ],
+        "title": "DebtOut",
+        "type": "object"
+      },
       "DefaultsIn": {
         "properties": {
           "template": {
@@ -1748,6 +2125,14 @@
         },
         "title": "DimensionValuePatch",
         "type": "object"
+      },
+      "Direction": {
+        "enum": [
+          "OUTFLOW",
+          "INFLOW"
+        ],
+        "title": "Direction",
+        "type": "string"
       },
       "DocumentOut": {
         "properties": {
@@ -2520,6 +2905,92 @@
         "title": "FlagOut",
         "type": "object"
       },
+      "FlowOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "COMMITTED",
+              "EXPECTED"
+            ],
+            "title": "Nature",
+            "type": "string"
+          },
+          "scheduled": {
+            "format": "date",
+            "title": "Scheduled",
+            "type": "string"
+          },
+          "series_id": {
+            "format": "uuid",
+            "title": "Series Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "due",
+          "scheduled",
+          "amount",
+          "nature",
+          "source",
+          "component",
+          "category",
+          "name",
+          "series_id",
+          "version_id"
+        ],
+        "title": "FlowOut",
+        "type": "object"
+      },
+      "FlowsQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "FlowsQuery",
+        "type": "object"
+      },
       "HistoryOut": {
         "properties": {
           "created_at": {
@@ -2556,6 +3027,52 @@
           "created_by_id"
         ],
         "title": "HistoryOut",
+        "type": "object"
+      },
+      "HolidayIn": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "name"
+        ],
+        "title": "HolidayIn",
+        "type": "object"
+      },
+      "HolidayOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "name"
+        ],
+        "title": "HolidayOut",
         "type": "object"
       },
       "IgnoreIn": {
@@ -2678,6 +3195,62 @@
         "title": "ImportOut",
         "type": "object"
       },
+      "InstalmentOut": {
+        "properties": {
+          "closing": {
+            "title": "Closing",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "interest": {
+            "title": "Interest",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "opening": {
+            "title": "Opening",
+            "type": "string"
+          },
+          "payment": {
+            "title": "Payment",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "principal": {
+            "title": "Principal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "period_start",
+          "period_end",
+          "due",
+          "opening",
+          "interest",
+          "principal",
+          "payment",
+          "closing"
+        ],
+        "title": "InstalmentOut",
+        "type": "object"
+      },
       "IntegrityCheckOut": {
         "properties": {
           "created_at": {
@@ -2793,12 +3366,11 @@
       },
       "Kind": {
         "enum": [
-          "CUSTOMER",
-          "SUPPLIER",
-          "BOTH",
-          "EMPLOYEE",
-          "TAX_AUTHORITY",
-          "LENDER"
+          "TERM_LOAN",
+          "LEASE",
+          "DIRECTOR_LOAN",
+          "OVERDRAFT",
+          "REVOLVER"
         ],
         "title": "Kind",
         "type": "string"
@@ -3462,6 +4034,265 @@
         "title": "Nature",
         "type": "string"
       },
+      "ObligationIn": {
+        "properties": {
+          "adjust": {
+            "default": "NONE",
+            "enum": [
+              "NONE",
+              "FOLLOWING",
+              "MODIFIED_FOLLOWING",
+              "PRECEDING"
+            ],
+            "title": "Adjust",
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "contractual": {
+            "title": "Contractual",
+            "type": "boolean"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Of Month"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "frequency": {
+            "enum": [
+              "WEEKLY",
+              "MONTHLY",
+              "QUARTERLY",
+              "YEARLY"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "interval": {
+            "default": 1,
+            "maximum": 52,
+            "minimum": 1,
+            "title": "Interval",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "direction",
+          "amount",
+          "frequency",
+          "start_date",
+          "contractual"
+        ],
+        "title": "ObligationIn",
+        "type": "object"
+      },
+      "ObligationOut": {
+        "properties": {
+          "adjust": {
+            "title": "Adjust",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "contractual": {
+            "title": "Contractual",
+            "type": "boolean"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Of Month"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "frequency": {
+            "title": "Frequency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interval": {
+            "title": "Interval",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "COMMITTED",
+              "EXPECTED"
+            ],
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "series_id": {
+            "format": "uuid",
+            "title": "Series Id",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "series_id",
+          "version",
+          "name",
+          "category",
+          "direction",
+          "amount",
+          "currency",
+          "frequency",
+          "interval",
+          "day_of_month",
+          "start_date",
+          "end_date",
+          "adjust",
+          "contractual",
+          "nature",
+          "counterparty_id",
+          "note",
+          "superseded_at",
+          "created_at"
+        ],
+        "title": "ObligationOut",
+        "type": "object"
+      },
       "OpenItemOut": {
         "properties": {
           "account_code": {
@@ -3674,6 +4505,14 @@
         ],
         "title": "PeriodStatusIn",
         "type": "object"
+      },
+      "RateType": {
+        "enum": [
+          "FIXED",
+          "VARIABLE"
+        ],
+        "title": "RateType",
+        "type": "string"
       },
       "ReconcileIn": {
         "properties": {
@@ -7389,6 +8228,78 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/commitment-flows": {
+      "get": {
+        "description": "The dated flows of all current obligations and loans in a period (inflows positive).",
+        "operationId": "fcp_modules_registers_api_commitment_flows",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FlowOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Commitment Flows",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/counterparties": {
       "get": {
         "operationId": "fcp_modules_registers_api_list_counterparties",
@@ -7713,6 +8624,358 @@
           }
         ],
         "summary": "Auto Allocate",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/debt-instruments": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_debt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DebtOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Debt",
+        "tags": [
+          "registers"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_registers_api_create_debt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebtIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Debt",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/debt-instruments/{series_id}": {
+      "put": {
+        "operationId": "fcp_modules_registers_api_change_debt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebtIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Change Debt",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/debt-instruments/{series_id}/history": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_debt_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DebtOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Debt History",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/debt-instruments/{series_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_registers_api_retire_debt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Debt",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/debt-instruments/{series_id}/schedule": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_debt_schedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstalmentOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Debt Schedule",
         "tags": [
           "registers"
         ]
@@ -8735,6 +9998,162 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/holidays": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_holidays",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HolidayOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Holidays",
+        "tags": [
+          "registers"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_registers_api_add_holiday",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Holiday",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/holidays/{holiday_id}": {
+      "delete": {
+        "operationId": "fcp_modules_registers_api_remove_holiday",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "holiday_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Holiday Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Holiday",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/journal-entries": {
       "get": {
         "operationId": "fcp_modules_ledger_api_list_entries",
@@ -9563,6 +10982,298 @@
         "summary": "Put Settings",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/obligations": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_list_obligations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObligationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Obligations",
+        "tags": [
+          "registers"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_registers_api_create_obligation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObligationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObligationOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Obligation",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/obligations/{series_id}": {
+      "put": {
+        "description": "Adds a new version; the previous one is kept in the history.",
+        "operationId": "fcp_modules_registers_api_change_obligation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObligationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObligationOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Change Obligation",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/obligations/{series_id}/history": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_obligation_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObligationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Obligation History",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/obligations/{series_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_registers_api_retire_obligation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObligationOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Obligation",
+        "tags": [
+          "registers"
         ]
       }
     },
