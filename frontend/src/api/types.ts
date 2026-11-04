@@ -66,7 +66,13 @@ export interface FiscalYear {
   periods: Period[];
 }
 
-export type EntryStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED" | "VOID";
+export type EntryStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "APPROVED"
+  | "POSTED"
+  | "REJECTED"
+  | "VOID";
 
 export interface LineDimension {
   dimension_id: string;
@@ -195,7 +201,13 @@ export interface IntegrityRun {
   results: { check: string; ok: boolean; details: string[] }[];
 }
 
-export type CounterpartyKind = "CUSTOMER" | "SUPPLIER" | "BOTH" | "EMPLOYEE" | "TAX_AUTHORITY" | "LENDER";
+export type CounterpartyKind =
+  | "CUSTOMER"
+  | "SUPPLIER"
+  | "BOTH"
+  | "EMPLOYEE"
+  | "TAX_AUTHORITY"
+  | "LENDER";
 
 export interface Counterparty {
   id: string;
@@ -232,7 +244,13 @@ export interface OpenItem {
   note: string;
 }
 
-export const BUCKETS = ["current", "1_30", "31_60", "61_90", "over_90"] as const;
+export const BUCKETS = [
+  "current",
+  "1_30",
+  "31_60",
+  "61_90",
+  "over_90",
+] as const;
 export type Bucket = (typeof BUCKETS)[number];
 
 export interface AgeingRow {
@@ -376,8 +394,14 @@ export interface CloseStatus {
   status: "OPEN" | "CLOSED";
   end_date: string;
   result: Amount;
-  lines: { account_id: string; account_code: string; account_name: string; account_type: string;
-           dimension_value_ids: string[]; balance: Amount }[];
+  lines: {
+    account_id: string;
+    account_code: string;
+    account_name: string;
+    account_type: string;
+    dimension_value_ids: string[];
+    balance: Amount;
+  }[];
   blockers: string[];
   closing_entry_id: string | null;
   closing_entry_status: EntryStatus | null;
@@ -465,4 +489,123 @@ export interface DocumentInfo {
   created_at: string;
   uploaded_by_id: string;
   links: { id: string; entry_id: string | null; line_id: string | null }[];
+}
+
+// --- commitments: recurring obligations, loans, facilities, holidays (M3-4) ----------------------
+
+export type Adjustment =
+  | "NONE"
+  | "FOLLOWING"
+  | "MODIFIED_FOLLOWING"
+  | "PRECEDING";
+export type Frequency = "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+export type ObligationCategory =
+  | "RENT"
+  | "PAYROLL"
+  | "SOCIAL_INSURANCE"
+  | "SUBSCRIPTION"
+  | "LEASE"
+  | "INSURANCE"
+  | "UTILITIES"
+  | "INCOME"
+  | "OTHER";
+export type CommitmentNature = "COMMITTED" | "EXPECTED";
+
+export interface ObligationInput {
+  name: string;
+  category: ObligationCategory;
+  direction: "OUTFLOW" | "INFLOW";
+  amount: string;
+  frequency: Frequency;
+  interval: number;
+  day_of_month: number | null;
+  start_date: string;
+  end_date: string | null;
+  adjust: Adjustment;
+  contractual: boolean;
+  counterparty_id: string | null;
+  note: string;
+}
+
+export interface Obligation extends ObligationInput {
+  id: string;
+  series_id: string;
+  version: number;
+  currency: string;
+  nature: CommitmentNature;
+  superseded_at: string | null;
+  created_at: string;
+}
+
+export type DebtKind =
+  | "TERM_LOAN"
+  | "LEASE"
+  | "DIRECTOR_LOAN"
+  | "OVERDRAFT"
+  | "REVOLVER";
+export type Repayment =
+  | ""
+  | "ANNUITY"
+  | "LINEAR"
+  | "BULLET"
+  | "IO_THEN_ANNUITY";
+
+export interface DebtInput {
+  name: string;
+  kind: DebtKind;
+  principal: string | null;
+  facility_limit: string | null;
+  start_date: string;
+  maturity_date: string | null;
+  payment_frequency_months: 1 | 3 | 6 | 12;
+  rate_type: "FIXED" | "VARIABLE";
+  fixed_rate: string | null;
+  reference_rate_key: string;
+  margin: string | null;
+  assumed_reference_rate: string | null;
+  day_count: "ACT_360" | "ACT_365" | "30_360";
+  repayment_type: Repayment;
+  interest_only_periods: number;
+  adjust: Adjustment;
+  lender_id: string | null;
+  note: string;
+}
+
+export interface Debt extends DebtInput {
+  id: string;
+  series_id: string;
+  version: number;
+  superseded_at: string | null;
+  created_at: string;
+}
+
+export interface Instalment {
+  number: number;
+  period_start: string;
+  period_end: string;
+  due: string;
+  opening: string;
+  interest: string;
+  principal: string;
+  payment: string;
+  closing: string;
+}
+
+export interface Holiday {
+  id: string;
+  day: string;
+  name: string;
+}
+
+export interface CommitmentFlow {
+  due: string;
+  scheduled: string;
+  amount: string;
+  nature: CommitmentNature;
+  source: "OBLIGATION" | "DEBT";
+  component: "PAYMENT" | "PRINCIPAL" | "INTEREST";
+  category: string;
+  name: string;
+  series_id: string;
+  version_id: string;
 }
