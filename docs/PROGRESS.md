@@ -65,7 +65,7 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M4-2 Budget grid, phasing, Excel import/export, department owners (issue #66) | `claude/m4-2-budget-grid` | #121 | Open |
 | M4-3 Variance, explanations, monthly review (issue #67) | `claude/m4-3-variance` | #122 | Open |
 | M4-4 KPI library: versioned definitions, KPI sets as calculation runs (issue #68) | `claude/m4-4-kpis` | #123 | Open |
-| M4-5 Custom KPIs and operational metrics (issue #69) | — | — | Next |
+| M4-5 Custom KPIs and operational metrics (issue #69) | — | — | **Paused**: the owner asked (2026-11-04) to stop after M4-4 and wait for their "continue" |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
