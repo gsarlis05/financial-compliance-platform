@@ -45,7 +45,8 @@ in order.
 | M2-9 Year-end close and re-open (issue #52) | `claude/m2-9-year-end` | #102 | Open |
 | M2-11 Grouped navigation (issue #99) | `claude/m2-11-nav` | #103 | Open |
 | M2-5 Bank import, matching, reconciliation (issue #53) | `claude/m2-5-bank` | #104 | Open |
-| M2-4 Documents (issue #54) | — | — | Next |
+| M2-4 Document vault (issue #54) | `claude/m2-4-documents` | #105 | Open |
+| Milestone 2 report and owner review | — | — | Next (all M2 items are in review) |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

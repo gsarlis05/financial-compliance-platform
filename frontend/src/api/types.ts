@@ -455,3 +455,14 @@ export interface PaymentSuggestion {
   open_amount: Amount;
   reference_matches: boolean;
 }
+
+export interface DocumentInfo {
+  id: string;
+  filename: string;
+  content_type: string;
+  size: number;
+  sha256: string;
+  created_at: string;
+  uploaded_by_id: string;
+  links: { id: string; entry_id: string | null; line_id: string | null }[];
+}

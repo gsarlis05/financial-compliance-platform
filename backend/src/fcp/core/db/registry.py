@@ -19,7 +19,7 @@ GLOBAL_TABLES: dict[str, str] = {
 }
 
 # Tables the runtime role may only INSERT into and SELECT from (no UPDATE or DELETE).
-APPEND_ONLY_TABLES: set[str] = {"audit_log_event", "banking_reconciliation"}
+APPEND_ONLY_TABLES: set[str] = {"audit_log_event", "banking_reconciliation", "documents_document"}
 
 # Narrow SECURITY DEFINER functions the runtime role may execute (each returns IDs only).
 RUNTIME_FUNCTIONS: set[str] = {"banking_pending_tenant_ids()"}
