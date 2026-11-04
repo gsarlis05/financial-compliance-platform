@@ -51,6 +51,12 @@ async function signIn(page) {
   await page.getByRole('heading', { name: 'Your workspaces' }).waitFor({ timeout: 15000 });
 }
 
+// Main navigation is grouped (M2-11): open the group, then follow the link.
+async function go(page, group, name) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: group }).click();
+  await page.getByRole('link', { name, exact: true }).click();
+}
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 });
@@ -65,19 +71,19 @@ async function signIn(page) {
     await page.getByRole('heading', { name: 'Journal entries' }).waitFor();
     steps.push('created personal workspace');
 
-    await page.getByRole('link', { name: 'Chart of accounts' }).click();
+    await go(page, 'Setup', 'Chart of accounts');
     await page.getByLabel('Apply template').selectOption('personal');
     await page.getByRole('button', { name: 'Apply template' }).click();
     await page.getByRole('cell', { name: 'Groceries' }).waitFor();
     steps.push('applied personal chart of accounts');
 
-    await page.getByRole('link', { name: 'Periods' }).click();
+    await go(page, 'Setup', 'Periods');
     await page.getByLabel('Start date').fill('2026-01-01');
     await page.getByRole('button', { name: 'Create fiscal year' }).click();
     await page.getByRole('heading', { name: /2026/ }).waitFor();
     steps.push('created FY2026');
 
-    await page.getByRole('link', { name: 'Journal entries' }).click();
+    await go(page, 'Bookkeeping', 'Journal entries');
     await page.getByRole('link', { name: 'New entry' }).click();
     await page.getByLabel('Accounting date').fill('2026-03-15');
     await page.getByLabel('Description').fill('Weekly groceries');
@@ -98,7 +104,7 @@ async function signIn(page) {
     await page.screenshot({ path: path.join(OUT, 'ui-entry-posted.png') });
     steps.push('posted entry (read-only, reverse only)');
 
-    await page.getByRole('link', { name: 'Trial balance' }).click();
+    await go(page, 'Reports', 'Trial balance');
     await page.getByLabel('As of').fill('2026-12-31');
     await page.getByRole('cell', { name: 'Groceries' }).waitFor();
     const totals = await page.locator('tfoot td.amount').allInnerTexts();
