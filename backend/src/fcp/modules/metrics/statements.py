@@ -243,9 +243,16 @@ class _Column:
     opening: dict[UUID, Decimal]  # bal(date_from)
     closing: dict[UUID, Decimal]  # bal(date_to + 1)
     fy_start: dict[UUID, Decimal]  # bal(start of the fiscal year containing date_to)
+    # The parts of ``opening`` and ``closing`` from year-end closing entries (M2-9).
+    opening_closings: dict[UUID, Decimal] = field(default_factory=dict)
+    closing_closings: dict[UUID, Decimal] = field(default_factory=dict)
 
     def movement(self, account_id: UUID) -> Decimal:
-        return self.closing.get(account_id, ZERO) - self.opening.get(account_id, ZERO)
+        """Movement in the period without closing entries: the P&L shows the result, and the
+        transfer of the result to equity is neither a cash flow nor a contribution."""
+        closing = self.closing.get(account_id, ZERO) - self.closing_closings.get(account_id, ZERO)
+        opening = self.opening.get(account_id, ZERO) - self.opening_closings.get(account_id, ZERO)
+        return closing - opening
 
 
 @dataclass
@@ -273,13 +280,21 @@ def _blocking(
     postable: list[AccountRef],
     mapping: dict[UUID, TaxonomyLine],
     cutoffs: dict[date, dict[UUID, Decimal]],
+    closings: dict[date, dict[UUID, Decimal]],
     checked: Iterable[date],
 ) -> dict[str, list[str]]:
+    """Unmapped accounts with a balance, with or without closing entries (a closed P&L account
+    is zero only because of the closing entry; its result would still be missing)."""
     errors: dict[str, list[str]] = {}
     for account in postable:
         if account.id in mapping:
             continue
-        dates = sorted(d for d in set(checked) if cutoffs[d].get(account.id, ZERO) != 0)
+        dates = sorted(
+            d
+            for d in set(checked)
+            if cutoffs[d].get(account.id, ZERO) != 0
+            or cutoffs[d].get(account.id, ZERO) != closings[d].get(account.id, ZERO)
+        )
         if dates:
             when = (dates[0] - timedelta(days=1)).isoformat()
             errors[account.code] = [f"unmapped and has a balance on {when}"]
@@ -655,11 +670,11 @@ def build(
         periods.append(prior_year(periods[0]))
     fy_starts = [fiscal_year_start(wctx, entity_id, p.date_to) for p in periods]
     cutoffs = [d for p in periods for d in (p.date_from, p.date_to + timedelta(days=1))]
-    watermark, balances = balances_before(wctx, entity_id, [*cutoffs, *fy_starts])
+    watermark, balances, closings = balances_before(wctx, entity_id, [*cutoffs, *fy_starts])
 
     all_accounts = [a for a in accounts(wctx, entity_id) if a.is_postable]
     mapping = current_mapping(entity_id, version)
-    errors = _blocking(all_accounts, mapping, balances, cutoffs)
+    errors = _blocking(all_accounts, mapping, balances, closings, cutoffs)
     if errors:
         raise MappingIncompleteError(
             f"{len(errors)} account(s) with a balance are not mapped to a statement line. Map "
@@ -667,7 +682,14 @@ def build(
             field_errors=errors,
         )
     columns = [
-        _Column(p, balances[p.date_from], balances[p.date_to + timedelta(days=1)], balances[fy])
+        _Column(
+            p,
+            balances[p.date_from],
+            balances[p.date_to + timedelta(days=1)],
+            balances[fy],
+            closings[p.date_from],
+            closings[p.date_to + timedelta(days=1)],
+        )
         for p, fy in zip(periods, fy_starts, strict=True)
     ]
     lines = list(TaxonomyLine.objects.filter(version_id=version).order_by("order"))

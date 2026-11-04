@@ -25,15 +25,20 @@ from .models import ActualsState, FactDaily, FactMonthly
 
 ZERO = Decimal(0)
 
+# Year-end closing entries, and reversals of them (re-opening a year), are kept apart (M2-9).
+_IS_CLOSING = """(e.entry_type = 'CLOSING' OR (e.entry_type = 'REVERSAL' AND EXISTS (
+    SELECT 1 FROM ledger_journal_entry o
+     WHERE o.id = e.reverses_entry_id AND o.entry_type = 'CLOSING')))"""
+
 _UPSERT = """
-INSERT INTO {table} (id, tenant_id, created_at, legal_entity_id, account_id, {key},
+INSERT INTO {table} (id, tenant_id, created_at, legal_entity_id, account_id, {key}, is_closing,
                      debit_total, credit_total)
 SELECT gen_random_uuid(), e.tenant_id, now(), e.legal_entity_id, l.account_id, {expr},
-       sum(l.debit), sum(l.credit)
+       {closing}, sum(l.debit), sum(l.credit)
   FROM ledger_journal_line l JOIN ledger_journal_entry e ON e.id = l.entry_id
  WHERE e.tenant_id = %s AND e.status = 'POSTED' AND e.posting_seq > %s AND e.posting_seq <= %s
- GROUP BY e.tenant_id, e.legal_entity_id, l.account_id, {expr}
-ON CONFLICT (legal_entity_id, account_id, {key}) DO UPDATE
+ GROUP BY e.tenant_id, e.legal_entity_id, l.account_id, {expr}, {closing}
+ON CONFLICT (legal_entity_id, account_id, {key}, is_closing) DO UPDATE
    SET debit_total = {table}.debit_total + EXCLUDED.debit_total,
        credit_total = {table}.credit_total + EXCLUDED.credit_total
 """
@@ -42,8 +47,11 @@ _UPSERTS = (
         table="reporting_fact_monthly",
         key="month",
         expr="date_trunc('month', e.accounting_date)::date",
+        closing=_IS_CLOSING,
     ),
-    _UPSERT.format(table="reporting_fact_daily", key="day", expr="e.accounting_date"),
+    _UPSERT.format(
+        table="reporting_fact_daily", key="day", expr="e.accounting_date", closing=_IS_CLOSING
+    ),
 )
 
 
@@ -109,9 +117,11 @@ class Actuals:
 
 
 def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date) -> Actuals:
+    """Operating actuals per month: year-end closing entries are left out."""
     watermark = refresh(tenant_id)
     rows = FactMonthly.objects.filter(
         legal_entity_id=entity_id,
+        is_closing=False,
         month__gte=date_from.replace(day=1),
         month__lte=date_to.replace(day=1),
     ).order_by("month", "account_id")
@@ -123,8 +133,9 @@ def daily(entity_id: UUID, tenant_id: UUID, *, account_ids: list[UUID], date_fro
           date_to: date) -> Actuals:  # fmt: skip
     watermark = refresh(tenant_id)
     rows = FactDaily.objects.filter(
-        legal_entity_id=entity_id, account_id__in=account_ids, day__gte=date_from, day__lte=date_to
-    ).order_by("day", "account_id")
+        legal_entity_id=entity_id, account_id__in=account_ids, day__gte=date_from,
+        day__lte=date_to, is_closing=False,
+    ).order_by("day", "account_id")  # fmt: skip
     return Actuals(watermark, [Fact(r.account_id, r.day, r.debit_total, r.credit_total)
                                for r in rows])  # fmt: skip
 
@@ -140,30 +151,40 @@ def net_before(
     return watermark, dict(totals)
 
 
+Balances = dict[date, dict[UUID, Decimal]]
+
+
 def net_before_many(
     entity_id: UUID, tenant_id: UUID, *, cutoffs: list[date]
-) -> tuple[int, dict[date, dict[UUID, Decimal]]]:
-    """Net debit balance per account before each cut-off date, in one pass over the daily facts.
+) -> tuple[int, Balances, Balances]:
+    """Net debit balance per account before each cut-off date, in one pass over the daily facts:
+    all postings, and the part from year-end closing entries (included in the first).
 
     Accounts without postings before a cut-off are absent from that cut-off's mapping."""
     watermark = refresh(tenant_id)
     unique = sorted(set(cutoffs))
     net = F("debit_total") - F("credit_total")
-    result: dict[date, dict[UUID, Decimal]] = {d: {} for d in unique}
+    every: Balances = {d: {} for d in unique}
+    closing: Balances = {d: {} for d in unique}
     if not unique:
-        return watermark, result
+        return watermark, every, closing
+    sums = {}
+    for i, d in enumerate(unique):
+        sums[f"c{i}"] = Sum(net, filter=Q(day__lt=d))
+        sums[f"k{i}"] = Sum(net, filter=Q(day__lt=d, is_closing=True))
     rows = cast(
         Iterable[dict[str, Any]],
         FactDaily.objects.filter(legal_entity_id=entity_id, day__lt=unique[-1])
         .values("account_id")
-        .annotate(**{f"c{i}": Sum(net, filter=Q(day__lt=d)) for i, d in enumerate(unique)}),
+        .annotate(**sums),
     )
     for row in rows:
         for i, d in enumerate(unique):
-            value = row[f"c{i}"]
-            if value is not None:
-                result[d][row["account_id"]] = value
-    return watermark, result
+            for prefix, target in (("c", every), ("k", closing)):
+                value = row[f"{prefix}{i}"]
+                if value is not None:
+                    target[d][row["account_id"]] = value
+    return watermark, every, closing
 
 
 # --- verification ---------------------------------------------------------------------------------
@@ -182,19 +203,20 @@ class Drift:
 _COMPARE = """
 WITH ledger AS (
     SELECT e.legal_entity_id AS entity, l.account_id AS account, {expr} AS period,
-           sum(l.debit) AS d, sum(l.credit) AS c
+           {closing} AS closing, sum(l.debit) AS d, sum(l.credit) AS c
       FROM ledger_journal_line l JOIN ledger_journal_entry e ON e.id = l.entry_id
      WHERE e.tenant_id = %s AND e.status = 'POSTED' AND e.posting_seq <= %s
-     GROUP BY 1, 2, 3
+     GROUP BY 1, 2, 3, 4
 ), facts AS (
     SELECT legal_entity_id AS entity, account_id AS account, {key} AS period,
-           debit_total AS d, credit_total AS c
+           is_closing AS closing, debit_total AS d, credit_total AS c
       FROM {table} WHERE tenant_id = %s
 )
 SELECT coalesce(l.entity, f.entity), coalesce(l.account, f.account), coalesce(l.period, f.period),
        coalesce(l.d, 0), coalesce(l.c, 0), coalesce(f.d, 0), coalesce(f.c, 0)
   FROM ledger l FULL OUTER JOIN facts f
     ON f.entity = l.entity AND f.account = l.account AND f.period = l.period
+   AND f.closing = l.closing
  WHERE coalesce(l.d, 0) <> coalesce(f.d, 0) OR coalesce(l.c, 0) <> coalesce(f.c, 0)
  ORDER BY 3, 2
 """
@@ -205,9 +227,15 @@ _COMPARES = (
             table="reporting_fact_monthly",
             key="month",
             expr="date_trunc('month', e.accounting_date)::date",
+            closing=_IS_CLOSING,
         ),
     ),
-    ("daily", _COMPARE.format(table="reporting_fact_daily", key="day", expr="e.accounting_date")),
+    (
+        "daily",
+        _COMPARE.format(
+            table="reporting_fact_daily", key="day", expr="e.accounting_date", closing=_IS_CLOSING
+        ),
+    ),
 )
 
 

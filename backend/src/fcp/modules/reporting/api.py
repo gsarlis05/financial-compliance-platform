@@ -113,8 +113,9 @@ def opening_net(ctx: WorkspaceContext, entity_id: UUID, *,
 
 def balances_before(
     ctx: WorkspaceContext, entity_id: UUID, cutoffs: list[date]
-) -> tuple[int, dict[date, dict[UUID, Decimal]]]:
-    """Net debit balance per account from everything dated before each cut-off (one query)."""
+) -> tuple[int, actuals.Balances, actuals.Balances]:
+    """Net debit balance per account from everything dated before each cut-off (one query), and
+    the part of it from year-end closing entries."""
     entity = get_entity(ctx, entity_id, "reports.read")
     return actuals.net_before_many(entity.id, ctx.tenant.id, cutoffs=cutoffs)
 

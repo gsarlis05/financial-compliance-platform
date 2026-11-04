@@ -104,3 +104,18 @@ class VatCodeRequiredError(ValidationFailedError):
 class VatCodeInvalidError(ValidationFailedError):
     code = "ledger.line.vat_code_invalid"
     title = "Invalid VAT code on a journal line"
+
+
+class FiscalYearClosedError(ConflictError):
+    code = "ledger.fiscal_year.closed"
+    title = "Fiscal year is closed"
+
+
+class CloseBlockedError(ConflictError):
+    code = "ledger.close.blocked"
+    title = "The fiscal year cannot be closed yet"
+
+
+class ClosingStaleError(ConflictError):
+    code = "ledger.close.stale"
+    title = "Closing entry is out of date"

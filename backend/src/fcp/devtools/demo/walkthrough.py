@@ -284,10 +284,35 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"profit {result['PL.RESULT']} = movement in equity; cash flow ends at the bank "
          f"balance {cash['CF.CASH_CLOSING']}")  # fmt: skip
 
+    fiscal_year = next(y for y in owner.call("GET", f"{base}/fiscal-years")
+                       if y["start_date"] == books.fiscal_year_start.isoformat())  # fmt: skip
+    retained = next(a for a in owner.call("GET", f"{base}/accounts") if a["code"] == "3200")
+    closing = owner.call("POST", f"{base}/fiscal-years/{fiscal_year['id']}/close",
+                         {"retained_earnings_account_id": retained["id"]}, 201)  # fmt: skip
+    reviewer.call("POST", f"{base}/journal-entries/{closing['id']}/approve", {})
+    reviewer.call("POST", f"{base}/journal-entries/{closing['id']}/post", {})
+    year_end = owner.call("GET", f"{base}/fiscal-years/{fiscal_year['id']}/close")
+    if year_end["status"] != "CLOSED" or not all(c["ok"] for c in year_end["checks"]):
+        raise DemoStepError(f"Year-end close failed its checks: {year_end}")
+    after = reviewer.call(
+        "GET", f"{base}/statements?date_from={books.fiscal_year_start}&date_to={december}"
+        "&comparative=none")  # fmt: skip
+    closed = {r["code"]: r["current"] for r in after["balance_sheet"]["rows"]}
+    unchanged = {r["code"]: r["current"] for r in after["profit_and_loss"]["rows"]}
+    if (not after["ok"] or unchanged["PL.RESULT"] != result["PL.RESULT"]
+            or closed["BS.EQUITY.RETAINED"] != result["PL.RESULT"]
+            or closed["BS.TOTAL_ASSETS"] != totals["BS.TOTAL_ASSETS"]):  # fmt: skip
+        raise DemoStepError(f"Statements after the close do not agree: {after}")
+    step(f"year {year} closed by the reviewed closing entry: profit {result['PL.RESULT']} moved "
+         f"to retained earnings; income and expense accounts are zero and the {year + 1} opening "
+         "balances equal the closing balance sheet")  # fmt: skip
+
     check = owner.call("POST", f"/api/w/{slug}/integrity-checks", None, 201)
     if check["status"] != "PASSED":
         raise DemoStepError(f"Integrity check {check['status']}: {check['results']}")
-    step("integrity checks passed (balance, snapshots, gapless numbering, audit chain)")
+    step(
+        "integrity checks passed (balance, snapshots, gapless numbering, closed years, audit chain)"
+    )
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

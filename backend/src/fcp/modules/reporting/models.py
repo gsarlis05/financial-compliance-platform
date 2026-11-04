@@ -6,6 +6,10 @@ Facts are derived from posted journal lines and are rebuildable at any time:
 - ``FactDaily``: the same per day (cash views select the cash accounts, e.g. mapped to BS.CASH);
 - ``ActualsState``: per tenant, the highest ``posting_seq`` already included (the watermark).
 
+Year-end closing entries (and reversals of them, which re-open a year) are kept apart with
+``is_closing`` (M2-9): they move the result into equity, so statements show P&L movements without
+them and balance-sheet balances with them, and planning reads operating actuals without them.
+
 Every calculation that reads actuals records the watermark it used, so results are reproducible.
 Accounts are referenced by key; composite database keys keep them inside the tenant and entity.
 """
@@ -22,12 +26,14 @@ class FactMonthly(TenantOwned):
     month = models.DateField(help_text="First day of the month")
     debit_total = models.DecimalField(max_digits=19, decimal_places=4)
     credit_total = models.DecimalField(max_digits=19, decimal_places=4)
+    is_closing = models.BooleanField(default=False, help_text="From year-end closing entries")
 
     class Meta:
         db_table = "reporting_fact_monthly"
         constraints = [
             models.UniqueConstraint(
-                fields=["legal_entity", "account_id", "month"], name="reporting_monthly_key"
+                fields=["legal_entity", "account_id", "month", "is_closing"],
+                name="reporting_monthly_key",
             ),
         ]
 
@@ -39,12 +45,14 @@ class FactDaily(TenantOwned):
     day = models.DateField()
     debit_total = models.DecimalField(max_digits=19, decimal_places=4)
     credit_total = models.DecimalField(max_digits=19, decimal_places=4)
+    is_closing = models.BooleanField(default=False, help_text="From year-end closing entries")
 
     class Meta:
         db_table = "reporting_fact_daily"
         constraints = [
             models.UniqueConstraint(
-                fields=["legal_entity", "account_id", "day"], name="reporting_daily_key"
+                fields=["legal_entity", "account_id", "day", "is_closing"],
+                name="reporting_daily_key",
             ),
         ]
 

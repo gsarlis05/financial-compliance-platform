@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 14
+    assert len(result.steps) == 15
     assert all(line.startswith("✔") for line in said)
     _assert_golden_statements(result.statements)
 

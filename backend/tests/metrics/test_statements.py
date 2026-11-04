@@ -358,5 +358,74 @@ def test_balances_without_cutoffs_are_empty(mb: dict[str, Any]) -> None:
     from fcp.modules.reporting.actuals import net_before_many  # noqa: PLC0415
 
     set_context(tenant_id=mb["ws"]["id"])
-    _, balances = net_before_many(mb["entity"]["id"], mb["ws"]["id"], cutoffs=[])
-    assert balances == {}
+    _, balances, closings = net_before_many(mb["entity"]["id"], mb["ws"]["id"], cutoffs=[])
+    assert balances == closings == {}
+
+
+def close(mb: dict[str, Any], start: str) -> None:
+    years = mb["client"].get(f"{mb['base']}/fiscal-years").json()
+    fy = next(y for y in years if y["start_date"] == start)
+    generated = mb["client"].post_json(
+        f"{mb['base']}/fiscal-years/{fy['id']}/close",
+        {"retained_earnings_account_id": mb["accounts"]["3200"]["id"]},
+    )
+    assert generated.status_code == 201, generated.content
+    posted = mb["client"].post_json(
+        f"{mb['base']}/journal-entries/{generated.json()['id']}/post", {}
+    )
+    assert posted.status_code == 200, posted.content
+    commit_point()
+
+
+def test_after_year_end_close_the_result_is_in_retained_earnings(two_years: dict[str, Any]) -> None:
+    close(two_years, "2025-01-01")
+    result = ok(two_years)
+    pl, bs, cf = (result[k] for k in ("profit_and_loss", "balance_sheet", "cash_flow"))
+    # The P&L of the closed year is unchanged: closing entries are not part of the result.
+    assert amounts(pl, "comparative")["PL.RESULT"] == "4000.00"
+    now, before = amounts(bs), amounts(bs, "comparative")
+    assert now["BS.EQUITY.RETAINED"] == "4000.00"
+    assert "BS.EQUITY.PRIOR_UNCLOSED" not in now  # nothing left unclosed
+    assert now["BS.TOTAL.EQUITY"] == "19550.00"
+    assert now["BS.TOTAL_ASSETS"] == now["BS.TOTAL_EQUITY_LIABILITIES"] == "23850.00"
+    assert before["BS.EQUITY.RESULT_YTD"] == "0.00"  # closed on 2025-12-31
+    assert before["BS.EQUITY.RETAINED"] == "4000.00"
+    # The transfer to retained earnings is neither a cash flow nor a contribution.
+    prior_cf = amounts(cf, "comparative")
+    assert prior_cf["CF.RESULT"] == "4000.00"
+    assert "CF.BS.EQUITY.RETAINED" not in prior_cf
+    assert prior_cf["CF.NET_CHANGE"] == "14000.00"
+
+    close(two_years, "2026-01-01")
+    closed = amounts(ok(two_years)["balance_sheet"])
+    assert closed["BS.EQUITY.RETAINED"] == "9550.00"
+    assert closed["BS.EQUITY.RESULT_YTD"] == "0.00"
+    assert amounts(ok(two_years)["profit_and_loss"])["PL.RESULT"] == "5550.00"
+
+    verify = two_years["client"].get(f"/api/w/{two_years['ws']['slug']}/actuals/verify").json()
+    assert verify["ok"] is True
+    december = two_years["client"].get(
+        f"{two_years['base']}/actuals/monthly", {"date_from": "2026-12-01", "date_to": "2026-12-31"}
+    )
+    codes = {f["account_code"] for f in december.json()["facts"]}
+    assert "4000" not in codes  # planning reads operating actuals, without the closing entry
+
+
+@settings(
+    max_examples=15, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(entries=postings, start=st.dates(min_value=date(2025, 1, 1), max_value=date(2026, 12, 31)),
+       days=st.integers(min_value=0, max_value=500))  # fmt: skip
+def test_every_check_holds_across_a_closed_year(
+    two_years: dict[str, Any], entries: list[Any], start: date, days: int
+) -> None:
+    years = two_years["client"].get(f"{two_years['base']}/fiscal-years").json()
+    if next(y for y in years if y["start_date"] == "2025-01-01")["status"] == "OPEN":
+        close(two_years, "2025-01-01")
+    for day, (debit, credit), amount in entries:
+        when = day if day.year == 2026 else day.replace(year=2026, day=min(day.day, 28))
+        post(two_years, (debit, f"{amount:.2f}", "0"), (credit, "0", f"{amount:.2f}"),
+             day=when.isoformat())  # fmt: skip
+    commit_point()
+    end = min(date.fromordinal(start.toordinal() + days), date(2026, 12, 31))
+    ok(two_years, start.isoformat(), end.isoformat())
