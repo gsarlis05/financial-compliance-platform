@@ -58,7 +58,8 @@ brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 | M3-7 13-week cash forecast engine (issue #61) | `claude/m3-7-cash-forecast` | #114 | Open |
 | M3-8 Forecast freshness, refresh, history, accuracy (issue #62) | `claude/m3-8-reruns` | #115 | Open |
 | M3-9 What-ifs on a forecast (issue #63) | `claude/m3-9-what-ifs` | #116 | Open |
-| M3-10 Cash dashboard (issue #64) | — | — | Next |
+| M3-10 Cash forecast dashboard (issue #64) | `claude/m3-10-cash-dashboard` | #117 | Open |
+| M3-11 Milestone 3 report | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
