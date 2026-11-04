@@ -17,7 +17,7 @@ from fcp.core.api.permissions import requires
 from fcp.modules.metrics.api import Nature
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import services, tracking
+from . import services, tracking, whatif
 from .engine import KIND
 from .services import Forecast, prepare, run_forecast
 
@@ -377,3 +377,96 @@ def remove_manual(request: HttpRequest, slug: str, entity_id: UUID, item_id: UUI
     ctx = workspace_ctx(request, slug, entity_id)
     services.remove_manual_item(ctx, entity_id, item_id)
     return Status(204, None)
+
+
+class OverrideIn(Schema):
+    type: Literal["TIMING_SHIFT", "PCT_CHANGE", "ONE_OFF"]
+    party: str = Field("", max_length=30, description="Customer or supplier code")
+    category: str = Field("", max_length=20)
+    days: int = Field(0, ge=-365, le=365)
+    percent: str = Field("0", pattern=r"^-?\d{1,4}(\.\d{1,2})?$")
+    day: date | None = None
+    amount: str = Field("0", pattern=SIGNED)
+    reason: str = Field("", max_length=200)
+
+
+class WhatIfIn(Schema):
+    overrides: list[OverrideIn] = Field(min_length=1, max_length=whatif.MAX_OVERRIDES)
+
+
+class WhatIfWeekOut(Schema):
+    label: str
+    start: date
+    base_closing: str
+    what_if_closing: str
+    delta: str
+    base_net: str
+    what_if_net: str
+    base_shortfall: bool
+    what_if_shortfall: bool
+
+
+class WhatIfOut(Schema):
+    run_id: UUID
+    as_of: date
+    nature: Nature = Field(Nature.HYPOTHETICAL, description="A what-if is never saved")
+    saved: bool = False
+    matched: list[int] = Field(description="Flows each override changed or added")
+    base_first_shortfall: ShortfallOut | None
+    what_if_first_shortfall: ShortfallOut | None
+    hypothetical_total: str
+    weeks: list[WhatIfWeekOut]
+
+
+def _shortfall(value: tuple[date, Decimal] | None) -> ShortfallOut | None:
+    return None if value is None else ShortfallOut(date=value[0], balance=_money(value[1]))
+
+
+@router.post(f"{BASE}/cash-forecasts/{{uuid:run_id}}/what-if", response=WhatIfOut)
+@requires("planning.read")
+def forecast_what_if(
+    request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID, body: WhatIfIn
+) -> WhatIfOut:
+    """The forecast under hypothetical changes, week by week against the base. Computed on
+    request and never saved: the base run is unchanged (AC-CW7)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    run = services.forecast(ctx, entity_id, run_id).run
+    overrides = [
+        whatif.Override(
+            o.type,
+            o.party.strip(),
+            o.category.strip(),
+            o.days,
+            Decimal(o.percent),
+            o.day,
+            Decimal(o.amount),
+            o.reason,
+        )
+        for o in body.overrides
+    ]
+    result = whatif.what_if(ctx, run, overrides)
+    weeks = [
+        WhatIfWeekOut(
+            label=b.label,
+            start=b.start,
+            base_closing=_money(b.closing),
+            what_if_closing=_money(w.closing),
+            delta=_money(w.closing - b.closing),
+            base_net=_money(b.net),
+            what_if_net=_money(w.net),
+            base_shortfall=b.shortfall,
+            what_if_shortfall=w.shortfall,
+        )
+        for b, w in zip(result.base.weeks, result.scenario.weeks, strict=True)
+    ]
+    return WhatIfOut(
+        run_id=run.id,
+        nature=Nature.HYPOTHETICAL,
+        saved=False,
+        as_of=run.as_of_date,
+        matched=result.matched,
+        base_first_shortfall=_shortfall(result.base.first_shortfall),
+        what_if_first_shortfall=_shortfall(result.scenario.first_shortfall),
+        hypothetical_total=_money(result.scenario.hypothetical),
+        weeks=weeks,
+    )
