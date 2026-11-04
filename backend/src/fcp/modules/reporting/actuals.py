@@ -171,6 +171,19 @@ def _as_facts(facts: Totals) -> list[Fact]:
     return [Fact(a, p, d, c) for (a, p), (d, c) in ordered]
 
 
+def posted_since(entity_id: UUID, tenant_id: UUID, watermark: int) -> bool:
+    """Whether the entity has posted entries after ``watermark`` (an entity-level change check:
+    the watermark itself is per tenant)."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT 1 FROM ledger_journal_entry WHERE tenant_id = %s "
+            "AND legal_entity_id = %s AND status = 'POSTED' AND posting_seq > %s)",
+            [tenant_id, entity_id, watermark],
+        )
+        row = cursor.fetchone()
+    return bool(row and row[0])
+
+
 def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date,
             watermark: int | None = None) -> Actuals:  # fmt: skip
     """Operating actuals per month: year-end closing entries are left out. With ``watermark``, the
