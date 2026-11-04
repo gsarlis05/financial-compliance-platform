@@ -33,6 +33,9 @@ from .models import VALUE_DIGITS, VALUE_PLACES, CalcLineage, CalcResult, CalcRun
 from .nature import Nature
 
 GRANULARITIES = frozenset(CalcResult.Granularity.values)
+# Run inputs can hold a snapshot of everything a run read besides the ledger (e.g. a cash
+# forecast's open items and scheduled flows), so they are kept exactly as they were.
+MAX_REFS_CHARS = 2_000_000
 INPUT_KINDS = frozenset(CalcLineage.InputKind.values)
 
 
@@ -221,7 +224,7 @@ def _plain_refs(refs: Mapping[str, Any] | None) -> dict[str, Any]:
     except (TypeError, ValueError) as error:
         raise ValidationFailedError(f"Run references are invalid: {error}.",
                                     field_errors={"refs": ["invalid"]}) from None  # fmt: skip
-    if len(text := str(plain)) > 10_000:
+    if len(text := str(plain)) > MAX_REFS_CHARS:
         raise ValidationFailedError(f"Run references are too large ({len(text)} chars).",
                                     field_errors={"refs": ["too large"]})  # fmt: skip
     return cast(dict[str, Any], plain)

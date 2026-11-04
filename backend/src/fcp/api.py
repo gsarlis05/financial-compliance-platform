@@ -7,6 +7,7 @@ from ninja.security import django_auth
 from fcp.core.api.handlers import install_exception_handlers
 from fcp.modules.audit_log.routes import router as audit_router
 from fcp.modules.banking.api import router as banking_router
+from fcp.modules.cashflow.api import router as cashflow_router
 from fcp.modules.documents.api import router as documents_router
 from fcp.modules.identity.api import router as identity_router
 from fcp.modules.ledger.api import router as ledger_router
@@ -31,4 +32,5 @@ api.add_router("/", registers_router)
 api.add_router("/", banking_router)
 api.add_router("/", documents_router)
 api.add_router("/", metrics_router)
+api.add_router("/", cashflow_router)
 api.add_router("/", reporting_router)
