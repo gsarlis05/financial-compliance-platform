@@ -48,6 +48,11 @@ PERMISSIONS: dict[str, str] = {
     "planning.read": "See forecasts, calculation runs and how each number was computed",
     "planning.run": "Run forecasts and calculations, and check that a run reproduces",
     "planning.publish": "Publish a calculation run (it then never changes)",
+    # budgets (M4)
+    "budget.read": "See budgets, their versions and approval trail",
+    "budget.edit": "Create budgets, edit draft versions, submit them and start revisions",
+    "budget.approve": "Approve, return or lock submitted budget versions",
+    "budget.settings.manage": "Change budget controls such as segregation of duties",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -67,6 +72,7 @@ _READ = frozenset(
         "banking.read",
         "documents.read",
         "planning.read",
+        "budget.read",
     }
 )
 _PREPARE = _READ | {
@@ -83,6 +89,7 @@ _PREPARE = _READ | {
     "documents.upload",
     "documents.link",
     "planning.run",
+    "budget.edit",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}
@@ -97,6 +104,8 @@ _SIGN_OFF = (
         "audit.read",
         "admin.integrity.read",
         "planning.publish",
+        "budget.approve",
+        "budget.settings.manage",
     }
 )
 

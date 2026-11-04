@@ -202,3 +202,7 @@ input.narrow { width: 6rem; }
 .nature-target { border-style: double; }
 tr.shortfall td, tr.shortfall th { background: color-mix(in srgb, var(--warn) 8%, transparent); }
 button.link { background: none; border: none; padding: 0; color: var(--link, inherit); text-decoration: underline; cursor: pointer; font: inherit; }
+
+/* Budget grid (M4-1): compact month inputs; the line name stays readable. */
+.budget-grid input { width: 7.5rem; min-width: 0; }
+.budget-grid tbody th, .budget-grid tfoot th { min-width: 12rem; }
