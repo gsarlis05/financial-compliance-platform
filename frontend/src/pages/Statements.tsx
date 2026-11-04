@@ -234,7 +234,7 @@ function LedgerPanel({
   const gl = useGeneralLedger(target.id, dateFrom, dateTo);
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
-    panel.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [target.id]);
   return (
     <section ref={panel} className="panel" aria-label={`${t("st.ledger")}: ${target.label}`}>
