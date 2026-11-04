@@ -51,7 +51,8 @@ brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 | M2-12 Milestone 2 report (issue #106) | `claude/m2-12-report` | #107 | Open |
 | M3-1 Calendar service + M3 brief (issue #55) | `claude/m3-1-calendar` | #108 | Open |
 | M3-2 Metrics core: natures, calc runs, lineage, reproducibility (issue #56) | `claude/m3-2-metrics-core` | #109 | Open |
-| M3-3 Expression evaluator (issue #57) | — | — | Next |
+| M3-3 Expression evaluator (issue #57) | `claude/m3-3-expressions` | #110 | Open |
+| M3-4 Obligations and debt schedules (issue #58) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

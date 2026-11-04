@@ -18,8 +18,27 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
 from . import calc, exports, services, statements
-from .calc import Engine, Output, Reproduction, RunInputs, Source, Value, execute, mark_stale
+from .calc import (
+    Engine,
+    Output,
+    Reproduction,
+    RunInputs,
+    Source,
+    Value,
+    execute,
+    formula_value,
+    mark_stale,
+)
 from .calc import register as register_engine
+from .expr import (
+    EvaluationError,
+    ExpressionError,
+    Function,
+    NotMeaningful,
+    Param,
+    compile_expression,
+    evaluate,
+)
 from .hashing import canonical_decimal
 from .models import CalcResult, CalcRun, TaxonomyLine
 from .nature import ActualSeries, BlendedSeries, Nature, NatureMixError, PlanSeries, Point, blend
@@ -27,10 +46,37 @@ from .services import Completeness, completeness, current_mapping
 from .taxonomy import DEFAULT_TAXONOMY
 
 __all__ = [
-    "DEFAULT_TAXONOMY", "ActualSeries", "BlendedSeries", "CalcRun", "Completeness", "Engine",
-    "Nature", "NatureMixError", "Output", "PlanSeries", "Point", "Reproduction", "RunInputs",
-    "Source", "TaxonomyLine", "Value", "blend", "completeness", "current_mapping", "execute",
-    "mark_stale", "register_engine", "router",
+    "DEFAULT_TAXONOMY",
+    "ActualSeries",
+    "BlendedSeries",
+    "CalcRun",
+    "Completeness",
+    "Engine",
+    "EvaluationError",
+    "ExpressionError",
+    "Function",
+    "Nature",
+    "NatureMixError",
+    "NotMeaningful",
+    "Output",
+    "Param",
+    "PlanSeries",
+    "Point",
+    "Reproduction",
+    "RunInputs",
+    "Source",
+    "TaxonomyLine",
+    "Value",
+    "blend",
+    "compile_expression",
+    "completeness",
+    "current_mapping",
+    "evaluate",
+    "execute",
+    "formula_value",
+    "mark_stale",
+    "register_engine",
+    "router",
 ]  # fmt: skip
 
 router = Router(tags=["metrics"])
