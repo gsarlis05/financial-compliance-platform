@@ -243,7 +243,8 @@ def test_permissions_and_isolation(
     assert other.get(f"{fc['base']}/cash-forecasts/{f['run_id']}").status_code == 404
     # Django checks deferred constraints when the test ends, under the row-level security context
     # of the last request: end in the owner's workspace (each real request commits on its own).
-    assert fc["client"].get(f"{fc['base']}/cash-forecasts/latest").status_code == 200
+    final = fc["client"].get(f"{fc['base']}/cash-forecasts/latest")
+    assert final.status_code == 200, final.content
 
 
 def test_without_cash_accounts_and_service_checks(ar: dict[str, Any]) -> None:

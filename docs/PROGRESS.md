@@ -56,7 +56,8 @@ brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 | M3-5 Tax payment calendar, manual entry (issue #59) | `claude/m3-5-tax-calendar` | #112 | Open |
 | M3-6 Customer payment behaviour (issue #60) | `claude/m3-6-payment-behaviour` | #113 | Open |
 | M3-7 13-week cash forecast engine (issue #61) | `claude/m3-7-cash-forecast` | #114 | Open |
-| M3-8 Re-runs, history, accuracy (issue #62) | — | — | Next |
+| M3-8 Forecast freshness, refresh, history, accuracy (issue #62) | `claude/m3-8-reruns` | #115 | Open |
+| M3-9 What-ifs (issue #63) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

@@ -364,9 +364,16 @@ def _manual_flows(
     ]
 
 
-def prepare(ctx: WorkspaceContext, entity_id: UUID, as_of: date, weeks: int = 13) -> dict[str, Any]:
-    """The run's inputs (everything except the ledger balances)."""
-    entity = get_entity(ctx, entity_id, MANAGE)
+def prepare(
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    as_of: date,
+    weeks: int = 13,
+    permission: str = MANAGE,
+) -> dict[str, Any]:
+    """The run's inputs (everything except the ledger balances). ``permission`` is
+    ``planning.read`` when only checking whether a forecast is current."""
+    entity = get_entity(ctx, entity_id, permission)
     settings = get_settings(ctx, entity.id)
     end = weekly_buckets(as_of, weeks)[-1].end
     warnings: list[dict[str, Any]] = []
@@ -401,12 +408,18 @@ def prepare(ctx: WorkspaceContext, entity_id: UUID, as_of: date, weeks: int = 13
 
 
 def run_forecast(
-    ctx: WorkspaceContext, entity_id: UUID, as_of: date, trigger: str = CalcRun.Trigger.USER
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    as_of: date,
+    trigger: str = CalcRun.Trigger.USER,
+    supersedes: CalcRun | None = None,
 ) -> CalcRun:
     """Prepare and run the 13-week forecast (a new calculation run)."""
     with transaction.atomic():
         refs = prepare(ctx, entity_id, as_of)
-        return execute(ctx, entity_id, KIND, as_of=as_of, refs=refs, trigger=trigger)
+        return execute(
+            ctx, entity_id, KIND, as_of=as_of, refs=refs, trigger=trigger, supersedes=supersedes
+        )
 
 
 # --- reading a forecast ---------------------------------------------------------------------------

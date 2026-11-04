@@ -349,6 +349,109 @@
         "title": "AccountPatch",
         "type": "object"
       },
+      "AccuracyOut": {
+        "properties": {
+          "mape_percent": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "By horizon in weeks",
+            "title": "Mape Percent",
+            "type": "object"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "samples": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Samples",
+            "type": "object"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/AccuracyWeekOut"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "weeks",
+          "mape_percent",
+          "samples",
+          "note"
+        ],
+        "title": "AccuracyOut",
+        "type": "object"
+      },
+      "AccuracyQuery": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to today",
+            "title": "As Of"
+          },
+          "weeks": {
+            "default": 13,
+            "maximum": 52,
+            "minimum": 1,
+            "title": "Weeks",
+            "type": "integer"
+          }
+        },
+        "title": "AccuracyQuery",
+        "type": "object"
+      },
+      "AccuracyWeekOut": {
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "string"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonOut"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "start",
+          "actual",
+          "comparisons"
+        ],
+        "title": "AccuracyWeekOut",
+        "type": "object"
+      },
       "AdjustIn": {
         "properties": {
           "accounting_date": {
@@ -1207,6 +1310,48 @@
           "balance"
         ],
         "title": "ClosingLineOut",
+        "type": "object"
+      },
+      "ComparisonOut": {
+        "properties": {
+          "ape_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Not meaningful (null) when the actual is 0",
+            "title": "Ape Percent"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "forecast": {
+            "title": "Forecast",
+            "type": "string"
+          },
+          "horizon_weeks": {
+            "title": "Horizon Weeks",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "horizon_weeks",
+          "run_id",
+          "forecast",
+          "error",
+          "ape_percent"
+        ],
+        "title": "ComparisonOut",
         "type": "object"
       },
       "CompletenessOut": {
@@ -3116,6 +3261,14 @@
             "title": "Stale",
             "type": "boolean"
           },
+          "stale_reasons": {
+            "description": "Why it is out of date (checked now)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Stale Reasons",
+            "type": "array"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3158,40 +3311,97 @@
       },
       "HistoryOut": {
         "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "closing_week_13": {
+            "title": "Closing Week 13",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "created_by_id": {
-            "format": "uuid",
-            "title": "Created By Id",
-            "type": "string"
-          },
-          "line_code": {
-            "title": "Line Code",
-            "type": "string"
-          },
-          "superseded_at": {
+          "first_shortfall": {
             "anyOf": [
               {
-                "format": "date-time",
+                "format": "date",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Superseded At"
+            "title": "First Shortfall"
+          },
+          "opening_cash": {
+            "title": "Opening Cash",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
           }
         },
         "required": [
-          "line_code",
+          "run_id",
+          "as_of",
           "created_at",
-          "superseded_at",
-          "created_by_id"
+          "status",
+          "stale",
+          "trigger",
+          "supersedes_id",
+          "actuals_watermark",
+          "opening_cash",
+          "closing_week_13",
+          "first_shortfall"
         ],
         "title": "HistoryOut",
+        "type": "object"
+      },
+      "HistoryQuery": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "HistoryQuery",
         "type": "object"
       },
       "HolidayIn": {
@@ -8966,8 +9176,152 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/accuracy": {
+      "get": {
+        "description": "For each full week, the net cash movement forecast 1, 4 and 13 weeks earlier against the\nactual movement on the cash accounts (reported, not gated).",
+        "operationId": "fcp_modules_cashflow_api_forecast_accuracy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Defaults to today",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Defaults to today",
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 13,
+              "maximum": 52,
+              "minimum": 1,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccuracyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Forecast Accuracy",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/history": {
+      "get": {
+        "description": "Earlier forecasts, newest first: every run is kept (doc 10 §3.4).",
+        "operationId": "fcp_modules_cashflow_api_forecast_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Forecast History",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/cash-forecasts/latest": {
       "get": {
+        "description": "The latest forecast, with whether it is out of date now (new postings, changed inputs or\na passed as-of date).",
         "operationId": "fcp_modules_cashflow_api_latest_forecast",
         "parameters": [
           {
@@ -9008,6 +9362,57 @@
           }
         ],
         "summary": "Latest Forecast",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/refresh": {
+      "post": {
+        "description": "Re-run now if the latest forecast is out of date (204 when it is current).",
+        "operationId": "fcp_modules_cashflow_api_refresh_forecast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Refresh Forecast",
         "tags": [
           "cashflow"
         ]
