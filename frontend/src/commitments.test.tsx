@@ -82,6 +82,22 @@ const flow = {
   version_id: "o1",
 };
 
+const tax = {
+  id: "tp1",
+  series_id: "t1",
+  version: 1,
+  kind: "VAT",
+  period_label: "2026-Q3",
+  due_date: "2026-11-10",
+  amount: "4200.00",
+  nature: "EXPECTED",
+  reference: "",
+  paid_on: null,
+  note: "",
+  superseded_at: null,
+  created_at: "2026-11-01T00:00:00Z",
+};
+
 function respond(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -144,6 +160,13 @@ describe("Obligations and loans page (M3-4)", () => {
           return Promise.resolve(respond([loan]));
         if (url.endsWith("/s2/schedule"))
           return Promise.resolve(respond([instalment]));
+        if (method === "PUT" && url.endsWith("/tax-payments/t1")) {
+          return Promise.resolve(
+            respond({ ...tax, version: 2, paid_on: "2026-11-04" }),
+          );
+        }
+        if (url.endsWith("/tax-payments"))
+          return Promise.resolve(respond([tax]));
         if (url.endsWith("/holidays")) {
           return Promise.resolve(
             respond([{ id: "h1", day: "2026-06-01", name: "Synthetic" }]),
@@ -215,6 +238,26 @@ describe("Obligations and loans page (M3-4)", () => {
       day_of_month: 1,
       contractual: true,
     });
+
+    const taxes = screen.getByRole("region", { name: "Tax payments" });
+    const taxRow = await within(taxes).findByRole("row", { name: /2026-Q3/ });
+    expect(taxRow).toHaveTextContent("Expected");
+    expect(taxRow).toHaveTextContent("-4,200.00");
+    fireEvent.click(
+      within(taxRow).getByRole("button", { name: "Mark paid today" }),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.url.endsWith("/tax-payments/t1"))).toBe(true),
+    );
+    const paid = calls.find((c) => c.url.endsWith("/tax-payments/t1"));
+    expect(paid?.body).toMatchObject({
+      amount: "4200.00",
+      nature: "EXPECTED",
+      kind: "VAT",
+    });
+    expect((paid?.body as { paid_on: string }).paid_on).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
 
     const results = await axe.run(container, {
       rules: { "color-contrast": { enabled: false } },

@@ -3366,11 +3366,12 @@
       },
       "Kind": {
         "enum": [
-          "TERM_LOAN",
-          "LEASE",
-          "DIRECTOR_LOAN",
-          "OVERDRAFT",
-          "REVOLVER"
+          "VAT",
+          "CORPORATE_TAX",
+          "SPECIAL_DEFENCE",
+          "SOCIAL_INSURANCE",
+          "PAYE",
+          "OTHER"
         ],
         "title": "Kind",
         "type": "string"
@@ -5409,6 +5410,162 @@
           "reference_matches"
         ],
         "title": "SuggestionOut",
+        "type": "object"
+      },
+      "TaxPaymentIn": {
+        "properties": {
+          "amount": {
+            "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "nature": {
+            "$ref": "#/components/schemas/Nature"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "period_label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Period Label",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "period_label",
+          "due_date",
+          "amount",
+          "nature"
+        ],
+        "title": "TaxPaymentIn",
+        "type": "object"
+      },
+      "TaxPaymentOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "COMMITTED",
+              "EXPECTED"
+            ],
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "series_id": {
+            "format": "uuid",
+            "title": "Series Id",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "series_id",
+          "version",
+          "kind",
+          "period_label",
+          "due_date",
+          "amount",
+          "nature",
+          "reference",
+          "paid_on",
+          "note",
+          "superseded_at",
+          "created_at"
+        ],
+        "title": "TaxPaymentOut",
         "type": "object"
       },
       "TemplateIn": {
@@ -12726,6 +12883,299 @@
         "summary": "Export Statements",
         "tags": [
           "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/tax-payments": {
+      "get": {
+        "description": "Entered by hand: no tax due dates are built in until verified (decision #93).",
+        "operationId": "fcp_modules_registers_api_list_tax_payments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaxPaymentOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Tax Payments",
+        "tags": [
+          "registers"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_registers_api_create_tax_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxPaymentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxPaymentOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Tax Payment",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/tax-payments/{series_id}": {
+      "put": {
+        "description": "Adds a new version (for example with the assessed amount, or the date it was paid).",
+        "operationId": "fcp_modules_registers_api_change_tax_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxPaymentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxPaymentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Change Tax Payment",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/tax-payments/{series_id}/history": {
+      "get": {
+        "operationId": "fcp_modules_registers_api_tax_payment_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaxPaymentOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Tax Payment History",
+        "tags": [
+          "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/tax-payments/{series_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_registers_api_retire_tax_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxPaymentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Tax Payment",
+        "tags": [
+          "registers"
         ]
       }
     },

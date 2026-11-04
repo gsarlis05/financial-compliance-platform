@@ -21,7 +21,7 @@ from fcp.modules.tenancy.api import workspace_ctx
 
 from . import commitments, services
 from .commitments import CommitmentFlow
-from .models import Allocation, Counterparty, DebtInstrument, RecurringObligation
+from .models import Allocation, Counterparty, DebtInstrument, RecurringObligation, TaxPayment
 
 __all__ = ["CommitmentFlow", "Counterparty", "DebtInstrument", "OpenItem", "business_days",
            "commitment_flows_between", "facilities", "open_items", "router"]  # fmt: skip
@@ -637,3 +637,100 @@ def remove_holiday(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     commitments.remove_holiday(ctx, entity_id, holiday_id)
     return Status(204, None)
+
+
+# --- tax payment calendar (M3-5) ------------------------------------------------------------------
+
+
+class TaxPaymentIn(Schema):
+    kind: TaxPayment.Kind
+    period_label: str = Field(min_length=1, max_length=40)
+    due_date: date
+    amount: str = Field(pattern=AMOUNT)
+    nature: TaxPayment.Nature
+    reference: str = Field(default="", max_length=100)
+    paid_on: date | None = None
+    note: str = Field(default="", max_length=500)
+
+
+class TaxPaymentOut(Schema):
+    id: UUID
+    series_id: UUID
+    version: int
+    kind: str
+    period_label: str
+    due_date: date
+    amount: str
+    nature: Literal["COMMITTED", "EXPECTED"]
+    reference: str
+    paid_on: date | None
+    note: str
+    superseded_at: datetime | None
+    created_at: datetime
+
+
+def _tax_out(t: TaxPayment) -> TaxPaymentOut:
+    return TaxPaymentOut(
+        id=t.id,
+        series_id=t.series_id,
+        version=t.version,
+        kind=t.kind,
+        period_label=t.period_label,
+        due_date=t.due_date,
+        amount=f"{t.amount:.2f}",
+        nature=t.nature,  # type: ignore[arg-type]
+        reference=t.reference,
+        paid_on=t.paid_on,
+        note=t.note,
+        superseded_at=t.superseded_at,
+        created_at=t.created_at,
+    )
+
+
+def _tax_input(body: TaxPaymentIn) -> commitments.TaxInput:
+    return commitments.TaxInput(**{**body.dict(), "amount": Decimal(body.amount)})
+
+
+@router.get(f"{BASE}/tax-payments", response=list[TaxPaymentOut])
+@requires("registers.commitment.read")
+def list_tax_payments(request: HttpRequest, slug: str, entity_id: UUID) -> list[TaxPaymentOut]:
+    """Entered by hand: no tax due dates are built in until verified (decision #93)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_tax_out(t) for t in commitments.current_versions(ctx, entity_id, TaxPayment)]
+
+
+@router.post(f"{BASE}/tax-payments", response={201: TaxPaymentOut})
+@requires("registers.commitment.manage")
+def create_tax_payment(
+    request: HttpRequest, slug: str, entity_id: UUID, body: TaxPaymentIn
+) -> Status[TaxPaymentOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, _tax_out(commitments.save_tax_payment(ctx, entity_id, _tax_input(body))))
+
+
+@router.put(f"{BASE}/tax-payments/{{uuid:series_id}}", response=TaxPaymentOut)
+@requires("registers.commitment.manage")
+def change_tax_payment(
+    request: HttpRequest, slug: str, entity_id: UUID, series_id: UUID, body: TaxPaymentIn
+) -> TaxPaymentOut:
+    """Adds a new version (for example with the assessed amount, or the date it was paid)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _tax_out(commitments.save_tax_payment(ctx, entity_id, _tax_input(body), series_id))
+
+
+@router.post(f"{BASE}/tax-payments/{{uuid:series_id}}/retire", response=TaxPaymentOut)
+@requires("registers.commitment.manage")
+def retire_tax_payment(
+    request: HttpRequest, slug: str, entity_id: UUID, series_id: UUID
+) -> TaxPaymentOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _tax_out(commitments.retire(ctx, entity_id, TaxPayment, series_id))
+
+
+@router.get(f"{BASE}/tax-payments/{{uuid:series_id}}/history", response=list[TaxPaymentOut])
+@requires("registers.commitment.read")
+def tax_payment_history(
+    request: HttpRequest, slug: str, entity_id: UUID, series_id: UUID
+) -> list[TaxPaymentOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_tax_out(t) for t in commitments.history(ctx, entity_id, TaxPayment, series_id)]

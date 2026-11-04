@@ -326,3 +326,104 @@ def test_service_level_checks_and_facilities(cm: dict[str, Any]) -> None:
         )
         commitments.save_debt(ctx, entity, loan)
         assert [f.facility_limit for f in facilities(ctx, entity)] == [Decimal("5000.00")]
+
+
+# --- tax payment calendar (M3-5) ------------------------------------------------------------------
+
+VAT = {
+    "kind": "VAT",
+    "period_label": "2026-Q3",
+    "due_date": "2026-11-10",
+    "amount": "4200.00",
+    "nature": "EXPECTED",
+    "reference": "Synthetic estimate",
+}
+
+
+def test_no_tax_dates_are_built_in(cm: dict[str, Any]) -> None:
+    """Decision #93: nothing is pre-filled until a tax professional verifies the dates."""
+    assert cm["client"].get(f"{cm['base']}/tax-payments").json() == []
+
+
+def test_tax_payments_are_versioned_and_become_flows_until_paid(cm: dict[str, Any]) -> None:
+    created = post(cm, "tax-payments", VAT)
+    assert created.status_code == 201, created.content
+    series = created.json()["series_id"]
+    window = {"date_from": "2026-11-01", "date_to": "2026-11-30"}
+    flows = cm["client"].get(f"{cm['base']}/commitment-flows", window).json()
+    assert [(f["source"], f["category"], f["name"], f["amount"], f["nature"]) for f in flows] == [
+        ("TAX", "VAT", "VAT 2026-Q3", "-4200.00", "EXPECTED")
+    ]
+    assessed = cm["client"].put_json(
+        f"{cm['base']}/tax-payments/{series}", {**VAT, "amount": "4350.20", "nature": "COMMITTED"}
+    )
+    assert assessed.json()["version"] == 2
+    flows = cm["client"].get(f"{cm['base']}/commitment-flows", window).json()
+    assert [(f["amount"], f["nature"]) for f in flows] == [("-4350.20", "COMMITTED")]
+    paid = cm["client"].put_json(
+        f"{cm['base']}/tax-payments/{series}",
+        {**VAT, "amount": "4350.20", "nature": "COMMITTED", "paid_on": "2026-11-09"},
+    )
+    assert paid.json()["paid_on"] == "2026-11-09"
+    assert cm["client"].get(f"{cm['base']}/commitment-flows", window).json() == []
+    history = cm["client"].get(f"{cm['base']}/tax-payments/{series}/history").json()
+    assert [(h["version"], h["amount"]) for h in history] == [
+        (1, "4200.00"),
+        (2, "4350.20"),
+        (3, "4350.20"),
+    ]
+    assert post(cm, f"tax-payments/{series}/retire", {}).status_code == 200
+    assert cm["client"].get(f"{cm['base']}/tax-payments").json() == []
+
+
+@pytest.mark.parametrize(
+    ("changes", "status"),
+    [
+        ({"amount": "0.00"}, 422),
+        ({"amount": "1.234"}, 422),
+        ({"nature": "ACTUAL"}, 422),
+        ({"kind": "WEALTH_TAX"}, 422),
+        ({"period_label": ""}, 422),
+    ],
+)
+def test_tax_payment_validation(cm: dict[str, Any], changes: dict[str, Any], status: int) -> None:
+    assert post(cm, "tax-payments", {**VAT, **changes}).status_code == status
+
+
+def test_tax_payments_are_immutable_and_ordered_by_due_date(cm: dict[str, Any]) -> None:
+    from fcp.modules.registers.models import TaxPayment  # noqa: PLC0415
+
+    later = post(cm, "tax-payments", {**VAT, "due_date": "2027-02-10", "period_label": "2026-Q4"})
+    post(cm, "tax-payments", VAT)
+    listed = cm["client"].get(f"{cm['base']}/tax-payments").json()
+    assert [t["period_label"] for t in listed] == ["2026-Q3", "2026-Q4"]
+    with transaction.atomic():
+        set_context(tenant_id=cm["ws"]["id"])
+        with pytest.raises(DatabaseError, match="immutable"), transaction.atomic():
+            TaxPayment.objects.filter(id=later.json()["id"]).update(amount=1)
+        with pytest.raises(DatabaseError, match="retire instead"), transaction.atomic():
+            TaxPayment.objects.filter(id=later.json()["id"]).delete()
+
+
+def test_tax_service_checks(cm: dict[str, Any]) -> None:
+    from datetime import date  # noqa: PLC0415
+    from decimal import Decimal  # noqa: PLC0415
+
+    from fcp.core.errors import ValidationFailedError  # noqa: PLC0415
+    from fcp.modules.registers import commitments  # noqa: PLC0415
+    from fcp.modules.tenancy import services as tenancy  # noqa: PLC0415
+
+    with transaction.atomic():
+        ctx = tenancy.enter_workspace(cm["owner"], cm["ws"]["slug"])
+        good = commitments.TaxInput(
+            "VAT", "2026-Q3", date(2026, 11, 10), Decimal("1.00"), "COMMITTED"
+        )
+        for bad, field in (
+            (replace(good, kind="X"), "kind"),
+            (replace(good, nature="X"), "nature"),
+            (replace(good, period_label="  "), "period_label"),
+            (replace(good, amount=Decimal("0.001")), "amount"),
+        ):
+            with pytest.raises(ValidationFailedError) as caught:
+                commitments.save_tax_payment(ctx, cm["entity"]["id"], bad)
+            assert field in caught.value.field_errors
