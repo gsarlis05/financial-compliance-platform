@@ -28,6 +28,19 @@ switcher:
 | Firm | an accounting firm's own practice | one or more | always |
 
 Create one on the **Your workspaces** page. A business workspace asks for its first legal entity.
+
+Inside a workspace, the menu bar groups the pages:
+
+| Menu | Pages |
+|---|---|
+| Bookkeeping | Journal entries, Approvals |
+| Customers & suppliers | Customers & suppliers, Receivables & payables |
+| Reports | Trial balance, Statements |
+| Setup | Chart of accounts, Dimensions, Statement mapping, Periods |
+| Controls | Integrity |
+
+Select a menu to show its pages. With the keyboard, use Tab to reach a menu, then Enter or the
+down arrow to open it. The arrow keys move between pages, and Escape closes the menu.
 Data never crosses workspaces: the database itself refuses it, not just the screens.
 
 ## 3. People and roles
@@ -102,7 +115,7 @@ Posting gives the entry its permanent number (for example GJ-42) without gaps.
 with a reason. The reversal is a new entry that follows the same approval workflow. Then post the
 correct entry. An entry can be reversed only once.
 
-The **Approvals** tab lists entries waiting for you.
+**Bookkeeping → Approvals** lists entries waiting for you.
 
 ## 7. Period unlocks (exceptional)
 To correct a locked period, an accountant requests an unlock with a reason and a time window
@@ -192,8 +205,8 @@ built from the statement mapping, not statutory financial statements.
   are using. Exports need the export permission and are recorded in the audit trail.
 
 ## 13. Integrity checks
-On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on the **Integrity**
-tab (owners, finance managers, partners and workspace admins), the system
+On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on **Controls → Integrity**
+(owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).

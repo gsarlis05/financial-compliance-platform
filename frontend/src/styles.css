@@ -67,9 +67,6 @@ code, pre { font-size: 0.85rem; }
 .kind-border-business { border-inline-start: 4px solid var(--business); }
 .kind-border-personal { border-inline-start: 4px solid var(--personal); }
 
-.tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-.tabs a { padding: 0.6rem 0.8rem; text-decoration: none; color: var(--muted); border-bottom: 2px solid transparent; }
-.tabs a.active { color: var(--text); border-bottom-color: var(--primary); font-weight: 600; }
 
 main { padding: 1.25rem; max-width: 1200px; margin: 0 auto; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; }
@@ -143,3 +140,21 @@ table.statement tr.account td:first-child { padding-inline-start: 2.25rem; }
 details.year-end { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
 details.year-end summary { cursor: pointer; font-weight: 600; }
 h2 .badge { margin-inline-start: 0.5rem; vertical-align: middle; }
+
+/* Grouped navigation (M2-11): disclosure buttons with link lists */
+.main-nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.25rem; }
+.main-nav > ul { display: flex; flex-wrap: wrap; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+.nav-group { position: relative; }
+.nav-group > button { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 0.6rem 0.8rem; }
+.nav-group > button[aria-expanded="true"], .nav-group > button:hover { color: var(--text); }
+.nav-group.current > button { color: var(--text); border-bottom-color: var(--primary); font-weight: 600; }
+.nav-group > ul { position: absolute; z-index: 20; top: 100%; inset-inline-start: 0; min-width: 14rem; list-style: none; margin: 0; padding: 0.35rem 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
+.nav-group > ul a { display: block; padding: 0.5rem 0.9rem; color: var(--text); text-decoration: none; }
+.nav-group > ul a:hover, .nav-group > ul a:focus-visible { background: var(--bg); }
+.nav-group > ul a.active { font-weight: 600; border-inline-start: 3px solid var(--primary); padding-inline-start: calc(0.9rem - 3px); }
+@media (max-width: 600px) {
+  .main-nav { padding: 0 0.5rem; }
+  .nav-group { position: static; }
+  .nav-group > ul { inset-inline: 0.5rem; min-width: 0; }
+  .main-nav > ul { position: relative; }
+}
