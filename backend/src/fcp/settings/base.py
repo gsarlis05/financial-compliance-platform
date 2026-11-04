@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "fcp.modules.ledger",
     "fcp.modules.registers",
     "fcp.modules.banking",
+    "fcp.modules.documents",
     "fcp.modules.reporting",
     "fcp.modules.metrics",
 ]
@@ -129,5 +130,18 @@ LOGOUT_REDIRECT_URL = env("LOGOUT_REDIRECT_URL", "/")
 # Bank statement imports (M2-5, ADR-0015): parsed by the worker (banking_process_imports), never in
 # the request. Development and tests may process inline for convenience; deployed settings never.
 BANKING_PROCESS_INLINE = env("BANKING_PROCESS_INLINE", "false").lower() == "true"
-DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # a 5 MB statement plus form overhead
-FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # uploads stay in memory (read-only root filesystem)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 11 * 1024 * 1024  # a 10 MB document plus form overhead
+FILE_UPLOAD_MAX_MEMORY_SIZE = 11 * 1024 * 1024  # uploads stay in memory (read-only root filesystem)
+
+# Document vault (M2-4, ADR-0016): S3 API storage under per-tenant prefixes, ClamAV as a service.
+# S3_ENDPOINT empty means AWS S3; empty keys mean the default credential chain (ECS task role).
+S3_ENDPOINT = env("S3_ENDPOINT", "")
+S3_REGION = env("S3_REGION", "eu-central-1")
+S3_ACCESS_KEY = env("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = env("S3_SECRET_KEY", "")
+DOCUMENTS_BUCKET = env("DOCUMENTS_BUCKET", "fcp-documents")
+DOCUMENTS_KMS_KEY_ID = env("DOCUMENTS_KMS_KEY_ID", "")  # set: SSE-KMS with a tenant context
+DOCUMENTS_MAX_BYTES = 10 * 1024 * 1024
+CLAMD_HOST = env("CLAMD_HOST", "127.0.0.1")
+CLAMD_PORT = int(env("CLAMD_PORT", "3310"))
+CLAMD_TIMEOUT_SECONDS = int(env("CLAMD_TIMEOUT_SECONDS", "30"))

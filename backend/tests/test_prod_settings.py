@@ -26,6 +26,9 @@ DEPLOYED_ENV = {
     "OIDC_CLIENT_SECRET": "from-secrets-manager",
     "OIDC_REDIRECT_URI": "https://app.example.test/auth/callback",
     "OIDC_POST_LOGOUT_REDIRECT_URI": "https://app.example.test/",
+    "DOCUMENTS_BUCKET": "fcp-documents-test",
+    "DOCUMENTS_KMS_KEY_ID": "arn:aws:kms:eu-central-1:000000000000:key/test",
+    "CLAMD_HOST": "clamav.internal.example.test",
 }
 
 PROBE = (
@@ -36,7 +39,7 @@ PROBE = (
 
 
 def _run(args: list[str], **overrides: str | None) -> subprocess.CompletedProcess[str]:
-    prefixes = ("POSTGRES_", "OIDC_", "DJANGO_")
+    prefixes = ("POSTGRES_", "OIDC_", "DJANGO_", "DOCUMENTS_", "CLAMD_", "S3_")
     env = {k: v for k, v in os.environ.items() if not k.startswith(prefixes)}
     env.update(DEPLOYED_ENV)
     for key, value in overrides.items():
@@ -70,6 +73,9 @@ def test_secure_defaults() -> None:
         ({"CSRF_TRUSTED_ORIGINS": "http://app.example.test"}, "must use https"),
         ({"POSTGRES_SSLMODE": "disable"}, "POSTGRES_SSLMODE must enforce TLS"),
         ({"DJANGO_SECRET_KEY": None}, "DJANGO_SECRET_KEY is not set"),
+        ({"DOCUMENTS_KMS_KEY_ID": ""}, "DOCUMENTS_KMS_KEY_ID must be set"),
+        ({"CLAMD_HOST": None}, "CLAMD_HOST is not set"),
+        ({"S3_ENDPOINT": "http://s3.example.test"}, "S3_ENDPOINT must be empty"),
     ],
 )
 def test_unsafe_or_missing_configuration_stops_start_up(

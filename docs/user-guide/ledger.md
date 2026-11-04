@@ -174,11 +174,23 @@ On **Statement mapping**, *Apply default mapping* maps the whole Cyprus business
 liabilities and equity to the balance sheet, income and expenses to the profit and loss.
 
 At any date, the page says whether the mapping is **complete**. An account with a balance but no
-mapping blocks the statements (section 13) until it is mapped; *9999 Suspense* is deliberately unmapped, so
+mapping blocks the statements (section 14) until it is mapped; *9999 Suspense* is deliberately unmapped, so
 statements stay blocked while it holds a balance. Every change keeps the previous version (history
 per account) and is recorded in the audit trail.
 
-## 12. Bank statements and reconciliation
+## 12. Documents
+Open a journal entry and use **Documents** to attach its evidence, such as the supplier invoice or
+a receipt.
+- Accepted types are PDF, PNG, JPEG, XLSX, CSV, TXT and XML, up to 10 MB.
+- Every file is checked for viruses, and it must really be the type its name says. A renamed file
+  is refused.
+- Uploading the same file again gives the same document; it is not stored twice.
+- Documents can also be attached to an open invoice (API for now).
+- Downloads always save the file rather than opening it in the browser.
+- Documents are **kept as evidence**: nobody can change or delete them. Every upload and download
+  is recorded in the audit trail; the document's content never is.
+
+## 13. Bank statements and reconciliation
 **Bookkeeping → Bank** holds your bank accounts. Each one is linked to its ledger account (for example
 *1300 Bank*).
 - **Import** a statement file: ISO 20022 **CAMT.053** (XML), which most EU banks export, or **CSV**.
@@ -200,7 +212,7 @@ per account) and is recorded in the audit trail.
   balance you enter. The page shows the difference and how many lines are still unmatched. The last
   reconciled date is shown on the account.
 
-## 13. Financial statements
+## 14. Financial statements
 **Statements** shows the *profit and loss*, *balance sheet* and *cash flow statement* for the
 period you choose (the balance sheet is at the end date). It also shows the same period one year
 earlier unless you untick *Compare with the prior year*. These are **management statements**
@@ -226,13 +238,13 @@ built from the statement mapping, not statutory financial statements.
 - **Export** as PDF (one page per statement), XLSX (one sheet each) or CSV, in the language you
   are using. Exports need the export permission and are recorded in the audit trail.
 
-## 14. Integrity checks
+## 15. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on **Controls → Integrity**
 (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 15. Try it with demo data
+## 16. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).

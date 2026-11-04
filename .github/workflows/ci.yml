@@ -38,11 +38,24 @@ jobs:
       POSTGRES_OWNER_USER: fcp_owner
       POSTGRES_OWNER_PASSWORD: ci-only-owner
       POSTGRES_APP_USER: fcp_app
+      # Document vault (M2-4): throwaway CI-only keys for an ephemeral SeaweedFS, and ClamAV.
+      S3_ENDPOINT: http://127.0.0.1:8333
+      S3_ACCESS_KEY: ci-only-access-key
+      S3_SECRET_KEY: ci-only-secret-key
+      CLAMD_HOST: 127.0.0.1
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      - name: Start object storage (SeaweedFS) and antivirus (ClamAV) for the document tests
+        working-directory: .
+        run: |
+          docker run -d --name s3 -p 127.0.0.1:8333:8333 -e S3_ACCESS_KEY -e S3_SECRET_KEY \
+            -v "$PWD/infra/local/seaweedfs-entrypoint.sh:/fcp/seaweedfs-entrypoint.sh:ro" \
+            --entrypoint /bin/sh chrislusf/seaweedfs:4.52 /fcp/seaweedfs-entrypoint.sh
+          docker run -d --name clamav -p 127.0.0.1:3310:3310 -e CLAMAV_NO_FRESHCLAMD=true \
+            clamav/clamav:1.4.3
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.13"
@@ -66,6 +79,14 @@ jobs:
         run: DJANGO_SETTINGS_MODULE=fcp.settings.test uv run python manage.py makemigrations --check --dry-run
       - name: Published OpenAPI document is up to date (AC-G3)
         run: DJANGO_SETTINGS_MODULE=fcp.settings.test uv run python -m fcp.openapi --check ../docs/api/openapi.json
+      - name: Wait for object storage and antivirus
+        working-directory: .
+        run: |
+          for i in $(seq 1 90); do
+            curl -s -o /dev/null http://127.0.0.1:8333 && docker exec clamav clamdcheck.sh >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          docker logs clamav | tail -20; docker logs s3 | tail -20; exit 1
       - name: Tests with coverage gate
         run: uv run pytest --cov --cov-report=term --cov-report=xml
       - name: Money library requires 100% branch coverage (AC-M0-7)

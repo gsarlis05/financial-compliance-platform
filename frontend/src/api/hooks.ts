@@ -14,6 +14,7 @@ import type {
   CloseStatus,
   Counterparty,
   CounterpartyKind,
+  DocumentInfo,
   Dimension,
   DimensionKind,
   DimensionValue,
@@ -725,4 +726,29 @@ export function useLineHelp(lineId: string) {
     enabled: !!lineId,
   });
   return { candidates, suggestions };
+}
+
+export function useDocuments(entryId: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const list = useQuery({
+    queryKey: ["documents", entityId, entryId],
+    queryFn: () =>
+      api<DocumentInfo[]>(`${base}/documents`, {
+        query: { entry_id: entryId },
+      }),
+  });
+  const upload = useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("entry_id", entryId);
+      return api<DocumentInfo>(`${base}/documents`, { method: "POST", body });
+    },
+    onSuccess: () =>
+      void client.invalidateQueries({
+        queryKey: ["documents", entityId, entryId],
+      }),
+  });
+  return { list, upload };
 }
