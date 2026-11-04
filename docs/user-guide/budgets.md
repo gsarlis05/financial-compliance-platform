@@ -31,6 +31,43 @@ but it stays readable. The **original** budget (the first version ever approved)
 The **approval trail** lists who created, saved, submitted, returned, approved, locked or revised
 each version, and when.
 
+## Phasing
+Instead of typing twelve months, choose a **phasing** method for a line and enter the annual amount:
+- **Even:** the same each month.
+- **Like last year:** in the shape of last year's posted actuals for that line (year-end closing
+  entries are left out). If last year has none, the line is spread evenly and says so. This needs
+  permission to see reports.
+- **Profile:** your own weights, one per month (for example `1 1 1 2 2 2 1 1 1 2 2 2`).
+- **Quantity × rate:** for example 3 people × 2,500 a month. One value is used for every month, or
+  give one per month.
+
+**Show months** previews the result without saving. The months always add up exactly to the annual
+amount: each month is rounded to the cent once, and any rounding cent goes to the last month.
+
+## Excel
+- **Download as Excel** gives the version as a workbook. It is also the import template: one row per
+  line, with the columns *Line* (taxonomy code), *Account* (account code), *Dimension*
+  (`CODE:VALUE`, e.g. `DEPT:SALES`), *Note*, one column per month (`2027-01` …) and *Total*. The
+  total is ignored on import.
+- **Check and preview** reads an uploaded workbook and lists every problem by row and column, or the
+  changes it would make. Nothing is saved until you select **Replace the lines with this file**. If
+  the draft changed in the meantime, you are asked to preview again.
+- **For safety:**
+  - formulas, and text that starts with `=`, `+`, `-` or `@`, are refused (enter negative amounts
+    as numbers);
+  - workbooks with macros are refused;
+  - files are limited to 5 MB and 5,000 rows.
+
+  Exports put an apostrophe before such text, so it can never run in Excel.
+- Imported lines are saved as manual monthly amounts.
+
+## Department owners
+A preparer can name an **owner** for each department (or project) of a budget. An owner with the
+*budget holder* role:
+- sees only the budgets that name them, and in them only their departments' lines, in the page,
+  the API and the Excel download;
+- can edit and import those lines while the version is a draft, and nothing else;
+- cannot submit, approve or see other departments.
+
 ## Coming next
-Phasing methods (even, seasonal, profile, driver), Excel import and export, and department owners
-(M4-2), then budget-versus-actual variance (M4-3).
+Budget-versus-actual variance with explanations (M4-3).

@@ -131,6 +131,34 @@ def _demo_invoice_pdf(text: str, amount: str) -> bytes:
     return buffer.getvalue()
 
 
+def _budget(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) -> dict[str, Any]:
+    """A budget for the following year: sales phased like this year's posted actuals, rent as
+    quantity x rate, payroll evenly. The accountant submits and the owner approves (SoD)."""
+    following = f"{year + 1}-01-01"
+    years = owner.call("GET", f"{base}/fiscal-years")
+    fy = next((y for y in years if y["start_date"] == following), None)
+    if fy is None:
+        fy = owner.call("POST", f"{base}/fiscal-years", {"start_date": following}, 201)
+    created = accountant.call(
+        "POST", f"{base}/budgets", {"name": f"Budget {year + 1}", "fiscal_year_id": fy["id"]}, 201
+    )
+    version = created["open_version_id"]
+    lines = [
+        {"taxonomy_code": "REV.SALES", "method": "SEASONAL", "params": {"annual": "600000.00"}},
+        {"taxonomy_code": "OPEX.RENT", "method": "DRIVER",
+         "params": {"quantity": "1", "rate": "2500.00"}},
+        {"taxonomy_code": "OPEX.PAYROLL", "method": "EVEN", "params": {"annual": "108000.00"}},
+    ]  # fmt: skip
+    accountant.call("PUT", f"{base}/budget-versions/{version}/lines", {"lines": lines})
+    accountant.call("POST", f"{base}/budget-versions/{version}/submit", {})
+    approved = owner.call("POST", f"{base}/budget-versions/{version}/approve",
+                          {"comment": "Demo approval"})  # fmt: skip
+    if approved["status"] != "APPROVED":
+        raise DemoStepError(f"Budget approval failed: {approved}")
+    detail: dict[str, Any] = owner.call("GET", f"{base}/budget-versions/{version}")
+    return detail
+
+
 def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
     """Synthetic commitments for Demo Trading, then the 13-week forecast from 4 January."""
     following = year + 1
@@ -527,6 +555,13 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
             else "no shortfall below the minimum"
         )
         + f"; run {forecast['status']} and reproducible"
+    )
+
+    budget = _budget(owner, accountant, base, year)
+    sales = next(ln for ln in budget["lines"] if ln["taxonomy_code"] == "REV.SALES")
+    step(
+        f"budget {year + 1} prepared by the accountant, approved by the owner: total "
+        f"{budget['total']}; sales {sales['total']} phased like {year} ({sales['phasing_note']})"
     )
 
     if share_with:
