@@ -18,9 +18,26 @@ from fcp.modules.tenancy.api import workspace_ctx
 
 from . import excel, services, variance
 from .models import Budget, BudgetEvent, BudgetVersion
-from .services import BudgetInput, BudgetView, LineInput, VersionView, fiscal_months
+from .services import (
+    ApprovedPlan,
+    BudgetInput,
+    BudgetView,
+    LineInput,
+    VersionView,
+    approved_plan,
+    fiscal_months,
+)
 
-__all__ = ["Budget", "BudgetVersion", "BudgetView", "VersionView", "fiscal_months", "router"]
+__all__ = [
+    "ApprovedPlan",
+    "Budget",
+    "BudgetVersion",
+    "BudgetView",
+    "VersionView",
+    "approved_plan",
+    "fiscal_months",
+    "router",
+]
 
 router = Router(tags=["budgeting"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

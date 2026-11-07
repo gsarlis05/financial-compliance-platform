@@ -1120,3 +1120,68 @@ def import_lines(
         {"rows": len(lines), "changes": len(changes)},
     )
     return ImportResult([], changes, unchanged, content_hash(saved), applied=True)
+
+
+# --- the plan other modules project with (goals, M4-6) --------------------------------------------
+
+
+@dataclass(frozen=True)
+class ApprovedPlan:
+    """The current approved annual budget of each fiscal year a period touches, as plain data:
+    amounts per subject (``line:<taxonomy code>`` or ``account:<id>``) and month, positive in the
+    subject's natural direction, summed over dimension values."""
+
+    versions: list[dict[str, str]]  # id, budget, number, fiscal_year_start, fiscal_year_end
+    amounts: dict[str, dict[str, str]]  # subject -> month (ISO) -> amount
+
+
+def approved_plan(
+    ctx: WorkspaceContext, entity_id: UUID, months: list[date]
+) -> ApprovedPlan | None:
+    """None when the user cannot read whole budgets or no approved annual budget covers any of
+    the months. Where several annual budgets of a year are approved, the latest approved wins."""
+    if not ctx.can(READ, entity_id) or not months:
+        return None
+    entity = get_entity(ctx, entity_id, READ)
+    first, last = min(months), max(months)
+    wanted = set(months)
+    budgets = Budget.objects.filter(
+        legal_entity=entity,
+        kind=Budget.Kind.ANNUAL,
+        fiscal_year_start__lte=month_end(last),
+        fiscal_year_end__gte=first,
+    ).prefetch_related("versions")
+    chosen: dict[date, BudgetVersion] = {}
+    for budget in budgets:
+        current = _view(budget).current
+        if current is None or current.approved_at is None:
+            continue
+        held = chosen.get(budget.fiscal_year_start)
+        if held is None or (held.approved_at or current.approved_at) < current.approved_at:
+            chosen[budget.fiscal_year_start] = current
+    if not chosen:
+        return None
+    amounts: dict[str, dict[date, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
+    versions = []
+    for start in sorted(chosen):
+        view = _load(chosen[start])
+        versions.append({"id": str(view.version.id), "budget": view.budget.name,
+                         "number": str(view.version.number),
+                         "fiscal_year_start": start.isoformat(),
+                         "fiscal_year_end": view.budget.fiscal_year_end.isoformat()})  # fmt: skip
+        for line in view.lines:
+            subject = (
+                f"line:{line.taxonomy_line.code}"
+                if line.taxonomy_line is not None
+                else f"account:{line.account_id}"
+            )
+            for month, amount in view.amounts.get(line.id, {}).items():
+                if month in wanted:
+                    amounts[subject][month] += amount
+    return ApprovedPlan(
+        versions,
+        {
+            subject: {m.isoformat(): f"{a:.2f}" for m, a in sorted(per.items())}
+            for subject, per in sorted(amounts.items())
+        },
+    )

@@ -159,6 +159,32 @@ def _budget(owner: "DemoClient", accountant: "DemoClient", base: str, year: int)
     return detail
 
 
+SAMPLE_GOALS = (
+    ("Revenue 500k", "REVENUE", "ABSOLUTE", "500000"),
+    ("EBITDA margin 20%", "kpi:EBITDA_MARGIN", "ABSOLUTE", "0.20"),
+    ("Cash at least 100k", "CASH", "MAINTAIN_MIN", "100000"),
+    ("DSO 30 days", "kpi:DSO", "ABSOLUTE", "30"),
+    ("Net profit +15%", "NET_PROFIT", "CHANGE_PCT", "0.15"),
+    ("Opex -10%", "OPEX", "CHANGE_PCT", "-0.10"),
+)
+
+
+def _goals(owner: "DemoClient", base: str, year: int) -> list[dict[str, Any]]:
+    """The six sample goals for the budget year (doc 12 AC-GO2), each evaluated once: baselines
+    from this year's actuals, outcomes from the approved budget and the cash forecast."""
+    evaluated = []
+    for name, metric, target_type, target in SAMPLE_GOALS:
+        made = owner.call("POST", f"{base}/goals", {
+            "name": name, "metric": metric, "target_type": target_type, "target": target,
+            "period_start": f"{year + 1}-01-01", "period_end": f"{year + 1}-12-31",
+        }, 201)  # fmt: skip
+        result = owner.call("POST", f"{base}/goals/{made['id']}/evaluations", {}, 201)
+        if result["run_status"] != "VALID":
+            raise DemoStepError(f"Goal evaluation failed: {result}")
+        evaluated.append({"name": name, "status": result["status"], "method": result["method"]})
+    return evaluated
+
+
 def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
     """Synthetic commitments for Demo Trading, then the 13-week forecast from 4 January."""
     following = year + 1
@@ -563,6 +589,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         f"budget {year + 1} prepared by the accountant, approved by the owner: total "
         f"{budget['total']}; sales {sales['total']} phased like {year} ({sales['phasing_note']})"
     )
+
+    goals = _goals(owner, base, year)
+    step(f"{len(goals)} sample goals for {year + 1} set with frozen {year} baselines and "
+         "evaluated: " + "; ".join(f"{g['name']} {g['status']}" for g in goals))  # fmt: skip
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

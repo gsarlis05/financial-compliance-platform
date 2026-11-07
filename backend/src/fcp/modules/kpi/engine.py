@@ -95,17 +95,20 @@ def cutoffs(start: date, end: date) -> dict[str, date]:
 class _Context:
     """The reference functions for one KPI, recording which accounts contributed."""
 
-    def __init__(self, inputs: RunInputs, data: Data, accounts: dict[str, Account]) -> None:
-        refs = inputs.refs
-        self.start, self.end = (
-            date.fromisoformat(refs["date_from"]),
-            date.fromisoformat(refs["date_to"]),
-        )
+    def __init__(
+        self,
+        start: date,
+        end: date,
+        data: Data,
+        accounts: dict[str, Account],
+        operational: dict[str, dict[str, Any]],
+    ) -> None:
+        self.start, self.end = start, end
         self.data, self.accounts = data, accounts
         self.cut = cutoffs(self.start, self.end)
         self.months = period_months(self.start, self.end)
         self.sources: dict[str, Decimal] = defaultdict(Decimal)
-        self.operational: dict[str, dict[str, Any]] = refs.get("operational", {})
+        self.operational = operational
         self.non_ledger = False
 
     def _natural(self, account_id: str, net_debit: Decimal) -> Decimal:
@@ -205,15 +208,49 @@ class _Context:
 
 def reference_functions() -> list[Function]:
     """The functions a KPI formula may use, for checking formulas without data (M4-5)."""
-    empty = RunInputs(
-        KIND,
-        "1",
-        UUID(int=0),
-        date(2000, 1, 1),
-        0,
-        {"date_from": "2000-01-01", "date_to": "2000-01-31"},
+    return _Context(date(2000, 1, 1), date(2000, 1, 31), Data([], {}, {}), {}, {}).functions()
+
+
+@dataclass(frozen=True)
+class Evaluated:
+    """A formula evaluated on given data, with the accounts and reference calls behind it."""
+
+    value: Decimal | None
+    nm_reason: str
+    unit: str
+    sources: dict[str, Decimal]
+    calls: tuple[str, ...]
+    non_ledger: bool
+
+
+def evaluate_formula(  # noqa: PLR0913 (the period and the data it reads)
+    formula: str,
+    *,
+    date_from: date,
+    date_to: date,
+    accounts: dict[str, Account],
+    flows: dict[tuple[str, date], Decimal],
+    balances: dict[date, dict[str, Decimal]],
+    operational: dict[str, dict[str, Any]] | None = None,
+) -> Evaluated:
+    """Evaluate a KPI formula on data the caller supplies (goals, M4-6): ``flows`` are net debits
+    per (account id, month) and ``balances`` the net debit per account before each cut-off date
+    (``cutoffs``). An account id may be a pseudo-account (e.g. a budget line) as long as
+    ``accounts`` describes it. Raises ``ExpressionError`` for a formula that does not compile."""
+    context = _Context(date_from, date_to, Data([], flows, balances), accounts, operational or {})
+    evaluation = evaluate(compile_expression(formula, functions=context.functions()))
+    result = evaluation.value
+    if isinstance(result, bool):
+        raise ValueError("a true/false formula has no value")
+    meaningful = not isinstance(result, NotMeaningful)
+    return Evaluated(
+        result if not isinstance(result, NotMeaningful) else None,
+        "" if meaningful else getattr(result, "reason", ""),
+        evaluation.unit,
+        dict(context.sources),
+        evaluation.calls,
+        context.non_ledger,
     )
-    return _Context(empty, Data([], {}, {}), {}).functions()
 
 
 class KpiSetEngine:
@@ -256,7 +293,7 @@ class KpiSetEngine:
         )
         values = []
         for definition in data.definitions:
-            context = _Context(inputs, data, accounts)
+            context = _Context(start, end, data, accounts, inputs.refs.get("operational", {}))
             compiled = compile_expression(definition["formula"], functions=context.functions())
             evaluation = evaluate(compiled)
             sources = sorted(context.sources.items())[:MAX_SOURCES]
