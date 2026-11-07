@@ -22,6 +22,7 @@ from fcp.modules.metrics.api import (
 from fcp.modules.reporting.api import accounts, posted_since
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
+from . import custom
 from .engine import KIND, account_snapshot
 from .library import DEFAULT_LIBRARY
 from .models import KpiDefinition
@@ -30,9 +31,23 @@ MAX_MONTHS = 12
 
 
 @dataclass(frozen=True)
+class Meta:
+    """What a KPI value is: a library definition or a workspace KPI version."""
+
+    id: str
+    key: str
+    name: str
+    name_el: str
+    category: str
+    display: str
+    direction: str
+    convention: str
+
+
+@dataclass(frozen=True)
 class KpiSet:
     run: CalcRun
-    definitions: dict[str, KpiDefinition]
+    definitions: dict[str, Meta]  # by series key ("kpi.<KEY>")
     values: list[Any]  # CalcResult rows, in library order
     unmapped_accounts: int
     out_of_date: bool  # entries were posted after the run's watermark (checked on reading)
@@ -79,22 +94,56 @@ def _unmapped(ctx: WorkspaceContext, entity_id: UUID, as_of: date) -> int:
     return len(found.unmapped_blocking) + len(found.unmapped_warning)
 
 
-def run(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date, date_to: date) -> KpiSet:
-    """Compute every KPI of the core library for the period, as a stored, reproducible run."""
-    _period(date_from, date_to)
-    entity = get_entity(ctx, entity_id, "planning.run")
-    refs = {
+def run_refs(
+    ctx: WorkspaceContext, entity_id: UUID, date_from: date, date_to: date
+) -> dict[str, Any]:
+    """A run's inputs besides the ledger: period, library, account mapping and operational
+    values (snapshotted, so later edits never change a stored run)."""
+    return {
         "date_from": date_from.isoformat(),
         "date_to": date_to.isoformat(),
         "library": DEFAULT_LIBRARY,
-        "accounts": _snapshot(ctx, entity.id),
+        "accounts": _snapshot(ctx, entity_id),
+        "operational": custom.operational_snapshot(entity_id, date_from, date_to),
+    }
+
+
+def run(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date, date_to: date) -> KpiSet:
+    """Compute the core library and the approved workspace KPIs for the period, as a stored,
+    reproducible run."""
+    _period(date_from, date_to)
+    entity = get_entity(ctx, entity_id, "planning.run")
+    refs = {
+        **run_refs(ctx, entity.id, date_from, date_to),
+        "custom": custom.workspace_snapshot(entity.id),
     }
     made = execute(ctx, entity.id, KIND, as_of=date_to, refs=refs)
     return _set(ctx, entity.id, made)
 
 
+def _metas(refs: dict[str, Any]) -> dict[str, Meta]:
+    found = {
+        f"kpi.{d.key}": Meta(
+            d.id, d.key, d.name, d.name_el, d.category, d.display, d.direction, d.convention
+        )
+        for d in KpiDefinition.objects.filter(library=refs["library"])
+    }
+    for c in refs.get("custom", []):
+        found[f"kpi.{c['key']}"] = Meta(
+            c["id"],
+            c["key"],
+            c["name"],
+            "",
+            "CUSTOM",
+            c["display"],
+            c["direction"],
+            c["convention"],
+        )
+    return found
+
+
 def _set(ctx: WorkspaceContext, entity_id: UUID, made: CalcRun) -> KpiSet:
-    found = {d.id: d for d in KpiDefinition.objects.filter(library=made.input_refs["library"])}
+    found = _metas(made.input_refs)
     as_of = date.fromisoformat(made.input_refs["date_to"])
     newer = posted_since(ctx, entity_id, made.actuals_watermark)
     return KpiSet(
