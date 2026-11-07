@@ -275,6 +275,8 @@ def test_every_library_formula_compiles_with_the_documented_unit() -> None:
         "days",
         "annual_factor",
         "burn_3m",
+        "count_metric",
+        "amount_metric",
     }
     for d in KpiDefinition.objects.all():
         compiled = compile_expression(d.formula, functions=functions)

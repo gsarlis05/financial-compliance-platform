@@ -3047,6 +3047,236 @@
         "title": "CsvMappingIn",
         "type": "object"
       },
+      "CustomKpiCreateIn": {
+        "properties": {
+          "convention": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Convention",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "HIGHER_BETTER",
+              "LOWER_BETTER"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "enum": [
+              "percent",
+              "ratio",
+              "times",
+              "days",
+              "months",
+              "EUR"
+            ],
+            "title": "Display",
+            "type": "string"
+          },
+          "formula": {
+            "maxLength": 2000,
+            "title": "Formula",
+            "type": "string"
+          },
+          "key": {
+            "description": "e.g. REVENUE_PER_EMPLOYEE",
+            "maxLength": 40,
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "PERSONAL",
+              "WORKSPACE"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "formula",
+          "display",
+          "direction",
+          "scope"
+        ],
+        "title": "CustomKpiCreateIn",
+        "type": "object"
+      },
+      "CustomKpiIn": {
+        "properties": {
+          "convention": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Convention",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "HIGHER_BETTER",
+              "LOWER_BETTER"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "enum": [
+              "percent",
+              "ratio",
+              "times",
+              "days",
+              "months",
+              "EUR"
+            ],
+            "title": "Display",
+            "type": "string"
+          },
+          "formula": {
+            "maxLength": 2000,
+            "title": "Formula",
+            "type": "string"
+          },
+          "key": {
+            "description": "e.g. REVENUE_PER_EMPLOYEE",
+            "maxLength": 40,
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "formula",
+          "display",
+          "direction"
+        ],
+        "title": "CustomKpiIn",
+        "type": "object"
+      },
+      "CustomKpiOut": {
+        "properties": {
+          "convention": {
+            "title": "Convention",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_name": {
+            "title": "Decided By Name",
+            "type": "string"
+          },
+          "decision_comment": {
+            "title": "Decision Comment",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner_name": {
+            "title": "Owner Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "version",
+          "scope",
+          "status",
+          "name",
+          "formula",
+          "unit",
+          "display",
+          "direction",
+          "convention",
+          "owner_name",
+          "supersedes_id",
+          "decided_by_name",
+          "decided_at",
+          "decision_comment",
+          "created_at"
+        ],
+        "title": "CustomKpiOut",
+        "type": "object"
+      },
       "DebtIn": {
         "properties": {
           "adjust": {
@@ -3407,6 +3637,18 @@
           "created_at"
         ],
         "title": "DebtOut",
+        "type": "object"
+      },
+      "DecisionIn": {
+        "properties": {
+          "comment": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Comment",
+            "type": "string"
+          }
+        },
+        "title": "DecisionIn",
         "type": "object"
       },
       "DefaultsIn": {
@@ -4676,6 +4918,102 @@
         "title": "ForecastOut",
         "type": "object"
       },
+      "FormulaCheckOut": {
+        "properties": {
+          "dry_run_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run Month"
+          },
+          "dry_run_reason": {
+            "title": "Dry Run Reason",
+            "type": "string"
+          },
+          "dry_run_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None: not meaningful (see the reason)",
+            "title": "Dry Run Value"
+          },
+          "non_ledger": {
+            "title": "Non Ledger",
+            "type": "boolean"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "ok",
+          "unit",
+          "problems",
+          "dry_run_month",
+          "dry_run_value",
+          "dry_run_reason",
+          "non_ledger"
+        ],
+        "title": "FormulaCheckOut",
+        "type": "object"
+      },
+      "FormulaIn": {
+        "properties": {
+          "display": {
+            "enum": [
+              "percent",
+              "ratio",
+              "times",
+              "days",
+              "months",
+              "EUR"
+            ],
+            "title": "Display",
+            "type": "string"
+          },
+          "formula": {
+            "maxLength": 2000,
+            "title": "Formula",
+            "type": "string"
+          }
+        },
+        "required": [
+          "formula",
+          "display"
+        ],
+        "title": "FormulaIn",
+        "type": "object"
+      },
       "HistoryQuery": {
         "properties": {
           "limit": {
@@ -5210,6 +5548,12 @@
           "nm_reason": {
             "title": "Nm Reason",
             "type": "string"
+          },
+          "non_ledger": {
+            "default": false,
+            "description": "Uses operational metrics entered by hand",
+            "title": "Non Ledger",
+            "type": "boolean"
           },
           "result_id": {
             "description": "For calc-runs/{run}/results/{result}/explain",
@@ -6042,6 +6386,187 @@
         "title": "MemberOut",
         "type": "object"
       },
+      "MetricHistoryQuery": {
+        "properties": {
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "MetricHistoryQuery",
+        "type": "object"
+      },
+      "MetricIn": {
+        "properties": {
+          "aggregation": {
+            "description": "LAST: a point in time (headcount); SUM: a total (units sold)",
+            "enum": [
+              "LAST",
+              "SUM"
+            ],
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "key": {
+            "description": "e.g. HEADCOUNT",
+            "maxLength": 40,
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "EUR"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "unit",
+          "aggregation"
+        ],
+        "title": "MetricIn",
+        "type": "object"
+      },
+      "MetricOut": {
+        "properties": {
+          "aggregation": {
+            "title": "Aggregation",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "const": "ACTUAL",
+            "default": "ACTUAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "non_ledger": {
+            "const": true,
+            "default": true,
+            "title": "Non Ledger",
+            "type": "boolean"
+          },
+          "source": {
+            "const": "MANUAL",
+            "default": "MANUAL",
+            "title": "Source",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/MetricValueOut"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "unit",
+          "aggregation",
+          "values"
+        ],
+        "title": "MetricOut",
+        "type": "object"
+      },
+      "MetricValueIn": {
+        "properties": {
+          "month": {
+            "description": "First day of the month",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?\\d{1,15}(\\.\\d{1,4})?$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "value"
+        ],
+        "title": "MetricValueIn",
+        "type": "object"
+      },
+      "MetricValueOut": {
+        "properties": {
+          "entered_at": {
+            "format": "date-time",
+            "title": "Entered At",
+            "type": "string"
+          },
+          "entered_by": {
+            "title": "Entered By",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "value",
+          "version",
+          "note",
+          "entered_by",
+          "entered_at"
+        ],
+        "title": "MetricValueOut",
+        "type": "object"
+      },
       "MonthlyOut": {
         "properties": {
           "facts": {
@@ -6700,6 +7225,72 @@
           "status"
         ],
         "title": "PeriodStatusIn",
+        "type": "object"
+      },
+      "PersonalValueOut": {
+        "properties": {
+          "definition_id": {
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "const": "ACTUAL",
+            "default": "ACTUAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "nm_reason": {
+            "title": "Nm Reason",
+            "type": "string"
+          },
+          "non_ledger": {
+            "title": "Non Ledger",
+            "type": "boolean"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "definition_id",
+          "name",
+          "display",
+          "direction",
+          "value",
+          "unit",
+          "nm_reason",
+          "non_ledger"
+        ],
+        "title": "PersonalValueOut",
         "type": "object"
       },
       "RateType": {
@@ -14054,6 +14645,430 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis": {
+      "get": {
+        "description": "Every version of the workspace KPIs, and your own personal KPIs.",
+        "operationId": "fcp_modules_kpi_api_list_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomKpiOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Custom",
+        "tags": [
+          "kpi"
+        ]
+      },
+      "post": {
+        "description": "A personal KPI (in use at once) or a workspace KPI (needs ``kpi.definition.manage``, and\napproval by someone else).",
+        "operationId": "fcp_modules_kpi_api_create_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomKpiCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomKpiOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Custom",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis/check": {
+      "post": {
+        "description": "Check a formula and try it on the last complete month; nothing is saved.",
+        "operationId": "fcp_modules_kpi_api_check_formula",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormulaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormulaCheckOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Check Formula",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis/{kpi_id}/approve": {
+      "post": {
+        "operationId": "fcp_modules_kpi_api_approve_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Kpi Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomKpiOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Approve Custom",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis/{kpi_id}/reject": {
+      "post": {
+        "operationId": "fcp_modules_kpi_api_reject_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Kpi Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomKpiOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reject Custom",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis/{kpi_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_kpi_api_retire_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Kpi Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomKpiOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Custom",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/custom-kpis/{kpi_id}/revise": {
+      "post": {
+        "operationId": "fcp_modules_kpi_api_revise_custom",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Kpi Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomKpiIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomKpiOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revise Custom",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/debt-instruments": {
       "get": {
         "operationId": "fcp_modules_registers_api_list_debt",
@@ -16488,6 +17503,68 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/kpi-sets/{run_id}/personal": {
+      "get": {
+        "description": "Your personal KPIs on this set's pinned data. They are not stored and only you see them.",
+        "operationId": "fcp_modules_kpi_api_personal_kpis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalValueOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Personal Kpis",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/ledger-settings": {
       "get": {
         "operationId": "fcp_modules_ledger_api_get_settings",
@@ -17115,6 +18192,252 @@
         "summary": "Set Flag",
         "tags": [
           "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/operational-metrics": {
+      "get": {
+        "description": "Operational (non-ledger) metrics with their current monthly values.",
+        "operationId": "fcp_modules_kpi_api_list_metrics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetricOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Metrics",
+        "tags": [
+          "kpi"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_kpi_api_create_metric",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetricIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Metric",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/operational-metrics/{metric_id}/history": {
+      "get": {
+        "operationId": "fcp_modules_kpi_api_metric_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetricValueOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Metric History",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/operational-metrics/{metric_id}/values": {
+      "put": {
+        "description": "Enter or correct a month's value; a correction keeps the earlier value as history.",
+        "operationId": "fcp_modules_kpi_api_set_metric_value",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetricValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricValueOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Metric Value",
+        "tags": [
+          "kpi"
         ]
       }
     },
