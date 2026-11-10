@@ -97,7 +97,17 @@ export function useCounterpartMutations() {
     revoke: useMutation({
       mutationFn: (id: string) =>
         api<null>(`${links}/${id}/revoke`, { method: "POST", body: {} }),
-      onSuccess: refresh,
+      onSuccess: (_, id) => {
+        // Drop the link first, so its suggestions are not fetched again after it is gone.
+        client.setQueryData<CounterpartLink[]>(
+          ["personal", entityId, "counterpart-links"],
+          (old) => old?.filter((l) => l.id !== id),
+        );
+        client.removeQueries({
+          queryKey: ["personal", entityId, "counterpart-decisions", id],
+        });
+        return refresh();
+      },
     }),
     decide: useMutation({
       mutationFn: ({

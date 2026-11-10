@@ -148,7 +148,10 @@ function LinkForm({ accounts }: { accounts: PersonalAccount[] }) {
             <option value="">—</option>
             {businesses.map((w) => (
               <option key={w.slug} value={w.slug}>
-                {w.name}
+                {/* Same-named workspaces are told apart by their address. */}
+                {businesses.filter((o) => o.name === w.name).length > 1
+                  ? `${w.name} (${w.slug})`
+                  : w.name}
               </option>
             ))}
           </select>
