@@ -225,7 +225,32 @@ def _personal(owner: "DemoClient", year: int) -> dict[str, Any]:
         owner.call("POST", f"{base}/goals", body, 201)
     worth["goals"] = owner.call("GET", f"{base}/goals")
     worth["projection"] = owner.call("GET", f"{base}/projection")
+    worth["base"], worth["accounts"] = base, acc
     return worth
+
+
+def _counterpart(owner: "DemoClient", personal: dict[str, Any], business: str,
+                 director_loans: str, since: str) -> dict[str, Any]:  # fmt: skip
+    """Opt-in counterpart hint (M5-3): link the business director's loan account, read the
+    suggestions in the business workspace, and confirm one in the personal books."""
+    base, acc = personal["base"], personal["accounts"]
+    slug, entity_id = business.split("/")[3], business.split("/")[5]
+    made = owner.call("POST", f"{base}/counterpart-links", {
+        "business_slug": slug, "business_entity_id": entity_id,
+        "business_account_id": director_loans, "label": "Demo Trading · 2020 Director loans",
+        "account_id": acc["1100"], "category_id": acc["4000"], "since": since,
+    }, 201)  # fmt: skip
+    gl = owner.call("GET", f"{business}/reports/general-ledger/{director_loans}"
+                           f"?date_from={since}&date_to={since[:4]}-12-31")  # fmt: skip
+    hints = [ln for ln in gl["lines"] if ln["debit"] != "0.00"]
+    if not hints:
+        raise DemoStepError(f"No counterpart suggestion: {gl}")
+    first = hints[0]
+    owner.call("POST", f"{base}/counterpart-links/{made['id']}/confirm", {
+        "business_entry_id": first["entry_id"], "date": first["accounting_date"],
+        "amount": first["debit"], "description": f"{made['label']}: {first['description']}",
+    }, 201)  # fmt: skip
+    return {"suggested": len(hints), "confirmed": first["debit"]}
 
 
 def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
@@ -654,6 +679,18 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{worth['as_of']}{valued}")  # fmt: skip
     step(f"personal budget (groceries 400 a month) and {len(worth['goals'])} goals: {goal_list}; "
          f"12-month projection from cash {worth['projection']['opening_cash']}")  # fmt: skip
+    repaid = through_workflow(
+        draft(
+            date(year + 1, 1, 15),
+            "Director loan repaid (Demo)",
+            [("2020", Decimal("1500.00"), Decimal("0")), (BANK, Decimal("0"), Decimal("1500.00"))],
+        )
+    )
+    hint = _counterpart(owner, worth, base, by_code["2020"], repaid["accounting_date"])
+    step(
+        f"counterpart hint (opt-in): {hint['suggested']} business payment to the owner "
+        f"suggested, {hint['confirmed']} recorded in the personal books only after confirmation"
+    )
     refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
     step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
 
