@@ -14,6 +14,8 @@ PERMISSIONS: dict[str, str] = {
     "tenancy.workspace.read": "See the workspace and its legal entities",
     "tenancy.entity.manage": "Create and edit legal entities",
     "tenancy.members.manage": "Invite members and assign roles",
+    "tenancy.workspace.export": "Download a full export of the workspace's data",
+    "tenancy.workspace.delete": "Request, confirm or cancel the deletion of the workspace",
     # chart of accounts and periods
     "ledger.account.read": "See the chart of accounts",
     "ledger.account.manage": "Create and edit accounts",
