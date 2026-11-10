@@ -954,6 +954,20 @@ export const en = {
   "dash.saveMine": "Save my layout",
   "dash.saveDefault": "Save as workspace default",
   "dash.reset": "Use the workspace default",
+  "nav.portfolio": "Firm portfolio",
+  "pf.title": "Firm portfolio",
+  "pf.intro":
+    "One row per client you have access to, calculated now with your permissions. Open a client to see its dashboard. KPIs come from each client's latest year-to-date KPI calculation.",
+  "pf.month": "Year to date ending in",
+  "pf.caption": "Clients",
+  "pf.client": "Client",
+  "pf.cash": "Opening cash (13-week forecast)",
+  "pf.grossMargin": "Gross margin",
+  "pf.currentRatio": "Current ratio",
+  "pf.dso": "DSO (days)",
+  "pf.goals": "Goals on track / at risk / off track",
+  "pf.alerts": "Open alerts critical / warning",
+  "pf.none": "No clients you have access to.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1927,6 +1941,20 @@ export const el: Record<MessageKey, string> = {
   "dash.saveMine": "Αποθήκευση της διάταξής μου",
   "dash.saveDefault": "Αποθήκευση ως προεπιλογή χώρου εργασίας",
   "dash.reset": "Χρήση της προεπιλογής",
+  "nav.portfolio": "Χαρτοφυλάκιο πελατών",
+  "pf.title": "Χαρτοφυλάκιο πελατών",
+  "pf.intro":
+    "Μία γραμμή για κάθε πελάτη στον οποίο έχετε πρόσβαση, υπολογισμένη τώρα με τα δικαιώματά σας. Ανοίξτε έναν πελάτη για να δείτε τον πίνακά του. Οι δείκτες προέρχονται από τον τελευταίο υπολογισμό από την αρχή του έτους.",
+  "pf.month": "Από αρχή έτους έως",
+  "pf.caption": "Πελάτες",
+  "pf.client": "Πελάτης",
+  "pf.cash": "Αρχικά ταμειακά (πρόβλεψη 13 εβδομάδων)",
+  "pf.grossMargin": "Μικτό περιθώριο",
+  "pf.currentRatio": "Κυκλοφορούσα ρευστότητα",
+  "pf.dso": "Μέρες είσπραξης",
+  "pf.goals": "Στόχοι εντός πορείας / σε κίνδυνο / εκτός πορείας",
+  "pf.alerts": "Ανοιχτές ειδοποιήσεις κρίσιμες / προειδοποιήσεις",
+  "pf.none": "Δεν υπάρχουν πελάτες στους οποίους έχετε πρόσβαση.",
 };
 
 export const catalogs = { en, el } as const;

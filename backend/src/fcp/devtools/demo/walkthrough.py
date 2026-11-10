@@ -604,6 +604,8 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     cards = next(w for w in board["widgets"] if w["type"] == "kpis")["data"].get("cards", [])
     step(f"CFO dashboard for {year} year to date: " + ", ".join(f"{k} {v}" for k, v in
          shown.items()) + f"; {len(cards)} KPI cards")  # fmt: skip
+    refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
+    step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

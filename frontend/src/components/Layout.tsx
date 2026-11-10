@@ -82,7 +82,8 @@ function EntityPicker() {
   );
 }
 
-type NavGroupSpec = { label: MessageKey; links: [string, MessageKey][] };
+type NavLinkSpec = [string, MessageKey];
+type NavGroupSpec = { label: MessageKey; links: NavLinkSpec[] };
 
 /** One navigation group: a button that shows or hides its links (WAI-ARIA disclosure
  * navigation). Arrow keys move between links, Escape closes the group and returns focus to its
@@ -175,6 +176,9 @@ function NavGroup({
 function MainNav({ base }: { base: string }) {
   const { t } = useI18n();
   const { pathname } = useLocation();
+  const { slug = "" } = useParams();
+  // The client portfolio exists for firm workspaces only (doc 11 §5); the server enforces it.
+  const firm = useWorkspace(slug).data?.kind === "FIRM";
   // The open group belongs to the page it was opened on, so navigating closes it.
   const [opened, setOpened] = useState<{ label: string; path: string } | null>(
     null,
@@ -203,6 +207,9 @@ function MainNav({ base }: { base: string }) {
       label: "nav.group.planning",
       links: [
         [`${base}/dashboard`, "nav.dashboard"],
+        ...(firm
+          ? [[`${base}/portfolio`, "nav.portfolio"] as NavLinkSpec]
+          : []),
         [`${base}/cash-forecast`, "nav.cashForecast"],
         [`${base}/budgets`, "nav.budgets"],
         [`${base}/kpis`, "nav.kpis"],
