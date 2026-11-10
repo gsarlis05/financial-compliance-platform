@@ -17,6 +17,7 @@ import {
 } from "./pages/Personal";
 import { PersonalPlanPage } from "./pages/PersonalPlan";
 import { PortfolioPage } from "./pages/Portfolio";
+import { EngagementsPage } from "./pages/Engagements";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
 import { CashForecastPage } from "./pages/CashForecast";
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
       },
       { path: "w/:slug/e/:entityId/statements", element: <StatementsPage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
+      { path: "w/:slug/e/:entityId/engagements", element: <EngagementsPage /> },
     ],
   },
 ]);
