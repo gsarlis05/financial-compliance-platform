@@ -200,7 +200,9 @@ function PersonalKpis({ runId }: { runId: string }) {
             <p className="muted">
               {t("nature.ACTUAL")} · {t("ck.scope.PERSONAL")}
             </p>
-            {v.non_ledger ? <p className="non-ledger">{t("ck.nonLedger")}</p> : null}
+            {v.non_ledger ? (
+              <p className="non-ledger">{t("ck.nonLedger")}</p>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -13,6 +13,8 @@ import structlog
 from django.db import connection, transaction
 from django.utils import timezone
 
+from fcp.core.db.rls import current_engagement
+
 from .models import AuditChainHead, AuditEvent
 
 GENESIS_HASH = bytes(32)
@@ -82,6 +84,9 @@ def record(  # noqa: PLR0913 - keyword-only; mirrors the audit event's fields
         key: digest(value) if key in sensitive_keys and value is not None else value
         for key, value in (changes or {}).items()
     }
+    via = current_engagement()
+    if via:  # a firm user acting through an engagement grant (M5-4): name the firm
+        stored["via_engagement"] = via
     normalised: dict[str, Any] = json.loads(canonical_json(stored))
     with connection.cursor() as cursor:
         cursor.execute(

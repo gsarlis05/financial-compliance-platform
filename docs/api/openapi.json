@@ -4582,6 +4582,121 @@
         "title": "DriftOut",
         "type": "object"
       },
+      "EngagementIn": {
+        "properties": {
+          "firm_slug": {
+            "description": "The firm's workspace address",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Firm Slug",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Omit for every entity",
+            "title": "Legal Entity Id"
+          },
+          "scope_roles": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Scope Roles",
+            "type": "array"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "firm_slug",
+          "scope_roles",
+          "valid_until"
+        ],
+        "title": "EngagementIn",
+        "type": "object"
+      },
+      "EngagementOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "firm_name": {
+            "title": "Firm Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scope_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope Roles",
+            "type": "array"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firm_name",
+          "scope_roles",
+          "legal_entity_id",
+          "valid_until",
+          "created_at",
+          "revoked_at",
+          "active"
+        ],
+        "title": "EngagementOut",
+        "type": "object"
+      },
       "EntityIn": {
         "properties": {
           "entity_type": {
@@ -5091,6 +5206,70 @@
           "net_debit"
         ],
         "title": "FactOut",
+        "type": "object"
+      },
+      "FirmEngagementOut": {
+        "properties": {
+          "client_kind": {
+            "title": "Client Kind",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "client_slug": {
+            "title": "Client Slug",
+            "type": "string"
+          },
+          "engagement_id": {
+            "format": "uuid",
+            "title": "Engagement Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "scope_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope Roles",
+            "type": "array"
+          },
+          "staff": {
+            "items": {
+              "$ref": "#/components/schemas/StaffOut"
+            },
+            "title": "Staff",
+            "type": "array"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engagement_id",
+          "client_slug",
+          "client_name",
+          "client_kind",
+          "scope_roles",
+          "legal_entity_id",
+          "valid_until",
+          "staff"
+        ],
+        "title": "FirmEngagementOut",
         "type": "object"
       },
       "FiscalYearIn": {
@@ -9486,6 +9665,18 @@
           "cash": {
             "$ref": "#/components/schemas/PortfolioPartOut"
           },
+          "client_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The client's own workspace, for a client with an engagement",
+            "title": "Client Slug"
+          },
           "entity_id": {
             "format": "uuid",
             "title": "Entity Id",
@@ -10437,6 +10628,50 @@
           "left_over"
         ],
         "title": "SpendingOut",
+        "type": "object"
+      },
+      "StaffIn": {
+        "properties": {
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "membership_id"
+        ],
+        "title": "StaffIn",
+        "type": "object"
+      },
+      "StaffOut": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "membership_id",
+          "email",
+          "display_name"
+        ],
+        "title": "StaffOut",
         "type": "object"
       },
       "StatementLineOut": {
@@ -12105,6 +12340,18 @@
           "slug": {
             "title": "Slug",
             "type": "string"
+          },
+          "via_engagement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The firm and engagement, when opened through a grant (M5-4)",
+            "title": "Via Engagement"
           }
         },
         "required": [
@@ -12464,6 +12711,281 @@
         "summary": "Verify Chain",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/api/w/{slug}/client-engagements": {
+      "get": {
+        "description": "Clients that have let this firm in, and who works on each (firm side).",
+        "operationId": "fcp_modules_tenancy_api_list_client_engagements",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FirmEngagementOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Client Engagements",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/client-engagements/staff/{staff_id}/remove": {
+      "post": {
+        "operationId": "fcp_modules_tenancy_api_remove_engagement_staff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Engagement Staff",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/client-engagements/{engagement_id}/staff": {
+      "post": {
+        "operationId": "fcp_modules_tenancy_api_add_engagement_staff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Engagement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Engagement Staff",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/engagements": {
+      "get": {
+        "description": "The firms this workspace has let in (client side).",
+        "operationId": "fcp_modules_tenancy_api_list_engagements",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EngagementOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Engagements",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "post": {
+        "description": "Let a firm work in this workspace, within a scope and until a date.",
+        "operationId": "fcp_modules_tenancy_api_grant_engagement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngagementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Grant Engagement",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/engagements/{engagement_id}/revoke": {
+      "post": {
+        "description": "End a firm's access now: its next request is refused.",
+        "operationId": "fcp_modules_tenancy_api_revoke_engagement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Engagement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revoke Engagement",
+        "tags": [
+          "workspaces"
         ]
       }
     },

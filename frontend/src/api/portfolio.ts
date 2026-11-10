@@ -14,6 +14,7 @@ export interface PortfolioRow {
   entity_id: string;
   legal_name: string;
   entity_type: string;
+  client_slug?: string | null; // the client's own workspace (engagement grant, M5-4)
   cash: PortfolioPart<{
     as_of?: string;
     stale?: boolean;

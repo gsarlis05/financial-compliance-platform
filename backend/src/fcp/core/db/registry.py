@@ -34,7 +34,15 @@ APPEND_ONLY_TABLES: set[str] = {
 }
 
 # Narrow SECURITY DEFINER functions the runtime role may execute (each returns IDs only).
-RUNTIME_FUNCTIONS: set[str] = {"banking_pending_tenant_ids()", "cashflow_forecast_tenant_ids()"}
+RUNTIME_FUNCTIONS: set[str] = {
+    "banking_pending_tenant_ids()",
+    "cashflow_forecast_tenant_ids()",
+    # Engagement grants (M5-4): each returns only what the caller is entitled to.
+    "app_firm_lookup(text)",
+    "app_firm_engagements()",
+    "app_engagement_access(text)",
+    "app_engaged_workspaces()",
+}
 
 # Reference-data tables the runtime role may only SELECT from (changed by migrations only).
 READ_ONLY_TABLES: set[str] = {

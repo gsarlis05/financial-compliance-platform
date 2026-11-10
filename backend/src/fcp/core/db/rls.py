@@ -27,6 +27,20 @@ def set_context(*, tenant_id: UUID | None = None, user_id: UUID | None = None) -
         )
 
 
+def set_engagement(label: str) -> None:
+    """Name the engagement the current user acts through (empty for a member), for the audit
+    trail of the rest of the current transaction (M5-4)."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT set_config('app.engagement', %s, true)", [label])
+
+
+def current_engagement() -> str:
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_setting('app.engagement', true)")
+        row = cursor.fetchone()
+    return str(row[0]) if row and row[0] else ""
+
+
 def clear_context() -> None:
     set_context(tenant_id=None, user_id=None)
 
