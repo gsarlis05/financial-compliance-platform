@@ -75,3 +75,14 @@ def test_a_user_without_planning_access_is_refused(
     holder = join(firm["oc"], slug, make_user("bh@example.test"), api_client,
                   Role.BUDGET_HOLDER, firm["a"]["id"])  # fmt: skip
     assert holder.get(f"/api/w/{slug}/portfolio?month=2026-10-01").status_code == 403
+
+
+def test_the_portfolio_is_for_firm_workspaces_only(
+    make_user: Make, api_client: Make, make_workspace: Make
+) -> None:
+    owner = make_user("owner@example.test")
+    for kind in ("BUSINESS", "PERSONAL"):
+        ws = make_workspace(owner, kind=kind, name=f"My {kind}")
+        refused = api_client(owner).get(f"/api/w/{ws['slug']}/portfolio?month=2026-10-01")
+        assert refused.status_code == 403, (kind, refused.content)
+        assert "not available" in refused.json()["detail"]

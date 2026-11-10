@@ -38,7 +38,8 @@ Select **Customise** to choose the widgets, their order and the KPI cards (up to
 - **Use the workspace default** forgets your own layout.
 
 ## Firm portfolio
-**Cash & planning → Firm portfolio** lists every client you have access to, one row each:
+In a firm workspace, **Cash & planning → Firm portfolio** lists every client you have access to,
+one row each:
 - opening cash from the latest 13-week forecast, and the first shortfall;
 - gross margin, current ratio and DSO from the latest year-to-date KPI calculation;
 - goals on track, at risk and off track;

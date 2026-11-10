@@ -1,7 +1,8 @@
 """The firm portfolio (M4-9, doc 10 §10, AC-DB6).
 
-A summary row per client entity in the firm's own workspace that the user may see with
-``planning.read`` (entity-scoped roles see only their clients). Each row is computed on request,
+Firm workspaces only (doc 11 §5). A summary row per client entity in the firm's own workspace
+that the user may see with ``planning.read`` (entity-scoped roles see only their clients). Each
+row is computed on request,
 entity by entity, under the user's own permissions: no cross-tenant query, and nothing is stored,
 so a revoked role removes the client on the next request and leaves no derived metrics behind.
 Engagement grants to client-owned workspaces join in M5-4.
@@ -18,7 +19,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fcp.modules.tenancy.api import WorkspaceContext, permitted_entities
+from fcp.modules.tenancy.api import Feature, WorkspaceContext, permitted_entities, require_feature
 
 from .overview import Widget, _alerts, _cash, _goals, _guard, _kpis, period
 
@@ -48,6 +49,8 @@ def _summary(ctx: WorkspaceContext, entity_id: UUID, month: date) -> dict[str, W
 
 
 def portfolio(ctx: WorkspaceContext, month: date) -> list[dict[str, Any]]:
+    """For firm workspaces only (doc 11 §5): elsewhere a 403, enforced here and not just hidden."""
+    require_feature(ctx.tenant.kind, Feature.CLIENT_PORTFOLIO)
     return [
         {"entity": e, "parts": _summary(ctx, e.id, month)} for e in permitted_entities(ctx, READ)
     ]

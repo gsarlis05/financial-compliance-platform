@@ -9,7 +9,9 @@ portfolio to the client entities in the firm's own workspace that the user can a
 
 ## Decision
 - `GET /w/{slug}/portfolio?month=` is a workspace route that needs `planning.read`; an
-  entity-scoped grant is enough.
+  entity-scoped grant is enough. It exists in **firm workspaces only** (doc 11 §5, the
+  `client_portfolio` feature). Business and personal workspaces get a 403 from the server, and
+  the menu hides the page there.
 - It lists the active entities for which the user holds `planning.read`, read from the role
   assignments on every request. It then builds each row with that entity's own services and the
   user's own permissions:

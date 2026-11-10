@@ -64,7 +64,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     board_step = next(s for s in result.steps if s.startswith("CFO dashboard"))
     assert "kpis ok, cash ok" in board_step, board_step
     assert board_step.endswith("6 KPI cards"), board_step
-    assert any(s == "portfolio: 1 client(s) the owner can access: Demo Trading Ltd (Demo)"
+    assert any(s.startswith("client portfolio refused in a business workspace")
                for s in result.steps), result.steps  # fmt: skip
     assert all(line.startswith("✔") for line in said)
     _assert_golden_statements(result.statements)

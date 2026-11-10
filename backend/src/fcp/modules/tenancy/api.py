@@ -18,7 +18,7 @@ from fcp.core.errors import PermissionDeniedError
 from fcp.modules.identity.api import User, require_recent_auth
 
 from . import services
-from .entitlements import Feature, Role, has_feature
+from .entitlements import Feature, Role, has_feature, require_feature
 from .models import LegalEntity, Membership, Tenant
 from .services import WorkspaceContext, enter_workspace, get_entity, visible_entities
 
@@ -42,6 +42,7 @@ __all__ = [
     "enter_workspace",
     "get_entity",
     "permitted_entities",
+    "require_feature",
     "router",
     "workspace_ctx",
 ]

@@ -40,10 +40,12 @@ On top of Milestones 1 to 3, you can:
   - The **CFO dashboard** shows KPI cards, 13-week cash, budget vs actual, top variances, goals and
     alerts, for one period and comparison.
   - You choose your own layout; finance managers set the workspace default.
-  - The **firm portfolio** lists every client you can access, with its key figures.
+  - In a firm workspace, the **firm portfolio** lists every client you can access, with its key
+    figures.
 
 Try it with `make demo` ([demo script](demo.md)). Its 23 steps now include Budget 2027, the six
-sample goals, the alert they raise, the dashboard and the portfolio. User guides:
+sample goals, the alert they raise and the dashboard. The last step shows that the portfolio is
+refused in a business workspace, because it exists in firm workspaces only. User guides:
 [budgets](user-guide/budgets.md), [KPIs](user-guide/kpis.md), [goals](user-guide/goals.md),
 [alerts](user-guide/alerts.md) and [dashboard and portfolio](user-guide/dashboard.md).
 
@@ -84,7 +86,7 @@ sample goals, the alert they raise, the dashboard and the portfolio. User guides
 | AC-DB3 drill-down within permissions; clear denials | widgets report `denied`; drill-down uses the existing pages and their permissions (live check: KPI → accounts → entries) |
 | AC-DB4 presets and comparisons update every widget; values equal the reports | `tests/dashboards/test_dashboard.py` (budget rows equal the variance report line for line; KPI cards equal the KPI set; one period for all widgets) |
 | AC-DB5 p95 < 1.5 s on a 3-year fixture; axe; non-colour encodings; table alternatives | `test_response_time_on_a_three_year_fixture` in CI; axe on every new screen; about 0.7 s in the browser on the demo |
-| AC-DB6 firm portfolio shows only granted clients; revocation removes them and their metrics | `tests/dashboards/test_portfolio.py` (entity-scoped access, grant, revoke, gone on the next request; nothing stored) |
+| AC-DB6 firm portfolio shows only granted clients; revocation removes them and their metrics | `tests/dashboards/test_portfolio.py` (entity-scoped access, grant, revoke, gone on the next request; nothing stored; refused outside firm workspaces) |
 
 ## Database changes (Milestone 4)
 | Module | Migrations | Content |
@@ -134,7 +136,7 @@ Measured on 2026-11-10 on the M4 branches (`make test`, fresh database):
   - ratio gaps in alerts shown as raw fractions;
   - links squeezed by a global card style;
   - and, while writing this report, a missing as-of marker and nature label on the dashboard
-    (AC-DB2).
+    (AC-DB2), and a portfolio that was not yet limited to firm workspaces (doc 11 §5).
 
 ## Known limitations
 - **Golden figures need sign-off** by a finance professional (AC-GO2), as in M3 (AC-CW5).
