@@ -214,6 +214,17 @@ def _personal(owner: "DemoClient", year: int) -> dict[str, Any]:
                                               "value": "310000.00", "note": "Synthetic estimate"},
                201)  # fmt: skip
     worth: dict[str, Any] = owner.call("GET", f"{base}/net-worth?as_of={year}-01-31")
+    owner.call("PUT", f"{base}/budget", {"account_id": acc["6100"], "monthly_amount": "400.00",
+                                         "from_month": f"{year}-02-01"})  # fmt: skip
+    for body in (
+        {"kind": "EMERGENCY_FUND", "name": "Emergency fund", "months": 6,
+         "account_ids": [acc["1110"]], "target_date": f"{year + 1}-12-31"},
+        {"kind": "SAVINGS", "name": "Savings 20k", "target_amount": "20000.00",
+         "account_ids": [acc["1110"]], "target_date": f"{year + 1}-12-31"},
+    ):  # fmt: skip
+        owner.call("POST", f"{base}/goals", body, 201)
+    worth["goals"] = owner.call("GET", f"{base}/goals")
+    worth["projection"] = owner.call("GET", f"{base}/projection")
     return worth
 
 
@@ -638,8 +649,11 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          shown.items()) + f"; {len(cards)} KPI cards")  # fmt: skip
     worth = _personal(owner, year)
     valued = ", including a home valuation (estimate)" if worth["includes_valuations"] else ""
+    goal_list = "; ".join(f"{g['name']} {g['status']}" for g in worth["goals"])
     step(f"personal workspace (separate books): net worth {worth['net_worth']} on "
          f"{worth['as_of']}{valued}")  # fmt: skip
+    step(f"personal budget (groceries 400 a month) and {len(worth['goals'])} goals: {goal_list}; "
+         f"12-month projection from cash {worth['projection']['opening_cash']}")  # fmt: skip
     refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
     step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
 
