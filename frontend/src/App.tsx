@@ -11,6 +11,10 @@ import { BudgetsPage } from "./pages/Budgets";
 import { AlertsPage } from "./pages/Alerts";
 import { CustomKpisPage } from "./pages/CustomKpis";
 import { DashboardPage } from "./pages/Dashboard";
+import {
+  PersonalOverviewPage,
+  PersonalTransactionsPage,
+} from "./pages/Personal";
 import { PortfolioPage } from "./pages/Portfolio";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
@@ -69,6 +73,14 @@ const router = createBrowserRouter([
       {
         path: "w/:slug/e/:entityId/portfolio",
         element: <PortfolioPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/personal",
+        element: <PersonalOverviewPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/personal/transactions",
+        element: <PersonalTransactionsPage />,
       },
       {
         path: "w/:slug/e/:entityId/budgets",

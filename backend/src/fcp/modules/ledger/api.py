@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
@@ -47,22 +48,31 @@ from .models import (
 
 __all__ = [
     "Account",
+    "AccountInput",
     "DimensionTotal",
     "EntryInput",
+    "EntryLine",
     "FiscalYear",
     "JournalEntry",
     "JournalLine",
     "LineInput",
     "Period",
+    "PostedEntry",
     "PostedLine",
     "TrialBalanceRow",
     "account_balance",
     "account_list",
+    "add_account",
+    "add_fiscal_year",
+    "apply_account_template",
+    "create_and_post",
     "create_entry_draft",
     "dimension_list",
     "fiscal_year_list",
     "posted_dimension_totals",
+    "posted_entries",
     "posted_lines",
+    "reverse_and_post",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
@@ -186,6 +196,67 @@ def create_entry_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> J
     """A draft from another module (e.g. a bank statement line), source IMPORT; it follows the
     normal workflow (doc 05 §8: sub-ledgers never write journal lines directly)."""
     return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.IMPORT)
+
+
+@dataclass(frozen=True)
+class EntryLine:
+    account_id: UUID
+    debit: Decimal
+    credit: Decimal
+
+
+@dataclass(frozen=True)
+class PostedEntry:
+    """A posted entry and its lines, for modules with their own simplified screens (M5-1)."""
+
+    id: UUID
+    ref: str
+    accounting_date: date
+    description: str
+    entry_type: str
+    reverses_entry_id: UUID | None
+    reversed_by_entry_id: UUID | None
+    lines: tuple[EntryLine, ...]
+
+
+def _posted(entry: JournalEntry) -> PostedEntry:
+    return PostedEntry(
+        entry.id, f"{entry.journal.code}-{entry.entry_no}", entry.accounting_date,
+        entry.description, entry.entry_type, entry.reverses_entry_id, entry.reversed_by_entry_id,
+        tuple(EntryLine(ln.account_id, ln.debit, ln.credit) for ln in entry.lines.all()),
+    )  # fmt: skip
+
+
+def create_and_post(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> PostedEntry:
+    """Create an entry and post it in one step (simplified personal screens, M5-1). Every
+    ledger rule applies: balance, open period, approval policy (a household has none), gapless
+    numbering and the audit trail."""
+    with transaction.atomic():
+        draft = entries.create_draft(ctx, entity_id, data)
+        return _posted(entries.post(ctx, entity_id, draft.id))
+
+
+def reverse_and_post(ctx: Any, entity_id: UUID, entry_id: UUID, *, reason: str,
+                     reversal_date: date | None = None) -> PostedEntry:  # fmt: skip
+    """Reverse a posted entry with a reason and post the reversal in one step."""
+    with transaction.atomic():
+        draft = corrections.reverse(ctx, entity_id, entry_id, reason=reason,
+                                    reversal_date=reversal_date)  # fmt: skip
+        return _posted(entries.post(ctx, entity_id, draft.id))
+
+
+def posted_entries(ctx: Any, entity_id: UUID, *, date_from: date | None = None,
+                   date_to: date | None = None, limit: int = 200) -> list[PostedEntry]:  # fmt: skip
+    """Posted entries with their lines, newest first."""
+    found = entries.list_entries(ctx, entity_id, status=JournalEntry.Status.POSTED,
+                                 date_from=date_from, date_to=date_to, limit=limit)  # fmt: skip
+    return [_posted(e) for e in found]
+
+
+AccountInput = accounts.AccountInput
+apply_account_template = accounts.apply_template
+add_account = accounts.create_account
+add_fiscal_year = periods.create_fiscal_year
 
 
 # Read functions for other modules (the reporting gateway, M2-6 onwards).
