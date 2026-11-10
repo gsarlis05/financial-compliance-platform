@@ -51,3 +51,14 @@ shown in your net worth as an estimate (**Valuation**) and is never booked.
 - **The next 12 months:** starting from your cash, each month adds your average income and takes
   away your budget (or your average spending where there is no budget). These are estimates,
   labelled **Budget** or **Forecast**. If a month would go below zero, it is highlighted.
+
+## From my business (optional)
+If you also belong to a business workspace, you can link one of its accounts, for example the
+director's loan account, on **Transactions** under **From my business**. Choose the business, the
+account, and where the money goes in your books (for example the current account, as salary or
+other income).
+
+Payments from that account to you are then **suggested**. Nothing is recorded until you select
+**Record it**; select **Not for my books** for anything else. The business never sees your personal
+workspace, and **Stop suggestions** removes the link. If you lose access to the business, nothing
+is suggested any more.
