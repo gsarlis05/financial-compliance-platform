@@ -61,6 +61,8 @@ PERMISSIONS: dict[str, str] = {
     "kpi.definition.manage": "Propose workspace KPIs and new versions of them",
     "kpi.definition.approve": "Approve or reject workspace KPIs proposed by someone else",
     "kpi.operational.manage": "Enter operational metrics such as headcount or customers",
+    # goals (M4-6)
+    "goal.manage": "Set goals, change their targets and retire them",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -101,6 +103,7 @@ _PREPARE = _READ | {
     "budget.edit",
     "kpi.definition.manage",
     "kpi.operational.manage",
+    "goal.manage",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}

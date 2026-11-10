@@ -16,11 +16,36 @@ from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import custom, services
-from .engine import KIND, reference_functions
+from .engine import (
+    KIND,
+    Account,
+    Evaluated,
+    cutoffs,
+    evaluate_formula,
+    matches,
+    period_months,
+    reference_functions,
+)
 from .models import CustomKpi, KpiDefinition, OperationalMetric, OperationalValue
-from .services import KpiSet
+from .services import KpiFormula, KpiSet, trackable
+from .services import run_refs as kpi_inputs
 
-__all__ = ["KIND", "KpiDefinition", "KpiSet", "reference_functions", "router"]
+__all__ = [
+    "KIND",
+    "Account",
+    "Evaluated",
+    "KpiDefinition",
+    "KpiFormula",
+    "KpiSet",
+    "cutoffs",
+    "evaluate_formula",
+    "kpi_inputs",
+    "matches",
+    "period_months",
+    "reference_functions",
+    "router",
+    "trackable",
+]
 
 router = Router(tags=["kpi"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

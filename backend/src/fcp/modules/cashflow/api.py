@@ -20,8 +20,9 @@ from fcp.modules.tenancy.api import workspace_ctx
 from . import services, tracking, whatif
 from .engine import KIND
 from .services import Forecast, prepare, run_forecast
+from .services import latest as latest_cash_forecast
 
-__all__ = ["KIND", "Forecast", "prepare", "router", "run_forecast"]
+__all__ = ["KIND", "Forecast", "latest_cash_forecast", "prepare", "router", "run_forecast"]
 
 router = Router(tags=["cashflow"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

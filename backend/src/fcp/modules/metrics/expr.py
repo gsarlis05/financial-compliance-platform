@@ -382,6 +382,37 @@ def parse(source: str) -> Node:
     return _Parser(tokenize(source)).parse()
 
 
+def unparse(node: Node) -> str:  # noqa: PLR0911 (one return per node kind)
+    """A formula's text from its tree, fully parenthesised (it parses back to the same tree)."""
+    if isinstance(node, Num):
+        return str(node.value)
+    if isinstance(node, Str):
+        return f'"{node.value}"'
+    if isinstance(node, Bool):
+        return "true" if node.value else "false"
+    if isinstance(node, Name):
+        return node.id
+    if isinstance(node, Unary):
+        return f"({node.op} {unparse(node.operand)})"
+    if isinstance(node, Binary):
+        return f"({unparse(node.left)} {node.op} {unparse(node.right)})"
+    if isinstance(node, Call):
+        args = [unparse(a) for a in node.args] + [f"{k}={unparse(v)}" for k, v in node.kwargs]
+        return f"{node.function}({', '.join(args)})"
+    raise TypeError(f"unknown node {type(node).__name__}")
+
+
+def ratio_parts(source: str) -> tuple[str, str] | None:
+    """The numerator and denominator of a formula that is a division at its top level
+    (``a / b`` or ``divide_positive(a, b)``), else None. Used to state what a ratio needs."""
+    tree = parse(source)
+    if isinstance(tree, Binary) and tree.op == "/":
+        return unparse(tree.left), unparse(tree.right)
+    if isinstance(tree, Call) and tree.function == "divide_positive" and len(tree.args) == 2:
+        return unparse(tree.args[0]), unparse(tree.args[1])
+    return None
+
+
 # --- unit and type checking -----------------------------------------------------------------------
 
 _BUILTINS = frozenset({"min", "max", "abs", "round", "if", "sum", "divide_positive"})

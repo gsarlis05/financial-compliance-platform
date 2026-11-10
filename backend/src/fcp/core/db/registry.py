@@ -27,6 +27,7 @@ APPEND_ONLY_TABLES: set[str] = {
     "budgeting_explanation",
     "budgeting_review",
     "documents_document",
+    "goals_evaluation",
     "metrics_calc_result",
     "metrics_calc_lineage",
 }
