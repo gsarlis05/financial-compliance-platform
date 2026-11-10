@@ -63,6 +63,8 @@ PERMISSIONS: dict[str, str] = {
     "kpi.operational.manage": "Enter operational metrics such as headcount or customers",
     # goals (M4-6)
     "goal.manage": "Set goals, change their targets and retire them",
+    # alerts (M4-7)
+    "alert.acknowledge": "Acknowledge alerts on goals and budgets",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -104,9 +106,15 @@ _PREPARE = _READ | {
     "kpi.definition.manage",
     "kpi.operational.manage",
     "goal.manage",
+    "alert.acknowledge",
     "reports.export",
 }
-_REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}
+_REVIEW = _READ | {
+    "ledger.entry.approve",
+    "ledger.entry.post",
+    "reports.export",
+    "alert.acknowledge",
+}
 _SIGN_OFF = (
     _PREPARE
     | _REVIEW
