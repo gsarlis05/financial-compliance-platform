@@ -3470,6 +3470,108 @@
         "title": "CustomKpiOut",
         "type": "object"
       },
+      "DashboardOut": {
+        "properties": {
+          "layout_source": {
+            "description": "USER, WORKSPACE or BUILT_IN",
+            "title": "Layout Source",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/DashboardPeriodOut"
+          },
+          "widgets": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetOut"
+            },
+            "title": "Widgets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "layout_source",
+          "widgets"
+        ],
+        "title": "DashboardOut",
+        "type": "object"
+      },
+      "DashboardPeriodOut": {
+        "properties": {
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "fiscal_year_start": {
+            "format": "date",
+            "title": "Fiscal Year Start",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "preset": {
+            "title": "Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preset",
+          "month",
+          "date_from",
+          "date_to",
+          "fiscal_year_start",
+          "comparison"
+        ],
+        "title": "DashboardPeriodOut",
+        "type": "object"
+      },
+      "DashboardQuery": {
+        "properties": {
+          "comparison": {
+            "default": "BUDGET",
+            "enum": [
+              "BUDGET",
+              "PRIOR_YEAR"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "month": {
+            "description": "Any day of the month the period ends in",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "preset": {
+            "default": "YTD",
+            "enum": [
+              "MONTH",
+              "QTD",
+              "YTD"
+            ],
+            "title": "Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "DashboardQuery",
+        "type": "object"
+      },
       "DebtIn": {
         "properties": {
           "adjust": {
@@ -6522,6 +6624,45 @@
         "title": "KpiValueOut",
         "type": "object"
       },
+      "LayoutIO": {
+        "properties": {
+          "widgets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Widgets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "widgets"
+        ],
+        "title": "LayoutIO",
+        "type": "object"
+      },
+      "LayoutOut": {
+        "properties": {
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "widgets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Widgets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "widgets",
+          "source"
+        ],
+        "title": "LayoutOut",
+        "type": "object"
+      },
       "LedgerLineOut": {
         "properties": {
           "accounting_date": {
@@ -8291,6 +8432,24 @@
           "reconciled"
         ],
         "title": "ReconciliationOut",
+        "type": "object"
+      },
+      "RefreshOut": {
+        "properties": {
+          "alerts_raised": {
+            "title": "Alerts Raised",
+            "type": "integer"
+          },
+          "kpi_sets": {
+            "title": "Kpi Sets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kpi_sets",
+          "alerts_raised"
+        ],
+        "title": "RefreshOut",
         "type": "object"
       },
       "RejectIn": {
@@ -10556,6 +10715,42 @@
           "what_if_shortfall"
         ],
         "title": "WhatIfWeekOut",
+        "type": "object"
+      },
+      "WidgetOut": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "options": {
+            "additionalProperties": true,
+            "title": "Options",
+            "type": "object"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "description": "ok, empty (with a reason) or denied (no permission)",
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "status",
+          "reason",
+          "options",
+          "data"
+        ],
+        "title": "WidgetOut",
         "type": "object"
       },
       "WorkspaceIn": {
@@ -16239,6 +16434,359 @@
         "summary": "Revise Custom",
         "tags": [
           "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard": {
+      "get": {
+        "description": "Every widget of the user's layout for one period and comparison (AC-DB4).",
+        "operationId": "fcp_modules_dashboards_api_dashboard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "preset",
+            "required": false,
+            "schema": {
+              "default": "YTD",
+              "enum": [
+                "MONTH",
+                "QTD",
+                "YTD"
+              ],
+              "title": "Preset",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Any day of the month the period ends in",
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "description": "Any day of the month the period ends in",
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "comparison",
+            "required": false,
+            "schema": {
+              "default": "BUDGET",
+              "enum": [
+                "BUDGET",
+                "PRIOR_YEAR"
+              ],
+              "title": "Comparison",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Dashboard",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard-layout": {
+      "delete": {
+        "operationId": "fcp_modules_dashboards_api_reset_layout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reset Layout",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "get": {
+        "operationId": "fcp_modules_dashboards_api_get_layout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Layout",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "description": "Your own layout: widget types in order, and for KPI cards the KPI keys.",
+        "operationId": "fcp_modules_dashboards_api_save_layout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LayoutIO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Save Layout",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard-layout/default": {
+      "put": {
+        "description": "The layout everyone starts from until they save their own.",
+        "operationId": "fcp_modules_dashboards_api_save_default_layout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LayoutIO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Save Default Layout",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard/refresh": {
+      "post": {
+        "description": "Calculate the KPI sets the period needs and check the budgets for alerts.",
+        "operationId": "fcp_modules_dashboards_api_refresh",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Refresh",
+        "tags": [
+          "dashboards"
         ]
       }
     },

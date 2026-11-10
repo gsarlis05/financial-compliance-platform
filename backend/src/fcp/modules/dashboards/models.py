@@ -79,3 +79,25 @@ class Alert(TenantOwned):
                 name="dashboards_alert_kind",
             ),
         ]
+
+
+class DashboardLayout(TenantOwned):
+    """Which widgets a user's dashboard shows, in order, with their options (M4-8). The row
+    without a user is the entity's default, used by everyone who has not saved their own."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(
+        USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    widgets = models.JSONField(default=list)  # [{"type": "kpis", "kpis": ["DSO", ...]}, ...]
+    updated_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "dashboards_layout"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "user"], name="dashboards_layout_once",
+                nulls_distinct=False,
+            ),
+        ]  # fmt: skip

@@ -223,3 +223,13 @@ dl.facts dd { margin: 0; }
 ul.alerts { list-style: none; padding: 0; margin: 0; }
 ul.alerts > li { margin: 0 0 0.75rem; }
 ul.alerts .card a { display: inline; padding: 0; color: var(--primary); text-decoration: underline; }
+/* CFO dashboard (M4-8). Natures keep a non-colour encoding (doc 10 §10.1). */
+.nature-budget { border-style: double; border-width: 3px; }
+.nature-target { border-style: dashed; border-color: var(--text); }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 1rem; }
+.dash-widget { padding: 1rem; min-width: 0; }
+.dash-widget a, ul.alerts .card a { display: inline; padding: 0; color: var(--primary); text-decoration: underline; }
+.kpi-cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.75rem; }
+.kpi-card { display: flex; flex-direction: column; gap: 0.2rem; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.6rem; }
+.kpi-value { font-size: 1.4rem; }
+.legend span { margin-inline-end: 0.75rem; font-size: 0.85rem; }

@@ -28,6 +28,8 @@ from .engine import (
 )
 from .models import CustomKpi, KpiDefinition, OperationalMetric, OperationalValue
 from .services import KpiFormula, KpiSet, trackable
+from .services import latest as latest_kpi_set
+from .services import run as run_kpi_set
 from .services import run_refs as kpi_inputs
 
 __all__ = [
@@ -40,10 +42,12 @@ __all__ = [
     "cutoffs",
     "evaluate_formula",
     "kpi_inputs",
+    "latest_kpi_set",
     "matches",
     "period_months",
     "reference_functions",
     "router",
+    "run_kpi_set",
     "trackable",
 ]
 

@@ -65,6 +65,8 @@ PERMISSIONS: dict[str, str] = {
     "goal.manage": "Set goals, change their targets and retire them",
     # alerts (M4-7)
     "alert.acknowledge": "Acknowledge alerts on goals and budgets",
+    # dashboard (M4-8)
+    "dashboard.manage_default": "Set the dashboard layout everyone starts from",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -129,6 +131,7 @@ _SIGN_OFF = (
         "budget.approve",
         "budget.settings.manage",
         "kpi.definition.approve",
+        "dashboard.manage_default",
     }
 )
 

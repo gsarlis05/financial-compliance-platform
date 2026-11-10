@@ -202,6 +202,7 @@ function MainNav({ base }: { base: string }) {
     {
       label: "nav.group.planning",
       links: [
+        [`${base}/dashboard`, "nav.dashboard"],
         [`${base}/cash-forecast`, "nav.cashForecast"],
         [`${base}/budgets`, "nav.budgets"],
         [`${base}/kpis`, "nav.kpis"],
