@@ -15,6 +15,7 @@ import {
   PersonalOverviewPage,
   PersonalTransactionsPage,
 } from "./pages/Personal";
+import { PersonalPlanPage } from "./pages/PersonalPlan";
 import { PortfolioPage } from "./pages/Portfolio";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
@@ -81,6 +82,10 @@ const router = createBrowserRouter([
       {
         path: "w/:slug/e/:entityId/personal/transactions",
         element: <PersonalTransactionsPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/personal/plan",
+        element: <PersonalPlanPage />,
       },
       {
         path: "w/:slug/e/:entityId/budgets",

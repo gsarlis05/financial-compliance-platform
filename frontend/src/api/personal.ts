@@ -128,3 +128,111 @@ export function usePersonalMutations() {
     }),
   };
 }
+
+// --- budget, goals and projection (M5-2) ----------------------------------------------------
+
+export interface BudgetLine {
+  account_id: string;
+  name: string;
+  type: MoneyType;
+  budgeted: string;
+  actual: string;
+  remaining: string;
+  over: boolean;
+}
+
+export interface MonthBudget {
+  month: string;
+  lines: BudgetLine[];
+  budgeted_spending: string;
+  actual_spending: string;
+}
+
+export type GoalKind = "SAVINGS" | "EMERGENCY_FUND" | "DEBT_PAYOFF";
+
+export interface PersonalGoal {
+  id: string;
+  kind: GoalKind;
+  name: string;
+  account_ids: string[];
+  target_date: string;
+  months: number | null;
+  retired_at: string | null;
+  current: string;
+  target: string;
+  months_left: number;
+  needed_per_month: string | null;
+  pace_per_month: string;
+  projected: string;
+  status: "ON_TRACK" | "AT_RISK" | "OFF_TRACK";
+  average_spending: string | null;
+}
+
+export interface Projection {
+  as_of: string;
+  opening_cash: string;
+  months: {
+    month: string;
+    income: string;
+    spending: string;
+    closing_cash: string;
+    nature: string;
+  }[];
+  first_negative: string | null;
+}
+
+export function useMonthBudget(month: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["personal", entityId, "budget", month],
+    queryFn: () =>
+      api<MonthBudget>(`${base}/personal/budget`, { query: { month } }),
+  });
+}
+
+export function usePersonalGoals() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["personal", entityId, "goals"],
+    queryFn: () => api<PersonalGoal[]>(`${base}/personal/goals`),
+  });
+}
+
+export function useProjection() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["personal", entityId, "projection"],
+    queryFn: () => api<Projection>(`${base}/personal/projection`),
+  });
+}
+
+export function usePlanMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({ queryKey: ["personal", entityId] });
+  return {
+    budget: useMutation({
+      mutationFn: (body: {
+        account_id: string;
+        monthly_amount: string;
+        from_month: string;
+      }) =>
+        api<MonthBudget>(`${base}/personal/budget`, { method: "PUT", body }),
+      onSuccess: refresh,
+    }),
+    goal: useMutation({
+      mutationFn: (body: object) =>
+        api<PersonalGoal>(`${base}/personal/goals`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    retire: useMutation({
+      mutationFn: (id: string) =>
+        api<PersonalGoal>(`${base}/personal/goals/${id}/retire`, {
+          method: "POST",
+          body: {},
+        }),
+      onSuccess: refresh,
+    }),
+  };
+}
