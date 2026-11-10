@@ -16,6 +16,7 @@ from django.core.management import CommandError, call_command
 from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
+from psycopg import sql
 
 from fcp.core.db.rls import set_context
 from fcp.core.errors import ConflictError
@@ -49,7 +50,9 @@ def counts(tenant_id: str) -> dict[str, int]:
     with connection.cursor() as cursor:
         for table in lifecycle.tenant_tables():
             cursor.execute(
-                f'SELECT count(*) FROM "{table}" WHERE tenant_id = %s',  # noqa: S608
+                sql.SQL("SELECT count(*) FROM {} WHERE tenant_id = %s").format(
+                    sql.Identifier(table)
+                ),
                 [tenant_id],
             )
             found[table] = cursor.fetchone()[0]

@@ -30,6 +30,7 @@ from uuid import UUID
 from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
+from psycopg import sql
 
 from fcp.core.db.rls import set_context
 from fcp.core.errors import (
@@ -87,8 +88,9 @@ def tenant_tables() -> list[str]:
         return [row[0] for row in cursor.fetchall()]
 
 
-def _quoted(table: str) -> str:
-    return connection.ops.quote_name(table)
+def _table(name: str) -> sql.Identifier:
+    """Table names come from the catalogue; still composed as identifiers, never as text."""
+    return sql.Identifier(name)
 
 
 # --- export ----------------------------------------------------------------------------------
@@ -108,8 +110,9 @@ def _digest(data: bytes) -> str:
 def _table_lines(table: str, tenant_id: UUID) -> list[str]:
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT row_to_json(t)::text FROM {_quoted(table)} t WHERE t.tenant_id = %s "  # noqa: S608
-            "ORDER BY 1",
+            sql.SQL(
+                "SELECT row_to_json(t)::text FROM {} t WHERE t.tenant_id = %s ORDER BY 1"
+            ).format(_table(table)),
             [tenant_id],
         )
         return [row[0] for row in cursor.fetchall()]
@@ -263,7 +266,9 @@ def _delete_order(tables: list[str]) -> list[str]:
 def _count(table: str, column: str, tenant_id: UUID) -> int:
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT count(*) FROM {_quoted(table)} WHERE {column} = %s",  # noqa: S608
+            sql.SQL("SELECT count(*) FROM {} WHERE {} = %s").format(
+                _table(table), sql.Identifier(column)
+            ),
             [tenant_id],
         )
         return int(cursor.fetchone()[0])
@@ -289,10 +294,10 @@ def purge(row: WorkspaceDeletion, *, force: bool = False) -> dict[str, int]:
         with connection.cursor() as cursor:
             cursor.execute("SET CONSTRAINTS ALL DEFERRED")
             for table in every:
-                cursor.execute(f"ALTER TABLE {_quoted(table)} DISABLE TRIGGER USER")
+                cursor.execute(sql.SQL("ALTER TABLE {} DISABLE TRIGGER USER").format(_table(table)))
             for table in tables:
                 cursor.execute(
-                    f"DELETE FROM {_quoted(table)} WHERE tenant_id = %s",  # noqa: S608
+                    sql.SQL("DELETE FROM {} WHERE tenant_id = %s").format(_table(table)),
                     [tenant_id],
                 )
                 if cursor.rowcount:
@@ -301,7 +306,7 @@ def purge(row: WorkspaceDeletion, *, force: bool = False) -> dict[str, int]:
             counts["tenancy_tenant"] = cursor.rowcount
             cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
             for table in every:
-                cursor.execute(f"ALTER TABLE {_quoted(table)} ENABLE TRIGGER USER")
+                cursor.execute(sql.SQL("ALTER TABLE {} ENABLE TRIGGER USER").format(_table(table)))
         left = {t: n for t in tables if (n := _count(t, "tenant_id", tenant_id))}
         if left or _count("tenancy_tenant", "id", tenant_id):
             raise RuntimeError(f"Rows are left after the purge: {left}")
