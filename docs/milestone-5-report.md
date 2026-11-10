@@ -94,9 +94,8 @@ applied locally only.
 
 ## Quality
 Measured on 2026-11-10 on the M5-6 branch (`make test`, fresh database):
-- Backend and frontend: the full run on this branch is in progress; its figures are added here
-  when it finishes. The previous branch (M5-4) measured 1,167 backend tests at 96.9% coverage
-  and 59 frontend tests.
+- Backend: **1,171 tests pass**; **96.8%** line coverage overall.
+- Frontend: **60 tests**, including axe on every new screen; ESLint strict, `tsc`, build.
 - Infrastructure: `fmt`, `validate` for staging and pilot, tflint (CI) and Checkov (430 checks
   pass, none fail; each exception has a written reason).
 - Every PR's CI is green on its head.
