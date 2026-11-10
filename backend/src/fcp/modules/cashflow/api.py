@@ -21,8 +21,17 @@ from . import services, tracking, whatif
 from .engine import KIND
 from .services import Forecast, prepare, run_forecast
 from .services import latest as latest_cash_forecast
+from .tracking import freshness as forecast_freshness
 
-__all__ = ["KIND", "Forecast", "latest_cash_forecast", "prepare", "router", "run_forecast"]
+__all__ = [
+    "KIND",
+    "Forecast",
+    "forecast_freshness",
+    "latest_cash_forecast",
+    "prepare",
+    "router",
+    "run_forecast",
+]
 
 router = Router(tags=["cashflow"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

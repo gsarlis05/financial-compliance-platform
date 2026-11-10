@@ -36,6 +36,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ budget 2027 prepared by the accountant, approved by the owner: total 738000.00; sales 600000.00 phased like 2026 (Phased like the prior year's actuals.)
 ✔ 6 sample goals for 2027 set with frozen 2026 baselines and evaluated: Revenue 500k ON_TRACK; EBITDA margin 20% ON_TRACK; Cash at least 100k ON_TRACK; DSO 30 days OFF_TRACK; Net profit +15% ON_TRACK; Opex -10% ON_TRACK
 ✔ 1 in-app alert(s) raised by the evaluations: Goal DSO 30 days is off track
+✔ CFO dashboard for 2026 year to date: kpis ok, cash ok, budget empty, top_variances empty, goals ok, alerts ok; 6 KPI cards
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the

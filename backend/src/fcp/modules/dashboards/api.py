@@ -1,18 +1,22 @@
-"""Public interface of the ``dashboards`` module and its HTTP routes (M4-7: in-app alerts).
+"""Public interface of the ``dashboards`` module and its HTTP routes (M4-7: in-app alerts;
+M4-8: the CFO dashboard and its saved layouts).
 
 Routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
 from datetime import date, datetime
+from typing import Any, Literal
 from uuid import UUID
 
 from django.http import HttpRequest
 from ninja import Field, Query, Router, Schema
 
 from fcp.core.api.permissions import requires
+from fcp.modules.kpi.api import run_kpi_set
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import alerts as service
+from . import layouts, overview
 from .models import Alert
 
 __all__ = ["Alert", "router"]
@@ -107,3 +111,124 @@ def acknowledge(request: HttpRequest, slug: str, entity_id: UUID, alert_id: UUID
                 payload: AcknowledgeIn) -> AlertOut:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     return _out(service.acknowledge(ctx, entity_id, alert_id, payload.note))
+
+
+# --- CFO dashboard (M4-8) ---------------------------------------------------------------------
+
+
+class DashboardQuery(Schema):
+    preset: Literal["MONTH", "QTD", "YTD"] = "YTD"
+    month: date = Field(description="Any day of the month the period ends in")
+    comparison: Literal["BUDGET", "PRIOR_YEAR"] = "BUDGET"
+
+
+class DashboardPeriodOut(Schema):
+    preset: str
+    month: date
+    date_from: date
+    date_to: date
+    fiscal_year_start: date
+    comparison: str
+
+
+class WidgetOut(Schema):
+    type: str
+    status: str = Field(description="ok, empty (with a reason) or denied (no permission)")
+    reason: str
+    options: dict[str, Any]
+    data: dict[str, Any]
+
+
+class DashboardOut(Schema):
+    period: DashboardPeriodOut
+    layout_source: str = Field(description="USER, WORKSPACE or BUILT_IN")
+    widgets: list[WidgetOut]
+
+
+def _period(ctx: Any, entity_id: UUID, q: DashboardQuery) -> overview.Period:
+    return overview.period(ctx, entity_id, q.preset, q.month, q.comparison)
+
+
+@router.get(f"{BASE}/dashboard", response=DashboardOut)
+@requires("planning.read")
+def dashboard(request: HttpRequest, slug: str, entity_id: UUID,
+              q: Query[DashboardQuery]) -> DashboardOut:  # fmt: skip
+    """Every widget of the user's layout for one period and comparison (AC-DB4)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    widgets, source = layouts.layout(ctx, entity_id)
+    p = _period(ctx, entity_id, q)
+    keys: list[str] = next((w.get("kpis", []) for w in widgets if w["type"] == "kpis"), [])
+    built = overview.overview(ctx, entity_id, p, list(keys))
+    return DashboardOut(
+        period=DashboardPeriodOut(**p.__dict__),
+        layout_source=source,
+        widgets=[WidgetOut(type=w["type"], status=built[w["type"]].status,
+                           reason=built[w["type"]].reason,
+                           options={k: v for k, v in w.items() if k != "type"},
+                           data=built[w["type"]].data) for w in widgets],
+    )  # fmt: skip
+
+
+class RefreshOut(Schema):
+    kpi_sets: int
+    alerts_raised: int
+
+
+@router.post(f"{BASE}/dashboard/refresh", response=RefreshOut)
+@requires("planning.run")
+def refresh(request: HttpRequest, slug: str, entity_id: UUID,
+            payload: DashboardQuery) -> RefreshOut:  # fmt: skip
+    """Calculate the KPI sets the period needs and check the budgets for alerts."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = _period(ctx, entity_id, payload)
+    periods = [(p.date_from, p.date_to)]
+    if p.comparison == "PRIOR_YEAR":
+        periods.append(p.prior)
+    for first, last in periods:
+        run_kpi_set(ctx, entity_id, date_from=first, date_to=last)
+    raised = service.check_budgets(ctx, entity_id, p.month)
+    return RefreshOut(kpi_sets=len(periods), alerts_raised=raised)
+
+
+class LayoutIO(Schema):
+    widgets: list[dict[str, Any]]
+
+
+class LayoutOut(LayoutIO):
+    source: str
+
+
+@router.get(f"{BASE}/dashboard-layout", response=LayoutOut)
+@requires("planning.read")
+def get_layout(request: HttpRequest, slug: str, entity_id: UUID) -> LayoutOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    widgets, source = layouts.layout(ctx, entity_id)
+    return LayoutOut(widgets=widgets, source=source)
+
+
+@router.put(f"{BASE}/dashboard-layout", response=LayoutOut)
+@requires("planning.read")
+def save_layout(request: HttpRequest, slug: str, entity_id: UUID,
+                payload: LayoutIO) -> LayoutOut:  # fmt: skip
+    """Your own layout: widget types in order, and for KPI cards the KPI keys."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return LayoutOut(widgets=layouts.save(ctx, entity_id, payload.widgets), source="USER")
+
+
+@router.delete(f"{BASE}/dashboard-layout", response=LayoutOut)
+@requires("planning.read")
+def reset_layout(request: HttpRequest, slug: str, entity_id: UUID) -> LayoutOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    layouts.reset(ctx, entity_id)
+    widgets, source = layouts.layout(ctx, entity_id)
+    return LayoutOut(widgets=widgets, source=source)
+
+
+@router.put(f"{BASE}/dashboard-layout/default", response=LayoutOut)
+@requires("dashboard.manage_default")
+def save_default_layout(request: HttpRequest, slug: str, entity_id: UUID,
+                        payload: LayoutIO) -> LayoutOut:  # fmt: skip
+    """The layout everyone starts from until they save their own."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    saved = layouts.save(ctx, entity_id, payload.widgets, default=True)
+    return LayoutOut(widgets=saved, source="WORKSPACE")
