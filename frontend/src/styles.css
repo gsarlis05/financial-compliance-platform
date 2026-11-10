@@ -219,3 +219,7 @@ a.download { text-decoration: underline; font-weight: 600; }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0.5rem 0; }
 dl.facts dt { font-weight: 600; }
 dl.facts dd { margin: 0; }
+/* Alerts (M4-7). */
+ul.alerts { list-style: none; padding: 0; margin: 0; }
+ul.alerts > li { margin: 0 0 0.75rem; }
+ul.alerts .card a { display: inline; padding: 0; color: var(--primary); text-decoration: underline; }

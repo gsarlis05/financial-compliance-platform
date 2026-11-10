@@ -35,6 +35,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ 13-week cash forecast from 2027-01-04: opening cash 371514.38, week 13 closing 420689.93; no shortfall below the minimum; run VALID and reproducible
 ✔ budget 2027 prepared by the accountant, approved by the owner: total 738000.00; sales 600000.00 phased like 2026 (Phased like the prior year's actuals.)
 ✔ 6 sample goals for 2027 set with frozen 2026 baselines and evaluated: Revenue 500k ON_TRACK; EBITDA margin 20% ON_TRACK; Cash at least 100k ON_TRACK; DSO 30 days OFF_TRACK; Net profit +15% ON_TRACK; Opex -10% ON_TRACK
+✔ 1 in-app alert(s) raised by the evaluations: Goal DSO 30 days is off track
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the
@@ -95,6 +96,7 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
   computed from the 2026 actuals and frozen. Each goal is evaluated once: actuals to date, then the
   approved budget, or the cash forecast for cash. The reference figures for these goals are in
   `backend/tests/goals/test_goals.py`, *not yet signed off* by a finance professional (AC-GO2).
+  The off-track goal raises an in-app alert (Cash & planning → Alerts, AC-GO4).
 
 - **Year-end close.** The owner generates the closing entry for 2026, and the reviewer approves and
   posts it. The year is then closed, and the statements show the profit in retained earnings with

@@ -887,6 +887,24 @@ export const en = {
   "goal.showRetired": "Show retired goals",
   "goal.list": "Goals",
   "goal.none": "No goals yet.",
+  "nav.alerts": "Alerts",
+  "alert.title": "Alerts",
+  "alert.intro":
+    "Alerts are raised when a goal becomes at risk or off track, when a goal's threshold is breached or forecast to be, and when a budget line is unfavourable beyond the variance thresholds or for 3 months in a row. The same alert is not raised again while nothing changes. Acknowledge an alert once you have dealt with it; alerts are kept.",
+  "alert.checkBudgets": "Check budgets now",
+  "alert.raised": "New alerts",
+  "alert.showAcknowledged": "Show acknowledged alerts",
+  "alert.none": "No open alerts.",
+  "alert.note": "Note (optional)",
+  "alert.acknowledge": "Acknowledge",
+  "alert.acknowledgedBy": "Acknowledged by",
+  "alert.open": "Open",
+  "alert.severity.WARNING": "Warning",
+  "alert.severity.CRITICAL": "Critical",
+  "alert.kind.GOAL_STATUS": "Goal status",
+  "alert.kind.GOAL_BREACH": "Goal threshold",
+  "alert.kind.BUDGET_OVERRUN": "Budget year to date",
+  "alert.kind.BUDGET_TREND": "Budget trend",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1791,6 +1809,24 @@ export const el: Record<MessageKey, string> = {
   "goal.showRetired": "Εμφάνιση αποσυρμένων στόχων",
   "goal.list": "Στόχοι",
   "goal.none": "Δεν υπάρχουν στόχοι ακόμη.",
+  "nav.alerts": "Ειδοποιήσεις",
+  "alert.title": "Ειδοποιήσεις",
+  "alert.intro":
+    "Οι ειδοποιήσεις δημιουργούνται όταν ένας στόχος τεθεί σε κίνδυνο ή εκτός πορείας, όταν παραβιάζεται ή προβλέπεται να παραβιαστεί το όριο ενός στόχου, και όταν μια γραμμή προϋπολογισμού είναι δυσμενής πέρα από τα όρια απόκλισης ή για 3 συνεχόμενους μήνες. Η ίδια ειδοποίηση δεν δημιουργείται ξανά όσο δεν αλλάζει κάτι. Επιβεβαιώστε μια ειδοποίηση όταν την έχετε χειριστεί· οι ειδοποιήσεις φυλάσσονται.",
+  "alert.checkBudgets": "Έλεγχος προϋπολογισμών τώρα",
+  "alert.raised": "Νέες ειδοποιήσεις",
+  "alert.showAcknowledged": "Εμφάνιση επιβεβαιωμένων ειδοποιήσεων",
+  "alert.none": "Δεν υπάρχουν ανοιχτές ειδοποιήσεις.",
+  "alert.note": "Σημείωση (προαιρετική)",
+  "alert.acknowledge": "Επιβεβαίωση",
+  "alert.acknowledgedBy": "Επιβεβαιώθηκε από",
+  "alert.open": "Άνοιγμα",
+  "alert.severity.WARNING": "Προειδοποίηση",
+  "alert.severity.CRITICAL": "Κρίσιμη",
+  "alert.kind.GOAL_STATUS": "Κατάσταση στόχου",
+  "alert.kind.GOAL_BREACH": "Όριο στόχου",
+  "alert.kind.BUDGET_OVERRUN": "Προϋπολογισμός από αρχή έτους",
+  "alert.kind.BUDGET_TREND": "Τάση προϋπολογισμού",
 };
 
 export const catalogs = { en, el } as const;

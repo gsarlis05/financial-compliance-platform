@@ -8,6 +8,7 @@ import { I18nProvider, useI18n } from "./i18n/I18n";
 import { AccountsPage } from "./pages/Accounts";
 import { BankPage } from "./pages/Bank";
 import { BudgetsPage } from "./pages/Budgets";
+import { AlertsPage } from "./pages/Alerts";
 import { CustomKpisPage } from "./pages/CustomKpis";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
       {
         path: "w/:slug/e/:entityId/goals",
         element: <GoalsPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/alerts",
+        element: <AlertsPage />,
       },
       {
         path: "w/:slug/e/:entityId/budgets",
