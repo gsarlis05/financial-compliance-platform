@@ -246,6 +246,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/mapping`, "nav.mapping"],
         [`${base}/periods`, "nav.periods"],
         [`${base}/engagements`, "nav.engagements"],
+        [`${base}/data`, "nav.data"],
       ],
     },
     {
@@ -286,6 +287,19 @@ function MainNav({ base }: { base: string }) {
       </ul>
     </nav>
   );
+}
+
+/** A confirmed deletion is announced on every page of the workspace until it is cancelled. */
+function DeletionBanner() {
+  const { t } = useI18n();
+  const { slug = "" } = useParams();
+  const due = useWorkspace(slug).data?.deletion_due;
+  return due ? (
+    <p className="banner-warning" role="status">
+      {t("ws.deletionDue")} <strong>{due.slice(0, 10)}</strong>.{" "}
+      <NavLink to={`/w/${slug}/data`}>{t("nav.data")}</NavLink>
+    </p>
+  ) : null;
 }
 
 export function Layout() {
@@ -329,6 +343,7 @@ export function Layout() {
         </div>
       </header>
       {base ? <MainNav base={base} /> : null}
+      <DeletionBanner />
       <main id="main">
         <Outlet />
       </main>

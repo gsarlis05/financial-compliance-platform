@@ -184,8 +184,8 @@ class WorkspaceDeletion(models.Model):
     is a global table and holds only IDs, dates and row counts (no names, no financial data)."""
 
     id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
-    tenant_id = models.UUIDField()
-    tenant_kind = models.CharField(max_length=16)
+    workspace_id = models.UUIDField()  # not a foreign key: the workspace row is deleted
+    workspace_kind = models.CharField(max_length=16)
     requested_by_id = models.UUIDField()
     requested_at = models.DateTimeField(auto_now_add=True)
     confirmed_by_id = models.UUIDField(null=True, blank=True)
@@ -200,7 +200,7 @@ class WorkspaceDeletion(models.Model):
         db_table = "tenancy_workspace_deletion"
         constraints = [
             models.UniqueConstraint(
-                fields=["tenant_id"],
+                fields=["workspace_id"],
                 condition=models.Q(cancelled_at__isnull=True),
                 name="tenancy_workspace_deletion_one_open",
             )

@@ -18,6 +18,7 @@ import {
 import { PersonalPlanPage } from "./pages/PersonalPlan";
 import { PortfolioPage } from "./pages/Portfolio";
 import { EngagementsPage } from "./pages/Engagements";
+import { WorkspaceDataPage } from "./pages/WorkspaceData";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
 import { CashForecastPage } from "./pages/CashForecast";
@@ -44,6 +45,8 @@ const router = createBrowserRouter([
       { index: true, element: <WorkspacesPage /> },
       { path: "w/:slug", element: <WorkspaceHome /> },
       { path: "w/:slug/engagements", element: <EngagementsPage /> },
+      { path: "w/:slug/data", element: <WorkspaceDataPage /> },
+      { path: "w/:slug/e/:entityId/data", element: <WorkspaceDataPage /> },
       { path: "w/:slug/e/:entityId/entries", element: <EntriesPage /> },
       { path: "w/:slug/e/:entityId/entries/new", element: <NewEntryPage /> },
       {

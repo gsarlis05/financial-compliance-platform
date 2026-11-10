@@ -40,6 +40,7 @@ from fcp.core.errors import (
 )
 from fcp.modules.audit_log.api import record as audit
 
+from .entitlements import Role
 from .models import Membership, WorkspaceDeletion
 from .services import WorkspaceContext
 
@@ -64,10 +65,13 @@ def on_purge(hook: PurgeFiles) -> None:
 
 
 def _own_admin(ctx: WorkspaceContext, permission: str) -> None:
-    """Workspace-wide owners only; never a firm user acting through an engagement."""
+    """The workspace's own workspace-wide administrators; never a firm user acting through an
+    engagement. Deletion needs the owner role itself."""
     ctx.authorize(permission)
     if ctx.permitted_entity_ids(permission) is not None or ctx.engagement is not None:
         raise PermissionDeniedError("Only the workspace's own owners can do this.")
+    if permission == DELETE and (Role.OWNER, None) not in ctx.assignments:
+        raise PermissionDeniedError("Only an owner of the workspace can delete it.")
 
 
 def tenant_tables() -> list[str]:
@@ -77,7 +81,7 @@ def tenant_tables() -> list[str]:
             "SELECT c.table_name FROM information_schema.columns c "
             "JOIN information_schema.tables t USING (table_schema, table_name) "
             "WHERE c.table_schema = 'public' AND c.column_name = 'tenant_id' "
-            "AND t.table_type = 'BASE TABLE' AND c.table_name <> 'tenancy_workspace_deletion' "
+            "AND t.table_type = 'BASE TABLE' "
             "ORDER BY c.table_name"
         )
         return [row[0] for row in cursor.fetchall()]
@@ -174,7 +178,7 @@ def export(ctx: WorkspaceContext) -> Export:
 def deletion(tenant_id: UUID) -> WorkspaceDeletion | None:
     """The open deletion of a workspace (requested or confirmed, not purged), if any."""
     return WorkspaceDeletion.objects.filter(
-        tenant_id=tenant_id, cancelled_at__isnull=True, purged_at__isnull=True
+        workspace_id=tenant_id, cancelled_at__isnull=True, purged_at__isnull=True
     ).first()
 
 
@@ -196,7 +200,7 @@ def request_deletion(ctx: WorkspaceContext) -> WorkspaceDeletion:
     if deletion(ctx.tenant.id) is not None:
         raise ConflictError("The deletion of this workspace was already requested.")
     row = WorkspaceDeletion.objects.create(
-        tenant_id=ctx.tenant.id, tenant_kind=ctx.tenant.kind, requested_by_id=ctx.user.id
+        workspace_id=ctx.tenant.id, workspace_kind=ctx.tenant.kind, requested_by_id=ctx.user.id
     )
     _audit(ctx, "deletion_requested", row)
     return row
@@ -272,7 +276,7 @@ def purge(row: WorkspaceDeletion, *, force: bool = False) -> dict[str, int]:
         raise ConflictError("This deletion is not confirmed, or is already finished.")
     if row.purge_after > timezone.now() and not force:
         raise ConflictError("The grace period has not ended.")
-    tenant_id = row.tenant_id
+    tenant_id = row.workspace_id
     files = {"deleted": 0, "retained": 0}
     for hook in _purge_hooks:
         for key, value in hook(tenant_id).items():

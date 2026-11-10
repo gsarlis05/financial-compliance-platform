@@ -30,15 +30,15 @@ class Command(BaseCommand):
                 failed += 1
                 log.error(
                     "tenancy.purge_failed",
-                    tenant_id=str(row.tenant_id),
+                    tenant_id=str(row.workspace_id),
                     error_code="tenancy.purge_failed",
                     reason=type(error).__name__,
                 )
-                self.stderr.write(f"FAILED {row.tenant_id}: {error}")
+                self.stderr.write(f"FAILED {row.workspace_id}: {error}")
                 continue
-            log.info("tenancy.workspace_purged", tenant_id=str(row.tenant_id),
+            log.info("tenancy.workspace_purged", tenant_id=str(row.workspace_id),
                      rows=sum(counts.values()), tables=len(counts))  # fmt: skip
-            self.stdout.write(f"Purged {row.tenant_id}: {sum(counts.values())} rows.")
+            self.stdout.write(f"Purged {row.workspace_id}: {sum(counts.values())} rows.")
         self.stdout.write(f"{len(rows) - failed} workspace(s) purged; {failed} failed.")
         if failed:
             raise CommandError(f"{failed} purge(s) failed")
