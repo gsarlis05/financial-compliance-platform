@@ -1107,6 +1107,7 @@ export const en = {
   "eng.remove": "Remove",
   "eng.noClients": "No client has let your firm in yet.",
   "ws.viaFirm": "through your firm",
+  "pf.ownWorkspace": "client's own workspace",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2235,6 +2236,7 @@ export const el: Record<MessageKey, string> = {
   "eng.noClients":
     "Κανένας πελάτης δεν έχει δώσει ακόμη πρόσβαση στο γραφείο σας.",
   "ws.viaFirm": "μέσω του γραφείου σας",
+  "pf.ownWorkspace": "χώρος εργασίας του πελάτη",
 };
 
 export const catalogs = { en, el } as const;

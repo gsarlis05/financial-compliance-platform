@@ -28,4 +28,4 @@ portfolio to the client entities in the firm's own workspace that the user can a
   A materialised summary, with purge on revocation, can be added if a firm grows large, and
   would then need its own purge test.
 - In M5-4, engagement grants add rows for clients in their own workspaces, through the grant and
-  never by a cross-tenant query.
+  never by a cross-tenant query. Done in ADR-0034.

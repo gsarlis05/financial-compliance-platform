@@ -12,7 +12,9 @@ export function isAmount(value: string): boolean {
 
 export function toDecimal(value: string): Decimal {
   const trimmed = value.trim();
-  return trimmed === "" || !AMOUNT.test(trimmed) ? new Decimal(0) : new Decimal(trimmed);
+  return trimmed === "" || !AMOUNT.test(trimmed)
+    ? new Decimal(0)
+    : new Decimal(trimmed);
 }
 
 export function sum(values: readonly string[]): Decimal {

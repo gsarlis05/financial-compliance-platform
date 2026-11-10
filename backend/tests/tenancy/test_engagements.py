@@ -81,10 +81,11 @@ def test_scope_intersection_staffing_and_immediate_revocation(setup: dict[str, A
     # The accountant works inside the client's workspace, as an accountant.
     shown = acc.get("/api/workspaces").json()
     assert [(w["name"], w["via_engagement"]) for w in shown] == [
-        ("Sarlis & Co", None), ("Client X", "firm")
+        ("Sarlis & Co", None),
+        ("Client X", "firm"),
     ]
     me = acc.get(f"/api/w/{s['client']['slug']}").json()
-    assert me["roles"] == ["accountant"]
+    assert me["roles"] == ["accountant", "read_only"]
     assert me["via_engagement"].startswith("Sarlis & Co")
     base = f"{entities}/{s['entity']['id']}"
     assert s["cc"].post_json(f"{base}/accounts/apply-template",
@@ -116,9 +117,8 @@ def test_scope_intersection_staffing_and_immediate_revocation(setup: dict[str, A
 
     # Audited in both workspaces: grant, staff actions by the firm user, staffing, revocation.
     set_context(tenant_id=UUID(s["client"]["id"]))
-    client_log = list(AuditEvent.objects.order_by("seq").values_list("action", "changes"))
-    actions = [a for a, _ in client_log]
-    assert "tenancy.engagement.granted" in actions and "tenancy.engagement.revoked" in actions
+    actions = set(AuditEvent.objects.values_list("action", flat=True))
+    assert {"tenancy.engagement.granted", "tenancy.engagement.revoked"} <= actions
     set_context(tenant_id=UUID(s["firm"]["id"]))
     firm_actions = list(AuditEvent.objects.values_list("action", flat=True))
     assert firm_actions.count("tenancy.engagement.staff_added") == 2
@@ -143,8 +143,9 @@ def test_firm_user_actions_are_attributed_to_the_firm(setup: dict[str, Any]) -> 
     assert "via_engagement" not in own.changes
 
 
-def test_grant_rules_expiry_and_history(setup: dict[str, Any], make_user: Make,
-                                        api_client: Make, make_workspace: Make) -> None:  # fmt: skip
+def test_grant_rules_expiry_and_history(
+    setup: dict[str, Any], make_user: Make, api_client: Make, make_workspace: Make
+) -> None:
     s = setup
     assert grant(s, ["owner"]).status_code == 422  # never ownership or administration
     assert grant(s, []).status_code == 422
@@ -156,11 +157,15 @@ def test_grant_rules_expiry_and_history(setup: dict[str, Any], make_user: Make,
                                "valid_until": later()})  # fmt: skip
     assert wrong.status_code == 422  # only firms can be engaged
 
-    # Only the client's administrators grant; a firm cannot staff an engagement in a business.
+    # Only the client's administrators grant; staffing is for firm workspaces only.
     acc = s["staff"]["accountant"]["client"]
-    assert acc.post_json(f"/api/w/{s['client']['slug']}/engagements", {
-        "firm_slug": s["firm"]["slug"], "scope_roles": ["read_only"], "valid_until": later()
-    }).status_code == 403  # fmt: skip
+    assert (
+        acc.post_json(
+            f"/api/w/{s['client']['slug']}/engagements",
+            {"firm_slug": s["firm"]["slug"], "scope_roles": ["read_only"], "valid_until": later()},
+        ).status_code
+        == 404
+    )  # not staffed anywhere: the workspace does not exist for them
     assert s["cc"].get(f"/api/w/{s['client']['slug']}/client-engagements").status_code == 403
 
     # A personal workspace may let an adviser read, nothing more.
@@ -199,3 +204,23 @@ def test_grant_rules_expiry_and_history(setup: dict[str, Any], make_user: Make,
         Engagement.objects.filter(id=eid).update(scope_roles=["accountant"])
     with pytest.raises(DatabaseError), transaction.atomic():
         Engagement.objects.filter(id=eid).delete()
+
+
+def test_a_grant_can_be_limited_to_one_legal_entity(setup: dict[str, Any]) -> None:
+    s = setup
+    slug = s["client"]["slug"]
+    second = s["cc"].post_json(f"/api/w/{slug}/entities",
+                               {"legal_name": "Client X Holdings Ltd (Demo)",
+                                "entity_type": "COMPANY"})  # fmt: skip
+    assert second.status_code == 201, second.content
+    made = grant(s, ["read_only"], legal_entity_id=second.json()["id"])
+    assert made.status_code == 201, made.content
+    assert staff(s, made.json()["id"], "view@firm.test").status_code == 201
+    viewer = s["staff"]["read_only"]["client"]
+    seen = viewer.get(f"/api/w/{slug}/entities").json()
+    assert [e["legal_name"] for e in seen] == ["Client X Holdings Ltd (Demo)"]
+    other = f"/api/w/{slug}/entities/{s['entity']['id']}"
+    assert viewer.get(f"{other}/accounts").status_code == 404  # the other entity is not visible
+    assert viewer.get(f"/api/w/{slug}/entities/{second.json()['id']}/accounts").status_code == 200
+    bad = grant(s, ["read_only"], legal_entity_id=s["firm"]["id"])
+    assert bad.status_code == 422  # not one of the client's entities

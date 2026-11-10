@@ -43,6 +43,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <WorkspacesPage /> },
       { path: "w/:slug", element: <WorkspaceHome /> },
+      { path: "w/:slug/engagements", element: <EngagementsPage /> },
       { path: "w/:slug/e/:entityId/entries", element: <EntriesPage /> },
       { path: "w/:slug/e/:entityId/entries/new", element: <NewEntryPage /> },
       {

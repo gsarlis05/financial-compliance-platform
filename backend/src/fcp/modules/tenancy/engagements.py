@@ -12,6 +12,7 @@
   SECURITY DEFINER functions of migration 0005, which return only what the caller is entitled to.
 """
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -49,6 +50,11 @@ FIRM_COVERS: dict[str, frozenset[str]] = {
     Role.REVIEWER: frozenset({Role.REVIEWER, Role.READ_ONLY}),
     Role.READ_ONLY: frozenset({Role.READ_ONLY}),
 }
+
+
+def _roles(raw: Any) -> list[str]:
+    """A jsonb list from a raw cursor arrives as text."""
+    return [str(r) for r in (json.loads(raw) if isinstance(raw, str) else raw)]
 
 
 def _invalid(name: str, message: str) -> ValidationFailedError:
@@ -95,7 +101,7 @@ def access_through_engagement(user: User, slug: str) -> EngagedAccess:
     by_engagement: dict[UUID, tuple[str, list[str], UUID | None, set[str]]] = {}
     for _, engagement_id, firm_name, scope, entity_id, firm_role in rows:
         name, scope_roles, entity, roles = by_engagement.setdefault(
-            engagement_id, (firm_name, list(scope), entity_id, set())
+            engagement_id, (firm_name, _roles(scope), entity_id, set())
         )
         roles.add(firm_role)
     assignments: set[tuple[str, UUID | None]] = set()
@@ -259,7 +265,7 @@ def firm_engagements(ctx: "WorkspaceContext") -> list[FirmEngagement]:
     return [
         FirmEngagement(
             engagement_id=r[0], client_tenant_id=r[1], client_slug=r[2], client_name=r[3],
-            client_kind=r[4], scope_roles=list(r[5]), legal_entity_id=r[6], valid_until=r[7],
+            client_kind=r[4], scope_roles=_roles(r[5]), legal_entity_id=r[6], valid_until=r[7],
             staff=[s for s in staff if s.engagement_id == r[0]],
         )
         for r in rows

@@ -33,14 +33,23 @@ export function StatementsPage() {
   const statements = useStatements(dateFrom, dateTo, comparative);
   const data = statements.data;
   const blocked =
-    statements.error instanceof ApiError && statements.error.code === "metrics.statements.mapping_incomplete"
+    statements.error instanceof ApiError &&
+    statements.error.code === "metrics.statements.mapping_incomplete"
       ? statements.error.fieldErrors()
       : null;
   const shown: Statement | undefined = data
-    ? { PL: data.profit_and_loss, BS: data.balance_sheet, CF: data.cash_flow }[tab]
+    ? { PL: data.profit_and_loss, BS: data.balance_sheet, CF: data.cash_flow }[
+        tab
+      ]
     : undefined;
   const exportUrl = (format: string) =>
-    apiUrl(`${base}/statements/export`, { date_from: dateFrom, date_to: dateTo, comparative, format, lang: locale });
+    apiUrl(`${base}/statements/export`, {
+      date_from: dateFrom,
+      date_to: dateTo,
+      comparative,
+      format,
+      lang: locale,
+    });
 
   return (
     <Page
@@ -61,32 +70,56 @@ export function StatementsPage() {
       <div className="form inline">
         <label>
           {t("st.from")}
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
         </label>
         <label>
           {t("st.to")}
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </label>
         <label className="checkbox">
-          <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={compare}
+            onChange={(e) => setCompare(e.target.checked)}
+          />
           {t("st.comparative")}
         </label>
       </div>
-      {statements.isPending && statements.fetchStatus !== "idle" ? <Loading /> : null}
+      {statements.isPending && statements.fetchStatus !== "idle" ? (
+        <Loading />
+      ) : null}
       {blocked ? (
-        <div className="notice warn" role="alert" data-testid="statements-blocked">
+        <div
+          className="notice warn"
+          role="alert"
+          data-testid="statements-blocked"
+        >
           <p>
             {t("st.blocked")} {Object.keys(blocked).join(", ")}
           </p>
-          <Link to={`/w/${slug}/e/${entityId}/mapping`}>{t("st.openMapping")}</Link>
+          <Link to={`/w/${slug}/e/${entityId}/mapping`}>
+            {t("st.openMapping")}
+          </Link>
         </div>
       ) : (
         <ProblemMessage error={statements.error} />
       )}
       {data && shown ? (
         <>
-          <p className={data.ok ? "notice" : "notice warn"} role={data.ok ? undefined : "alert"}>
-            {data.ok ? t("st.checksOk") : t("st.checksFailed")} {t("st.watermark")}
+          <p
+            className={data.ok ? "notice" : "notice warn"}
+            role={data.ok ? undefined : "alert"}
+          >
+            {data.ok ? t("st.checksOk") : t("st.checksFailed")}{" "}
+            {t("st.watermark")}
             {data.watermark}.
           </p>
           <div role="tablist" aria-label={t("st.title")} className="segmented">
@@ -111,7 +144,12 @@ export function StatementsPage() {
         </>
       ) : null}
       {ledger ? (
-        <LedgerPanel target={ledger} dateFrom={dateFrom} dateTo={dateTo} onClose={() => setLedger(null)} />
+        <LedgerPanel
+          target={ledger}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onClose={() => setLedger(null)}
+        />
       ) : null}
     </Page>
   );
@@ -128,8 +166,10 @@ function StatementTable({
 }) {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const name = (r: { name: string; name_el: string }) => (locale === "el" && r.name_el ? r.name_el : r.name);
-  const money = (value: string | null) => (value === null ? "" : formatAmount(value, locale));
+  const name = (r: { name: string; name_el: string }) =>
+    locale === "el" && r.name_el ? r.name_el : r.name;
+  const money = (value: string | null) =>
+    value === null ? "" : formatAmount(value, locale);
   const toggle = (code: string) =>
     setOpen((current) => {
       const next = new Set(current);
@@ -184,17 +224,27 @@ function StatementTable({
                     )}
                   </th>
                   <td className="amount">{money(row.current)}</td>
-                  {comparative ? <td className="amount">{money(row.comparative)}</td> : null}
+                  {comparative ? (
+                    <td className="amount">{money(row.comparative)}</td>
+                  ) : null}
                 </tr>
                 {open.has(row.code)
                   ? row.accounts.map((a: StatementAccount) => (
-                      <tr key={`${row.code}:${a.account_id ?? a.name}`} className="account">
+                      <tr
+                        key={`${row.code}:${a.account_id ?? a.name}`}
+                        className="account"
+                      >
                         <td>
                           {a.account_id ? (
                             <button
                               type="button"
                               className="link-button"
-                              onClick={() => onLedger({ id: a.account_id ?? "", label: `${a.code} · ${name(a)}` })}
+                              onClick={() =>
+                                onLedger({
+                                  id: a.account_id ?? "",
+                                  label: `${a.code} · ${name(a)}`,
+                                })
+                              }
                             >
                               {a.code} · {name(a)}
                             </button>
@@ -205,7 +255,9 @@ function StatementTable({
                           )}
                         </td>
                         <td className="amount">{money(a.current)}</td>
-                        {comparative ? <td className="amount">{money(a.comparative)}</td> : null}
+                        {comparative ? (
+                          <td className="amount">{money(a.comparative)}</td>
+                        ) : null}
                       </tr>
                     ))
                   : null}
@@ -237,7 +289,11 @@ function LedgerPanel({
     panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [target.id]);
   return (
-    <section ref={panel} className="panel" aria-label={`${t("st.ledger")}: ${target.label}`}>
+    <section
+      ref={panel}
+      className="panel"
+      aria-label={`${t("st.ledger")}: ${target.label}`}
+    >
       <header className="page-header">
         <h2>
           {t("st.ledger")}: {target.label}
@@ -253,7 +309,9 @@ function LedgerPanel({
           <p>
             {t("st.opening")}: {formatAmount(gl.data.opening_balance, locale)}
           </p>
-          {gl.data.lines.length === 0 ? <p className="muted">{t("st.noLines")}</p> : null}
+          {gl.data.lines.length === 0 ? (
+            <p className="muted">{t("st.noLines")}</p>
+          ) : null}
           {gl.data.lines.length ? (
             <table>
               <thead>
@@ -274,11 +332,23 @@ function LedgerPanel({
                   <tr key={`${line.entry_id}:${index}`}>
                     <td>{line.accounting_date}</td>
                     <td>
-                      <Link to={`/w/${slug}/e/${entityId}/entries/${line.entry_id}`}>{line.entry_ref}</Link>
+                      <Link
+                        to={`/w/${slug}/e/${entityId}/entries/${line.entry_id}`}
+                      >
+                        {line.entry_ref}
+                      </Link>
                     </td>
                     <td>{line.description}</td>
-                    <td className="amount">{line.debit === "0.00" ? "" : formatAmount(line.debit, locale)}</td>
-                    <td className="amount">{line.credit === "0.00" ? "" : formatAmount(line.credit, locale)}</td>
+                    <td className="amount">
+                      {line.debit === "0.00"
+                        ? ""
+                        : formatAmount(line.debit, locale)}
+                    </td>
+                    <td className="amount">
+                      {line.credit === "0.00"
+                        ? ""
+                        : formatAmount(line.credit, locale)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

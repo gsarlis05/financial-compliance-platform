@@ -33,7 +33,9 @@ export class ApiError extends Error {
 const CSRF_COOKIE = "__Host-fcp_csrftoken";
 
 function csrfToken(): string {
-  const match = document.cookie.split("; ").find((c) => c.startsWith(`${CSRF_COOKIE}=`));
+  const match = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(`${CSRF_COOKIE}=`));
   return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : "";
 }
 
@@ -69,7 +71,10 @@ export function apiUrl(path: string, query?: RequestOptions["query"]): string {
   return url.pathname + url.search;
 }
 
-export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };
   if (method !== "GET") {
@@ -85,7 +90,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const init: RequestInit = { method, headers, credentials: "same-origin" };
   if (options.body !== undefined) {
     // A FormData body (file upload) is sent as multipart; the browser sets the boundary.
-    init.body = form ? (options.body as FormData) : JSON.stringify(options.body);
+    init.body = form
+      ? (options.body as FormData)
+      : JSON.stringify(options.body);
   }
   const response = await fetch(apiUrl(path, options.query), init);
   if (!response.ok) {

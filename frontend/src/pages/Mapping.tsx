@@ -13,14 +13,20 @@ export function MappingPage() {
   const lines = taxonomy.data ?? [];
   const label = (code: string) => {
     const line = lines.find((l) => l.code === code);
-    return line ? `${line.code} · ${locale === "el" && line.name_el ? line.name_el : line.name}` : code;
+    return line
+      ? `${line.code} · ${locale === "el" && line.name_el ? line.name_el : line.name}`
+      : code;
   };
   const c = completeness.data;
   return (
     <Page
       title={t("map.title")}
       actions={
-        <button type="button" disabled={applyDefaults.isPending} onClick={() => applyDefaults.mutate()}>
+        <button
+          type="button"
+          disabled={applyDefaults.isPending}
+          onClick={() => applyDefaults.mutate()}
+        >
           {t("map.applyDefaults")}
         </button>
       }
@@ -28,11 +34,22 @@ export function MappingPage() {
       <p className="muted">{t("map.help")}</p>
       <label className="form inline">
         {t("tb.asOf")}
-        <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+        <input
+          type="date"
+          value={asOf}
+          onChange={(e) => setAsOf(e.target.value)}
+        />
       </label>
-      <ProblemMessage error={rows.error ?? completeness.error ?? set.error ?? applyDefaults.error} />
+      <ProblemMessage
+        error={
+          rows.error ?? completeness.error ?? set.error ?? applyDefaults.error
+        }
+      />
       {c ? (
-        <p className={c.complete ? "notice" : "notice warn"} data-testid="mapping-status">
+        <p
+          className={c.complete ? "notice" : "notice warn"}
+          data-testid="mapping-status"
+        >
           {c.complete
             ? t("map.complete")
             : `${t("map.blocking")} ${c.unmapped_blocking.map((r) => r.account_code).join(", ")}`}
@@ -56,16 +73,28 @@ export function MappingPage() {
           </thead>
           <tbody>
             {rows.data.map((r) => (
-              <tr key={r.account_id} className={r.line_code === null && r.balance !== "0.00" ? "warn" : ""}>
+              <tr
+                key={r.account_id}
+                className={
+                  r.line_code === null && r.balance !== "0.00" ? "warn" : ""
+                }
+              >
                 <td>{r.account_code}</td>
                 <td>{r.account_name}</td>
-                <td className="amount">{r.has_activity ? formatAmount(r.balance, locale) : ""}</td>
+                <td className="amount">
+                  {r.has_activity ? formatAmount(r.balance, locale) : ""}
+                </td>
                 <td>
                   <select
                     aria-label={`${t("map.line")} ${r.account_code}`}
                     value={r.line_code ?? ""}
                     disabled={set.isPending}
-                    onChange={(e) => set.mutate({ accountId: r.account_id, lineCode: e.target.value || null })}
+                    onChange={(e) =>
+                      set.mutate({
+                        accountId: r.account_id,
+                        lineCode: e.target.value || null,
+                      })
+                    }
                   >
                     <option value="">{t("map.unmapped")}</option>
                     {lines
