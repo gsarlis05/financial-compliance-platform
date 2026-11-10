@@ -5,7 +5,8 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  purposes = toset(["database", "documents", "logs", "backups"])
+  # "application": container images, runtime secrets and the alarm topic (M5-5).
+  purposes = toset(["database", "documents", "logs", "backups", "application"])
 }
 
 data "aws_iam_policy_document" "key" {
@@ -36,6 +37,22 @@ data "aws_iam_policy_document" "key" {
       test     = "ArnLike"
       variable = "kms:EncryptionContext:aws:logs:arn"
       values   = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+    }
+  }
+
+  # Alarms and event rules publish to the encrypted alarm topic (M5-5).
+  statement {
+    sid       = "AlarmPublishersUse"
+    actions   = ["kms:Decrypt", "kms:GenerateDataKey*"]
+    resources = ["*"]
+    principals {
+      type        = "Service"
+      identifiers = ["cloudwatch.amazonaws.com", "events.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
 }
