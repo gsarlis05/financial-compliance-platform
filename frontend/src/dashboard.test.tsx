@@ -198,7 +198,8 @@ describe("CFO dashboard (M4-8)", () => {
       </QueryClientProvider>,
     );
     const kpis = await screen.findByRole("region", { name: "KPIs" });
-    expect(kpis).toHaveTextContent("Gross margin40.00%");
+    // AC-DB2: every card states its nature.
+    expect(kpis).toHaveTextContent("Gross marginActual40.00%");
     expect(kpis).toHaveTextContent("Revenue is zero");
     expect(
       screen.getByRole("region", { name: "Budget vs actual" }),
@@ -222,6 +223,9 @@ describe("CFO dashboard (M4-8)", () => {
       svg?.querySelector('[data-nature="FORECAST"]')?.getAttribute("class"),
     ).toBe("chart-forecast");
     expect(svg?.querySelector('[data-encoding="reference"]')).not.toBeNull();
+    // AC-DB2: the cut-over (the forecast's as-of date) is marked on the chart.
+    expect(svg?.querySelector('[data-encoding="cut-over"]')).not.toBeNull();
+    expect(svg).toHaveTextContent("As of 2026-03-31");
     expect(within(cash).getByRole("img")).toHaveAccessibleName(
       "Opening cash 2,400.00; week 13 closing 2,500.00.",
     );

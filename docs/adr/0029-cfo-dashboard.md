@@ -32,6 +32,8 @@ Doc 10 §10 and AC-DB1 to AC-DB5 ask for a dashboard with these properties:
 - **Charts stay SVG drawn in React**, with no new dependency, as in M3.
   - Every nature has a non-colour encoding: the actual is a solid point, the forecast a dashed
     line, the minimum a thin reference line.
+  - Time charts mark the cut-over (the forecast's as-of date) with a labelled vertical line, and
+    KPI cards state their nature (AC-DB2).
   - Every chart has a text description and a table with the same numbers.
   - Colours come from the theme variables, so the light and dark themes keep the same encodings.
   - Doc 10 names Apache ECharts; staying with SVG is listed for owner confirmation.

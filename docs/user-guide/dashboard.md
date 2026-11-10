@@ -10,11 +10,13 @@
 Every widget shows the same period and comparison.
 
 ## Widgets
-- **KPIs:** cards from the latest KPI calculation for the period, with the prior year when you
+- **KPIs:** cards from the latest KPI calculation for the period, each labelled with its nature
+  (actual), with the prior year when you
   compare with it. Not-meaningful KPIs say why. **Explain** opens the KPI page, where you can go
   down to accounts and entries.
 - **13-week cash:** the latest cash forecast. The actual opening is a solid point, the forecast a
-  dashed line and the minimum cash a thin line. **Show as a table** lists the same numbers.
+  dashed line and the minimum cash a thin line. A dotted vertical line marks the forecast's as-of
+  date. **Show as a table** lists the same numbers.
 - **Budget vs actual** and **Top unfavourable variances:** the variance report for the current
   approved annual budget. Each difference is marked ▲ favourable or ▼ unfavourable, in words as
   well as symbols.
