@@ -8,7 +8,6 @@ import fcp.core.ids
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
