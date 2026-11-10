@@ -12,3 +12,18 @@ output "security_group_id" {
   description = "Database security group."
   value       = aws_security_group.db.id
 }
+
+output "arn" {
+  description = "Database instance ARN (for backup selection)."
+  value       = aws_db_instance.this.arn
+}
+
+output "identifier" {
+  description = "Database instance identifier (for alarms)."
+  value       = aws_db_instance.this.identifier
+}
+
+output "address" {
+  description = "Database host name."
+  value       = aws_db_instance.this.address
+}

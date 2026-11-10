@@ -1,6 +1,7 @@
 # Deployment target: AWS (eu-central-1)
 
-Status: **design + container packaging only.** No AWS resource exists. Creating or changing any
+Status: **design, container packaging and the pilot environment as code (M5-5).** No AWS resource
+exists. Creating or changing any
 environment needs the product owner's explicit approval (directive; ADR-0010). Staging carries
 synthetic data only.
 
@@ -61,7 +62,17 @@ PostgreSQL 17, migration as a separate owner-role task, API as the runtime role 
 filesystem as a non-root user, web front end proxying the API on one origin with security headers,
 readiness probe, and the scheduled-job commands.
 
-## Still to build (M5-5, pilot readiness; nothing is applied without approval)
-Terraform for ECR, ECS cluster/services/tasks, ALB, CloudFront + WAF, Secrets Manager entries,
-EventBridge schedules, CloudWatch alarms and dashboards; image signing (cosign) and SBOM; error
-tracking; backup/restore drill; identity provider hosting decision.
+## Built as code in M5-5 (ADR-0035; nothing is applied without approval)
+`infra/terraform/envs/pilot` holds the whole pilot environment: registry, VPC endpoints, ECS
+cluster with the API, worker and owner-role one-off tasks, internal load balancer, CloudFront with
+AWS WAF, Secrets Manager entries, EventBridge schedules, alarms and a locked backup vault. CI
+validates it and produces a bill of materials (SPDX) for both images. `make restore-drill` proves
+a backup by restoring it. Runbooks: `docs/runbooks/pilot-environment.md` and
+`docs/runbooks/backup-restore-drill.md`.
+
+## Still open (owner decisions before the pilot is created)
+- The AWS account, the domain and its certificates, and who receives alarms.
+- Where the identity provider runs: Keycloak in the account or a managed OIDC provider.
+- How the antivirus service (ClamAV) runs and gets signature updates. The tasks have no route to
+  the internet, so this and an external identity provider need a controlled way out.
+- A hosted error tracker, if wanted; today an error-level log line raises an alarm.
