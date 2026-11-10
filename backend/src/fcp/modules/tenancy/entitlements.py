@@ -14,6 +14,7 @@ class Feature(StrEnum):
     MULTIPLE_ENTITIES = "multiple_entities"
     INVITE_MEMBERS = "invite_members"
     CLIENT_PORTFOLIO = "client_portfolio"
+    PERSONAL_FINANCES = "personal_finances"  # simplified personal screens (M5-1)
 
 
 class Role(StrEnum):
@@ -34,7 +35,7 @@ _FEATURES: dict[str, frozenset[Feature]] = {
         {Feature.MULTIPLE_ENTITIES, Feature.INVITE_MEMBERS, Feature.CLIENT_PORTFOLIO}
     ),
     Tenant.Kind.BUSINESS: frozenset({Feature.MULTIPLE_ENTITIES, Feature.INVITE_MEMBERS}),
-    Tenant.Kind.PERSONAL: frozenset({Feature.INVITE_MEMBERS}),
+    Tenant.Kind.PERSONAL: frozenset({Feature.INVITE_MEMBERS, Feature.PERSONAL_FINANCES}),
 }
 
 _ROLES: dict[str, frozenset[Role]] = {

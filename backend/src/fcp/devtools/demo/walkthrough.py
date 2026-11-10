@@ -185,6 +185,38 @@ def _goals(owner: "DemoClient", base: str, year: int) -> list[dict[str, Any]]:
     return evaluated
 
 
+def _personal(owner: "DemoClient", year: int) -> dict[str, Any]:
+    """The owner's own personal workspace (a separate tenant): synthetic opening balances, a
+    month of spending and income, and a home valuation (doc 11)."""
+    ws = owner.call("POST", "/api/workspaces", {"name": "My finances (Demo)", "kind": "PERSONAL"},
+                    201)  # fmt: skip
+    entity = owner.call("GET", f"/api/w/{ws['slug']}/entities")[0]
+    base = f"/api/w/{ws['slug']}/entities/{entity['id']}/personal"
+    owner.call("POST", f"{base}/setup", {})
+    acc = {a["code"]: a["id"] for a in owner.call("GET", f"{base}/accounts")}
+    day = f"{year}-01-01"
+    for code, amount in (("1100", "6500.00"), ("1110", "12000.00"), ("2200", "142000.00")):
+        owner.call("POST", f"{base}/opening-balances",
+                   {"account_id": acc[code], "date": day, "amount": amount}, 201)  # fmt: skip
+    rows = (
+        ("RECEIVED", "2500.00", "Salary", "1100", "4000"),
+        ("SPENT", "640.00", "Mortgage payment (interest part)", "1100", "6010"),
+        ("SPENT", "380.25", "Groceries", "1100", "6100"),
+        ("SPENT", "95.40", "Electricity and water", "1100", "6200"),
+        ("MOVED", "500.00", "Monthly saving", "1100", "1110"),
+    )
+    for kind, amount, text, account, other in rows:
+        body = {"kind": kind, "date": f"{year}-01-28", "amount": amount, "description": text,
+                "account_id": acc[account]}  # fmt: skip
+        body["to_account_id" if kind == "MOVED" else "category_id"] = acc[other]
+        owner.call("POST", f"{base}/transactions", body, 201)
+    owner.call("POST", f"{base}/valuations", {"account_id": acc["1300"], "date": f"{year}-01-31",
+                                              "value": "310000.00", "note": "Synthetic estimate"},
+               201)  # fmt: skip
+    worth: dict[str, Any] = owner.call("GET", f"{base}/net-worth?as_of={year}-01-31")
+    return worth
+
+
 def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
     """Synthetic commitments for Demo Trading, then the 13-week forecast from 4 January."""
     following = year + 1
@@ -604,6 +636,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     cards = next(w for w in board["widgets"] if w["type"] == "kpis")["data"].get("cards", [])
     step(f"CFO dashboard for {year} year to date: " + ", ".join(f"{k} {v}" for k, v in
          shown.items()) + f"; {len(cards)} KPI cards")  # fmt: skip
+    worth = _personal(owner, year)
+    valued = ", including a home valuation (estimate)" if worth["includes_valuations"] else ""
+    step(f"personal workspace (separate books): net worth {worth['net_worth']} on "
+         f"{worth['as_of']}{valued}")  # fmt: skip
     refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
     step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
 
