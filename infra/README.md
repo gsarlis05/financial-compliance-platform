@@ -14,11 +14,21 @@ terraform/
                        protection, PITR backups, Secrets Manager master password, no statement logging
   modules/storage      Documents/evidence bucket: private, versioned, SSE-KMS, TLS-only, deny unencrypted
                        uploads, Object Lock (GOVERNANCE in staging, COMPLIANCE in production), access logs
+  modules/registry     Private image repository: immutable tags, scan on push, customer-managed key
+  modules/endpoints    VPC endpoints (registry, logs, secrets, keys, S3): no public subnets, no NAT gateway
+  modules/app          ECS Fargate: API and worker (database runtime role), owner-role one-off tasks, internal
+                       HTTPS load balancer, Secrets Manager entries (values set by an operator), schedules
+  modules/edge         CloudFront (one browser origin, security headers), private web bucket, AWS WAF with
+                       logs kept in the EU region
+  modules/monitoring   One encrypted alarm topic: database, API, error log lines, any task that stops with an error
+  modules/backup       Locked AWS Backup vault: daily and monthly copies of the database
   envs/staging         Composition for staging (synthetic data only), EU regions only, account allow-list
+  envs/pilot           The owner's pilot (Gate P), complete: all modules above. Separate account. Never applied
+                       without approval; steps in docs/runbooks/pilot-environment.md
 ```
 
 ## Checks
-`make iac-check` (Docker; needs Terraform registry access). Checkov exceptions are written inside
+`make iac-check` (Docker; needs Terraform registry access) validates every environment. Checkov exceptions are written inside
 the resource with a reason (`# checkov:skip=ID:reason`) and are reviewed like code.
 
 ## Applying (future, approval required)

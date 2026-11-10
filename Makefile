@@ -3,7 +3,7 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check e2e-login e2e-ui demo images container-smoke openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check restore-drill e2e-login e2e-ui demo images container-smoke openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
@@ -13,6 +13,7 @@ help:
 	@echo "make images        build the API and web container images (local only, never pushed)"
 	@echo "make container-smoke  run the images production-like (TLS DB, migration task, read-only)"
 	@echo "make openapi       regenerate docs/api/openapi.json"
+	@echo "make restore-drill back up the local database, restore it to a scratch copy and verify it"
 	@echo "make synthetic     generate synthetic business + household datasets into var/"
 	@echo "make test | lint | security | prove-gates"
 	@echo "make dev-down      stop services (data kept); make dev-reset deletes local data"
@@ -80,9 +81,15 @@ prove-gates:
 # pointing at a provider mirror). Nothing is ever planned against or applied to an account.
 iac-check:
 	docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform fmt -check -recursive
-	docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/staging init -backend=false -input=false -lockfile=readonly
-	docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/staging validate
+	for env in staging pilot; do \
+		docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/$$env init -backend=false -input=false -lockfile=readonly && \
+		docker run --rm -v "$$PWD:/repo" hashicorp/terraform:1.17.1 -chdir=/repo/infra/terraform/envs/$$env validate || exit 1; \
+	done
 	docker run --rm -v "$$PWD/infra/terraform:/tf" bridgecrew/checkov:3.4.3 -d /tf --framework terraform --quiet --compact --skip-path .terraform
+
+# Backup and restore drill against the local stack (needs make services; changes nothing).
+restore-drill:
+	scripts/ops/restore-drill.sh
 
 # Live MFA sign-in check against the local stack (needs `make dev` and `make run-backend`).
 e2e-login:
