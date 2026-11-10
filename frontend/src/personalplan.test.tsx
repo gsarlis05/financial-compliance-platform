@@ -38,13 +38,19 @@ const accounts = [
 describe("Personal budget and goals (M5-2)", () => {
   it("edits the budget, adds a goal and shows the projection accessibly", async () => {
     const sent: { url: string; method: string; body: unknown }[] = [];
+    let groceries = "350.00";
     document.cookie = "__Host-fcp_csrftoken=test";
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string, init: RequestInit) => {
         const method = init.method ?? "GET";
         if (method !== "GET") {
-          sent.push({ url, method, body: JSON.parse(init.body as string) });
+          const body = JSON.parse(init.body as string) as {
+            monthly_amount?: string;
+          };
+          sent.push({ url, method, body });
+          if (method === "PUT" && body.monthly_amount)
+            groceries = `${body.monthly_amount}.00`;
           return Promise.resolve(respond({}, method === "POST" ? 201 : 200));
         }
         if (url.includes("/personal/accounts"))
@@ -60,7 +66,7 @@ describe("Personal budget and goals (M5-2)", () => {
                   account_id: "c1",
                   name: "Groceries",
                   type: "EXPENSE",
-                  budgeted: "350.00",
+                  budgeted: groceries,
                   actual: "400.00",
                   remaining: "-50.00",
                   over: true,
@@ -141,6 +147,18 @@ describe("Personal budget and goals (M5-2)", () => {
         monthly_amount: "450",
       }),
     );
+    // The row shows the saved amount from the server, not a stale local value.
+    await waitFor(() =>
+      expect(within(budget).getByLabelText("Per month Groceries")).toHaveValue(
+        "450.00",
+      ),
+    );
+    expect(
+      within(within(budget).getByRole("row", { name: /Groceries/ })).getByRole(
+        "button",
+        { name: "Save" },
+      ),
+    ).toBeDisabled();
 
     const goals = screen.getByRole("region", { name: "Goals" });
     const holiday = await within(goals).findByRole("row", {

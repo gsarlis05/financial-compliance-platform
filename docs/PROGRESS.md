@@ -74,7 +74,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M4-9 Firm portfolio of accessible client entities (issue #73) | `claude/m4-9-portfolio` | #128 | Open |
 | M4 report (`docs/milestone-4-report.md`) | `claude/m4-9-portfolio` | #128 | Open, with M4-9 |
 | M5-1 Personal workspace: setup, simplified transactions, valuations, net worth, spending (issue #74) | `claude/m5-1-personal` | #129 | Open |
-| M5-2 Personal budgets, goals, 12-month projection (issue #75) | — | — | Next |
+| M5-2 Personal budgets, goals, 12-month projection (issue #75) | `claude/m5-2-personal-plans` | #130 | Open |
+| M5-3 Counterpart hint (issue #76) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

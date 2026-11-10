@@ -119,7 +119,7 @@ function BudgetSection({ accounts }: { accounts: PersonalAccount[] }) {
             <tbody>
               {budget.data.lines.map((l) => (
                 <BudgetRow
-                  key={`${l.account_id}-${month}`}
+                  key={`${l.account_id}-${month}-${l.budgeted}`}
                   accountId={l.account_id}
                   name={l.name}
                   budgeted={l.budgeted}

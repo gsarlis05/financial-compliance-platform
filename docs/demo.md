@@ -38,6 +38,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ 1 in-app alert(s) raised by the evaluations: Goal DSO 30 days is off track
 ✔ CFO dashboard for 2026 year to date: kpis ok, cash ok, budget empty, top_variances empty, goals ok, alerts ok; 6 KPI cards
 ✔ personal workspace (separate books): net worth 187884.35 on 2026-01-31, including a home valuation (estimate)
+✔ personal budget (groceries 400 a month) and 2 goals: Emergency fund ON_TRACK; Savings 20k OFF_TRACK; 12-month projection from cash 19884.35
 ✔ client portfolio refused in a business workspace (firms only): This is not available in a business workspace.
 ✔ shared with you@example.com as finance_manager
 ```

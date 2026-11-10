@@ -649,10 +649,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          shown.items()) + f"; {len(cards)} KPI cards")  # fmt: skip
     worth = _personal(owner, year)
     valued = ", including a home valuation (estimate)" if worth["includes_valuations"] else ""
-    goals = "; ".join(f"{g['name']} {g['status']}" for g in worth["goals"])
+    goal_list = "; ".join(f"{g['name']} {g['status']}" for g in worth["goals"])
     step(f"personal workspace (separate books): net worth {worth['net_worth']} on "
          f"{worth['as_of']}{valued}")  # fmt: skip
-    step(f"personal budget (groceries 400 a month) and {len(worth['goals'])} goals: {goals}; "
+    step(f"personal budget (groceries 400 a month) and {len(worth['goals'])} goals: {goal_list}; "
          f"12-month projection from cash {worth['projection']['opening_cash']}")  # fmt: skip
     refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
     step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
