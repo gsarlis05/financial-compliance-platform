@@ -20,7 +20,15 @@ from fcp.modules.identity.api import User, require_recent_auth
 from . import services
 from .entitlements import Feature, Role, has_feature
 from .models import LegalEntity, Membership, Tenant
-from .services import WorkspaceContext, enter_workspace, get_entity
+from .services import WorkspaceContext, enter_workspace, get_entity, visible_entities
+
+
+def permitted_entities(ctx: WorkspaceContext, permission: str) -> list[LegalEntity]:
+    """The workspace's active entities the user holds ``permission`` for, by name (entity-scoped
+    roles see only theirs). Read on every call, so a revoked role is gone at once."""
+    rows = visible_entities(ctx, permission).filter(status=LegalEntity.Status.ACTIVE)
+    return list(rows.order_by("legal_name"))
+
 
 __all__ = [
     "Feature",
@@ -33,6 +41,7 @@ __all__ = [
     "all_tenant_ids",
     "enter_workspace",
     "get_entity",
+    "permitted_entities",
     "router",
     "workspace_ctx",
 ]

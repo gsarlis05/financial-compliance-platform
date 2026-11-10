@@ -34,3 +34,13 @@ Select **Customise** to choose the widgets, their order and the KPI cards (up to
 - **Save as workspace default** sets the layout for everyone who has not saved their own. Finance
   managers, partners and owners can do this.
 - **Use the workspace default** forgets your own layout.
+
+## Firm portfolio
+**Cash & planning → Firm portfolio** lists every client you have access to, one row each:
+- opening cash from the latest 13-week forecast, and the first shortfall;
+- gross margin, current ratio and DSO from the latest year-to-date KPI calculation;
+- goals on track, at risk and off track;
+- open alerts.
+
+The figures are calculated when you open the page, with your own permissions. A client you lose
+access to disappears at once. Select a client to open its dashboard.
