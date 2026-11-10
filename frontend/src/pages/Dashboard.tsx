@@ -65,6 +65,7 @@ function KpiCards({
           <span className="kpi-name">
             {locale === "el" && c.name_el ? c.name_el : c.name}
           </span>
+          <Nature nature={c.nature} />
           <strong className="kpi-value">
             {c.value === null
               ? t("kpi.nm")
@@ -98,9 +99,11 @@ const PAD = { left: 64, right: 12, top: 12, bottom: 28 };
 export function CashChart({
   opening,
   weeks,
+  asOf,
 }: {
   opening: string;
   weeks: CashWeek[];
+  asOf: string;
 }) {
   const { t, locale } = useI18n();
   const values = [
@@ -151,6 +154,17 @@ export function CashChart({
           y1={y(minimum)}
           y2={y(minimum)}
         />
+        <line
+          className="chart-today"
+          data-encoding="cut-over"
+          x1={x(0)}
+          x2={x(0)}
+          y1={PAD.top}
+          y2={H - PAD.bottom}
+        />
+        <text x={x(0) + 4} y={H - PAD.bottom - 4} className="chart-axis">
+          {t("dash.asOf")} {asOf}
+        </text>
         <path className="chart-forecast" data-nature="FORECAST" d={path} />
         <circle
           className="chart-actual"
@@ -169,7 +183,7 @@ export function CashChart({
       <figcaption className="legend">
         <span>● {t("nature.ACTUAL")}</span>{" "}
         <span>- - {t("nature.FORECAST")}</span>{" "}
-        <span>— {t("dash.minimum")}</span>
+        <span>— {t("dash.minimum")}</span> <span>┆ {t("dash.asOf")}</span>
       </figcaption>
     </figure>
   );
@@ -264,7 +278,11 @@ function WidgetBody({
               ? `${t("dash.shortfall")} ${d.first_shortfall}`
               : t("dash.noShortfall")}
           </p>
-          <CashChart opening={d.opening ?? "0"} weeks={d.weeks ?? []} />
+          <CashChart
+            opening={d.opening ?? "0"}
+            weeks={d.weeks ?? []}
+            asOf={d.as_of ?? ""}
+          />
           <details>
             <summary>{t("dash.table")}</summary>
             <div className="table-scroll">
