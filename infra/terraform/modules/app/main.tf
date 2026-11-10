@@ -1,8 +1,8 @@
 # The application on ECS Fargate (M5-5; docs/deployment/aws.md, ADR-0012).
 #
 # - API service and the bank-import worker run as the database **runtime** role (no schema rights,
-#   no BYPASSRLS). Migrations and the nightly integrity checks run as one-off tasks with the
-#   **owner** role, from a separate task definition with separate secrets.
+#   no BYPASSRLS). Migrations, the nightly integrity checks and the workspace purge run as
+#   one-off tasks with the **owner** role, from a separate task definition with separate secrets.
 # - Tasks have no public IP, a read-only root file system and run as a non-root user (the image).
 # - The load balancer is internal: only CloudFront reaches it, through a VPC origin.
 # - Secret values are set by an operator in Secrets Manager; they are never in Terraform state.
@@ -70,6 +70,7 @@ locals {
     audit-verify     = { task = "ops", expression = "cron(15 1 * * ? *)", command = ["python", "manage.py", "audit_verify"] }
     ledger-integrity = { task = "ops", expression = "cron(30 1 * * ? *)", command = ["python", "manage.py", "ledger_integrity_check"] }
     actuals-verify   = { task = "ops", expression = "cron(45 1 * * ? *)", command = ["python", "manage.py", "actuals_verify"] }
+    purge-workspaces = { task = "ops", expression = "cron(0 2 * * ? *)", command = ["python", "manage.py", "tenancy_purge_workspaces"] }
     cashflow-refresh = { task = "api", expression = "rate(15 minutes)", command = ["python", "manage.py", "cashflow_refresh"] }
   }
 }
@@ -179,6 +180,39 @@ resource "aws_iam_role_policy" "task" {
   policy = data.aws_iam_policy_document.task.json
 }
 
+# The owner-role one-off tasks also purge a deleted workspace's documents (M5-6), so only they
+# may list and delete objects, and only under the tenants/ prefix.
+resource "aws_iam_role" "ops_task" {
+  name               = "${var.name_prefix}-ops-task"
+  assume_role_policy = data.aws_iam_policy_document.assume_tasks.json
+}
+
+data "aws_iam_policy_document" "ops_task" {
+  source_policy_documents = [data.aws_iam_policy_document.task.json]
+
+  statement {
+    sid       = "ListTenantDocuments"
+    actions   = ["s3:ListBucket", "s3:ListBucketVersions"]
+    resources = ["arn:aws:s3:::${var.documents_bucket}"]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["tenants/*"]
+    }
+  }
+  statement {
+    sid       = "PurgeTenantDocuments"
+    actions   = ["s3:DeleteObject", "s3:DeleteObjectVersion"]
+    resources = ["arn:aws:s3:::${var.documents_bucket}/tenants/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ops_task" {
+  name   = "documents-and-purge"
+  role   = aws_iam_role.ops_task.id
+  policy = data.aws_iam_policy_document.ops_task.json
+}
+
 # --- cluster and task definitions -----------------------------------------------------------
 
 resource "aws_ecs_cluster" "this" {
@@ -199,7 +233,7 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.execution[each.key].arn
-  task_role_arn            = aws_iam_role.task.arn
+  task_role_arn            = each.key == "ops" ? aws_iam_role.ops_task.arn : aws_iam_role.task.arn
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -444,9 +478,12 @@ data "aws_iam_policy_document" "scheduler" {
     }
   }
   statement {
-    sid       = "PassTaskRoles"
-    actions   = ["iam:PassRole"]
-    resources = concat([aws_iam_role.task.arn], [for name in ["api", "ops"] : aws_iam_role.execution[name].arn])
+    sid     = "PassTaskRoles"
+    actions = ["iam:PassRole"]
+    resources = concat(
+      [aws_iam_role.task.arn, aws_iam_role.ops_task.arn],
+      [for name in ["api", "ops"] : aws_iam_role.execution[name].arn],
+    )
     condition {
       test     = "StringEquals"
       variable = "iam:PassedToService"

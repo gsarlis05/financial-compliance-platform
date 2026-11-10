@@ -14,6 +14,8 @@ PERMISSIONS: dict[str, str] = {
     "tenancy.workspace.read": "See the workspace and its legal entities",
     "tenancy.entity.manage": "Create and edit legal entities",
     "tenancy.members.manage": "Invite members and assign roles",
+    "tenancy.workspace.export": "Download a full export of the workspace's data",
+    "tenancy.workspace.delete": "Request, confirm or cancel the deletion of the workspace",
     # chart of accounts and periods
     "ledger.account.read": "See the chart of accounts",
     "ledger.account.manage": "Create and edit accounts",
@@ -144,7 +146,15 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
         "audit.read",
         "admin.integrity.read",
     },
-    Role.PARTNER: _SIGN_OFF | {"tenancy.entity.manage", "tenancy.members.manage"},
+    # A firm partner holds every permission. Deleting the workspace still needs the owner role
+    # itself (checked in tenancy.lifecycle).
+    Role.PARTNER: _SIGN_OFF
+    | {
+        "tenancy.entity.manage",
+        "tenancy.members.manage",
+        "tenancy.workspace.export",
+        "tenancy.workspace.delete",
+    },
     Role.FINANCE_MANAGER: _SIGN_OFF,
     Role.ACCOUNTANT: _PREPARE,
     Role.REVIEWER: _REVIEW,

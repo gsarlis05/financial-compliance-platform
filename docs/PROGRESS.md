@@ -13,9 +13,10 @@ in order.
 awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
 according to our existing roadmap"). **Milestone 3 is complete and awaits review** (see `docs/milestone-3-report.md`; owner: "Continue",
 2026-11-04; brief `docs/planning/16-milestone-3-brief.md`). **Milestone 4 is complete and awaits review** (see `docs/milestone-4-report.md`; owner: "Let continue",
-2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). **Milestone 5 is in progress** (owner,
-2026-11-10: "continue with what is easier for now for best coding"; brief
-`docs/planning/18-milestone-5-brief.md`). Cloud-readiness review:
+2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). **Milestone 5 is complete and awaits review** (see
+`docs/milestone-5-report.md`; owner, 2026-11-10: "continue with what is easier for now for best
+coding"; brief `docs/planning/18-milestone-5-brief.md`). **Nothing was created on AWS; the pilot
+environment waits for the owner's approval (Gate P).** Milestone 6 waits for the owner's go-ahead. Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -78,7 +79,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M5-3 Counterpart hint: opt-in, confirm-only (issue #76) | `claude/m5-3-counterpart-hint` | #131 | Open |
 | M5-4 Engagement grants: scope ∩ firm role, revocation, audit, portfolio (issue #77) | `claude/m5-4-engagements` | #132 | Open |
 | M5-5 Pilot environment as code (never applied), monitoring, backup and restore drill (issue #78) | `claude/m5-5-pilot-iac` | #133 | Open |
-| M5-6 Export and deletion (issue #79) | — | — | Next |
+| M5-6 Workspace export and deletion with a grace period (issue #79) | `claude/m5-6-export-deletion` | #134 | Open |
+| M5 report (`docs/milestone-5-report.md`) | `claude/m5-6-export-deletion` | #134 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

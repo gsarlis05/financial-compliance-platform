@@ -9,8 +9,9 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
+from django.conf import settings
 from django.db import connection
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from ninja import Field, Router, Schema, Status
 
@@ -18,9 +19,9 @@ from fcp.core.api.permissions import AUTHENTICATED, required_permission, require
 from fcp.core.errors import PermissionDeniedError
 from fcp.modules.identity.api import User, require_recent_auth
 
-from . import engagements, services
+from . import engagements, lifecycle, services
 from .entitlements import Feature, Role, has_feature, require_feature
-from .models import LegalEntity, Membership, Tenant
+from .models import LegalEntity, Membership, Tenant, WorkspaceDeletion
 from .services import WorkspaceContext, enter_workspace, get_entity, visible_entities
 
 
@@ -36,6 +37,9 @@ def engaged_clients(ctx: WorkspaceContext) -> list[Tenant]:
     return engagements.engaged_workspaces(ctx.tenant.id)
 
 
+on_workspace_export = lifecycle.on_export
+on_workspace_purge = lifecycle.on_purge
+
 __all__ = [
     "Feature",
     "LegalEntity",
@@ -48,6 +52,8 @@ __all__ = [
     "engaged_clients",
     "enter_workspace",
     "get_entity",
+    "on_workspace_export",
+    "on_workspace_purge",
     "permitted_entities",
     "require_feature",
     "router",
@@ -118,6 +124,9 @@ class WorkspaceOut(Schema):
     via_engagement: str | None = Field(
         default=None, description="The firm and engagement, when opened through a grant (M5-4)"
     )
+    deletion_due: datetime | None = Field(
+        default=None, description="When a confirmed deletion will purge the workspace (M5-6)"
+    )
 
 
 class EntityIn(Schema):
@@ -156,8 +165,10 @@ class AcceptIn(Schema):
 
 def _workspace_out(ctx: WorkspaceContext) -> WorkspaceOut:
     t = ctx.tenant
+    pending = lifecycle.deletion(t.id)
     return WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind, roles=sorted(ctx.roles),
-                        via_engagement=ctx.engagement)  # fmt: skip
+                        via_engagement=ctx.engagement,
+                        deletion_due=pending.purge_after if pending else None)  # fmt: skip
 
 
 @router.post("/workspaces", response={201: WorkspaceOut})
@@ -427,3 +438,77 @@ def add_engagement_staff(request: HttpRequest, slug: str, engagement_id: UUID,
 def remove_engagement_staff(request: HttpRequest, slug: str, staff_id: UUID) -> Status[None]:
     engagements.remove_staff(workspace_ctx(request, slug), staff_id)
     return Status(204, None)
+
+
+# --- export and deletion (M5-6) ------------------------------------------------------------------
+
+
+@router.post("/w/{slug}/export")
+@requires("tenancy.workspace.export")
+def export_workspace(request: HttpRequest, slug: str) -> HttpResponse:
+    """Everything the workspace holds, as one ZIP with a manifest of counts and hashes."""
+    ctx = workspace_ctx(request, slug)
+    require_recent_auth(request.session, request.path)
+    made = lifecycle.export(ctx)
+    response = HttpResponse(made.content, content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{made.filename}"'
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+class DeletionOut(Schema):
+    status: str = Field(description="NONE, REQUESTED (not confirmed yet) or CONFIRMED")
+    requested_at: datetime | None = None
+    confirmed_at: datetime | None = None
+    purge_after: datetime | None = Field(
+        default=None, description="The workspace is deleted for good after this moment"
+    )
+    grace_days: int
+
+
+class DeletionConfirmIn(Schema):
+    workspace_name: str = Field(max_length=200, description="The workspace's exact name")
+
+
+def _deletion_out(row: WorkspaceDeletion | None) -> DeletionOut:
+    days = settings.WORKSPACE_DELETION_GRACE_DAYS
+    if row is None:
+        return DeletionOut(status="NONE", grace_days=days)
+    return DeletionOut(
+        status="CONFIRMED" if row.confirmed_at else "REQUESTED", requested_at=row.requested_at,
+        confirmed_at=row.confirmed_at, purge_after=row.purge_after, grace_days=days,
+    )  # fmt: skip
+
+
+@router.get("/w/{slug}/deletion", response=DeletionOut)
+@requires("tenancy.workspace.delete")
+def get_deletion(request: HttpRequest, slug: str) -> DeletionOut:
+    ctx = workspace_ctx(request, slug)
+    return _deletion_out(lifecycle.deletion(ctx.tenant.id))
+
+
+@router.post("/w/{slug}/deletion", response={201: DeletionOut})
+@requires("tenancy.workspace.delete")
+def request_deletion(request: HttpRequest, slug: str) -> Status[DeletionOut]:
+    """Step 1: ask for the workspace to be deleted. Nothing happens until it is confirmed."""
+    ctx = workspace_ctx(request, slug)
+    return Status(201, _deletion_out(lifecycle.request_deletion(ctx)))
+
+
+@router.post("/w/{slug}/deletion/confirm", response=DeletionOut)
+@requires("tenancy.workspace.delete")
+def confirm_deletion(request: HttpRequest, slug: str, payload: DeletionConfirmIn) -> DeletionOut:
+    """Step 2: an owner confirms with a recent sign-in and the workspace's name. The grace
+    period starts; the deletion can still be cancelled until it ends."""
+    ctx = workspace_ctx(request, slug)
+    require_recent_auth(request.session, request.path)
+    return _deletion_out(lifecycle.confirm_deletion(ctx, workspace_name=payload.workspace_name))
+
+
+@router.post("/w/{slug}/deletion/cancel", response=DeletionOut)
+@requires("tenancy.workspace.delete")
+def cancel_deletion(request: HttpRequest, slug: str) -> DeletionOut:
+    ctx = workspace_ctx(request, slug)
+    lifecycle.cancel_deletion(ctx)
+    return _deletion_out(None)

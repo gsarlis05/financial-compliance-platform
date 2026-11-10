@@ -1,6 +1,6 @@
 # 18 — Milestone 5 Implementation Brief: personal MVP and pilot readiness
 
-Status: **IN PROGRESS**. Product owner go-ahead 2026-11-10: "Later on the design will be changed
+Status: **COMPLETE, awaiting review** (report: `docs/milestone-5-report.md`). Product owner go-ahead 2026-11-10: "Later on the design will be changed
 so continue with what is easier for now for best coding". Backlog:
 [08 §M5](08-implementation-backlog.md). Specification: [11](11-account-types-and-coexistence.md)
 (customer types and coexistence) and [10](10-cfo-fpa-specification.md) for the planning parts.

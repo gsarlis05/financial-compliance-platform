@@ -1108,6 +1108,27 @@ export const en = {
   "eng.noClients": "No client has let your firm in yet.",
   "ws.viaFirm": "through your firm",
   "pf.ownWorkspace": "client's own workspace",
+  "nav.data": "Export and delete",
+  "data.title": "Export and delete",
+  "data.export": "Export everything",
+  "data.exportText":
+    "Download one ZIP file with every record of this workspace, its document files and a list of what it contains. Keep it somewhere safe: it holds all your data.",
+  "data.exportButton": "Download the export",
+  "data.exported": "Downloaded:",
+  "data.delete": "Delete this workspace",
+  "data.deleteText":
+    "Deleting removes every record and document of this workspace for good. It takes two steps, and you can change your mind for",
+  "data.days": "days after you confirm. Download an export first.",
+  "data.request": "Start deleting this workspace",
+  "data.confirmText": "To confirm, type the name of the workspace exactly:",
+  "data.typeName": "Workspace name",
+  "data.confirm": "Confirm the deletion",
+  "data.cancel": "Cancel",
+  "data.confirmed": "This workspace will be deleted for good after",
+  "data.confirmedText":
+    "Until then you can keep working, and you can stop the deletion.",
+  "data.keep": "Keep this workspace",
+  "ws.deletionDue": "This workspace will be deleted after",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2237,6 +2258,28 @@ export const el: Record<MessageKey, string> = {
     "Κανένας πελάτης δεν έχει δώσει ακόμη πρόσβαση στο γραφείο σας.",
   "ws.viaFirm": "μέσω του γραφείου σας",
   "pf.ownWorkspace": "χώρος εργασίας του πελάτη",
+  "nav.data": "Εξαγωγή και διαγραφή",
+  "data.title": "Εξαγωγή και διαγραφή",
+  "data.export": "Εξαγωγή όλων",
+  "data.exportText":
+    "Κατεβάστε ένα αρχείο ZIP με κάθε εγγραφή αυτού του χώρου εργασίας, τα αρχεία των εγγράφων του και κατάλογο περιεχομένων. Φυλάξτε το με ασφάλεια: περιέχει όλα τα δεδομένα σας.",
+  "data.exportButton": "Λήψη της εξαγωγής",
+  "data.exported": "Έγινε λήψη:",
+  "data.delete": "Διαγραφή αυτού του χώρου εργασίας",
+  "data.deleteText":
+    "Η διαγραφή αφαιρεί οριστικά κάθε εγγραφή και έγγραφο αυτού του χώρου εργασίας. Γίνεται σε δύο βήματα και μπορείτε να αλλάξετε γνώμη για",
+  "data.days": "ημέρες μετά την επιβεβαίωση. Κατεβάστε πρώτα μια εξαγωγή.",
+  "data.request": "Έναρξη διαγραφής αυτού του χώρου εργασίας",
+  "data.confirmText":
+    "Για επιβεβαίωση, πληκτρολογήστε ακριβώς το όνομα του χώρου εργασίας:",
+  "data.typeName": "Όνομα χώρου εργασίας",
+  "data.confirm": "Επιβεβαίωση διαγραφής",
+  "data.cancel": "Ακύρωση",
+  "data.confirmed": "Αυτός ο χώρος εργασίας θα διαγραφεί οριστικά μετά τις",
+  "data.confirmedText":
+    "Έως τότε μπορείτε να συνεχίσετε να εργάζεστε και να σταματήσετε τη διαγραφή.",
+  "data.keep": "Διατήρηση αυτού του χώρου εργασίας",
+  "ws.deletionDue": "Αυτός ο χώρος εργασίας θα διαγραφεί μετά τις",
 };
 
 export const catalogs = { en, el } as const;

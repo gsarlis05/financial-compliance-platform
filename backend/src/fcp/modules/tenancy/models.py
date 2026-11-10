@@ -176,3 +176,32 @@ class EngagementStaff(TenantOwned):
                 name="tenancy_engagement_staff_once",
             )
         ]
+
+
+class WorkspaceDeletion(models.Model):
+    """The deletion of a workspace (M5-6): requested, confirmed by an owner, then purged after a
+    grace period; or cancelled before that. This row outlives the workspace it describes, so it
+    is a global table and holds only IDs, dates and row counts (no names, no financial data)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
+    workspace_id = models.UUIDField()  # not a foreign key: the workspace row is deleted
+    workspace_kind = models.CharField(max_length=16)
+    requested_by_id = models.UUIDField()
+    requested_at = models.DateTimeField(auto_now_add=True)
+    confirmed_by_id = models.UUIDField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    purge_after = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    purged_at = models.DateTimeField(null=True, blank=True)
+    purged_rows = models.JSONField(default=dict)  # table -> rows deleted
+    purged_files = models.JSONField(default=dict)  # {"deleted": n, "retained": n}
+
+    class Meta:
+        db_table = "tenancy_workspace_deletion"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace_id"],
+                condition=models.Q(cancelled_at__isnull=True),
+                name="tenancy_workspace_deletion_one_open",
+            )
+        ]

@@ -17,6 +17,10 @@ GLOBAL_TABLES: dict[str, str] = {
     "metrics_taxonomy_version": "Reference data: financial taxonomy versions (no tenant data)",
     "metrics_taxonomy_line": "Reference data: financial taxonomy lines (no tenant data)",
     "kpi_definition": "Reference data: KPI library definitions (no tenant data)",
+    "tenancy_workspace_deletion": (
+        "Deletion requests and purge records; they outlive the workspace, and hold only IDs, "
+        "dates and row counts"
+    ),
 }
 
 # Tables the runtime role may only INSERT into and SELECT from (no UPDATE or DELETE).
