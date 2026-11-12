@@ -9,7 +9,6 @@ from uuid import uuid4
 import pytest
 
 from fcp.core.errors import ValidationFailedError
-
 from fcp.modules.projections import engine, runs
 
 from ..ledger.test_dimensions import commit_point

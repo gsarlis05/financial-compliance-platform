@@ -11,6 +11,7 @@ from hypothesis import strategies as st
 
 from fcp.modules.calendar.api import add_months
 from fcp.modules.projections import engine
+from fcp.modules.projections.drivers import OPEX_LINES, REVENUE_LINES
 from fcp.modules.projections.engine import EngineInput, project
 
 D = Decimal
@@ -64,7 +65,11 @@ def test_one_month_by_hand() -> None:
         "PL.NET_INCOME": D("4523.75"),
     }  # fmt: skip
     # Receivables 31,000 x 30 / 31 = 30,000; stock 18,600 x 31 / 31; payables 18,600 x 15 / 31.
-    assert (jan.bs["BS.AR"], jan.bs["BS.INVENTORY"], jan.bs["BS.AP"]) == (30000, 18600, 9000)
+    assert (jan.bs["BS.AR"], jan.bs["BS.INVENTORY"], jan.bs["BS.AP"]) == (
+        D(30000),
+        D(18600),
+        D(9000),
+    )
     # Operating cash 4,523.75 + 200 - 25,000 - 18,600 + 6,000 + 646.25 = -32,230; capex 6,000;
     # repayment 1,000 and dividends 500: 10,000 - 39,730 = -29,730, so the facility draws
     # 30,730 to keep the minimum cash of 1,000.
@@ -213,9 +218,9 @@ def projections(draw: st.DrawFn) -> EngineInput:
         return {m: draw(values) for m in months}
 
     drivers: dict[tuple[str, str], dict[date, Decimal]] = {
-        ("revenue", line): series(money) for line in engine.REVENUE_LINES
+        ("revenue", line): series(money) for line in REVENUE_LINES
     }
-    drivers |= {("opex", line): series(money) for line in engine.OPEX_LINES[:3]}
+    drivers |= {("opex", line): series(money) for line in OPEX_LINES[:3]}
     for key in ("capex", "borrowing", "repayment", "dividends", "share_capital", "minimum_cash",
                 "revolver_limit"):  # fmt: skip
         drivers[(key, "")] = series(money)
@@ -228,8 +233,8 @@ def projections(draw: st.DrawFn) -> EngineInput:
     opening["BS.PPE.ACCDEP"] = -draw(money)
     for line in engine.LIABILITIES + engine.EQUITY[:-1]:
         opening[line] = draw(money)
-    assets = sum(opening[x] for x in engine.ASSETS)
-    others = sum(opening[x] for x in engine.LIABILITIES + engine.EQUITY[:-1])
+    assets = sum((opening[x] for x in engine.ASSETS), D(0))
+    others = sum((opening[x] for x in engine.LIABILITIES + engine.EQUITY[:-1]), D(0))
     opening["BS.EQUITY.RETAINED"] = assets - others  # balanced, possibly negative
     register = series(st.decimals(min_value=0, max_value=10**5, places=2, allow_nan=False,
                                   allow_infinity=False))  # fmt: skip
