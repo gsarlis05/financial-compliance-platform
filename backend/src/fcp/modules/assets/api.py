@@ -88,14 +88,14 @@ def _input(payload: AssetIn) -> services.AssetInput:
     return services.AssetInput(**payload.dict())
 
 
-class AsOfQuery(Schema):
+class AssetsAsOfQuery(Schema):
     as_of: date | None = Field(default=None, description="Defaults to today")
 
 
 @router.get(f"{BASE}/fixed-assets", response=list[AssetOut])
 @requires("assets.read")
 def list_assets(request: HttpRequest, slug: str, entity_id: UUID,
-                q: Query[AsOfQuery]) -> list[AssetOut]:  # fmt: skip
+                q: Query[AssetsAsOfQuery]) -> list[AssetOut]:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     day = q.as_of or timezone.localdate()
     return [_out(v) for v in services.assets(ctx, entity_id, as_of=day)]
@@ -170,7 +170,7 @@ def asset_schedule(request: HttpRequest, slug: str, entity_id: UUID,
     ])  # fmt: skip
 
 
-class RunOut(Schema):
+class DepreciationRunOut(Schema):
     id: UUID
     month: date
     total: str
@@ -182,9 +182,9 @@ class RunOut(Schema):
     created_at: datetime
 
 
-def _run_out(view: services.RunView) -> RunOut:
+def _run_out(view: services.RunView) -> DepreciationRunOut:
     r = view.run
-    return RunOut(id=r.id, month=r.month, total=f"{r.total:.2f}", assets=view.assets,
+    return DepreciationRunOut(id=r.id, month=r.month, total=f"{r.total:.2f}", assets=view.assets,
                   entry_id=r.entry_id, entry_ref=view.entry_ref, entry_status=view.entry_status,
                   cancelled=r.cancelled_at is not None, created_at=r.created_at)  # fmt: skip
 
@@ -193,17 +193,17 @@ class PrepareIn(Schema):
     month: date = Field(description="Any day of the month to depreciate")
 
 
-@router.get(f"{BASE}/depreciation-runs", response=list[RunOut])
+@router.get(f"{BASE}/depreciation-runs", response=list[DepreciationRunOut])
 @requires("assets.read")
-def list_runs(request: HttpRequest, slug: str, entity_id: UUID) -> list[RunOut]:
+def list_runs(request: HttpRequest, slug: str, entity_id: UUID) -> list[DepreciationRunOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [_run_out(v) for v in services.runs(ctx, entity_id)]
 
 
-@router.post(f"{BASE}/depreciation-runs", response={201: RunOut})
+@router.post(f"{BASE}/depreciation-runs", response={201: DepreciationRunOut})
 @requires("assets.manage")
 def prepare_depreciation(request: HttpRequest, slug: str, entity_id: UUID,
-                         payload: PrepareIn) -> Status[RunOut]:  # fmt: skip
+                         payload: PrepareIn) -> Status[DepreciationRunOut]:  # fmt: skip
     """Prepare the month's depreciation as one draft journal entry. It still needs the normal
     approval and posting; nothing is posted here."""
     ctx = workspace_ctx(request, slug, entity_id)
