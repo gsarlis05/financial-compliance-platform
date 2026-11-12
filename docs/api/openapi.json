@@ -925,7 +925,7 @@
                 "type": "null"
               }
             ],
-            "description": "Defaults to today",
+            "description": "Default: today",
             "title": "As Of"
           }
         },
@@ -1180,6 +1180,25 @@
           "disposal_gain"
         ],
         "title": "AssetOut",
+        "type": "object"
+      },
+      "AssetsAsOfQuery": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to today",
+            "title": "As Of"
+          }
+        },
+        "title": "AssetsAsOfQuery",
         "type": "object"
       },
       "AuditEventOut": {
@@ -4538,6 +4557,66 @@
           "grace_days"
         ],
         "title": "DeletionOut",
+        "type": "object"
+      },
+      "DepreciationRunOut": {
+        "properties": {
+          "assets": {
+            "title": "Assets",
+            "type": "integer"
+          },
+          "cancelled": {
+            "description": "Its entry was voided or rejected; prepared again since",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "entry_ref": {
+            "description": "Journal and number, once posted",
+            "title": "Entry Ref",
+            "type": "string"
+          },
+          "entry_status": {
+            "description": "DRAFT, SUBMITTED, APPROVED, POSTED, REJECTED or VOID",
+            "title": "Entry Status",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "month",
+          "total",
+          "assets",
+          "entry_id",
+          "entry_ref",
+          "entry_status",
+          "cancelled",
+          "created_at"
+        ],
+        "title": "DepreciationRunOut",
         "type": "object"
       },
       "DimensionIn": {
@@ -10691,60 +10770,116 @@
       },
       "RunOut": {
         "properties": {
-          "assets": {
-            "title": "Assets",
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
             "type": "integer"
           },
-          "cancelled": {
-            "description": "Its entry was voided or rejected; prepared again since",
-            "title": "Cancelled",
-            "type": "boolean"
+          "as_of_date": {
+            "format": "date",
+            "title": "As Of Date",
+            "type": "string"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "entry_id": {
-            "format": "uuid",
-            "title": "Entry Id",
+          "engine_version": {
+            "title": "Engine Version",
             "type": "string"
           },
-          "entry_ref": {
-            "description": "Journal and number, once posted",
-            "title": "Entry Ref",
+          "error": {
+            "title": "Error",
             "type": "string"
           },
-          "entry_status": {
-            "description": "DRAFT, SUBMITTED, APPROVED, POSTED, REJECTED or VOID",
-            "title": "Entry Status",
-            "type": "string"
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
-          "month": {
-            "format": "date",
-            "title": "Month",
+          "input_hash": {
+            "title": "Input Hash",
             "type": "string"
           },
-          "total": {
-            "title": "Total",
+          "input_refs": {
+            "additionalProperties": true,
+            "title": "Input Refs",
+            "type": "object"
+          },
+          "invariant_results": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Invariant Results",
+            "type": "object"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "trigger": {
+            "title": "Trigger",
             "type": "string"
           }
         },
         "required": [
           "id",
-          "month",
-          "total",
-          "assets",
-          "entry_id",
-          "entry_ref",
-          "entry_status",
-          "cancelled",
-          "created_at"
+          "kind",
+          "engine_version",
+          "status",
+          "as_of_date",
+          "actuals_watermark",
+          "input_refs",
+          "input_hash",
+          "output_hash",
+          "invariant_results",
+          "error",
+          "stale",
+          "is_published",
+          "trigger",
+          "supersedes_id",
+          "created_at",
+          "finished_at"
         ],
         "title": "RunOut",
         "type": "object"
@@ -19526,7 +19661,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RunOut"
+                    "$ref": "#/components/schemas/DepreciationRunOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -19585,7 +19720,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/DepreciationRunOut"
                 }
               }
             },
