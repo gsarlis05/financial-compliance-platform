@@ -16,7 +16,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). **Milestone 5 is complete and awaits review** (see
 `docs/milestone-5-report.md`; owner, 2026-11-10: "continue with what is easier for now for best
 coding"; brief `docs/planning/18-milestone-5-brief.md`). **Nothing was created on AWS; the pilot
-environment waits for the owner's approval (Gate P).** Milestone 6 waits for the owner's go-ahead. Cloud-readiness review:
+environment waits for the owner's approval (Gate P).** **Milestone 6 is in progress** (owner, 2026-11-12: "Continue"; brief
+`docs/planning/19-milestone-6-brief.md`). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -81,6 +82,7 @@ environment waits for the owner's approval (Gate P).** Milestone 6 waits for the
 | M5-5 Pilot environment as code (never applied), monitoring, backup and restore drill (issue #78) | `claude/m5-5-pilot-iac` | #133 | Open |
 | M5-6 Workspace export and deletion with a grace period (issue #79) | `claude/m5-6-export-deletion` | #134 | Open |
 | M5 report (`docs/milestone-5-report.md`) | `claude/m5-6-export-deletion` | #134 | Open |
+| M6-1 Fixed-asset register, depreciation, prepared entries (issue #135) | `claude/m6-1-fixed-assets` | — | In progress |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
