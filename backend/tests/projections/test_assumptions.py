@@ -111,6 +111,7 @@ def test_edit_approve_revise_and_the_database_keeps_approved_sets(hist: dict[str
     ):
         refused = c.put_json(f"{url}/values", {"changes": [bad]})
         assert refused.status_code == 422, (bad, refused.content)
+        assert refused.json()["detail"].startswith(bad["driver"]), refused.json()
     assert c.patch_json(url, {"name": "Plan 2027 (base)"}).json()["name"] == "Plan 2027 (base)"
 
     approved = c.post_json(f"{url}/approve", {})

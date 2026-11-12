@@ -324,19 +324,20 @@ def set_values(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, changes: li
     for n, change in enumerate(changes):
         driver = DRIVERS.get(change.driver)
         where = f"changes[{n}]"
+        cell = " ".join(p for p in (change.driver, change.line) if p) + f", {change.month:%m/%Y}"
         if driver is None or change.line not in driver.lines:
-            raise _invalid(where, "Unknown driver or line.")
+            raise _invalid(where, f"{cell}: unknown driver or line.")
         if month_start(change.month) not in months:
-            raise _invalid(where, "The month is outside the set's horizon.")
+            raise _invalid(where, f"{cell}: the month is outside the set's horizon.")
         try:
             value = Decimal(change.value)
         except InvalidOperation:
-            raise _invalid(where, "Enter a number.") from None
+            raise _invalid(where, f"{cell}: enter a number.") from None
         low, high = LIMITS[driver.unit]
         if driver.minimum is not None:
             low = max(low, Decimal(driver.minimum))
         if not value.is_finite() or not low <= value <= high:
-            raise _invalid(where, f"Enter a value between {low} and {high}.")
+            raise _invalid(where, f"{cell}: enter a value between {low} and {high}.")
         AssumptionValue.objects.update_or_create(
             assumption_set=made, driver=change.driver, line=change.line,
             month=month_start(change.month),
