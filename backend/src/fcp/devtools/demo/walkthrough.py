@@ -404,6 +404,20 @@ def _fixed_assets(owner: "DemoClient", base: str, by_code: dict[str, str],
     return run
 
 
+def _assumptions(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
+    """Assumptions for the two years after the demo year, started from its actuals with revenue
+    growing 10% a year, then approved (M6-2)."""
+    made = owner.call("POST", f"{base}/assumption-sets", {
+        "name": f"Plan {year + 1}-{year + 2} (Demo)", "cutover": f"{year}-12-31", "months": 24,
+        "start_from": "ACTUALS", "revenue_growth": "10"}, 201)  # fmt: skip
+    approved: dict[str, Any] = owner.call(
+        "POST", f"{base}/assumption-sets/{made['id']}/approve", {}
+    )
+    grid = owner.call("GET", f"{base}/assumption-sets/{made['id']}")
+    first = {(r["driver"], r["line"]): r["values"][0] for r in grid["rows"]}
+    return {**approved, "gross_margin": first[("gross_margin", "")], "dso": first[("dso", "")]}
+
+
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
     """The full export of the workspace, checked against its own manifest; and the two-step
     deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
@@ -776,6 +790,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     step(f"fixed-asset register: 2 assets; depreciation for {year + 1}-01 prepared by the "
          f"accountant as a draft entry of {run['total']}, then approved and posted by the "
          f"reviewer as {posted_dep['journal']}-{posted_dep['entry_no']}")  # fmt: skip
+    plan = _assumptions(owner, base, year)
+    margin, dso = plan["gross_margin"], plan["dso"]
+    step(f"assumptions for {year + 1}-{year + 2} started from {year} actuals (revenue +10% a "
+         f"year) and approved: gross margin {margin}%, DSO {dso} days")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "
