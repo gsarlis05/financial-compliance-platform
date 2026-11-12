@@ -51,7 +51,11 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 31
+    assert len(result.steps) == 32
+    assert (
+        "rolling forecast: the next 12 months from the approved assumptions, VALID, current; "
+        "re-run hourly when the books move"
+    ) in result.steps, result.steps
     projection_step = next(s for s in result.steps if s.startswith("three-statement"))
     # 2028 revenue = 2026 revenue x 1.1^2 (the approved assumptions); the run is checked and
     # published (M6-3).

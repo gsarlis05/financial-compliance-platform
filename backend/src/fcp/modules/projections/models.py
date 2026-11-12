@@ -90,3 +90,26 @@ class AssumptionValue(TenantOwned):
                 name="projections_value_once",
             )
         ]
+
+
+class RollingForecast(TenantOwned):
+    """A legal entity's rolling forecast setting (M6-4): the next 12 or 24 months, projected from
+    the approved version of an assumption-set family, re-run as the books move. Runs are kept as
+    calculation runs; this row only says what to run and who set it up."""
+
+    legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    family_id = models.UUIDField()  # the approved version of this family is used
+    horizon = models.PositiveSmallIntegerField()  # 12 or 24 months
+    active = models.BooleanField(default=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )  # the scheduled re-run acts with this user's current permissions
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "projections_rolling_forecast"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(horizon__in=[12, 24]), name="projections_rolling_horizon"
+            )
+        ]

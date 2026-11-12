@@ -22,6 +22,7 @@ from uuid import UUID
 
 from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
 from fcp.modules.assets.api import depreciation_plan
+from fcp.modules.calendar.api import add_months
 from fcp.modules.metrics.api import (
     CalcRun,
     Output,
@@ -76,13 +77,35 @@ def _mapping(entity_id: UUID) -> dict[str, str]:
             for account_id, line in current_mapping(entity_id).items()}  # fmt: skip
 
 
-def _pinned(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet) -> dict[str, Any]:
-    months = horizon(made.cutover, made.months)
+Drivers = dict[tuple[str, str], dict[date, Decimal]]
+
+
+def same_month_of_the_set(drivers: Drivers, months: list[date]) -> Drivers:
+    """Driver values for ``months``: the set's own where it has them; elsewhere (a rolling
+    forecast reaching past the set) the same calendar month of the set, the nearest year first,
+    earlier before later. No growth is assumed."""
+    out: dict[tuple[str, str], dict[date, Decimal]] = {}
+    for key, series in drivers.items():
+        filled: dict[date, Decimal] = {}
+        for month in months:
+            for years in (0, *(sign * n for n in range(1, 11) for sign in (-1, 1))):
+                found = series.get(add_months(month, 12 * years))
+                if found is not None:
+                    filled[month] = found
+                    break
+        out[key] = filled
+    return out
+
+
+def _pinned(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet,
+            cutover: date | None = None, count: int | None = None) -> dict[str, Any]:  # fmt: skip
+    cutover = cutover or made.cutover
+    months = horizon(cutover, count or made.months)
     plan = depreciation_plan(ctx, entity_id, months)
     return {
         "assumption_set_id": str(made.id),
         "assumption_set_version": made.version,
-        "cutover": made.cutover.isoformat(),
+        "cutover": cutover.isoformat(),
         "months": [m.isoformat() for m in months],
         "mapping": _mapping(entity_id),
         "register_depreciation": {d.month.isoformat(): str(d.amount) for d in plan if d.amount},
@@ -107,12 +130,13 @@ class ProjectionEngine:
                              watermark=inputs.actuals_watermark)  # fmt: skip
         made, drivers = approved_values(ctx, inputs.legal_entity_id,
                                         UUID(refs["assumption_set_id"]))  # fmt: skip
+        months = [date.fromisoformat(m) for m in refs["months"]]
         return Loaded(engine.EngineInput(
             set_id=str(made.id),
             cutover=cutover,
-            months=[date.fromisoformat(m) for m in refs["months"]],
+            months=months,
             opening=opening_balance_sheet(net, refs["mapping"]),
-            drivers=drivers,
+            drivers=same_month_of_the_set(drivers, months),
             register_depreciation={date.fromisoformat(m): Decimal(v)
                                    for m, v in refs["register_depreciation"].items()},
             fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
@@ -125,19 +149,34 @@ class ProjectionEngine:
 ENGINE = register_engine(ProjectionEngine())
 
 
-def run_projection(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> CalcRun:
-    """Project the three statements from an approved assumption set (a new run every time)."""
+def run_projection(  # noqa: PLR0913 (keyword options for rolling forecasts)
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    set_id: UUID,
+    *,
+    cutover: date | None = None,
+    months: int | None = None,
+    rolling: UUID | None = None,
+    trigger: str = CalcRun.Trigger.USER,
+    supersedes: CalcRun | None = None,
+) -> CalcRun:
+    """Project the three statements from an approved assumption set (a new run every time). A
+    rolling forecast (M6-4) chooses its own cut-over and horizon."""
     entity = get_entity(ctx, entity_id, RUN).id
     made = AssumptionSet.objects.filter(legal_entity_id=entity, id=set_id).first()
     if made is None:
         raise NotFoundError("Assumption set not found.")
     if made.status == AssumptionSet.Status.DRAFT:
         raise ConflictError("Approve the assumption set before projecting with it.")
-    refs = _pinned(ctx, entity, made)
+    refs = _pinned(ctx, entity, made, cutover, months)
+    if rolling is not None:
+        refs["rolling_forecast_id"] = str(rolling)
+    as_of = date.fromisoformat(refs["cutover"])
     # Refuse an unmappable opening before recording a run (the run's own read is pinned).
-    _, net = opening_net(ctx, entity, before=made.cutover + timedelta(days=1))
+    _, net = opening_net(ctx, entity, before=as_of + timedelta(days=1))
     opening_balance_sheet(net, refs["mapping"])
-    return execute(ctx, entity, KIND, as_of=made.cutover, refs=refs)
+    return execute(ctx, entity, KIND, as_of=as_of, refs=refs, trigger=trigger,
+                   supersedes=supersedes)  # fmt: skip
 
 
 def projections(ctx: WorkspaceContext, entity_id: UUID) -> list[CalcRun]:

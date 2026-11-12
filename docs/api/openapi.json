@@ -349,6 +349,39 @@
         "title": "AccountPatch",
         "type": "object"
       },
+      "AccuracyMonthOut": {
+        "properties": {
+          "actual": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Actual",
+            "type": "object"
+          },
+          "comparisons": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/ForecastComparisonOut"
+              },
+              "type": "array"
+            },
+            "title": "Comparisons",
+            "type": "object"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "actual",
+          "comparisons"
+        ],
+        "title": "AccuracyMonthOut",
+        "type": "object"
+      },
       "AccuracyOut": {
         "properties": {
           "mape_percent": {
@@ -6077,6 +6110,48 @@
         "title": "FlowsQuery",
         "type": "object"
       },
+      "ForecastComparisonOut": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "error_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "|error| / |actual| in %; null when actual is 0",
+            "title": "Error Pct"
+          },
+          "forecast": {
+            "title": "Forecast",
+            "type": "string"
+          },
+          "months_before": {
+            "title": "Months Before",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "months_before",
+          "run_id",
+          "forecast",
+          "error",
+          "error_pct"
+        ],
+        "title": "ForecastComparisonOut",
+        "type": "object"
+      },
       "ForecastFlowOut": {
         "properties": {
           "amount": {
@@ -11043,6 +11118,118 @@
           "legal_entity_id"
         ],
         "title": "RoleOut",
+        "type": "object"
+      },
+      "RollingIn": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "assumption_set_id": {
+            "description": "Any version; its family's approved one is used",
+            "format": "uuid",
+            "title": "Assumption Set Id",
+            "type": "string"
+          },
+          "horizon": {
+            "default": 12,
+            "enum": [
+              12,
+              24
+            ],
+            "title": "Horizon",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assumption_set_id"
+        ],
+        "title": "RollingIn",
+        "type": "object"
+      },
+      "RollingOut": {
+        "properties": {
+          "active": {
+            "default": false,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "assumption_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved version in use",
+            "title": "Assumption Set Id"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionRunOut"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "horizon": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectionRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "stale_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stale Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "RollingOut",
         "type": "object"
       },
       "RowOut": {
@@ -26839,6 +27026,209 @@
         "summary": "Trial Balance Csv",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/rolling-forecast": {
+      "get": {
+        "description": "The setting, the latest run, whether it is stale and why, and the earlier runs.",
+        "operationId": "fcp_modules_projections_api_get_rolling",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Rolling",
+        "tags": [
+          "projections"
+        ]
+      },
+      "put": {
+        "operationId": "fcp_modules_projections_api_put_rolling",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Put Rolling",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/rolling-forecast/accuracy": {
+      "get": {
+        "description": "For each of the last 12 closed months: revenue, EBITDA and closing cash as forecast 1, 3\nand 6 months earlier, against the actual.",
+        "operationId": "fcp_modules_projections_api_rolling_accuracy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccuracyMonthOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Rolling Accuracy",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/rolling-forecast/refresh": {
+      "post": {
+        "description": "Re-run now if the latest run is stale (the scheduled job does the same every hour).",
+        "operationId": "fcp_modules_projections_api_refresh_rolling",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Refresh Rolling",
+        "tags": [
+          "projections"
         ]
       }
     },
