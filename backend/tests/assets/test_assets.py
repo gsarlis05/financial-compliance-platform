@@ -77,6 +77,11 @@ def test_register_schedule_and_draft_depreciation(reg: dict[str, Any]) -> None:
     # Never twice for the same month; the terms are now locked.
     again = c.post_json(f"{base}/depreciation-runs", {"month": "2026-02-01"})
     assert again.status_code == 409, again.content
+    assert again.json()["detail"] == (
+        "Depreciation for 02/2026 is already prepared; its entry is draft. Void or reject that "
+        "entry to prepare the month again."
+    )
+    assert entry["description"] == "Depreciation 02/2026 (1 asset, fixed-asset register)"
     assert c.get(f"{base}/fixed-assets").json()[0]["locked"] is True
     corrected = c.put_json(f"{base}/fixed-assets/{van['id']}", asset_body(reg, cost="25000.00"))
     assert corrected.status_code == 409, corrected.content

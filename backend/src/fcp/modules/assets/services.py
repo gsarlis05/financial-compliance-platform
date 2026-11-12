@@ -304,9 +304,11 @@ def prepare_month(ctx: WorkspaceContext, entity_id: UUID, month: date) -> RunVie
     if current is not None:
         entry = _entries([current.entry_id]).get(current.entry_id)
         if entry is not None and entry.status not in ENDED:
+            ref = _run_view(current, entry).entry_ref
+            where = f" as {ref}" if ref else ""
             raise ConflictError(
-                f"Depreciation for {first:%m/%Y} is already prepared "
-                f"({_run_view(current, entry).entry_ref or 'draft'}, {entry.status.lower()})."
+                f"Depreciation for {first:%m/%Y} is already prepared{where}; its entry is "
+                f"{entry.status.lower()}. Void or reject that entry to prepare the month again."
             )
         current.cancelled_at = timezone.now()
         current.save(update_fields=["cancelled_at"])
@@ -326,7 +328,8 @@ def prepare_month(ctx: WorkspaceContext, entity_id: UUID, month: date) -> RunVie
     total = sum((a for _, a in amounts), Decimal("0.00"))
     entry = create_entry_draft(ctx, entity, EntryInput(
         accounting_date=month_end(first),
-        description=f"Depreciation {first:%m/%Y} ({len(amounts)} assets, fixed-asset register)",
+        description=f"Depreciation {first:%m/%Y} ({len(amounts)} asset"
+        f"{'' if len(amounts) == 1 else 's'}, fixed-asset register)",
         lines=lines,
     ))  # fmt: skip
     run = DepreciationRun.objects.create(
