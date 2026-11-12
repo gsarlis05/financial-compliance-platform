@@ -386,6 +386,24 @@ def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[st
     return {"firm": firm["name"], "roles": inside["roles"], "clients": len(rows)}
 
 
+def _fixed_assets(owner: "DemoClient", base: str, by_code: dict[str, str],
+                  year: int) -> dict[str, Any]:  # fmt: skip
+    """Two synthetic assets bought in December, and January's depreciation prepared as a draft
+    entry (M6-1). The register only prepares; the normal workflow approves and posts it."""
+    common = {"asset_account_id": by_code["1010"], "accumulated_account_id": by_code["1019"],
+              "expense_account_id": by_code["6600"], "acquired_on": f"{year}-12-10"}  # fmt: skip
+    for body in (
+        {"code": "VAN-1", "name": "Delivery van (Demo)", "category": "VEHICLES",
+         "cost": "24000.00", "useful_life_months": 48},
+        {"code": "IT-1", "name": "Laptops (Demo)", "category": "IT_EQUIPMENT", "cost": "3600.00",
+         "useful_life_months": 36, "method": "DECLINING_BALANCE", "annual_rate": "40"},
+    ):  # fmt: skip
+        owner.call("POST", f"{base}/fixed-assets", {**common, **body}, 201)
+    run: dict[str, Any] = owner.call("POST", f"{base}/depreciation-runs",
+                                     {"month": f"{year + 1}-01-01"}, 201)  # fmt: skip
+    return run
+
+
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
     """The full export of the workspace, checked against its own manifest; and the two-step
     deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
@@ -753,6 +771,11 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{engaged['clients']} client in the firm portfolio; after the owner revoked it, the "
          "firm's next request is refused and the client is gone from its portfolio")  # fmt: skip
 
+    run = _fixed_assets(accountant, base, by_code, year)
+    posted_dep = through_workflow({"id": run["entry_id"]})
+    step(f"fixed-asset register: 2 assets; depreciation for {year + 1}-01 prepared by the "
+         f"accountant as a draft entry of {run['total']}, then approved and posted by the "
+         f"reviewer as {posted_dep['journal']}-{posted_dep['entry_no']}")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "

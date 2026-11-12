@@ -33,7 +33,7 @@ Inside a workspace, the menu bar groups the pages:
 
 | Menu | Pages |
 |---|---|
-| Bookkeeping | Journal entries, Approvals, Bank |
+| Bookkeeping | Journal entries, Approvals, Bank, Fixed assets ([guide](fixed-assets.md)) |
 | Customers & suppliers | Customers & suppliers, Receivables & payables |
 | Reports | Trial balance, Statements |
 | Setup | Chart of accounts, Dimensions, Statement mapping, Periods |

@@ -102,7 +102,9 @@ describe("Grouped navigation (M2-11)", () => {
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowDown" });
     expect(screen.getByRole("link", { name: "Dimensions" })).toHaveFocus();
     fireEvent.keyDown(document.activeElement as Element, { key: "End" });
-    expect(screen.getByRole("link", { name: "Export and delete" })).toHaveFocus();
+    expect(
+      screen.getByRole("link", { name: "Export and delete" }),
+    ).toHaveFocus();
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowDown" });
     expect(
       screen.getByRole("link", { name: "Chart of accounts" }),
