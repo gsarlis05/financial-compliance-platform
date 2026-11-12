@@ -10512,6 +10512,48 @@
       },
       "ProjectionOut": {
         "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "first_negative": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first month cash would fall below 0",
+            "title": "First Negative"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionMonthOut"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "opening_cash": {
+            "description": "Money accounts you have, without valued assets",
+            "title": "Opening Cash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "opening_cash",
+          "months",
+          "first_negative"
+        ],
+        "title": "ProjectionOut",
+        "type": "object"
+      },
+      "ProjectionRunOut": {
+        "properties": {
           "actuals_watermark": {
             "title": "Actuals Watermark",
             "type": "integer"
@@ -10591,7 +10633,71 @@
           "is_published",
           "created_at"
         ],
-        "title": "ProjectionOut",
+        "title": "ProjectionRunOut",
+        "type": "object"
+      },
+      "ProjectionStatementsOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "failures": {
+            "description": "Failed invariants, as invariant@where",
+            "items": {
+              "type": "string"
+            },
+            "title": "Failures",
+            "type": "array"
+          },
+          "projection": {
+            "$ref": "#/components/schemas/ProjectionRunOut"
+          },
+          "rows": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "description": "Series key: a decimal string per column",
+            "title": "Rows",
+            "type": "object"
+          }
+        },
+        "required": [
+          "projection",
+          "columns",
+          "rows",
+          "failures"
+        ],
+        "title": "ProjectionStatementsOut",
+        "type": "object"
+      },
+      "ProjectionStatementsQuery": {
+        "properties": {
+          "granularity": {
+            "default": "MONTH",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          }
+        },
+        "title": "ProjectionStatementsQuery",
         "type": "object"
       },
       "RateType": {
@@ -11699,65 +11805,110 @@
       },
       "StatementsOut": {
         "properties": {
-          "columns": {
-            "items": {
-              "$ref": "#/components/schemas/ColumnOut"
-            },
-            "title": "Columns",
-            "type": "array"
+          "balance_sheet": {
+            "$ref": "#/components/schemas/StatementOut"
           },
-          "failures": {
-            "description": "Failed invariants, as invariant@where",
-            "items": {
-              "type": "string"
-            },
-            "title": "Failures",
-            "type": "array"
+          "cash_flow": {
+            "$ref": "#/components/schemas/StatementOut"
           },
-          "projection": {
-            "$ref": "#/components/schemas/ProjectionOut"
-          },
-          "rows": {
-            "additionalProperties": {
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+          "comparative_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
               },
-              "type": "array"
-            },
-            "description": "Series key: a decimal string per column",
-            "title": "Rows",
-            "type": "object"
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative From"
+          },
+          "comparative_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative To"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "ok": {
+            "description": "Every check passed (a failure is a defect and is logged)",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "profit_and_loss": {
+            "$ref": "#/components/schemas/StatementOut"
+          },
+          "taxonomy": {
+            "title": "Taxonomy",
+            "type": "string"
+          },
+          "watermark": {
+            "description": "The statements include every posting up to this number",
+            "title": "Watermark",
+            "type": "integer"
           }
         },
         "required": [
-          "projection",
-          "columns",
-          "rows",
-          "failures"
+          "entity_name",
+          "taxonomy",
+          "watermark",
+          "date_from",
+          "date_to",
+          "comparative_from",
+          "comparative_to",
+          "ok",
+          "profit_and_loss",
+          "balance_sheet",
+          "cash_flow"
         ],
         "title": "StatementsOut",
         "type": "object"
       },
       "StatementsQuery": {
         "properties": {
-          "granularity": {
-            "default": "MONTH",
+          "comparative": {
+            "default": "prior_year",
             "enum": [
-              "MONTH",
-              "QUARTER",
-              "YEAR"
+              "prior_year",
+              "none"
             ],
-            "title": "Granularity",
+            "title": "Comparative",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
             "type": "string"
           }
         },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
         "title": "StatementsQuery",
         "type": "object"
       },
@@ -26027,7 +26178,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ProjectionOut"
+                    "$ref": "#/components/schemas/ProjectionRunOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -26086,7 +26237,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectionOut"
+                  "$ref": "#/components/schemas/ProjectionRunOut"
                 }
               }
             },
@@ -26158,7 +26309,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatementsOut"
+                  "$ref": "#/components/schemas/ProjectionStatementsOut"
                 }
               }
             },

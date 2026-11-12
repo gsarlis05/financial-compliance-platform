@@ -182,7 +182,7 @@ class ProjectionIn(Schema):
     assumption_set_id: UUID
 
 
-class ProjectionOut(Schema):
+class ProjectionRunOut(Schema):
     id: UUID
     status: str = Field(description="VALID, INVALID (an invariant failed) or FAILED")
     as_of_date: date = Field(description="The cut-over")
@@ -197,9 +197,9 @@ class ProjectionOut(Schema):
     created_at: datetime
 
 
-def _projection_out(run: CalcRun) -> ProjectionOut:
+def _projection_out(run: CalcRun) -> ProjectionRunOut:
     set_id = run.input_refs.get("assumption_set_id")
-    return ProjectionOut(
+    return ProjectionRunOut(
         id=run.id, status=run.status, as_of_date=run.as_of_date,
         assumption_set_id=UUID(set_id) if set_id else None,
         actuals_watermark=run.actuals_watermark, input_hash=run.input_hash,
@@ -208,17 +208,17 @@ def _projection_out(run: CalcRun) -> ProjectionOut:
     )  # fmt: skip
 
 
-@router.get(f"{BASE}/projections", response=list[ProjectionOut])
+@router.get(f"{BASE}/projections", response=list[ProjectionRunOut])
 @requires("planning.read")
-def list_projections(request: HttpRequest, slug: str, entity_id: UUID) -> list[ProjectionOut]:
+def list_projections(request: HttpRequest, slug: str, entity_id: UUID) -> list[ProjectionRunOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [_projection_out(r) for r in runs.projections(ctx, entity_id)]
 
 
-@router.post(f"{BASE}/projections", response={201: ProjectionOut})
+@router.post(f"{BASE}/projections", response={201: ProjectionRunOut})
 @requires("planning.run")
 def run_projection(request: HttpRequest, slug: str, entity_id: UUID,
-                   payload: ProjectionIn) -> Status[ProjectionOut]:  # fmt: skip
+                   payload: ProjectionIn) -> Status[ProjectionRunOut]:  # fmt: skip
     """Project the three statements from an approved assumption set. A run that fails an
     invariant is INVALID and cannot be published; publish a VALID one through
     ``/calc-runs/{id}/publish``."""
@@ -232,7 +232,7 @@ def _cents(value: Decimal | None) -> str | None:
     return None if value is None else str(value.quantize(Decimal("0.01")))
 
 
-class StatementsQuery(Schema):
+class ProjectionStatementsQuery(Schema):
     granularity: Literal["MONTH", "QUARTER", "YEAR"] = "MONTH"
 
 
@@ -242,20 +242,20 @@ class ColumnOut(Schema):
     nature: str = Field(description="ACTUAL for the opening balance sheet, FORECAST otherwise")
 
 
-class StatementsOut(Schema):
-    projection: ProjectionOut
+class ProjectionStatementsOut(Schema):
+    projection: ProjectionRunOut
     columns: list[ColumnOut]
     rows: dict[str, list[str | None]] = Field(description="Series key: a decimal string per column")
     failures: list[str] = Field(description="Failed invariants, as invariant@where")
 
 
-@router.get(f"{BASE}/projections/{{uuid:run_id}}", response=StatementsOut)
+@router.get(f"{BASE}/projections/{{uuid:run_id}}", response=ProjectionStatementsOut)
 @requires("planning.read")
 def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
-                   query: Query[StatementsQuery]) -> StatementsOut:  # fmt: skip
+                   query: Query[ProjectionStatementsQuery]) -> ProjectionStatementsOut:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     found = runs.statements(ctx, entity_id, run_id, query.granularity)
-    return StatementsOut(
+    return ProjectionStatementsOut(
         projection=_projection_out(found.run),
         columns=[ColumnOut(start=c.start, end=c.end, nature=c.nature) for c in found.columns],
         rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
