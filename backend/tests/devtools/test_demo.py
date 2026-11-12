@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 28
+    assert len(result.steps) == 29
     budget_step = next(s for s in result.steps if s.startswith("budget "))
     assert "approved by the owner: total 738000.00" in budget_step
     assert "sales 600000.00 phased like" in budget_step
@@ -84,6 +84,12 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
         )
         for s in result.steps
     ), result.steps
+    # Van 24,000 / 48 = 500.00; laptops 3,600 x 40% / 12 = 120.00.
+    assets_step = next(s for s in result.steps if s.startswith("fixed-asset register"))
+    assert (
+        "depreciation for 2027-01 prepared by the accountant as a draft entry of 620.00, "
+        "then approved and posted by the reviewer"
+    ) in assets_step, assets_step
     export_step = next(s for s in result.steps if s.startswith("full export of the workspace"))
     assert "deletion confirmed with 30 days' grace, then cancelled" in export_step, export_step
     assert all(line.startswith("✔") for line in said)

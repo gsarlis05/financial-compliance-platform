@@ -82,7 +82,8 @@ environment waits for the owner's approval (Gate P).** **Milestone 6 is in progr
 | M5-5 Pilot environment as code (never applied), monitoring, backup and restore drill (issue #78) | `claude/m5-5-pilot-iac` | #133 | Open |
 | M5-6 Workspace export and deletion with a grace period (issue #79) | `claude/m5-6-export-deletion` | #134 | Open |
 | M5 report (`docs/milestone-5-report.md`) | `claude/m5-6-export-deletion` | #134 | Open |
-| M6-1 Fixed-asset register, depreciation, prepared entries (issue #135) | `claude/m6-1-fixed-assets` | — | In progress |
+| M6-1 Fixed-asset register, depreciation, prepared entries (issue #135) | `claude/m6-1-fixed-assets` | #141 | Open |
+| M6-2 Assumption sets (issue #136) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

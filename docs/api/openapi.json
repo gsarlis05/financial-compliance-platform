@@ -925,11 +925,261 @@
                 "type": "null"
               }
             ],
-            "description": "Default: today",
+            "description": "Defaults to today",
             "title": "As Of"
           }
         },
         "title": "AsOfQuery",
+        "type": "object"
+      },
+      "AssetIn": {
+        "properties": {
+          "accumulated_account_id": {
+            "description": "Accumulated depreciation (e.g. 1019)",
+            "format": "uuid",
+            "title": "Accumulated Account Id",
+            "type": "string"
+          },
+          "acquired_on": {
+            "format": "date",
+            "title": "Acquired On",
+            "type": "string"
+          },
+          "annual_rate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,3}(\\.\\d{1,4})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declining balance: % a year",
+            "title": "Annual Rate"
+          },
+          "asset_account_id": {
+            "description": "Where the cost is (e.g. 1010)",
+            "format": "uuid",
+            "title": "Asset Account Id",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "BUILDINGS",
+              "MACHINERY",
+              "VEHICLES",
+              "IT_EQUIPMENT",
+              "FURNITURE",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "cost": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Cost",
+            "type": "string"
+          },
+          "expense_account_id": {
+            "description": "Depreciation expense (e.g. 6600)",
+            "format": "uuid",
+            "title": "Expense Account Id",
+            "type": "string"
+          },
+          "method": {
+            "default": "STRAIGHT_LINE",
+            "enum": [
+              "STRAIGHT_LINE",
+              "DECLINING_BALANCE"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "residual_value": {
+            "default": "0",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Residual Value",
+            "type": "string"
+          },
+          "useful_life_months": {
+            "maximum": 1200,
+            "minimum": 1,
+            "title": "Useful Life Months",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "category",
+          "asset_account_id",
+          "accumulated_account_id",
+          "expense_account_id",
+          "acquired_on",
+          "cost",
+          "useful_life_months"
+        ],
+        "title": "AssetIn",
+        "type": "object"
+      },
+      "AssetOut": {
+        "properties": {
+          "accumulated": {
+            "description": "Accumulated depreciation at the date asked for",
+            "title": "Accumulated",
+            "type": "string"
+          },
+          "accumulated_account_id": {
+            "format": "uuid",
+            "title": "Accumulated Account Id",
+            "type": "string"
+          },
+          "acquired_on": {
+            "format": "date",
+            "title": "Acquired On",
+            "type": "string"
+          },
+          "annual_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declining balance: % a year",
+            "title": "Annual Rate"
+          },
+          "asset_account_id": {
+            "format": "uuid",
+            "title": "Asset Account Id",
+            "type": "string"
+          },
+          "book_value": {
+            "title": "Book Value",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "cost": {
+            "title": "Cost",
+            "type": "string"
+          },
+          "disposal_gain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Proceeds - book value; negative is a loss",
+            "title": "Disposal Gain"
+          },
+          "disposal_proceeds": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disposal Proceeds"
+          },
+          "disposed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disposed On"
+          },
+          "expense_account_id": {
+            "format": "uuid",
+            "title": "Expense Account Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locked": {
+            "description": "Depreciation was prepared; the terms can no longer change",
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "residual_value": {
+            "title": "Residual Value",
+            "type": "string"
+          },
+          "status": {
+            "description": "ACTIVE, FULLY_DEPRECIATED or DISPOSED",
+            "title": "Status",
+            "type": "string"
+          },
+          "useful_life_months": {
+            "title": "Useful Life Months",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "category",
+          "asset_account_id",
+          "accumulated_account_id",
+          "expense_account_id",
+          "acquired_on",
+          "cost",
+          "residual_value",
+          "useful_life_months",
+          "method",
+          "annual_rate",
+          "disposed_on",
+          "disposal_proceeds",
+          "locked",
+          "accumulated",
+          "book_value",
+          "status",
+          "disposal_gain"
+        ],
+        "title": "AssetOut",
         "type": "object"
       },
       "AuditEventOut": {
@@ -4517,6 +4767,26 @@
         ],
         "title": "Direction",
         "type": "string"
+      },
+      "DisposalIn": {
+        "properties": {
+          "disposed_on": {
+            "format": "date",
+            "title": "Disposed On",
+            "type": "string"
+          },
+          "proceeds": {
+            "default": "0",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Proceeds",
+            "type": "string"
+          }
+        },
+        "required": [
+          "disposed_on"
+        ],
+        "title": "DisposalIn",
+        "type": "object"
       },
       "DocumentOut": {
         "properties": {
@@ -9780,6 +10050,21 @@
         "title": "PortfolioRowOut",
         "type": "object"
       },
+      "PrepareIn": {
+        "properties": {
+          "month": {
+            "description": "Any day of the month to depreciate",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "PrepareIn",
+        "type": "object"
+      },
       "ProjectionMonthOut": {
         "properties": {
           "closing_cash": {
@@ -10406,116 +10691,60 @@
       },
       "RunOut": {
         "properties": {
-          "actuals_watermark": {
-            "title": "Actuals Watermark",
+          "assets": {
+            "title": "Assets",
             "type": "integer"
           },
-          "as_of_date": {
-            "format": "date",
-            "title": "As Of Date",
-            "type": "string"
+          "cancelled": {
+            "description": "Its entry was voided or rejected; prepared again since",
+            "title": "Cancelled",
+            "type": "boolean"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "engine_version": {
-            "title": "Engine Version",
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
             "type": "string"
           },
-          "error": {
-            "title": "Error",
+          "entry_ref": {
+            "description": "Journal and number, once posted",
+            "title": "Entry Ref",
             "type": "string"
           },
-          "finished_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
+          "entry_status": {
+            "description": "DRAFT, SUBMITTED, APPROVED, POSTED, REJECTED or VOID",
+            "title": "Entry Status",
+            "type": "string"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
-          "input_hash": {
-            "title": "Input Hash",
+          "month": {
+            "format": "date",
+            "title": "Month",
             "type": "string"
           },
-          "input_refs": {
-            "additionalProperties": true,
-            "title": "Input Refs",
-            "type": "object"
-          },
-          "invariant_results": {
-            "additionalProperties": {
-              "type": "boolean"
-            },
-            "title": "Invariant Results",
-            "type": "object"
-          },
-          "is_published": {
-            "title": "Is Published",
-            "type": "boolean"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "output_hash": {
-            "title": "Output Hash",
-            "type": "string"
-          },
-          "stale": {
-            "title": "Stale",
-            "type": "boolean"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "supersedes_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supersedes Id"
-          },
-          "trigger": {
-            "title": "Trigger",
+          "total": {
+            "title": "Total",
             "type": "string"
           }
         },
         "required": [
           "id",
-          "kind",
-          "engine_version",
-          "status",
-          "as_of_date",
-          "actuals_watermark",
-          "input_refs",
-          "input_hash",
-          "output_hash",
-          "invariant_results",
-          "error",
-          "stale",
-          "is_published",
-          "trigger",
-          "supersedes_id",
-          "created_at",
-          "finished_at"
+          "month",
+          "total",
+          "assets",
+          "entry_id",
+          "entry_ref",
+          "entry_status",
+          "cancelled",
+          "created_at"
         ],
         "title": "RunOut",
         "type": "object"
@@ -10543,6 +10772,81 @@
           }
         },
         "title": "RunsQuery",
+        "type": "object"
+      },
+      "ScheduleOut": {
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "convention": {
+            "title": "Convention",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "asset_id",
+          "convention",
+          "rows"
+        ],
+        "title": "ScheduleOut",
+        "type": "object"
+      },
+      "ScheduleRowOut": {
+        "properties": {
+          "accumulated": {
+            "title": "Accumulated",
+            "type": "string"
+          },
+          "closing": {
+            "title": "Closing",
+            "type": "string"
+          },
+          "depreciation": {
+            "title": "Depreciation",
+            "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft or posted entry, once prepared",
+            "title": "Entry Id"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "opening": {
+            "title": "Opening",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "opening",
+          "depreciation",
+          "closing",
+          "accumulated",
+          "entry_id"
+        ],
+        "title": "ScheduleRowOut",
         "type": "object"
       },
       "SettingsIO": {
@@ -19192,6 +19496,113 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/depreciation-runs": {
+      "get": {
+        "operationId": "fcp_modules_assets_api_list_runs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Runs",
+        "tags": [
+          "fixed assets"
+        ]
+      },
+      "post": {
+        "description": "Prepare the month's depreciation as one draft journal entry. It still needs the normal\napproval and posting; nothing is posted here.",
+        "operationId": "fcp_modules_assets_api_prepare_depreciation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Prepare Depreciation",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/dimension-values/{value_id}": {
       "patch": {
         "operationId": "fcp_modules_ledger_api_update_dimension_value",
@@ -20206,6 +20617,324 @@
         "summary": "Reopen Fiscal Year",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets": {
+      "get": {
+        "operationId": "fcp_modules_assets_api_list_assets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Defaults to today",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Defaults to today",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Assets",
+        "tags": [
+          "fixed assets"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_assets_api_create_asset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Asset",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets/{asset_id}": {
+      "put": {
+        "description": "Correct the terms; refused once depreciation has been prepared for the asset.",
+        "operationId": "fcp_modules_assets_api_correct_asset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Correct Asset",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets/{asset_id}/dispose": {
+      "post": {
+        "description": "Record the disposal (once). Depreciation stops from its month; book it in the ledger.",
+        "operationId": "fcp_modules_assets_api_dispose_asset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisposalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Dispose Asset",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets/{asset_id}/schedule": {
+      "get": {
+        "operationId": "fcp_modules_assets_api_asset_schedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Asset Schedule",
+        "tags": [
+          "fixed assets"
         ]
       }
     },

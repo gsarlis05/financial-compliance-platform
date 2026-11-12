@@ -42,7 +42,8 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ counterpart hint (opt-in): 1 business payment to the owner suggested, 1500.00 recorded in the personal books only after confirmation
 ✔ client portfolio refused in a business workspace (firms only): This is not available in a business workspace.
 ✔ engagement grant: Demo Accountants let in as accountant + read_only, 1 client in the firm portfolio; after the owner revoked it, the firm's next request is refused and the client is gone from its portfolio
-✔ full export of the workspace: 70 tables and 1 document file(s), every file matching its count and hash in the manifest; a spare workspace's deletion confirmed with 30 days' grace, then cancelled
+✔ fixed-asset register: 2 assets; depreciation for 2027-01 prepared by the accountant as a draft entry of 620.00, then approved and posted by the reviewer as GJ-2
+✔ full export of the workspace: 73 tables and 1 document file(s), every file matching its count and hash in the manifest; a spare workspace's deletion confirmed with 30 days' grace, then cancelled
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the
