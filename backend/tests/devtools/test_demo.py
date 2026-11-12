@@ -51,7 +51,14 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 30
+    assert len(result.steps) == 31
+    projection_step = next(s for s in result.steps if s.startswith("three-statement"))
+    # 2028 revenue = 2026 revenue x 1.1^2 (the approved assumptions); the run is checked and
+    # published (M6-3).
+    assert projection_step == (
+        "three-statement projection 2027-2028: VALID, 6 invariants hold, published; 2028: "
+        "revenue 1452000.00, net income 196572.33, closing cash 550508.64"
+    ), projection_step
     budget_step = next(s for s in result.steps if s.startswith("budget "))
     assert "approved by the owner: total 738000.00" in budget_step
     assert "sales 600000.00 phased like" in budget_step

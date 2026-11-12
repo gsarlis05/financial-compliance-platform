@@ -44,6 +44,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ engagement grant: Demo Accountants let in as accountant + read_only, 1 client in the firm portfolio; after the owner revoked it, the firm's next request is refused and the client is gone from its portfolio
 ✔ fixed-asset register: 2 assets; depreciation for 2027-01 prepared by the accountant as a draft entry of 620.00, then approved and posted by the reviewer as GJ-2
 ✔ assumptions for 2027-2028 started from 2026 actuals (revenue +10% a year) and approved: gross margin 45%, DSO 61.9379 days
+✔ three-statement projection 2027-2028: VALID, 6 invariants hold, published; 2028: revenue 1452000.00, net income 196572.33, closing cash 550508.64
 ✔ full export of the workspace: 75 tables and 1 document file(s), every file matching its count and hash in the manifest; a spare workspace's deletion confirmed with 30 days' grace, then cancelled
 ✔ shared with you@example.com as finance_manager
 ```

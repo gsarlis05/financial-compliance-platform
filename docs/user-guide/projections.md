@@ -22,5 +22,19 @@ Open **Cash & planning → Assumptions**.
 3. **Approve.** An approved set never changes. To change it, select **Revise as a new version**:
    you get a draft copy, and when you approve it the earlier version is marked superseded.
 
+## Running a projection
+With an approved set, run a projection (`POST .../projections`, screens follow in M6-6). It starts
+from your actual balance sheet at the cut-over, read from the posted books, and works out each
+month in a fixed order: income statement, interest on the debt at the start of the month, tax,
+receivables, stock and payables from the days, fixed assets, debt, equity, the cash flow
+statement, then the credit facility to keep the minimum cash.
+
+Every run checks that the three statements agree: the balance sheet balances, the cash on it equals
+the cash flow statement, retained earnings move only by profit and dividends, each month starts
+where the last ended, and quarters and years add up. A run that fails a check is marked
+**invalid**, says which check failed in which month, and cannot be published. Lines the
+assumptions do not cover (intangibles, investments, other receivables and payables) stay at their
+opening balance. If an account with a balance is not mapped to a statement line, map it first.
+
 The tax rate is the one from your books or the one you enter; the platform does not assume a rate
 from tax law.

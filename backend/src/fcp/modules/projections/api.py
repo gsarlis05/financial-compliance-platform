@@ -1,20 +1,23 @@
-"""Public interface of the ``projections`` module and its HTTP routes (M6-2: assumption sets).
+"""Public interface of the ``projections`` module and its HTTP routes (M6-2: assumption sets;
+M6-3: projections, published through the calculation-run routes).
 
 Routes are entity-scoped (``/api/w/{slug}/entities/{entity_id}/...``). Values are decimal strings:
 amounts in money, percentages as e.g. ``35`` for 35%, days and months as numbers.
 """
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from django.http import HttpRequest
-from ninja import Field, Router, Schema, Status
+from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import assumptions
+from . import assumptions, runs
 from .drivers import DRIVERS
 from .models import AssumptionSet
 
@@ -170,3 +173,91 @@ class DriverOut(Schema):
 def list_drivers(request: HttpRequest, slug: str, entity_id: UUID) -> list[DriverOut]:
     workspace_ctx(request, slug, entity_id)
     return [DriverOut(key=d.key, unit=d.unit, lines=list(d.lines)) for d in DRIVERS.values()]
+
+
+# --- projections (M6-3) ---------------------------------------------------------------------------
+
+
+class ProjectionIn(Schema):
+    assumption_set_id: UUID
+
+
+class ProjectionRunOut(Schema):
+    id: UUID
+    status: str = Field(description="VALID, INVALID (an invariant failed) or FAILED")
+    as_of_date: date = Field(description="The cut-over")
+    assumption_set_id: UUID | None
+    actuals_watermark: int
+    input_hash: str
+    output_hash: str
+    invariants: dict[str, bool]
+    error: str
+    stale: bool
+    is_published: bool
+    created_at: datetime
+
+
+def _projection_out(run: CalcRun) -> ProjectionRunOut:
+    set_id = run.input_refs.get("assumption_set_id")
+    return ProjectionRunOut(
+        id=run.id, status=run.status, as_of_date=run.as_of_date,
+        assumption_set_id=UUID(set_id) if set_id else None,
+        actuals_watermark=run.actuals_watermark, input_hash=run.input_hash,
+        output_hash=run.output_hash, invariants=run.invariant_results, error=run.error,
+        stale=run.stale, is_published=run.is_published, created_at=run.created_at,
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/projections", response=list[ProjectionRunOut])
+@requires("planning.read")
+def list_projections(request: HttpRequest, slug: str, entity_id: UUID) -> list[ProjectionRunOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_projection_out(r) for r in runs.projections(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/projections", response={201: ProjectionRunOut})
+@requires("planning.run")
+def run_projection(request: HttpRequest, slug: str, entity_id: UUID,
+                   payload: ProjectionIn) -> Status[ProjectionRunOut]:  # fmt: skip
+    """Project the three statements from an approved assumption set. A run that fails an
+    invariant is INVALID and cannot be published; publish a VALID one through
+    ``/calc-runs/{id}/publish``."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    run = runs.run_projection(ctx, entity_id, payload.assumption_set_id)
+    return Status(201, _projection_out(run))
+
+
+def _cents(value: Decimal | None) -> str | None:
+    """Every projected value is a whole number of cents (doc 10 §2.4)."""
+    return None if value is None else str(value.quantize(Decimal("0.01")))
+
+
+class ProjectionStatementsQuery(Schema):
+    granularity: Literal["MONTH", "QUARTER", "YEAR"] = "MONTH"
+
+
+class ColumnOut(Schema):
+    start: date
+    end: date
+    nature: str = Field(description="ACTUAL for the opening balance sheet, FORECAST otherwise")
+
+
+class ProjectionStatementsOut(Schema):
+    projection: ProjectionRunOut
+    columns: list[ColumnOut]
+    rows: dict[str, list[str | None]] = Field(description="Series key: a decimal string per column")
+    failures: list[str] = Field(description="Failed invariants, as invariant@where")
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}", response=ProjectionStatementsOut)
+@requires("planning.read")
+def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
+                   query: Query[ProjectionStatementsQuery]) -> ProjectionStatementsOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = runs.statements(ctx, entity_id, run_id, query.granularity)
+    return ProjectionStatementsOut(
+        projection=_projection_out(found.run),
+        columns=[ColumnOut(start=c.start, end=c.end, nature=c.nature) for c in found.columns],
+        rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
+        failures=found.failures,
+    )  # fmt: skip
