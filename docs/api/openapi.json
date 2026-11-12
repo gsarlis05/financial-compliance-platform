@@ -3224,6 +3224,32 @@
         "title": "ClosingLineOut",
         "type": "object"
       },
+      "ColumnOut": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "nature": {
+            "description": "ACTUAL for the opening balance sheet, FORECAST otherwise",
+            "title": "Nature",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "nature"
+        ],
+        "title": "ColumnOut",
+        "type": "object"
+      },
       "CommitmentFlowOut": {
         "properties": {
           "amount": {
@@ -10435,6 +10461,20 @@
         "title": "PrepareIn",
         "type": "object"
       },
+      "ProjectionIn": {
+        "properties": {
+          "assumption_set_id": {
+            "format": "uuid",
+            "title": "Assumption Set Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assumption_set_id"
+        ],
+        "title": "ProjectionIn",
+        "type": "object"
+      },
       "ProjectionMonthOut": {
         "properties": {
           "closing_cash": {
@@ -10472,42 +10512,84 @@
       },
       "ProjectionOut": {
         "properties": {
-          "as_of": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of_date": {
+            "description": "The cut-over",
             "format": "date",
-            "title": "As Of",
+            "title": "As Of Date",
             "type": "string"
           },
-          "first_negative": {
+          "assumption_set_id": {
             "anyOf": [
               {
-                "format": "date",
+                "format": "uuid",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "The first month cash would fall below 0",
-            "title": "First Negative"
+            "title": "Assumption Set Id"
           },
-          "months": {
-            "items": {
-              "$ref": "#/components/schemas/ProjectionMonthOut"
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "invariants": {
+            "additionalProperties": {
+              "type": "boolean"
             },
-            "title": "Months",
-            "type": "array"
+            "title": "Invariants",
+            "type": "object"
           },
-          "opening_cash": {
-            "description": "Money accounts you have, without valued assets",
-            "title": "Opening Cash",
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "VALID, INVALID (an invariant failed) or FAILED",
+            "title": "Status",
             "type": "string"
           }
         },
         "required": [
-          "as_of",
-          "opening_cash",
-          "months",
-          "first_negative"
+          "id",
+          "status",
+          "as_of_date",
+          "assumption_set_id",
+          "actuals_watermark",
+          "input_hash",
+          "output_hash",
+          "invariants",
+          "error",
+          "stale",
+          "is_published",
+          "created_at"
         ],
         "title": "ProjectionOut",
         "type": "object"
@@ -11617,110 +11699,65 @@
       },
       "StatementsOut": {
         "properties": {
-          "balance_sheet": {
-            "$ref": "#/components/schemas/StatementOut"
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
           },
-          "cash_flow": {
-            "$ref": "#/components/schemas/StatementOut"
+          "failures": {
+            "description": "Failed invariants, as invariant@where",
+            "items": {
+              "type": "string"
+            },
+            "title": "Failures",
+            "type": "array"
           },
-          "comparative_from": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
+          "projection": {
+            "$ref": "#/components/schemas/ProjectionOut"
+          },
+          "rows": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comparative From"
-          },
-          "comparative_to": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comparative To"
-          },
-          "date_from": {
-            "format": "date",
-            "title": "Date From",
-            "type": "string"
-          },
-          "date_to": {
-            "format": "date",
-            "title": "Date To",
-            "type": "string"
-          },
-          "entity_name": {
-            "title": "Entity Name",
-            "type": "string"
-          },
-          "ok": {
-            "description": "Every check passed (a failure is a defect and is logged)",
-            "title": "Ok",
-            "type": "boolean"
-          },
-          "profit_and_loss": {
-            "$ref": "#/components/schemas/StatementOut"
-          },
-          "taxonomy": {
-            "title": "Taxonomy",
-            "type": "string"
-          },
-          "watermark": {
-            "description": "The statements include every posting up to this number",
-            "title": "Watermark",
-            "type": "integer"
+              "type": "array"
+            },
+            "description": "Series key: a decimal string per column",
+            "title": "Rows",
+            "type": "object"
           }
         },
         "required": [
-          "entity_name",
-          "taxonomy",
-          "watermark",
-          "date_from",
-          "date_to",
-          "comparative_from",
-          "comparative_to",
-          "ok",
-          "profit_and_loss",
-          "balance_sheet",
-          "cash_flow"
+          "projection",
+          "columns",
+          "rows",
+          "failures"
         ],
         "title": "StatementsOut",
         "type": "object"
       },
       "StatementsQuery": {
         "properties": {
-          "comparative": {
-            "default": "prior_year",
+          "granularity": {
+            "default": "MONTH",
             "enum": [
-              "prior_year",
-              "none"
+              "MONTH",
+              "QUARTER",
+              "YEAR"
             ],
-            "title": "Comparative",
-            "type": "string"
-          },
-          "date_from": {
-            "format": "date",
-            "title": "Date From",
-            "type": "string"
-          },
-          "date_to": {
-            "format": "date",
-            "title": "Date To",
+            "title": "Granularity",
             "type": "string"
           }
         },
-        "required": [
-          "date_from",
-          "date_to"
-        ],
         "title": "StatementsQuery",
         "type": "object"
       },
@@ -25957,6 +25994,185 @@
         "summary": "Set Valuation",
         "tags": [
           "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/projections": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_list_projections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Projections",
+        "tags": [
+          "projections"
+        ]
+      },
+      "post": {
+        "description": "Project the three statements from an approved assumption set. A run that fails an\ninvariant is INVALID and cannot be published; publish a VALID one through\n``/calc-runs/{id}/publish``.",
+        "operationId": "fcp_modules_projections_api_run_projection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Run Projection",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/projections/{run_id}": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_get_projection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "default": "MONTH",
+              "enum": [
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "title": "Granularity",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Projection",
+        "tags": [
+          "projections"
         ]
       }
     },

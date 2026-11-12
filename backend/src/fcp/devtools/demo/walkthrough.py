@@ -418,6 +418,25 @@ def _assumptions(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
     return {**approved, "gross_margin": first[("gross_margin", "")], "dso": first[("dso", "")]}
 
 
+def _projection(owner: "DemoClient", base: str, set_id: str) -> dict[str, Any]:
+    """The three statements from the approved assumptions, checked and published (M6-3)."""
+    run = owner.call("POST", f"{base}/projections", {"assumption_set_id": set_id}, 201)
+    if run["status"] != "VALID":
+        raise DemoStepError(
+            f"The projection is {run['status']}: {run['error'] or run['invariants']}"
+        )
+    owner.call("POST", f"{base}/calc-runs/{run['id']}/publish", {})
+    got = owner.call("GET", f"{base}/projections/{run['id']}?granularity=YEAR")
+    rows = got["rows"]
+    return {
+        **run,
+        "checks": sum(run["invariants"].values()),
+        "cash": rows["BS.CASH"][-1],
+        "revenue": rows["PL.REVENUE"][-1],
+        "net_income": rows["PL.NET_INCOME"][-1],
+    }
+
+
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
     """The full export of the workspace, checked against its own manifest; and the two-step
     deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
@@ -794,6 +813,11 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     margin, dso = plan["gross_margin"], plan["dso"]
     step(f"assumptions for {year + 1}-{year + 2} started from {year} actuals (revenue +10% a "
          f"year) and approved: gross margin {margin}%, DSO {dso} days")  # fmt: skip
+    projected = _projection(owner, base, plan["id"])
+    step(f"three-statement projection {year + 1}-{year + 2}: {projected['status']}, "
+         f"{projected['checks']} invariants hold, published; {year + 2}: revenue "
+         f"{projected['revenue']}, net income {projected['net_income']}, closing cash "
+         f"{projected['cash']}")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "

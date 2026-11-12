@@ -16,9 +16,18 @@ from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import services
+from .schedule import AssetTerms, ScheduleRow, schedule
 from .services import CONVENTION, MonthlyDepreciation, depreciation_plan
 
-__all__ = ["CONVENTION", "MonthlyDepreciation", "depreciation_plan", "router"]
+__all__ = [
+    "CONVENTION",
+    "AssetTerms",
+    "MonthlyDepreciation",
+    "ScheduleRow",
+    "depreciation_plan",
+    "router",
+    "schedule",
+]
 
 router = Router(tags=["fixed assets"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

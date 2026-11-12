@@ -84,7 +84,8 @@ environment waits for the owner's approval (Gate P).** **Milestone 6 is in progr
 | M5 report (`docs/milestone-5-report.md`) | `claude/m5-6-export-deletion` | #134 | Open |
 | M6-1 Fixed-asset register, depreciation, prepared entries (issue #135) | `claude/m6-1-fixed-assets` | #141 | Open |
 | M6-2 Assumption sets: drivers by month, start from actuals or budget, approval (issue #136) | `claude/m6-2-assumptions` | #142 | Open |
-| M6-3 Projection engine (issue #137) | — | — | Next |
+| M6-3 Three-statement projection engine, six invariants, golden model (issue #137) | `claude/m6-3-projection-engine` | #143 | Open |
+| M6-4 Rolling forecasts (issue #138) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
