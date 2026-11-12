@@ -86,7 +86,8 @@ environment waits for the owner's approval (Gate P).** **Milestone 6 is in progr
 | M6-2 Assumption sets: drivers by month, start from actuals or budget, approval (issue #136) | `claude/m6-2-assumptions` | #142 | Open |
 | M6-3 Three-statement projection engine, six invariants, golden model (issue #137) | `claude/m6-3-projection-engine` | #143 | Open |
 | M6-4 Rolling forecasts: staleness, hourly re-runs, history, accuracy (issue #138) | `claude/m6-4-rolling-forecasts` | #144 | Open |
-| M6-5 Outlook and views (issue #139) | — | — | Next |
+| M6-5 Full-year outlook (actual + forecast with natures), goals use the projection (issue #139) | `claude/m6-5-outlook` | #145 | Open |
+| M6-6 Projection screens (issue #140) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

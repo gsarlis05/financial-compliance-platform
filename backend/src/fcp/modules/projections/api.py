@@ -17,11 +17,12 @@ from fcp.core.api.permissions import requires
 from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
-from . import assumptions, rolling, runs
+from . import assumptions, outlook, rolling, runs
 from .drivers import DRIVERS
 from .models import AssumptionSet
+from .outlook import projected_plan
 
-__all__ = ["router"]
+__all__ = ["projected_plan", "router"]
 
 router = Router(tags=["projections"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
@@ -360,3 +361,43 @@ def rolling_accuracy(request: HttpRequest, slug: str, entity_id: UUID) -> list[A
         )
         for m in rolling.accuracy(ctx, entity_id)
     ]  # fmt: skip
+
+
+# --- the full-year outlook (M6-5) -----------------------------------------------------------------
+
+
+class OutlookQuery(Schema):
+    day: date = Field(description="Any day of the fiscal year to show")
+
+
+class OutlookColumnOut(Schema):
+    start: date
+    end: date
+    granularity: str = Field(description="MONTH, QUARTER or YEAR")
+    nature: str = Field(description="ACTUAL, FORECAST, ACTUAL+FORECAST, or empty (not shown)")
+
+
+class OutlookOut(Schema):
+    year_start: date
+    cutover: date | None = Field(description="The last actual month end (the divider)")
+    projection_id: UUID | None
+    note: str
+    columns: list[OutlookColumnOut]
+    rows: dict[str, list[str | None]] = Field(description="12 months, 4 quarters, the year")
+
+
+@router.get(f"{BASE}/outlook", response=OutlookOut)
+@requires("planning.read")
+def get_outlook(request: HttpRequest, slug: str, entity_id: UUID,
+                query: Query[OutlookQuery]) -> OutlookOut:  # fmt: skip
+    """Actual months from the books and forecast months from the latest published projection,
+    each column with its nature; quarters and the year are sums of their months."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = outlook.outlook(ctx, entity_id, query.day)
+    return OutlookOut(
+        year_start=found.year_start, cutover=found.cutover,
+        projection_id=found.run.id if found.run else None, note=found.note,
+        columns=[OutlookColumnOut(start=c.start, end=c.end, granularity=c.granularity,
+                                  nature=c.nature) for c in found.columns],
+        rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
+    )  # fmt: skip

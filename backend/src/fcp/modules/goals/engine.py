@@ -10,8 +10,9 @@ the cash forecast), so a stored evaluation never changes:
 1. **Actual to date:** the metric over the window's months that have ended (the cut-over is the
    last month end on or before the as-of date), with % of the target achieved and % of time
    elapsed.
-2. **Likely outcome:** actuals to the cut-over, then for the remaining months the current
-   approved annual budget, or where there is none the trailing 3-month run rate of each account.
+2. **Likely outcome:** actuals to the cut-over, then for the remaining months the latest published
+   projection where one reaches them (M6-5), otherwise the current approved annual budget, and
+   where neither covers a month the trailing 3-month run rate of each account.
    Balances after the cut-over are held at their latest actual value. Cash goals use the latest
    13-week cash forecast (week-end closing cash). The method is stated with every outcome.
 3. **Gap:** target - likely outcome, and target - actual.
@@ -89,6 +90,9 @@ METHODS = {
     "BUDGET_AND_RUN_RATE": "then the approved budget, and the 3-month run rate where the budget "
     "does not cover a month",
     "RUN_RATE": "then each account's 3-month run rate (no approved budget)",
+    "PROJECTION": "then the published projection",
+    "PROJECTION_RUN_RATE": "then the published projection, and the 3-month run rate where it "
+    "does not cover a month",
     "CASH_FORECAST": "then the 13-week cash forecast",
     "HELD": "then held at the latest actual value (no cash forecast)",
 }
@@ -138,9 +142,11 @@ def _lineage(sources: dict[str, Decimal]) -> tuple[Source, ...]:
     for ref, amount in sorted(sources.items())[:MAX_SOURCES]:
         if ref.startswith("operational:"):
             kind, note = "MANUAL", ""
-        elif ref.startswith(("account:plan:", "account:rate:")):
+        elif ref.startswith(("account:plan:", "account:proj:", "account:rate:")):
             kind = "ASSUMPTION"
-            note = "budget" if ref.startswith("account:plan:") else "run rate (3 months)"
+            note = {"plan": "budget", "proj": "published projection"}.get(
+                ref.split(":")[1], "run rate (3 months)"
+            )
         else:
             kind, note = "ACTUAL", ""
         out.append(Source(kind, ref[:200], _q(amount), note))
@@ -263,11 +269,11 @@ class _Book:
             kind, _, ref = subject.partition(":")
             if kind == "line" and ref in lines:
                 section, credit = lines[ref]
-                pseudo = f"plan:{ref}"
+                pseudo = f"{self.plan_prefix}:{ref}"
                 self.accounts[pseudo] = Account(ref, section, credit, True)
             elif kind == "account" and ref in self.accounts:
                 real = self.accounts[ref]
-                pseudo, credit = f"plan:{ref}", real.credit_normal
+                pseudo, credit = f"{self.plan_prefix}:{ref}", real.credit_normal
                 self.accounts[pseudo] = real
             else:
                 continue
@@ -298,9 +304,18 @@ class _Book:
             return "ACTUALS"
         if self.goal.kind == "BALANCE":
             return "CASH_FORECAST" if self.refs.get("forecast") else "HELD"
+        if self.plan_prefix == "proj":  # a published projection (M6-5)
+            if len(self.plan_months) == len(self.remaining):
+                return "PROJECTION"
+            return "PROJECTION_RUN_RATE" if self.plan_months else "RUN_RATE"
         if len(self.plan_months) == len(self.remaining):
             return "BUDGET"
         return "BUDGET_AND_RUN_RATE" if self.plan_months else "RUN_RATE"
+
+    @property
+    def plan_prefix(self) -> str:
+        plan = self.refs.get("plan") or {}
+        return "proj" if plan.get("source") == "PROJECTION" else "plan"
 
     @property
     def projected_nature(self) -> Nature:

@@ -45,6 +45,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ fixed-asset register: 2 assets; depreciation for 2027-01 prepared by the accountant as a draft entry of 620.00, then approved and posted by the reviewer as GJ-2
 ✔ assumptions for 2027-2028 started from 2026 actuals (revenue +10% a year) and approved: gross margin 45%, DSO 61.9379 days
 ✔ three-statement projection 2027-2028: VALID, 6 invariants hold, published; 2028: revenue 1452000.00, net income 196572.33, closing cash 550508.64
+✔ full-year outlook 2027: 0 actual and 12 forecast months from the published projection; revenue 1320000.00
 ✔ rolling forecast: the next 12 months from the approved assumptions, VALID, current; re-run hourly when the books move
 ✔ full export of the workspace: 76 tables and 1 document file(s), every file matching its count and hash in the manifest; a spare workspace's deletion confirmed with 30 days' grace, then cancelled
 ✔ shared with you@example.com as finance_manager

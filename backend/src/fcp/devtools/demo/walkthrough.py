@@ -827,6 +827,11 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{projected['checks']} invariants hold, published; {year + 2}: revenue "
          f"{projected['revenue']}, net income {projected['net_income']}, closing cash "
          f"{projected['cash']}")  # fmt: skip
+    year_ahead = owner.call("GET", f"{base}/outlook?day={year + 1}-06-30")
+    kinds = [c["nature"] for c in year_ahead["columns"] if c["granularity"] == "MONTH"]
+    step(f"full-year outlook {year + 1}: {kinds.count('ACTUAL')} actual and "
+         f"{kinds.count('FORECAST')} forecast months from the published projection; revenue "
+         f"{year_ahead['rows']['PL.REVENUE'][-1]}")  # fmt: skip
     rolled = _rolling(owner, base, plan["id"])
     step(f"rolling forecast: the next {rolled['horizon']} months from the approved assumptions, "
          f"{rolled['latest']['status']}, current; re-run hourly when the books move")  # fmt: skip
