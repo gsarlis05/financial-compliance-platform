@@ -845,3 +845,12 @@ button.danger {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* Assumption grid (M6-2): where each value came from, by more than colour (the cell title says it). */
+table.assumptions td.source-manual input {
+  font-weight: 600;
+}
+table.assumptions td.source-budget input,
+table.assumptions td.source-actuals input {
+  font-style: italic;
+}
