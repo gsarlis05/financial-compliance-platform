@@ -854,3 +854,19 @@ table.assumptions td.source-budget input,
 table.assumptions td.source-actuals input {
   font-style: italic;
 }
+
+/* Projections and the outlook (M6-6): the cut-over divider and the six checks. */
+.divider-after {
+  border-inline-end: 3px solid var(--text);
+}
+.nature-blended {
+  border-style: double;
+  border-width: 3px;
+}
+ul.checklist {
+  list-style: none;
+  padding-inline-start: 0;
+}
+ul.checklist li {
+  margin-block: 0.25rem;
+}

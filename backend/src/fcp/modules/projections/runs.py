@@ -196,6 +196,7 @@ class Statements:
     columns: list[Column]
     rows: dict[str, list[Decimal | None]]  # series key -> one value per column
     failures: list[str]  # "<invariant>@<where>"
+    ids: dict[str, list[UUID | None]]  # series key -> the stored result per column (explain)
 
 
 def statements(ctx: WorkspaceContext, entity_id: UUID, run_id: UUID,
@@ -211,8 +212,10 @@ def statements(ctx: WorkspaceContext, entity_id: UUID, run_id: UUID,
                   key=lambda k: (k[0], k[2] != "ACTUAL"))  # fmt: skip
     index = {k: i for i, k in enumerate(keys)}
     rows: dict[str, list[Decimal | None]] = {}
+    ids: dict[str, list[UUID | None]] = {}
     for r in found:
-        rows.setdefault(r.series_key, [None] * len(keys))[
-            index[(r.period_start, r.period_end, r.nature)]] = r.value  # fmt: skip
+        at = index[(r.period_start, r.period_end, r.nature)]
+        rows.setdefault(r.series_key, [None] * len(keys))[at] = r.value
+        ids.setdefault(r.series_key, [None] * len(keys))[at] = r.id
     failures = sorted(k for k, v in run.invariant_results.items() if not v and "@" in k)
-    return Statements(run, [Column(*k) for k in keys], rows, failures)
+    return Statements(run, [Column(*k) for k in keys], rows, failures, ids)

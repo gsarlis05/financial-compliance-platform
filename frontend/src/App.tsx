@@ -39,6 +39,8 @@ import { PeriodsPage } from "./pages/Periods";
 import { StatementsPage } from "./pages/Statements";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
 import { WorkspaceHome, WorkspacesPage } from "./pages/Workspaces";
+import { OutlookPage } from "./pages/Outlook";
+import { ProjectionsPage } from "./pages/Projections";
 
 const router = createBrowserRouter([
   {
@@ -62,6 +64,8 @@ const router = createBrowserRouter([
         element: <FixedAssetsPage />,
       },
       { path: "w/:slug/e/:entityId/assumptions", element: <AssumptionsPage /> },
+      { path: "w/:slug/e/:entityId/projections", element: <ProjectionsPage /> },
+      { path: "w/:slug/e/:entityId/outlook", element: <OutlookPage /> },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
       {
         path: "w/:slug/e/:entityId/custom-kpis",

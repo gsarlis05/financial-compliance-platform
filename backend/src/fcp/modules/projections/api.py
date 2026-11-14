@@ -10,21 +10,25 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.modules.audit_log.api import record as audit
 from fcp.modules.metrics.api import CalcRun
-from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
-from . import assumptions, outlook, rolling, runs
+from . import assumptions, exports, outlook, rolling, runs
 from .drivers import DRIVERS
+from .layout import with_totals
 from .models import AssumptionSet
 from .outlook import projected_plan
 
 __all__ = ["projected_plan", "router"]
 
 router = Router(tags=["projections"])
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
 
 
@@ -248,6 +252,9 @@ class ProjectionStatementsOut(Schema):
     columns: list[ColumnOut]
     rows: dict[str, list[str | None]] = Field(description="Series key: a decimal string per column")
     failures: list[str] = Field(description="Failed invariants, as invariant@where")
+    result_ids: dict[str, list[UUID | None]] = Field(
+        description="The stored result per cell, for /calc-runs/{id}/results/{result}/explain"
+    )
 
 
 @router.get(f"{BASE}/projections/{{uuid:run_id}}", response=ProjectionStatementsOut)
@@ -259,9 +266,32 @@ def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUI
     return ProjectionStatementsOut(
         projection=_projection_out(found.run),
         columns=[ColumnOut(start=c.start, end=c.end, nature=c.nature) for c in found.columns],
-        rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
-        failures=found.failures,
+        rows={k: [_cents(v) for v in vs] for k, vs in with_totals(found.rows).items()},
+        failures=found.failures, result_ids=found.ids,
     )  # fmt: skip
+
+
+class ProjectionExportQuery(ProjectionStatementsQuery):
+    lang: Literal["en", "el"] = "en"
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}/export")
+@requires("reports.export")
+def export_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
+                      query: Query[ProjectionExportQuery]) -> HttpResponse:  # fmt: skip
+    """The three projected statements as XLSX, with a nature row above the figures; audited."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = runs.statements(ctx, entity_id, run_id, query.granularity)
+    entity = get_entity(ctx, entity_id, "reports.export")
+    content = exports.to_xlsx(found, entity.legal_name, query.granularity, query.lang,
+                              generated=timezone.now())  # fmt: skip
+    filename = f"projection-{found.run.as_of_date.isoformat()}-{query.granularity.lower()}.xlsx"
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="reports.exported",
+          subject_type="report", subject_id="projection", entity_id=entity_id,
+          changes={"format": "xlsx", "filename": filename, "run_id": str(run_id)})  # fmt: skip
+    response = HttpResponse(content, content_type=XLSX)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 # --- rolling forecasts (M6-4) ---------------------------------------------------------------------
