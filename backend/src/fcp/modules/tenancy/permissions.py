@@ -73,6 +73,7 @@ PERMISSIONS: dict[str, str] = {
     "dashboard.manage_default": "Set the dashboard layout everyone starts from",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
+    "ledger.fx.manage": "Record exchange rates (with their source)",
     "reports.export": "Export reports",
     "audit.read": "See the audit trail",
     "admin.integrity.read": "See ledger integrity check results",
@@ -97,6 +98,7 @@ _READ = frozenset(
 )
 _PREPARE = _READ | {
     "ledger.account.manage",
+    "ledger.fx.manage",
     "assets.manage",
     "ledger.period.manage",
     "ledger.entry.create",

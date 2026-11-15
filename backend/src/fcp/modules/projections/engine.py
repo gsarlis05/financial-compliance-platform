@@ -74,6 +74,7 @@ class EngineInput:
     drivers: dict[tuple[str, str], dict[date, Decimal]]
     register_depreciation: dict[date, Decimal]
     fiscal_year_starts: set[date] = field(default_factory=set)  # months that start a year
+    currency: str = "EUR"  # the entity's functional currency (ISO 4217)
 
 
 @dataclass
@@ -317,19 +318,19 @@ def values(p: Projection, inp: EngineInput) -> list[Value]:
     out: list[Value] = []
     first = add_months(inp.months[0], -1)
     for line in BS_LINES:  # the actual balance sheet at the cut-over
-        out.append(Value(line, first, Nature.ACTUAL, p.opening[line], "EUR",
+        out.append(Value(line, first, Nature.ACTUAL, p.opening[line], inp.currency,
                          period_end=inp.cutover, granularity="MONTH",
                          lineage=(Source("ACTUAL", f"balance:{line}:{inp.cutover.isoformat()}",
                                          p.opening[line]),)))  # fmt: skip
     for m in p.months:
         end = month_end(m.month)
         for key, amount in {**m.pl, **m.bs, **m.cf}.items():
-            out.append(Value(key, m.month, Nature.FORECAST, amount, "EUR", period_end=end,
+            out.append(Value(key, m.month, Nature.FORECAST, amount, inp.currency, period_end=end,
                              granularity="MONTH", lineage=_lineage(key, m, inp)))  # fmt: skip
     for size, granularity in ((3, "QUARTER"), (12, "YEAR")):
         for start, end, flows, bs in aggregate(p, size):
             for key, amount in {**flows, **bs}.items():
-                out.append(Value(key, start, Nature.FORECAST, amount, "EUR", period_end=end,
+                out.append(Value(key, start, Nature.FORECAST, amount, inp.currency, period_end=end,
                                  granularity=granularity))  # fmt: skip
     return out
 

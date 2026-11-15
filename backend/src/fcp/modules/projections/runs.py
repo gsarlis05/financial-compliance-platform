@@ -105,6 +105,7 @@ def _pinned(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet,
     return {
         "assumption_set_id": str(made.id),
         "assumption_set_version": made.version,
+        "currency": get_entity(ctx, entity_id, RUN).functional_currency,
         "cutover": cutover.isoformat(),
         "months": [m.isoformat() for m in months],
         "mapping": _mapping(entity_id),
@@ -140,6 +141,7 @@ class ProjectionEngine:
             register_depreciation={date.fromisoformat(m): Decimal(v)
                                    for m, v in refs["register_depreciation"].items()},
             fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
+            currency=refs.get("currency", "EUR"),  # runs made before M6F-1 are in EUR
         ))  # fmt: skip
 
     def compute(self, inputs: RunInputs, data: Loaded) -> Output:

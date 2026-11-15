@@ -26,6 +26,7 @@ from . import (
     corrections,
     dimensions,
     entries,
+    fx,
     idempotency,
     integrity,
     periods,
@@ -36,6 +37,7 @@ from .models import (
     AccountDimensionRule,
     Dimension,
     DimensionValue,
+    ExchangeRate,
     FiscalYear,
     IntegrityCheckRun,
     JournalEntry,
@@ -652,6 +654,11 @@ class EntryIn(Schema):
     description: str = Field(min_length=1, max_length=500)
     journal: str = Field(default="GJ", max_length=10)
     use_adjustment_period: bool = False
+    currency: str | None = Field(
+        default=None, pattern=r"^[A-Z]{3}$",
+        description="ISO 4217; omitted means the functional currency, the only one accepted while "
+        "multi-currency is disabled",
+    )  # fmt: skip
     lines: list[LineIn] = Field(min_length=1, max_length=500)
 
 
@@ -785,6 +792,7 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
         description=payload.description,
         journal_code=payload.journal,
         use_adjustment_period=payload.use_adjustment_period,
+        currency=payload.currency,
         lines=[
             entries.LineInput(
                 ln.account_id,
@@ -1343,3 +1351,54 @@ def list_integrity_checks(request: HttpRequest, slug: str) -> list[IntegrityChec
 def run_integrity_check(request: HttpRequest, slug: str) -> Status[IntegrityCheckRun]:
     ctx = workspace_ctx(request, slug)
     return Status(201, integrity.run_checks(ctx.tenant.id, trigger="ON_DEMAND"))
+
+
+# --- exchange rates (M6F-1, #80) ------------------------------------------------------------------
+
+
+class ExchangeRateIn(Schema):
+    rate_date: date
+    base_currency: str = Field(pattern=r"^[A-Z]{3}$", description="ISO 4217")
+    quote_currency: str = Field(pattern=r"^[A-Z]{3}$", description="ISO 4217")
+    rate: str = Field(pattern=r"^\d{1,9}(\.\d{1,10})?$", description="Quote units per base unit")
+    rate_type: Literal["SPOT", "CLOSING", "AVERAGE"]
+    source: str = Field(min_length=1, max_length=200, description="e.g. ECB reference rate")
+    source_hash: str = Field(default="", max_length=64, description="SHA-256 of the source file")
+
+
+class ExchangeRateOut(Schema):
+    id: UUID
+    rate_date: date
+    base_currency: str
+    quote_currency: str
+    rate: str
+    rate_type: str
+    source: str
+    source_hash: str
+    created_at: datetime
+
+
+def _rate_out(r: ExchangeRate) -> ExchangeRateOut:
+    return ExchangeRateOut(id=r.id, rate_date=r.rate_date, base_currency=r.base_currency,
+                           quote_currency=r.quote_currency, rate=f"{r.rate.normalize():f}",
+                           rate_type=r.rate_type, source=r.source, source_hash=r.source_hash,
+                           created_at=r.created_at)  # fmt: skip
+
+
+@router.get(f"{BASE}/exchange-rates", response=list[ExchangeRateOut])
+@requires("reports.read")
+def list_exchange_rates(request: HttpRequest, slug: str, entity_id: UUID) -> list[ExchangeRateOut]:
+    """Recorded exchange rates (the workspace's), newest first. Nothing converts amounts while
+    multi-currency is disabled."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_rate_out(r) for r in fx.rates(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/exchange-rates", response={201: ExchangeRateOut})
+@requires("ledger.fx.manage")
+def add_exchange_rate(request: HttpRequest, slug: str, entity_id: UUID,
+                      payload: ExchangeRateIn) -> Status[ExchangeRateOut]:  # fmt: skip
+    """Record a rate with its source; rates are never changed (a correction is a new source)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = fx.add_rate(ctx, entity_id, fx.NewRate(**payload.model_dump()))
+    return Status(201, _rate_out(made))

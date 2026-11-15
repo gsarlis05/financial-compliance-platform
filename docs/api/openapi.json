@@ -504,6 +504,19 @@
             "title": "Accounting Date",
             "type": "string"
           },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 4217; omitted means the functional currency, the only one accepted while multi-currency is disabled",
+            "title": "Currency"
+          },
           "description": {
             "maxLength": 500,
             "minLength": 1,
@@ -5422,6 +5435,7 @@
             "type": "string"
           },
           "functional_currency": {
+            "description": "ISO 4217",
             "title": "Functional Currency",
             "type": "string"
           },
@@ -5438,8 +5452,18 @@
             "title": "Legal Name",
             "type": "string"
           },
+          "multi_currency_enabled": {
+            "description": "False in this release (#80)",
+            "title": "Multi Currency Enabled",
+            "type": "boolean"
+          },
           "registration_no": {
             "title": "Registration No",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "description": "ISO 4217; equal to functional in this release",
+            "title": "Reporting Currency",
             "type": "string"
           },
           "status": {
@@ -5454,6 +5478,8 @@
           "registration_no",
           "jurisdiction",
           "functional_currency",
+          "reporting_currency",
+          "multi_currency_enabled",
           "status"
         ],
         "title": "EntityOut",
@@ -5528,6 +5554,19 @@
             "format": "date",
             "title": "Accounting Date",
             "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 4217; omitted means the functional currency, the only one accepted while multi-currency is disabled",
+            "title": "Currency"
           },
           "description": {
             "maxLength": 500,
@@ -5791,6 +5830,122 @@
           "lines"
         ],
         "title": "EntryOut",
+        "type": "object"
+      },
+      "ExchangeRateIn": {
+        "properties": {
+          "base_currency": {
+            "description": "ISO 4217",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "quote_currency": {
+            "description": "ISO 4217",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "rate": {
+            "description": "Quote units per base unit",
+            "pattern": "^\\d{1,9}(\\.\\d{1,10})?$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "rate_date": {
+            "format": "date",
+            "title": "Rate Date",
+            "type": "string"
+          },
+          "rate_type": {
+            "enum": [
+              "SPOT",
+              "CLOSING",
+              "AVERAGE"
+            ],
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "source": {
+            "description": "e.g. ECB reference rate",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "source_hash": {
+            "default": "",
+            "description": "SHA-256 of the source file",
+            "maxLength": 64,
+            "title": "Source Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rate_date",
+          "base_currency",
+          "quote_currency",
+          "rate",
+          "rate_type",
+          "source"
+        ],
+        "title": "ExchangeRateIn",
+        "type": "object"
+      },
+      "ExchangeRateOut": {
+        "properties": {
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "rate_date": {
+            "format": "date",
+            "title": "Rate Date",
+            "type": "string"
+          },
+          "rate_type": {
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_hash": {
+            "title": "Source Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rate_date",
+          "base_currency",
+          "quote_currency",
+          "rate",
+          "rate_type",
+          "source",
+          "source_hash",
+          "created_at"
+        ],
+        "title": "ExchangeRateOut",
         "type": "object"
       },
       "ExplainOut": {
@@ -21776,6 +21931,114 @@
         "summary": "Link Document",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/exchange-rates": {
+      "get": {
+        "description": "Recorded exchange rates (the workspace's), newest first. Nothing converts amounts while\nmulti-currency is disabled.",
+        "operationId": "fcp_modules_ledger_api_list_exchange_rates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExchangeRateOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Exchange Rates",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "post": {
+        "description": "Record a rate with its source; rates are never changed (a correction is a new source).",
+        "operationId": "fcp_modules_ledger_api_add_exchange_rate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeRateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeRateOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Exchange Rate",
+        "tags": [
+          "ledger"
         ]
       }
     },

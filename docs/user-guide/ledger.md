@@ -248,3 +248,16 @@ A failure is an incident: see the [integrity runbook](../runbooks/integrity-chec
 ## 16. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).
+
+## Currencies
+Every amount is recorded in the entity's **functional currency** (EUR by default) and presented in
+its **reporting currency** (the same in this release). Currencies use ISO 4217 codes.
+
+Entries in another currency are **not available yet**: the platform refuses them with a clear
+message until foreign-currency accounting (conversion, period-end revaluation, exchange gains and
+losses) is complete and tested. The database already has a place for each line's transaction
+currency, amount and rate, so turning it on later needs no change to your recorded data.
+
+You can already record **exchange rates** with their source (for example the ECB reference rate
+and the file it came from) through the API (`POST .../exchange-rates`); a recorded rate is never
+changed. Nothing is converted with them yet.

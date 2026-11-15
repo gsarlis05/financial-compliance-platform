@@ -331,6 +331,15 @@ class JournalLine(TenantOwned):
     vat_code = models.ForeignKey(
         VatCode, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
+    # Multi-currency (M6F-1, #80): the transaction currency amount and the rate that converted it
+    # into the functional amounts above (debit, credit). All four are empty for a transaction in
+    # the functional currency, which is the only kind allowed while multi-currency is disabled.
+    txn_currency = models.CharField(max_length=3, null=True, blank=True)  # ISO 4217
+    txn_debit = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    txn_credit = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    exchange_rate = models.DecimalField(  # functional units per one transaction unit
+        max_digits=20, decimal_places=10, null=True, blank=True
+    )
 
     class Meta:
         db_table = "ledger_journal_line"
@@ -341,6 +350,23 @@ class JournalLine(TenantOwned):
                 condition=(models.Q(debit__gt=0) & models.Q(credit=0))
                 | (models.Q(credit__gt=0) & models.Q(debit=0)),
                 name="ledger_line_one_positive_side",
+            ),
+            # Transaction-currency fields: all empty, or all set on the same side with a rate.
+            models.CheckConstraint(
+                condition=models.Q(
+                    txn_currency__isnull=True,
+                    txn_debit__isnull=True,
+                    txn_credit__isnull=True,
+                    exchange_rate__isnull=True,
+                )
+                | (
+                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0)
+                    & (
+                        (models.Q(debit__gt=0, txn_debit__gt=0, txn_credit=0))
+                        | (models.Q(credit__gt=0, txn_credit__gt=0, txn_debit=0))
+                    )
+                ),
+                name="ledger_line_txn_currency_shape",
             ),
         ]
 
@@ -570,3 +596,39 @@ class LineDimension(TenantOwned):
             ),
         ]
         indexes = [models.Index(fields=["value", "line"])]
+
+
+class ExchangeRate(TenantOwned):
+    """An exchange rate as data (M6F-1, #80; doc 10 §13: no live market data). Entered or imported
+    with its source and the hash of the file it came from; never changed (a correction is a new
+    rate from a new source). ``rate`` is quote units per one base unit on ``rate_date``."""
+
+    class RateType(models.TextChoices):
+        SPOT = "SPOT"  # transaction date (IAS 21.21)
+        CLOSING = "CLOSING"  # period-end (IAS 21.23)
+        AVERAGE = "AVERAGE"  # an approximation of transaction dates (IAS 21.22)
+
+    rate_date = models.DateField()
+    base_currency = models.CharField(max_length=3)  # ISO 4217
+    quote_currency = models.CharField(max_length=3)  # ISO 4217
+    rate = models.DecimalField(max_digits=20, decimal_places=10)
+    rate_type = models.CharField(max_length=8, choices=RateType.choices)
+    source = models.CharField(max_length=200)
+    source_hash = models.CharField(max_length=64, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_exchange_rate"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["rate_date", "base_currency", "quote_currency", "rate_type", "source"],
+                name="ledger_exchange_rate_once",
+            ),
+            models.CheckConstraint(condition=models.Q(rate__gt=0), name="ledger_exchange_rate_pos"),
+            models.CheckConstraint(
+                condition=~models.Q(base_currency=models.F("quote_currency")),
+                name="ledger_exchange_rate_pair",
+            ),
+        ]
