@@ -76,5 +76,16 @@ projection for the year, the outlook shows the actual months only and says so.
 
 Goals use the published projection as their likely outcome for the months it covers, and say so.
 
+## Tax rules
+Corporate tax rules are kept per country as dated rule sets: the rate, how long losses can be
+carried forward, when provisional tax is paid and when the final balance is due, each with the
+publications it was taken from. Cyprus is the first country: 12.5% for tax years 2020–2025 and
+15% from 2026; losses carried forward 5 years (7 years for losses from 2026); provisional tax in
+two halves by 31 July and 31 December; the balance by 1 August of the following year.
+
+These rules are **pending verification** by a Cyprus tax professional and are shown as such
+wherever they are used. They are not tax advice, and the platform never files a tax return.
+See them with `GET .../tax-rules`.
+
 The tax rate is the one from your books or the one you enter; the platform does not assume a rate
 from tax law.
