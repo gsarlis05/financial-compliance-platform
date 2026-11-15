@@ -30,7 +30,7 @@ from fcp.modules.metrics.api import current_mapping
 from fcp.modules.reporting.api import actuals_monthly, opening_net
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from .drivers import DEFAULT_CAPEX_LIFE, DRIVERS, OPEX_LINES, REVENUE_LINES, Unit
+from .drivers import DEFAULTS, DRIVERS, OPEX_LINES, REVENUE_LINES, Unit
 from .models import AssumptionSet, AssumptionValue
 
 READ, RUN, PUBLISH = "planning.read", "planning.run", "planning.publish"
@@ -157,7 +157,7 @@ Row = tuple[str, str, date, Decimal, str]  # driver, line, month, value, source
 def _empty(months: list[date]) -> list[Row]:
     values: list[Row] = []
     for key, driver in DRIVERS.items():
-        default = Decimal(DEFAULT_CAPEX_LIFE) if key == "capex_life" else Decimal(0)
+        default = Decimal(DEFAULTS.get(key, 0))
         for line in driver.lines:
             values += [(key, line, m, default, Source.DEFAULT) for m in months]
     return values
@@ -189,10 +189,10 @@ def _month(
         values.append(("gross_margin", "", month, ratios["gross_margin"], Source.ACTUALS))
     for key in ("dso", "dio", "dpo", "tax_rate", "interest_rate"):
         values.append((key, "", month, ratios[key], Source.ACTUALS))
-    values.append(("capex_life", "", month, Decimal(DEFAULT_CAPEX_LIFE), Source.DEFAULT))
-    for key in ("capex", "borrowing", "repayment", "dividends", "share_capital",
-                "minimum_cash", "revolver_limit", "revolver_rate"):  # fmt: skip
-        values.append((key, "", month, Decimal(0), Source.DEFAULT))
+    for key in ("capex_life", "capex_start", "capex_db_rate", "capex_allowance_rate", "capex",
+                "borrowing", "repayment", "dividends", "share_capital", "minimum_cash",
+                "revolver_limit", "revolver_rate"):  # fmt: skip
+        values.append((key, "", month, Decimal(DEFAULTS.get(key, 0)), Source.DEFAULT))
     return values
 
 

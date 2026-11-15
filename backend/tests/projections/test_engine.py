@@ -254,3 +254,24 @@ def test_every_valid_assumption_set_satisfies_the_six_invariants(inp: EngineInpu
     _, out = engine.output(inp)
     assert all(v.nature.value in ("ACTUAL", "FORECAST") for v in out.values)
     assert out.digest() == engine.output(inp)[1].digest()  # deterministic
+
+
+def test_new_capex_commencement_and_method() -> None:
+    """M6F-3 (#148): new capex depreciation starts ``capex_start`` months after it is spent (the
+    default 1 keeps the earlier behaviour) and may be declining balance."""
+    months = [add_months(JAN, n) for n in range(4)]
+    base = {("capex", ""): {JAN: D(12000)}, ("capex_life", ""): flat(12, months)}
+
+    def da(drivers: dict[tuple[str, str], dict[date, Decimal]]) -> list[Decimal]:
+        inp = EngineInput("c", date(2026, 12, 31), months, {"BS.CASH": D(20000),
+                          "BS.EQUITY.SHARE_CAPITAL": D(20000)}, drivers, {}, set())  # fmt: skip
+        p = project(inp)
+        assert all(p.invariants.values()), p.invariants
+        return [m.pl["PL.DA"] for m in p.months]
+
+    assert da(base) == [0, D(1000), D(1000), D(1000)]  # no capex_start row: the month after
+    assert da({**base, ("capex_start", ""): flat(0, months)}) == [D(1000)] * 4
+    assert da({**base, ("capex_start", ""): flat(2, months)}) == [0, 0, D(1000), D(1000)]
+    # Declining balance 24% a year from the month after: 12,000 x 2% = 240; 11,760 x 2% = 235.20.
+    db = da({**base, ("capex_db_rate", ""): flat(24, months)})
+    assert db[:3] == [0, D(240), D("235.20")]

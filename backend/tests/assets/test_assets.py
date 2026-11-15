@@ -30,7 +30,7 @@ def asset_body(b: dict[str, Any], **extra: Any) -> dict[str, Any]:
             "asset_account_id": acc["1010"]["id"], "accumulated_account_id": acc["1019"]["id"],
             "expense_account_id": acc["6600"]["id"], "acquired_on": "2026-01-15",
             "cost": "24000.00", "residual_value": "0", "useful_life_months": 48,
-            **extra}  # fmt: skip
+            "commencement": "NEXT_MONTH", **extra}  # fmt: skip
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def test_register_schedule_and_draft_depreciation(reg: dict[str, Any]) -> None:
     assert sched["rows"][0] == {"month": "2026-02-01", "opening": "24000.00",
                                 "depreciation": "500.00", "closing": "23500.00",
                                 "accumulated": "500.00", "entry_id": None}  # fmt: skip
-    assert "month after acquisition" in sched["convention"]
+    assert "available for use" in sched["convention"]
 
     # Prepared as a draft (AC-FA2): nothing is posted by the register.
     run = c.post_json(f"{base}/depreciation-runs", {"month": "2026-02-10"})
