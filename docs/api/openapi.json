@@ -5474,6 +5474,11 @@
             "title": "Lines",
             "type": "array"
           },
+          "per_loan": {
+            "description": "One row per loan of the set (the loan's code as line)",
+            "title": "Per Loan",
+            "type": "boolean"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -5482,7 +5487,8 @@
         "required": [
           "key",
           "unit",
-          "lines"
+          "lines",
+          "per_loan"
         ],
         "title": "DriverOut",
         "type": "object"
@@ -8718,6 +8724,177 @@
           "line_id"
         ],
         "title": "LinkOut",
+        "type": "object"
+      },
+      "LoanIn": {
+        "properties": {
+          "amount": {
+            "default": "0",
+            "description": "New loan: the amount drawn",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "annual_rate": {
+            "description": "% a year",
+            "pattern": "^\\d{1,3}(\\.\\d{1,4})?$",
+            "title": "Annual Rate",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "drawdown_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New loan: drawn at its end",
+            "title": "Drawdown Month"
+          },
+          "interest_only_months": {
+            "default": 0,
+            "maximum": 599,
+            "minimum": 0,
+            "title": "Interest Only Months",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "EXISTING",
+              "NEW"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "opening_balance": {
+            "default": "0",
+            "description": "Existing loan: owed at the cut-over",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "structure": {
+            "enum": [
+              "ANNUITY",
+              "EQUAL_PRINCIPAL",
+              "BULLET"
+            ],
+            "title": "Structure",
+            "type": "string"
+          },
+          "term_months": {
+            "description": "Repayment months, interest-only included",
+            "maximum": 600,
+            "minimum": 1,
+            "title": "Term Months",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind",
+          "structure",
+          "term_months",
+          "annual_rate"
+        ],
+        "title": "LoanIn",
+        "type": "object"
+      },
+      "LoanOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "annual_rate": {
+            "title": "Annual Rate",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "drawdown_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drawdown Month"
+          },
+          "from_register": {
+            "title": "From Register",
+            "type": "boolean"
+          },
+          "interest_only_months": {
+            "title": "Interest Only Months",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "opening_balance": {
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "structure": {
+            "title": "Structure",
+            "type": "string"
+          },
+          "term_months": {
+            "title": "Term Months",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind",
+          "structure",
+          "term_months",
+          "annual_rate",
+          "opening_balance",
+          "amount",
+          "drawdown_month",
+          "interest_only_months",
+          "from_register",
+          "note"
+        ],
+        "title": "LoanOut",
         "type": "object"
       },
       "ManualIn": {
@@ -16651,6 +16828,254 @@
           }
         ],
         "summary": "Approve Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/loans": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_list_loans",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LoanOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Loans",
+        "tags": [
+          "projections"
+        ]
+      },
+      "post": {
+        "description": "A loan of a draft set; its rate path, early repayments and extra drawdowns are rows of\nthe grid (``loan_rate``, ``loan_prepayment``, ``loan_drawdown``).",
+        "operationId": "fcp_modules_projections_api_add_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Loan",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/loans/from-register": {
+      "post": {
+        "description": "The debt register's drawn loans with their balances at the set's cut-over.",
+        "operationId": "fcp_modules_projections_api_add_loans_from_register",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LoanOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Loans From Register",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/loans/{code}": {
+      "delete": {
+        "operationId": "fcp_modules_projections_api_remove_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Loan",
         "tags": [
           "projections"
         ]

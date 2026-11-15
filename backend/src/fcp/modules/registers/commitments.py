@@ -537,3 +537,56 @@ def flows(
 def facilities(ctx: WorkspaceContext, entity_id: UUID) -> list[DebtInstrument]:
     """Current overdraft and revolving facilities (their limits count towards liquidity)."""
     return [d for d in current_versions(ctx, entity_id, DebtInstrument) if d.kind in FACILITIES]
+
+
+# --- positions for projections (M6F-4, #149) ------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DebtPosition:
+    """A drawn loan of the register as it stands at a date, for projections to start from."""
+
+    series_id: UUID
+    name: str
+    kind: str
+    balance: Decimal  # outstanding principal after the instalments due up to the date
+    annual_rate: Decimal  # percent a year (fixed, or the assumed reference rate plus the margin)
+    rate_type: str  # FIXED or VARIABLE
+    remaining_months: int  # from the month after the date to the maturity month
+    structure: str  # ANNUITY, EQUAL_PRINCIPAL or BULLET
+    interest_only_months: int  # left after the date
+    frequency_months: int  # the register's payment frequency (projections are monthly)
+
+
+_STRUCTURE = {"ANNUITY": "ANNUITY", "LINEAR": "EQUAL_PRINCIPAL", "BULLET": "BULLET",
+              "IO_THEN_ANNUITY": "ANNUITY"}  # fmt: skip
+
+
+def debt_positions(ctx: WorkspaceContext, entity_id: UUID, on: date) -> list[DebtPosition]:
+    """Every drawn, unmatured loan (not facilities) with its balance at ``on``."""
+    entity = get_entity(ctx, entity_id, READ)
+    found = []
+    for d in current_versions(ctx, entity.id, DebtInstrument):
+        if d.kind in FACILITIES or d.start_date > on or d.maturity_date is None:
+            continue
+        loan = _loan(d)
+        rows = loan_schedule(loan)
+        balance = loan.principal
+        for row in rows:
+            if row.period_end <= on:
+                balance = row.closing
+        if balance <= 0:
+            continue
+        months_left = (d.maturity_date.year - on.year) * 12 + d.maturity_date.month - on.month
+        elapsed = (on.year - d.start_date.year) * 12 + on.month - d.start_date.month
+        io_left = 0
+        if d.repayment_type == "IO_THEN_ANNUITY":
+            io_left = max(d.interest_only_periods * d.payment_frequency_months - elapsed, 0)
+        found.append(DebtPosition(
+            series_id=d.series_id, name=d.name, kind=d.kind, balance=balance,
+            annual_rate=loan.annual_rate * 100, rate_type=d.rate_type,
+            remaining_months=max(months_left, 1), structure=_STRUCTURE[d.repayment_type],
+            interest_only_months=min(io_left, max(months_left - 1, 0)),
+            frequency_months=d.payment_frequency_months,
+        ))  # fmt: skip
+    return found

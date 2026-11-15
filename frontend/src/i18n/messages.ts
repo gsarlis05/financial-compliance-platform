@@ -1439,6 +1439,33 @@ export const en = {
     "Declining-balance rate for new assets (0 = straight-line)",
   "as.driver.capex_allowance_rate":
     "Tax capital allowance rate for new assets (a year)",
+  "as.loans": "Loans",
+  "as.loansIntro":
+    "Each loan is projected on its own: interest on the balance at the start of the month, then the scheduled repayment, early repayments and drawdowns at the month end. Its rate path, early repayments and extra drawdowns are rows in the grid below. Any debt in the books not covered by these loans is projected with the borrowing, repayment and interest-rate rows.",
+  "as.noLoans": "No loans in this set.",
+  "as.loanCode": "Loan code",
+  "as.loanKind": "Kind",
+  "as.kind.EXISTING": "Existing (owed at the cut-over)",
+  "as.kind.NEW": "New (drawn in a month of the set)",
+  "as.loanStructure": "Repayment",
+  "as.structure.ANNUITY": "Annuity (level payments)",
+  "as.structure.EQUAL_PRINCIPAL": "Equal principal",
+  "as.structure.BULLET": "Bullet (repaid at the end)",
+  "as.loanBalance": "Balance owed at the cut-over",
+  "as.loanAmount": "Amount drawn",
+  "as.drawdownMonth": "Drawn at the end of",
+  "as.loanRate": "Rate (% a year)",
+  "as.loanTerm": "Repayment months",
+  "as.interestOnly": "interest only",
+  "as.interestOnlyMonths": "Interest-only months",
+  "as.addLoan": "Add loan",
+  "as.removeLoan": "Remove",
+  "as.fromRegister": "Add the loans of the debt register",
+  "as.driver.loan_rate": "Loan rate (a year)",
+  "as.driver.loan_prepayment": "Early repayment",
+  "as.driver.loan_drawdown": "Extra drawdown",
+  "pj.inv.debt_reconciles":
+    "Each loan, the interest and the debt lines reconcile",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2903,6 +2930,33 @@ export const el: Record<MessageKey, string> = {
     "Συντελεστής φθίνουσας απόσβεσης νέων παγίων (0 = σταθερή)",
   "as.driver.capex_allowance_rate":
     "Συντελεστής φορολογικών εκπτώσεων νέων παγίων (ετησίως)",
+  "as.loans": "Δάνεια",
+  "as.loansIntro":
+    "Κάθε δάνειο προβάλλεται χωριστά: τόκος επί του υπολοίπου στην αρχή του μήνα, και στο τέλος του μήνα η προγραμματισμένη αποπληρωμή, οι πρόωρες αποπληρωμές και οι εκταμιεύσεις. Η πορεία του επιτοκίου, οι πρόωρες αποπληρωμές και οι πρόσθετες εκταμιεύσεις είναι γραμμές του πίνακα παρακάτω. Ο δανεισμός των βιβλίων που δεν καλύπτεται από αυτά τα δάνεια προβάλλεται με τις γραμμές δανεισμού, αποπληρωμής και επιτοκίου.",
+  "as.noLoans": "Δεν υπάρχουν δάνεια σε αυτό το σύνολο.",
+  "as.loanCode": "Κωδικός δανείου",
+  "as.loanKind": "Είδος",
+  "as.kind.EXISTING": "Υφιστάμενο (οφειλή στην ημερομηνία αποκοπής)",
+  "as.kind.NEW": "Νέο (εκταμίευση σε μήνα του συνόλου)",
+  "as.loanStructure": "Αποπληρωμή",
+  "as.structure.ANNUITY": "Τοκοχρεολυτική (σταθερές δόσεις)",
+  "as.structure.EQUAL_PRINCIPAL": "Ίσο κεφάλαιο",
+  "as.structure.BULLET": "Εφάπαξ στη λήξη",
+  "as.loanBalance": "Υπόλοιπο στην ημερομηνία αποκοπής",
+  "as.loanAmount": "Ποσό εκταμίευσης",
+  "as.drawdownMonth": "Εκταμίευση στο τέλος του",
+  "as.loanRate": "Επιτόκιο (% ετησίως)",
+  "as.loanTerm": "Μήνες αποπληρωμής",
+  "as.interestOnly": "μόνο τόκοι",
+  "as.interestOnlyMonths": "Μήνες μόνο τόκων",
+  "as.addLoan": "Προσθήκη δανείου",
+  "as.removeLoan": "Αφαίρεση",
+  "as.fromRegister": "Προσθήκη των δανείων του μητρώου δανεισμού",
+  "as.driver.loan_rate": "Επιτόκιο δανείου (ετησίως)",
+  "as.driver.loan_prepayment": "Πρόωρη αποπληρωμή",
+  "as.driver.loan_drawdown": "Πρόσθετη εκταμίευση",
+  "pj.inv.debt_reconciles":
+    "Κάθε δάνειο, οι τόκοι και οι γραμμές δανεισμού συμφωνούν",
 };
 
 export const catalogs = { en, el } as const;

@@ -113,3 +113,61 @@ class RollingForecast(TenantOwned):
                 condition=models.Q(horizon__in=[12, 24]), name="projections_rolling_horizon"
             )
         ]
+
+
+class AssumptionLoan(TenantOwned):
+    """A loan in an assumption set (M6F-4, #149; owner decision D5). An existing loan starts from
+    its balance at the cut-over (taken from the debt register or entered); a new loan is drawn at
+    the end of its drawdown month. Its monthly rate path, early repayments and extra drawdowns are
+    values of the set (drivers ``loan_rate``, ``loan_prepayment`` and ``loan_drawdown``, with the
+    loan's code as the line). Changes only while the set is a draft (database trigger)."""
+
+    class Kind(models.TextChoices):
+        EXISTING = "EXISTING"
+        NEW = "NEW"
+
+    class Structure(models.TextChoices):
+        ANNUITY = "ANNUITY"
+        EQUAL_PRINCIPAL = "EQUAL_PRINCIPAL"
+        BULLET = "BULLET"
+
+    assumption_set = models.ForeignKey(AssumptionSet, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    opening_balance = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    drawdown_month = models.DateField(null=True, blank=True)  # first day of the month
+    structure = models.CharField(max_length=16, choices=Structure.choices)
+    term_months = models.PositiveSmallIntegerField()
+    interest_only_months = models.PositiveSmallIntegerField(default=0)
+    annual_rate = models.DecimalField(max_digits=9, decimal_places=4)  # percent a year
+    register_series_id = models.UUIDField(null=True, blank=True)  # from the debt register
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "projections_assumption_loan"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assumption_set", "code"], name="projections_loan_once"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    kind="EXISTING", opening_balance__gt=0, amount=0, drawdown_month__isnull=True
+                )
+                | models.Q(
+                    kind="NEW", opening_balance=0, amount__gt=0, drawdown_month__isnull=False
+                ),
+                name="projections_loan_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    term_months__gte=1,
+                    term_months__lte=600,
+                    interest_only_months__lt=models.F("term_months"),
+                    annual_rate__gte=0,
+                    annual_rate__lte=100,
+                ),
+                name="projections_loan_terms",
+            ),
+        ]

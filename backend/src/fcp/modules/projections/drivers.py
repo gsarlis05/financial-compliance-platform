@@ -34,6 +34,7 @@ class Driver:
     unit: Unit
     lines: tuple[str, ...] = ("",)  # taxonomy lines, or "" for a single row
     minimum: int | None = 0  # None: negative values allowed
+    per_loan: bool = False  # one row per loan of the set, the loan's code as the line (M6F-4)
 
 
 DRIVERS: dict[str, Driver] = {
@@ -62,6 +63,10 @@ DRIVERS: dict[str, Driver] = {
         Driver("minimum_cash", Unit.AMOUNT),
         Driver("revolver_limit", Unit.AMOUNT),
         Driver("revolver_rate", Unit.PERCENT),  # a year
+        # Per loan (M6F-4, #149): the rate path, early repayments and extra drawdowns by month.
+        Driver("loan_rate", Unit.PERCENT, (), per_loan=True),  # a year
+        Driver("loan_prepayment", Unit.AMOUNT, (), per_loan=True),
+        Driver("loan_drawdown", Unit.AMOUNT, (), per_loan=True),
     )
 }
 

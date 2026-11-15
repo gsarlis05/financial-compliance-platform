@@ -28,9 +28,11 @@ __all__ = [
     "CommitmentFlow",
     "Counterparty",
     "DebtInstrument",
+    "DebtPosition",
     "OpenItem",
     "business_days",
     "commitment_flows_between",
+    "debt_positions",
     "facilities",
     "open_items",
     "payment_behaviour",
@@ -41,6 +43,8 @@ OpenItem = services.OpenItem
 open_items = services.open_items
 commitment_flows_between = commitments.flows
 facilities = commitments.facilities
+DebtPosition = commitments.DebtPosition
+debt_positions = commitments.debt_positions
 business_days = commitments.business_days
 Behaviour = behaviour.Behaviour
 payment_behaviour = behaviour.payment_behaviour

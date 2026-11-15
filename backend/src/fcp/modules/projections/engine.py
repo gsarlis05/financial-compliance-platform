@@ -41,6 +41,7 @@ from fcp.modules.assets.api import (
 from fcp.modules.calendar.api import add_months, month_end
 from fcp.modules.metrics.api import Nature, Output, Source, Value
 
+from .debt import LoanMonth, LoanTerms, opening_current, project_loan
 from .drivers import DEFAULTS, OPEX_LINES, REVENUE_LINES
 
 # The engine is not production-ready until the validation package passes and a qualified
@@ -62,6 +63,7 @@ INVARIANTS = (
     "opening_equals_previous_closing",
     "roll_forwards_tie",
     "aggregation_consistent",
+    "debt_reconciles",  # M6F-4: each loan's roll-forward, interest and the debt lines
 )
 
 
@@ -81,6 +83,7 @@ class EngineInput:
     register_depreciation: dict[date, Decimal]
     fiscal_year_starts: set[date] = field(default_factory=set)  # months that start a year
     currency: str = "EUR"  # the entity's functional currency (ISO 4217)
+    loans: tuple[LoanTerms, ...] = ()  # M6F-4: loans of the assumption set
 
 
 @dataclass
@@ -89,6 +92,8 @@ class Month:
     pl: dict[str, Decimal]
     bs: dict[str, Decimal]
     cf: dict[str, Decimal]
+    loans: dict[str, LoanMonth] = field(default_factory=dict)  # M6F-4, by loan code
+    other_debt: dict[str, Decimal] = field(default_factory=dict)  # M6F-4
 
 
 @dataclass
@@ -135,7 +140,7 @@ def _new_capex_depreciation(inp: EngineInput) -> dict[date, Decimal]:
 
 
 def _income(inp: EngineInput, month: date, depreciation: Decimal,
-            debt: Decimal, revolver: Decimal) -> dict[str, Decimal]:  # fmt: skip
+            interest: Decimal) -> dict[str, Decimal]:  # fmt: skip
     pl: dict[str, Decimal] = {}
     for line in REVENUE_LINES:
         pl[f"PL.{line}"] = cents(_d(inp, "revenue", month, line))
@@ -150,9 +155,7 @@ def _income(inp: EngineInput, month: date, depreciation: Decimal,
     pl["PL.EBITDA"] = pl["PL.GROSS_PROFIT"] - pl["PL.OPEX"]
     pl["PL.DA"] = depreciation
     pl["PL.EBIT"] = pl["PL.EBITDA"] - depreciation
-    pl["PL.INTEREST"] = cents(debt * _d(inp, "interest_rate", month) / HUNDRED / TWELVE) + cents(
-        revolver * _d(inp, "revolver_rate", month) / HUNDRED / TWELVE
-    )
+    pl["PL.INTEREST"] = interest
     pl["PL.PBT"] = pl["PL.EBIT"] - pl["PL.INTEREST"]
     rate = _d(inp, "tax_rate", month)
     pl["PL.TAX"] = cents(pl["PL.PBT"] * rate / HUNDRED) if pl["PL.PBT"] > 0 else ZERO
@@ -168,12 +171,25 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
     revolver = ZERO  # part of current debt, tracked for its own rate and rule
     months: list[Month] = []
     notes: list[str] = []
+    # Loans of the set (M6F-4); the rest of the opening debt is "other debt" (drivers).
+    schedules = {loan.code: {r.month: r for r in project_loan(loan, inp.months)}
+                 for loan in inp.loans}  # fmt: skip
+    first = inp.months[0] if inp.months else date.min
+    existing = [loan for loan in inp.loans if loan.drawdown_month is None]
+    current0 = sum((opening_current(loan, first) for loan in existing), ZERO)
+    other_current = opening["BS.DEBT.CURRENT"] - current0
+    existing_total = sum((cents(loan.opening) for loan in existing), ZERO)
+    other_noncurrent = opening["BS.DEBT.NONCURRENT"] - (existing_total - current0)
     for month in inp.months:
         prev = dict(bs)
         days = Decimal(calendar.monthrange(month.year, month.month)[1])
         dep = cents(inp.register_depreciation.get(month, ZERO) + new_dep.get(month, ZERO))
-        term_debt = prev["BS.DEBT.NONCURRENT"] + prev["BS.DEBT.CURRENT"] - revolver
-        pl = _income(inp, month, dep, term_debt, revolver)
+        loans = {code: rows[month] for code, rows in schedules.items()}
+        other_opening = other_current + other_noncurrent
+        other_interest = cents(other_opening * _d(inp, "interest_rate", month) / HUNDRED / TWELVE)
+        revolver_interest = cents(revolver * _d(inp, "revolver_rate", month) / HUNDRED / TWELVE)
+        loan_interest = sum((r.interest for r in loans.values()), ZERO)
+        pl = _income(inp, month, dep, loan_interest + other_interest + revolver_interest)
         # Working capital and fixed assets.
         bs["BS.AR"] = cents(pl["PL.REVENUE"] * _d(inp, "dso", month) / days)
         bs["BS.INVENTORY"] = cents(pl["PL.COGS"] * _d(inp, "dio", month) / days)
@@ -184,15 +200,20 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         # Tax: accrued this month; last year's balance paid in the first month of a fiscal year.
         tax_paid = prev["BS.TAX_PAY"] if month in inp.fiscal_year_starts else ZERO
         bs["BS.TAX_PAY"] = prev["BS.TAX_PAY"] - tax_paid + pl["PL.TAX"]
-        # Debt: new borrowing is non-current; repayments reduce current debt first.
+        # Other debt: new borrowing is non-current; repayments reduce current debt first.
         borrowing = cents(_d(inp, "borrowing", month))
         asked = cents(_d(inp, "repayment", month))
-        repayment = max(min(asked, term_debt + borrowing), ZERO)
+        repayment = max(min(asked, other_opening + borrowing), ZERO)
         if repayment < asked:
-            notes.append(f"{month:%Y-%m}: repayment capped at the debt owed ({repayment}).")
-        current_term = prev["BS.DEBT.CURRENT"] - revolver
-        from_current = min(repayment, max(current_term, ZERO))
-        noncurrent = prev["BS.DEBT.NONCURRENT"] + borrowing - (repayment - from_current)
+            notes.append(f"{month:%Y-%m}: repayment capped at the other debt owed ({repayment}).")
+        from_current = min(repayment, max(other_current, ZERO))
+        other_current -= from_current
+        other_noncurrent += borrowing - (repayment - from_current)
+        # Loans (M6F-4).
+        drawn = sum((r.drawdown for r in loans.values()), ZERO)
+        repaid = sum((r.principal + r.prepayment for r in loans.values()), ZERO)
+        loans_closing = sum((r.closing for r in loans.values()), ZERO)
+        loans_current = sum((r.current for r in loans.values()), ZERO)
         # Equity.
         dividends = cents(_d(inp, "dividends", month))
         issued = cents(_d(inp, "share_capital", month))
@@ -209,10 +230,10 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
                                  ZERO)  # fmt: skip
         cf["CF.CAPEX"] = -capex
         cf["CF.INVESTING"] = cf["CF.CAPEX"]
-        cf["CF.BORROWING"], cf["CF.REPAYMENT"] = borrowing, -repayment
+        cf["CF.BORROWING"], cf["CF.REPAYMENT"] = borrowing + drawn, -(repayment + repaid)
         cf["CF.SHARE_CAPITAL"], cf["CF.DIVIDENDS"] = issued, -dividends
-        before = (prev["BS.CASH"] + cf["CF.OPERATING"] + cf["CF.INVESTING"] + borrowing
-                  - repayment + issued - dividends)  # fmt: skip
+        before = (prev["BS.CASH"] + cf["CF.OPERATING"] + cf["CF.INVESTING"] + cf["CF.BORROWING"]
+                  + cf["CF.REPAYMENT"] + issued - dividends)  # fmt: skip
         # The credit facility (doc 10 §4.1 step 8).
         minimum = cents(_d(inp, "minimum_cash", month))
         limit = cents(_d(inp, "revolver_limit", month))
@@ -221,18 +242,24 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
             draw = min(minimum - before, limit - revolver)
         elif before > minimum and revolver > 0:
             repay = min(revolver, before - minimum)
+        revolver_opening = revolver
         revolver += draw - repay
         cf["CF.REVOLVER"] = draw - repay
-        cf["CF.FINANCING"] = borrowing - repayment + issued - dividends + cf["CF.REVOLVER"]
+        cf["CF.FINANCING"] = (cf["CF.BORROWING"] + cf["CF.REPAYMENT"] + issued - dividends
+                              + cf["CF.REVOLVER"])  # fmt: skip
         cf["CF.NET_CHANGE"] = cf["CF.OPERATING"] + cf["CF.INVESTING"] + cf["CF.FINANCING"]
         cf["CF.OPENING_CASH"] = prev["BS.CASH"]
         cf["CF.CLOSING_CASH"] = prev["BS.CASH"] + cf["CF.NET_CHANGE"]
         bs["BS.CASH"] = before + cf["CF.REVOLVER"]
-        bs["BS.DEBT.NONCURRENT"] = noncurrent
-        bs["BS.DEBT.CURRENT"] = current_term - from_current + revolver
+        bs["BS.DEBT.NONCURRENT"] = other_noncurrent + loans_closing - loans_current
+        bs["BS.DEBT.CURRENT"] = other_current + loans_current + revolver
         if bs["BS.CASH"] < 0:
             notes.append(f"{month:%Y-%m}: cash would be negative ({bs['BS.CASH']}).")
-        months.append(Month(month, pl, dict(bs), cf))
+        other = {"opening": other_opening, "interest": other_interest, "borrowing": borrowing,
+                 "repayment": repayment, "closing": other_current + other_noncurrent,
+                 "revolver_opening": revolver_opening, "revolver_interest": revolver_interest,
+                 "revolver": revolver}  # fmt: skip
+        months.append(Month(month, pl, dict(bs), cf, loans, other))
     projection = Projection(opening, months, {}, notes)
     projection.invariants = check(projection, inp)
     return projection
@@ -250,7 +277,30 @@ HELD = ("BS.INTANGIBLES", "BS.INVESTMENTS", "BS.OTHER_REC", "BS.TAX_REC", "BS.OT
         "BS.EQUITY.SHARE_PREMIUM")  # fmt: skip
 
 
-def _month_checks(m: Month, prev: dict[str, Decimal]) -> dict[str, bool]:
+def _debt_reconciles(m: Month, start: dict[str, Decimal]) -> bool:
+    """M6F-4: each loan's roll-forward ties and opens on its previous closing (``start``); the
+    debt lines equal the loans, the other debt and the credit facility; interest is the sum of
+    its parts."""
+    loans_ok = all(
+        r.opening == start.get(code, ZERO)
+        and r.opening + r.drawdown - r.principal - r.prepayment == r.closing
+        and r.closing >= 0
+        and 0 <= r.current <= r.closing
+        for code, r in m.loans.items()
+    )
+    o = m.other_debt
+    if not o:
+        return loans_ok
+    debt = m.bs["BS.DEBT.NONCURRENT"] + m.bs["BS.DEBT.CURRENT"]
+    closing = sum((r.closing for r in m.loans.values()), ZERO) + o["closing"] + o["revolver"]
+    interest = (sum((r.interest for r in m.loans.values()), ZERO) + o["interest"]
+                + o["revolver_interest"])  # fmt: skip
+    other_ok = o["opening"] + o["borrowing"] - o["repayment"] == o["closing"]
+    return loans_ok and other_ok and debt == closing and m.pl["PL.INTEREST"] == interest
+
+
+def _month_checks(m: Month, prev: dict[str, Decimal],
+                  loan_start: dict[str, Decimal]) -> dict[str, bool]:  # fmt: skip
     a, liabilities, e = totals(m.bs)
     debt = m.bs["BS.DEBT.NONCURRENT"] + m.bs["BS.DEBT.CURRENT"]
     debt_before = prev["BS.DEBT.NONCURRENT"] + prev["BS.DEBT.CURRENT"]
@@ -271,11 +321,13 @@ def _month_checks(m: Month, prev: dict[str, Decimal]) -> dict[str, bool]:
             m.bs["BS.EQUITY.SHARE_CAPITAL"] - prev["BS.EQUITY.SHARE_CAPITAL"]
             == m.cf["CF.SHARE_CAPITAL"],
         )),
+        "debt_reconciles": _debt_reconciles(m, loan_start),
     }  # fmt: skip
 
 
 def check(p: Projection, inp: EngineInput) -> dict[str, bool]:
-    """The six invariants over every month. A failure also adds "<invariant>@<YYYY-MM>": False,
+    """The invariants over every month (doc 10's six, and the debt reconciliation of M6F-4). A
+    failure also adds "<invariant>@<YYYY-MM>": False,
     so a run that fails says where (brief AC-PJ6)."""
     ok = dict.fromkeys(INVARIANTS, True)
     failures: dict[str, bool] = {}
@@ -292,10 +344,13 @@ def check(p: Projection, inp: EngineInput) -> dict[str, bool]:
            all(p.opening[x] == cents(inp.opening.get(x, ZERO)) for x in BS_LINES),
            "opening")  # fmt: skip
     prev = p.opening
+    loan_start = {loan.code: cents(loan.opening) if loan.drawdown_month is None else ZERO
+                  for loan in inp.loans}  # fmt: skip
     for m in p.months:
-        for name, passed in _month_checks(m, prev).items():
+        for name, passed in _month_checks(m, prev, loan_start).items():
             record(name, passed, f"{m.month:%Y-%m}")
         prev = m.bs
+        loan_start = {code: r.closing for code, r in m.loans.items()}
     for where in _aggregate_failures(p):
         record("aggregation_consistent", False, where)
     return {**ok, **failures}
@@ -352,11 +407,31 @@ def values(p: Projection, inp: EngineInput) -> list[Value]:
         for key, amount in {**m.pl, **m.bs, **m.cf}.items():
             out.append(Value(key, m.month, Nature.FORECAST, amount, inp.currency, period_end=end,
                              granularity="MONTH", lineage=_lineage(key, m, inp)))  # fmt: skip
+        out += _loan_values(m, inp, end)
     for size, granularity in ((3, "QUARTER"), (12, "YEAR")):
         for start, end, flows, bs in aggregate(p, size):
             for key, amount in {**flows, **bs}.items():
                 out.append(Value(key, start, Nature.FORECAST, amount, inp.currency, period_end=end,
                                  granularity=granularity))  # fmt: skip
+    return out
+
+
+LOAN_FIELDS = ("opening", "interest", "drawdown", "principal", "prepayment", "closing", "current")
+
+
+def _loan_values(m: Month, inp: EngineInput, end: date) -> list[Value]:
+    """Each loan's month (M6F-4): ``DEBT.<code>.<field>``, and its rate as ``DEBT.<code>.rate``."""
+    ref = f"assumption_set:{inp.set_id}"
+    out = []
+    for code, r in m.loans.items():
+        lineage = (Source("ASSUMPTION", f"{ref}:loan:{code}:{m.month:%Y-%m}", None,
+                          "loan terms, rate path, early repayments and drawdowns"),)  # fmt: skip
+        for name in LOAN_FIELDS:
+            out.append(Value(f"DEBT.{code}.{name}", m.month, Nature.FORECAST, getattr(r, name),
+                             inp.currency, period_end=end, granularity="MONTH",
+                             lineage=lineage))  # fmt: skip
+        out.append(Value(f"DEBT.{code}.rate", m.month, Nature.FORECAST, r.rate, "percent",
+                         period_end=end, granularity="MONTH", lineage=lineage))  # fmt: skip
     return out
 
 
@@ -370,7 +445,11 @@ def _lineage(key: str, m: Month, inp: EngineInput) -> tuple[Source, ...]:
         return (Source("ASSUMPTION", f"{ref}:opex:{code}:{month}", m.pl[key]),)
     simple = {
         "PL.COGS": ("gross_margin", "cost of sales = sales and services x (100% - gross margin)"),
-        "PL.INTEREST": ("interest_rate", "on opening debt; credit facility at its own rate"),
+        "PL.INTEREST": (
+            "interest_rate",
+            "on opening balances: each loan at its rate, other debt "
+            "and the credit facility at theirs",
+        ),
         "PL.TAX": ("tax_rate", "on a positive profit before tax; no relief for losses"),
         "BS.AR": ("dso", "revenue x DSO / days in the month"),
         "BS.INVENTORY": ("dio", "cost of sales x DIO / days in the month"),

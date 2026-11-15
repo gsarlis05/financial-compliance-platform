@@ -121,7 +121,7 @@ def test_capped_repayment_and_tax_paid_in_the_new_year() -> None:
     # December: tax 100 accrued, nothing paid; 3,500 owed, so the repayment is capped at 3,500.
     assert (dec.bs["BS.TAX_PAY"], dec.cf["CF.REPAYMENT"]) == (D(150), D(-3500))
     assert dec.bs["BS.DEBT.CURRENT"] == dec.bs["BS.DEBT.NONCURRENT"] == 0
-    assert "2027-12: repayment capped at the debt owed (3500.00)." in p.notes
+    assert "2027-12: repayment capped at the other debt owed (3500.00)." in p.notes
     # January starts a fiscal year: the 150 owed is paid and January's 100 accrued.
     assert jan.bs["BS.TAX_PAY"] == D(100)
     assert jan.cf["CF.WC.TAX"] == D(-50)

@@ -8,11 +8,21 @@ import {
   type StartFrom,
   useAssumptionGrid,
   useAssumptionMutations,
+  type LoanInput,
+  type LoanStructure,
   useAssumptionSets,
+  useLoanMutations,
+  useLoans,
 } from "../api/projections";
-import { Loading, Page, ProblemMessage } from "../components/common";
+import {
+  FieldError,
+  Loading,
+  Page,
+  ProblemMessage,
+} from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
+import { formatAmount } from "../money";
 
 const lastMonthEnd = () => {
   const d = new Date();
@@ -124,9 +134,249 @@ function NewSet({ onMade }: { onMade: (id: string) => void }) {
 
 function rowLabel(t: (k: MessageKey) => string, row: GridRow) {
   const driver = t(`as.driver.${row.driver}` as MessageKey);
+  if (row.driver.startsWith("loan_")) return `${driver}: ${row.line}`;
   return row.line
     ? `${driver}: ${t(`as.line.${row.line}` as MessageKey)}`
     : driver;
+}
+
+const STRUCTURES: LoanStructure[] = ["ANNUITY", "EQUAL_PRINCIPAL", "BULLET"];
+
+function Loans({ setId, draft }: { setId: string; draft: boolean }) {
+  const { t, locale } = useI18n();
+  const list = useLoans(setId);
+  const m = useLoanMutations(setId);
+  const blank = (): LoanInput => ({
+    code: "",
+    name: "",
+    kind: "NEW",
+    structure: "ANNUITY",
+    term_months: 60,
+    annual_rate: "5",
+    opening_balance: "0",
+    amount: "",
+    drawdown_month: null,
+    interest_only_months: 0,
+  });
+  const [form, setForm] = useState<LoanInput>(blank);
+  const set = (patch: Partial<LoanInput>) => setForm({ ...form, ...patch });
+  const error = m.add.error ?? m.fromRegister.error ?? m.remove.error;
+  return (
+    <section className="card" aria-labelledby="as-loans">
+      <h2 id="as-loans">{t("as.loans")}</h2>
+      <p className="muted">{t("as.loansIntro")}</p>
+      {list.data?.length ? (
+        <div className="table-scroll">
+          <table className="grid">
+            <caption>{t("as.loans")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("as.loanCode")}</th>
+                <th scope="col">{t("as.name")}</th>
+                <th scope="col">{t("as.loanKind")}</th>
+                <th scope="col">{t("as.loanStructure")}</th>
+                <th scope="col" className="num">
+                  {t("as.loanBalance")}
+                </th>
+                <th scope="col" className="num">
+                  {t("as.loanRate")}
+                </th>
+                <th scope="col" className="num">
+                  {t("as.loanTerm")}
+                </th>
+                {draft ? (
+                  <th scope="col">
+                    <span className="visually-hidden">{t("eng.actions")}</span>
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {list.data.map((loan) => (
+                <tr key={loan.code}>
+                  <th scope="row">{loan.code}</th>
+                  <td>
+                    {loan.name}
+                    {loan.note ? (
+                      <span className="muted"> · {loan.note}</span>
+                    ) : null}
+                  </td>
+                  <td>
+                    {t(`as.kind.${loan.kind}` as MessageKey)}
+                    {loan.drawdown_month
+                      ? ` (${loan.drawdown_month.slice(0, 7)})`
+                      : ""}
+                  </td>
+                  <td>{t(`as.structure.${loan.structure}` as MessageKey)}</td>
+                  <td className="num">
+                    {formatAmount(
+                      loan.kind === "NEW" ? loan.amount : loan.opening_balance,
+                      locale,
+                    )}
+                  </td>
+                  <td className="num">{loan.annual_rate}%</td>
+                  <td className="num">
+                    {loan.term_months}
+                    {loan.interest_only_months
+                      ? ` (${loan.interest_only_months} ${t("as.interestOnly")})`
+                      : ""}
+                  </td>
+                  {draft ? (
+                    <td>
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => m.remove.mutate(loan.code)}
+                      >
+                        {t("as.removeLoan")} {loan.code}
+                      </button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted">{t("as.noLoans")}</p>
+      )}
+      {draft ? (
+        <>
+          <button
+            type="button"
+            disabled={m.fromRegister.isPending}
+            onClick={() => m.fromRegister.mutate()}
+          >
+            {t("as.fromRegister")}
+          </button>
+          <div className="form inline">
+            <label>
+              {t("as.loanCode")}
+              <input
+                value={form.code}
+                maxLength={20}
+                onChange={(e) => set({ code: e.target.value })}
+              />
+              <FieldError error={m.add.error} field="code" />
+            </label>
+            <label>
+              {t("as.name")}
+              <input
+                value={form.name}
+                maxLength={120}
+                onChange={(e) => set({ name: e.target.value })}
+              />
+            </label>
+            <label>
+              {t("as.loanKind")}
+              <select
+                value={form.kind}
+                onChange={(e) =>
+                  set({ kind: e.target.value as LoanInput["kind"] })
+                }
+              >
+                <option value="NEW">{t("as.kind.NEW")}</option>
+                <option value="EXISTING">{t("as.kind.EXISTING")}</option>
+              </select>
+            </label>
+            {form.kind === "NEW" ? (
+              <>
+                <label>
+                  {t("as.loanAmount")}
+                  <input
+                    inputMode="decimal"
+                    value={form.amount}
+                    onChange={(e) => set({ amount: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("as.drawdownMonth")}
+                  <input
+                    type="month"
+                    value={form.drawdown_month?.slice(0, 7) ?? ""}
+                    onChange={(e) =>
+                      set({
+                        drawdown_month: e.target.value
+                          ? `${e.target.value}-01`
+                          : null,
+                      })
+                    }
+                  />
+                  <FieldError error={m.add.error} field="drawdown_month" />
+                </label>
+              </>
+            ) : (
+              <label>
+                {t("as.loanBalance")}
+                <input
+                  inputMode="decimal"
+                  value={form.opening_balance}
+                  onChange={(e) => set({ opening_balance: e.target.value })}
+                />
+                <FieldError error={m.add.error} field="opening_balance" />
+              </label>
+            )}
+            <label>
+              {t("as.loanStructure")}
+              <select
+                value={form.structure}
+                onChange={(e) =>
+                  set({ structure: e.target.value as LoanStructure })
+                }
+              >
+                {STRUCTURES.map((x) => (
+                  <option key={x} value={x}>
+                    {t(`as.structure.${x}` as MessageKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t("as.loanRate")}
+              <input
+                inputMode="decimal"
+                value={form.annual_rate}
+                onChange={(e) => set({ annual_rate: e.target.value })}
+              />
+            </label>
+            <label>
+              {t("as.loanTerm")}
+              <input
+                inputMode="numeric"
+                value={form.term_months}
+                onChange={(e) =>
+                  set({ term_months: Number(e.target.value) || 0 })
+                }
+              />
+              <FieldError error={m.add.error} field="term_months" />
+            </label>
+            <label>
+              {t("as.interestOnlyMonths")}
+              <input
+                inputMode="numeric"
+                value={form.interest_only_months}
+                onChange={(e) =>
+                  set({ interest_only_months: Number(e.target.value) || 0 })
+                }
+              />
+            </label>
+            <button
+              type="button"
+              disabled={
+                !form.code.trim() || !form.name.trim() || m.add.isPending
+              }
+              onClick={() =>
+                m.add.mutate(form, { onSuccess: () => setForm(blank()) })
+              }
+            >
+              {t("as.addLoan")}
+            </button>
+          </div>
+        </>
+      ) : null}
+      <ProblemMessage error={error} />
+    </section>
+  );
 }
 
 function Grid({ grid }: { grid: AssumptionGrid }) {
@@ -316,7 +566,13 @@ export function AssumptionsPage() {
         <p className="muted">{t("as.none")}</p>
       ) : null}
       {grid.data && open ? (
-        <Grid key={open + grid.data.assumption_set.status} grid={grid.data} />
+        <>
+          <Loans
+            setId={open}
+            draft={grid.data.assumption_set.status === "DRAFT"}
+          />
+          <Grid key={open + grid.data.assumption_set.status} grid={grid.data} />
+        </>
       ) : null}
     </Page>
   );
