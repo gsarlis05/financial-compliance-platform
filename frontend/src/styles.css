@@ -870,3 +870,8 @@ ul.checklist {
 ul.checklist li {
   margin-block: 0.25rem;
 }
+[role="group"] > button[aria-pressed="true"] {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}

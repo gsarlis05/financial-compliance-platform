@@ -199,6 +199,7 @@ class ProjectionRunOut(Schema):
     error: str
     stale: bool
     is_published: bool
+    rolling: bool = Field(description="Made by the rolling forecast (M6-4)")
     created_at: datetime
 
 
@@ -210,6 +211,7 @@ def _projection_out(run: CalcRun) -> ProjectionRunOut:
         actuals_watermark=run.actuals_watermark, input_hash=run.input_hash,
         output_hash=run.output_hash, invariants=run.invariant_results, error=run.error,
         stale=run.stale, is_published=run.is_published, created_at=run.created_at,
+        rolling="rolling_forecast_id" in run.input_refs,
     )  # fmt: skip
 
 

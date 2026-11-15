@@ -7,7 +7,7 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Branches are stacked: each PR targets the previous one and is merged
 in order.
 
-## Status (updated 2026-11-10)
+## Status (updated 2026-11-15)
 
 **Milestone 1 is complete** (see `docs/milestone-1-report.md`). **Milestone 2 is complete and
 awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
@@ -16,8 +16,9 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). **Milestone 5 is complete and awaits review** (see
 `docs/milestone-5-report.md`; owner, 2026-11-10: "continue with what is easier for now for best
 coding"; brief `docs/planning/18-milestone-5-brief.md`). **Nothing was created on AWS; the pilot
-environment waits for the owner's approval (Gate P).** **Milestone 6 is in progress** (owner, 2026-11-12: "Continue"; brief
-`docs/planning/19-milestone-6-brief.md`). Cloud-readiness review:
+environment waits for the owner's approval (Gate P).** **Milestone 6 is complete and awaits review** (see `docs/milestone-6-report.md`; owner,
+2026-11-12 and 2026-11-15: "Continue"; brief `docs/planning/19-milestone-6-brief.md`). M6-0
+multi-currency (#80) waits for the owner's answer on currencies. Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -87,7 +88,8 @@ environment waits for the owner's approval (Gate P).** **Milestone 6 is in progr
 | M6-3 Three-statement projection engine, six invariants, golden model (issue #137) | `claude/m6-3-projection-engine` | #143 | Open |
 | M6-4 Rolling forecasts: staleness, hourly re-runs, history, accuracy (issue #138) | `claude/m6-4-rolling-forecasts` | #144 | Open |
 | M6-5 Full-year outlook (actual + forecast with natures), goals use the projection (issue #139) | `claude/m6-5-outlook` | #145 | Open |
-| M6-6 Projection screens (issue #140) | — | — | Next |
+| M6-6 Projection screens: statements with natures, checks, explain, chart, Excel export, rolling forecast and outlook (issue #140) | `claude/m6-6-projection-screens` | #146 | Open |
+| M6 report (`docs/milestone-6-report.md`) | `claude/m6-6-projection-screens` | #146 | Open, with M6-6 |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

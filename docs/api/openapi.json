@@ -10656,6 +10656,31 @@
         "title": "PrepareIn",
         "type": "object"
       },
+      "ProjectionExportQuery": {
+        "properties": {
+          "granularity": {
+            "default": "MONTH",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "lang": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Lang",
+            "type": "string"
+          }
+        },
+        "title": "ProjectionExportQuery",
+        "type": "object"
+      },
       "ProjectionIn": {
         "properties": {
           "assumption_set_id": {
@@ -10804,6 +10829,11 @@
             "title": "Output Hash",
             "type": "string"
           },
+          "rolling": {
+            "description": "Made by the rolling forecast (M6-4)",
+            "title": "Rolling",
+            "type": "boolean"
+          },
           "stale": {
             "title": "Stale",
             "type": "boolean"
@@ -10826,6 +10856,7 @@
           "error",
           "stale",
           "is_published",
+          "rolling",
           "created_at"
         ],
         "title": "ProjectionRunOut",
@@ -10851,6 +10882,25 @@
           "projection": {
             "$ref": "#/components/schemas/ProjectionRunOut"
           },
+          "result_ids": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "description": "The stored result per cell, for /calc-runs/{id}/results/{result}/explain",
+            "title": "Result Ids",
+            "type": "object"
+          },
           "rows": {
             "additionalProperties": {
               "items": {
@@ -10874,7 +10924,8 @@
           "projection",
           "columns",
           "rows",
-          "failures"
+          "failures",
+          "result_ids"
         ],
         "title": "ProjectionStatementsOut",
         "type": "object"
@@ -26689,6 +26740,86 @@
           }
         ],
         "summary": "Get Projection",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/projections/{run_id}/export": {
+      "get": {
+        "description": "The three projected statements as XLSX, with a nature row above the figures; audited.",
+        "operationId": "fcp_modules_projections_api_export_projection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "default": "MONTH",
+              "enum": [
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "title": "Granularity",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "enum": [
+                "en",
+                "el"
+              ],
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Projection",
         "tags": [
           "projections"
         ]

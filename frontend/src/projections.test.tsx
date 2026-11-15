@@ -39,6 +39,7 @@ const run = {
   error: "",
   stale: false,
   is_published: false,
+  rolling: false,
   created_at: "2026-11-12T10:00:00Z",
 };
 const statements = {
@@ -261,7 +262,7 @@ describe("Full-year outlook (M6-6)", () => {
             columns,
             rows: {
               "PL.REVENUE": [
-                ...Array(12).fill("100.00"),
+                ...Array.from({ length: 12 }, () => "100.00"),
                 "300.00",
                 "300.00",
                 "300.00",

@@ -639,6 +639,7 @@ export function ProjectionsPage() {
                 <option key={r.id} value={r.id}>
                   {r.created_at.slice(0, 16).replace("T", " ")} · {t("pj.to")}{" "}
                   {r.as_of_date} · {t(`pj.status.${r.status}` as MessageKey)}
+                  {r.rolling ? ` · ${t("pj.rollingRun")}` : ""}
                   {r.is_published ? ` · ${t("pj.published")}` : ""}
                   {r.stale ? ` · ${t("pj.stale")}` : ""}
                 </option>

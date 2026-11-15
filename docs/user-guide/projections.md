@@ -23,7 +23,7 @@ Open **Cash & planning → Assumptions**.
    you get a draft copy, and when you approve it the earlier version is marked superseded.
 
 ## Running a projection
-With an approved set, run a projection (`POST .../projections`, screens follow in M6-6). It starts
+With an approved set, open **Cash & planning → Projections**, choose the set and select **Run**. It starts
 from your actual balance sheet at the cut-over, read from the posted books, and works out each
 month in a fixed order: income statement, interest on the debt at the start of the month, tax,
 receivables, stock and payables from the days, fixed assets, debt, equity, the cash flow
@@ -36,22 +36,38 @@ where the last ended, and quarters and years add up. A run that fails a check is
 assumptions do not cover (intangibles, investments, other receivables and payables) stay at their
 opening balance. If an account with a balance is not mapped to a statement line, map it first.
 
+### Reading a projection
+- **Natures.** Every column says **Actual** (the opening balance sheet, from your books) or
+  **Forecast**, in words as well as by its border style. Show it by month, quarter or year.
+- **Checks.** The six checks are listed with **holds** or **fails**; a failed check names the month
+  where it failed, and such a projection cannot be published.
+- **Explain a line.** Select any figure to see where it comes from: the assumption and how it is
+  used, the fixed-asset register, your books, or which other lines it is worked out from.
+- **Chart.** Cash at the end of each period; the balance-sheet table holds the same figures.
+- **Publish.** A valid projection can be published (with planning publish permission). The
+  outlook and goals use the latest published projection.
+- **Export to Excel.** One sheet per statement, with a row stating the nature of each column and a
+  note that the figures are a projection, not actual results.
+
 ## Rolling forecast
 A rolling forecast looks at the next 12 or 24 months from the end of the last full month, and
-moves on by itself. Set it up once (`PUT .../rolling-forecast`, screens follow in M6-6): choose an
+moves on by itself. Set it up once at the bottom of **Cash & planning → Projections**: choose an
 assumption set and the horizon. The approved version of that set is used; when you approve a
 revision, the forecast moves onto it.
 
 The forecast is marked **out of date** when entries are posted after it was made, when a new month
 has closed, or when another version of the assumptions is approved. It is then re-run within the
-hour (or at once with **Refresh**); earlier forecasts are kept. Months beyond the assumption set
+hour (or at once with **Refresh now**); earlier forecasts are kept. Months beyond the assumption set
 repeat the set's value for the same month of the year.
+
+Its runs appear in the projections list marked **rolling forecast**; its state (up to date, or
+out of date and why) is shown with a **Refresh now** button.
 
 **Accuracy** compares, for each of the last 12 closed months, what the forecasts made one, three
 and six months earlier expected with what happened: revenue, EBITDA and cash at the month end.
 
 ## Full-year outlook
-The outlook shows a whole fiscal year (`GET .../outlook?day=...`, screens follow in M6-6): the
+The outlook (**Cash & planning → Full-year outlook**) shows a whole fiscal year: the
 months up to the latest published projection's cut-over come from your posted books and are marked
 **actual**; the later months come from that projection and are marked **forecast**. A divider
 separates the two. Quarters and the year are sums of their months (cash: the month-end figure);

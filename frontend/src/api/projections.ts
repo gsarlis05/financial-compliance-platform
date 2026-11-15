@@ -119,6 +119,7 @@ export interface ProjectionRun {
   error: string;
   stale: boolean;
   is_published: boolean;
+  rolling: boolean;
   created_at: string;
 }
 
