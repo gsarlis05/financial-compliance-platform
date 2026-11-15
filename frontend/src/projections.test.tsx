@@ -40,6 +40,7 @@ const run = {
   stale: false,
   is_published: false,
   rolling: false,
+  validation_status: "PENDING_PROFESSIONAL_REVIEW",
   created_at: "2026-11-12T10:00:00Z",
 };
 const statements = {
@@ -177,6 +178,9 @@ describe("Projections (M6-6)", () => {
     expect(
       screen.getByText("Assets equal liabilities plus equity"),
     ).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(
+      /Pending professional review/,
+    );
     expect(screen.getAllByText(/✓ holds/)).toHaveLength(6);
     // The income statement has no opening column.
     const is = screen.getByRole("table", {

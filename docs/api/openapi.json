@@ -10842,6 +10842,11 @@
             "description": "VALID, INVALID (an invariant failed) or FAILED",
             "title": "Status",
             "type": "string"
+          },
+          "validation_status": {
+            "description": "PENDING_PROFESSIONAL_REVIEW until the engine is validated and signed off",
+            "title": "Validation Status",
+            "type": "string"
           }
         },
         "required": [
@@ -10857,6 +10862,7 @@
           "stale",
           "is_published",
           "rolling",
+          "validation_status",
           "created_at"
         ],
         "title": "ProjectionRunOut",

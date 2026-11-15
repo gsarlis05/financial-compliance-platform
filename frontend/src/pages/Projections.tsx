@@ -620,6 +620,9 @@ export function ProjectionsPage() {
   return (
     <Page title={t("nav.projections")}>
       <p>{t("pj.intro")}</p>
+      <p className="notice" role="note">
+        {t("pj.pendingReview")}
+      </p>
       <RunPanel onRun={(id) => setSelected(id)} />
       <section className="card" aria-labelledby="pj-list">
         <h2 id="pj-list">{t("pj.list")}</h2>

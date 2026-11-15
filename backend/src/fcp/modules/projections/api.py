@@ -19,7 +19,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
-from . import assumptions, exports, outlook, rolling, runs
+from . import assumptions, engine, exports, outlook, rolling, runs
 from .drivers import DRIVERS
 from .layout import with_totals
 from .models import AssumptionSet
@@ -200,6 +200,9 @@ class ProjectionRunOut(Schema):
     stale: bool
     is_published: bool
     rolling: bool = Field(description="Made by the rolling forecast (M6-4)")
+    validation_status: str = Field(
+        description="PENDING_PROFESSIONAL_REVIEW until the engine is validated and signed off"
+    )
     created_at: datetime
 
 
@@ -212,6 +215,7 @@ def _projection_out(run: CalcRun) -> ProjectionRunOut:
         output_hash=run.output_hash, invariants=run.invariant_results, error=run.error,
         stale=run.stale, is_published=run.is_published, created_at=run.created_at,
         rolling="rolling_forecast_id" in run.input_refs,
+        validation_status=engine.VALIDATION_STATUS,
     )  # fmt: skip
 
 

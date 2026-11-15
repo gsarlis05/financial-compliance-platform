@@ -120,6 +120,7 @@ export interface ProjectionRun {
   stale: boolean;
   is_published: boolean;
   rolling: boolean;
+  validation_status: string;
   created_at: string;
 }
 

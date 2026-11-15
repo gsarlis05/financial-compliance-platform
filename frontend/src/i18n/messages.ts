@@ -1333,6 +1333,8 @@ export const en = {
   "pj.status.FAILED": "failed",
   "pj.published": "published",
   "pj.rollingRun": "rolling forecast",
+  "pj.pendingReview":
+    "Pending professional review: the projection engine has not yet been independently validated and signed off by a qualified professional. Use projections as estimates, not certified figures.",
   "pj.stale": "out of date",
   "pj.current": "up to date",
   "pj.shown": "Projection from the books at",
@@ -2761,6 +2763,8 @@ export const el: Record<MessageKey, string> = {
   "pj.status.FAILED": "απέτυχε",
   "pj.published": "δημοσιευμένη",
   "pj.rollingRun": "κυλιόμενη πρόβλεψη",
+  "pj.pendingReview":
+    "Εκκρεμεί επαγγελματικός έλεγχος: το μοντέλο προβολών δεν έχει ακόμη επικυρωθεί και υπογραφεί από ανεξάρτητο, κατάλληλα προσοντούχο επαγγελματία. Χρησιμοποιήστε τις προβολές ως εκτιμήσεις, όχι ως πιστοποιημένα ποσά.",
   "pj.stale": "μη ενημερωμένη",
   "pj.current": "ενημερωμένη",
   "pj.shown": "Προβολή από τα βιβλία στις",

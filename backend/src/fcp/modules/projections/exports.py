@@ -15,13 +15,15 @@ from .runs import Statements
 Lang = Literal["en", "el"]
 _TEXT = {
     "en": {"nature": "Nature", "ACTUAL": "Actual", "FORECAST": "Forecast", "line": "Line",
-           "note": "Projection (forecast, not actual results). Run {run} ({status}); cut-over "
-                   "{cutover}; postings up to #{watermark}; inputs {input_hash}; outputs "
-                   "{output_hash}; generated {generated}.",
+           "note": "Projection (forecast, not actual results). The projection engine is pending "
+                   "independent professional review and is not certified. Run {run} "
+                   "({status}); cut-over {cutover}; postings up to #{watermark}; inputs "
+                   "{input_hash}; outputs {output_hash}; generated {generated}.",
            "opening": "Opening (actual)"},
     "el": {"nature": "Φύση", "ACTUAL": "Πραγματικό", "FORECAST": "Πρόβλεψη", "line": "Γραμμή",
-           "note": "Πρόβλεψη (όχι πραγματικά αποτελέσματα). Υπολογισμός {run} ({status}); "
-                   "ημερομηνία αποκοπής {cutover}; εγγραφές έως #{watermark}; είσοδοι "
+           "note": "Πρόβλεψη (όχι πραγματικά αποτελέσματα). Εκκρεμεί ανεξάρτητος επαγγελματικός "
+                   "έλεγχος του μοντέλου προβολών, χωρίς πιστοποίηση. Υπολογισμός {run} "
+                   "({status}); ημερομηνία αποκοπής {cutover}; εγγραφές έως #{watermark}; είσοδοι "
                    "{input_hash}; έξοδοι {output_hash}; δημιουργία {generated}.",
            "opening": "Έναρξη (πραγματικό)"},
 }  # fmt: skip

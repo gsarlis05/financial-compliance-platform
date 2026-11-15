@@ -6,6 +6,13 @@ was created on AWS, and no migration has been applied anywhere else.** Brief:
 [planning doc 19](planning/19-milestone-6-brief.md); specification: planning doc 10 §1, §2.4 and
 §4 (approved), on the planning branch (PR #1), which is not yet merged.
 
+**Owner decisions of 2026-11-15** replace the simplified defaults listed for confirmation below
+(depreciation, Cyprus corporate tax, debt, rolling forecasts, goals, currency) and require
+independent professional validation of the projection engine. They are planned in
+[planning doc 20](planning/20-milestone-6-follow-up-brief.md) (issues #80, #147–#154). **Until that
+validation passes and a qualified reviewer signs it, the projection engine is not production-ready:**
+every projection screen and export says so.
+
 ## What you can do now
 On top of Milestones 1 to 5, you can:
 - **Keep a fixed-asset register.** Record what the business owns; depreciation is worked out for

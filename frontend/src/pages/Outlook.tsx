@@ -33,6 +33,9 @@ export function OutlookPage() {
   return (
     <Page title={t("nav.outlook")}>
       <p>{t("ol.intro")}</p>
+      <p className="notice" role="note">
+        {t("pj.pendingReview")}
+      </p>
       <div className="form inline">
         <label>
           {t("ol.year")}
