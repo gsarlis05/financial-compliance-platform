@@ -28,7 +28,7 @@ class SourceOut(Schema):
     note: str
 
 
-class InstalmentOut(Schema):
+class TaxInstalmentOut(Schema):
     month: int
     day: int
     share: str
@@ -43,7 +43,7 @@ class TaxRuleSetOut(Schema):
     rate: str = Field(description="A fraction: 0.15 for 15%")
     loss_carryforward_years: int = Field(description="For losses arising in these tax years")
     tax_year_start_month: int
-    provisional_instalments: list[InstalmentOut]
+    provisional_instalments: list[TaxInstalmentOut]
     final_payment: str = Field(description="When the balance is due, after the tax year")
     verified: bool = Field(description="False until a qualified tax professional confirms it")
     verification_note: str
@@ -57,7 +57,7 @@ def _out(r: TaxRules) -> TaxRuleSetOut:
         effective_to=r.effective_to, rate=f"{r.rate.normalize():f}",
         loss_carryforward_years=r.loss_carryforward_years,
         tax_year_start_month=r.tax_year_start_month,
-        provisional_instalments=[InstalmentOut(month=i.month, day=i.day, share=str(i.share))
+        provisional_instalments=[TaxInstalmentOut(month=i.month, day=i.day, share=str(i.share))
                                  for i in r.instalments],
         final_payment=f"{day:02d}/{month:02d} of the year {offset} after the tax year",
         verified=r.verified, verification_note=r.verification_note,
