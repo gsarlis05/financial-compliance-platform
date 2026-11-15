@@ -7629,23 +7629,56 @@
       },
       "InstalmentOut": {
         "properties": {
-          "day": {
-            "title": "Day",
+          "closing": {
+            "title": "Closing",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "interest": {
+            "title": "Interest",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
             "type": "integer"
           },
-          "month": {
-            "title": "Month",
-            "type": "integer"
+          "opening": {
+            "title": "Opening",
+            "type": "string"
           },
-          "share": {
-            "title": "Share",
+          "payment": {
+            "title": "Payment",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "principal": {
+            "title": "Principal",
             "type": "string"
           }
         },
         "required": [
-          "month",
-          "day",
-          "share"
+          "number",
+          "period_start",
+          "period_end",
+          "due",
+          "opening",
+          "interest",
+          "principal",
+          "payment",
+          "closing"
         ],
         "title": "InstalmentOut",
         "type": "object"
@@ -12479,6 +12512,29 @@
         "title": "SuggestionOut",
         "type": "object"
       },
+      "TaxInstalmentOut": {
+        "properties": {
+          "day": {
+            "title": "Day",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "share": {
+            "title": "Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "day",
+          "share"
+        ],
+        "title": "TaxInstalmentOut",
+        "type": "object"
+      },
       "TaxPaymentIn": {
         "properties": {
           "amount": {
@@ -12674,7 +12730,7 @@
           },
           "provisional_instalments": {
             "items": {
-              "$ref": "#/components/schemas/InstalmentOut"
+              "$ref": "#/components/schemas/TaxInstalmentOut"
             },
             "title": "Provisional Instalments",
             "type": "array"
