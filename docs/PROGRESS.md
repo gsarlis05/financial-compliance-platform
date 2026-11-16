@@ -117,6 +117,7 @@ until validated and signed by a qualified professional; brief
 | M7-2 Scenario runs: comparison with the base, lineage by override, what changed and why, saved runs (never published), promotion to a draft set (issue #177) | `claude/m7-2-scenario-runs` | #184 | Open |
 | M7-3 Sensitivity (one variable) and tornado: cached by input hash, quotas and time limit (issue #178) | `claude/m7-3-sensitivity` | #185 | Open |
 | M7-4 Working-capital view (receivables, stock, payables, days, cash conversion cycle against observed days) and what N days are worth (issue #179) | `claude/m7-4-working-capital` | #186 | Open |
+| M7-5 Goals against up to three shared scenarios, side by side with the base, in memory (goal engine v3: method SCENARIO, nature HYPOTHETICAL) (issue #180) | `claude/m7-5-goals-scenarios` | #187 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
