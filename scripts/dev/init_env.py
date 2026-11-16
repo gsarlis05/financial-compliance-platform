@@ -12,11 +12,31 @@ PLACEHOLDER = "generated-by-make-dev-env"
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _append_missing(target: Path) -> int:
+    """Add variables introduced since .env was created; existing values are never changed."""
+    existing = {
+        line.split("=", 1)[0]
+        for line in target.read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.startswith("#")
+    }
+    added = []
+    for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep and not line.startswith("#") and key not in existing:
+            added.append(f"{key}={secrets.token_urlsafe(32) if value == PLACEHOLDER else value}")
+    if added:
+        with target.open("a", encoding="utf-8") as f:
+            f.write("\n".join(added) + "\n")
+        print(f"Added {len(added)} new variable(s) to .env: {', '.join(a.split('=')[0] for a in added)}")
+    else:
+        print(".env is up to date.")
+    return 0
+
+
 def main() -> int:
     target = ROOT / ".env"
     if target.exists():
-        print(".env already exists; leaving it unchanged.")
-        return 0
+        return _append_missing(target)
     lines = []
     for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines(keepends=True):
         key, sep, value = line.partition("=")

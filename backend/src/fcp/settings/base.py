@@ -30,7 +30,9 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.sessions",
+    "fcp.core.db",
     "fcp.modules.identity",
+    "fcp.modules.tenancy",
 ]
 
 AUTH_USER_MODEL = "identity.User"
@@ -51,12 +53,19 @@ ROOT_URLCONF = "fcp.urls"
 WSGI_APPLICATION = "fcp.wsgi.application"
 ASGI_APPLICATION = "fcp.asgi.application"
 
+# The application never connects as a superuser (superusers bypass row-level security).
+# DB_ROLE=app (default) is the runtime role; DB_ROLE=owner runs migrations and tests.
+DB_ROLE = env("DB_ROLE", "app")
+if DB_ROLE not in ("app", "owner"):
+    raise ImproperlyConfigured("DB_ROLE must be 'app' or 'owner'.")
+DB_APP_ROLE_NAME = env("POSTGRES_APP_USER", "fcp_app")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": env("POSTGRES_DB", "fcp"),
-        "USER": env("POSTGRES_USER", "fcp"),
-        "PASSWORD": env("POSTGRES_PASSWORD", ""),
+        "USER": env(f"POSTGRES_{DB_ROLE.upper()}_USER", f"fcp_{DB_ROLE}"),
+        "PASSWORD": env(f"POSTGRES_{DB_ROLE.upper()}_PASSWORD", ""),
         "HOST": env("POSTGRES_HOST", "localhost"),
         "PORT": env("POSTGRES_PORT", "5432"),
         "ATOMIC_REQUESTS": True,

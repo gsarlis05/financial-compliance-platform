@@ -3,6 +3,9 @@
 import os
 
 os.environ.setdefault("DJANGO_SECRET_KEY", "test-only-not-a-secret")
+# Tests create the test database and run migrations, so they use the schema-owner role.
+# It is not a superuser and has no BYPASSRLS, so row-level security is fully enforced.
+os.environ["DB_ROLE"] = "owner"
 
 from .base import *  # noqa: F403
 
