@@ -17,7 +17,7 @@ from fcp.core.api.permissions import requires
 from fcp.modules.ledger.api import Account
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import services
+from . import plans, services
 from .models import Valuation
 
 __all__ = ["Valuation", "router"]
@@ -353,3 +353,176 @@ def spending(
         total_spending=_money(s.total_spending),
         left_over=_money(s.total_income - s.total_spending),
     )
+
+
+# --- budget, goals and projection (M5-2) ----------------------------------------------------------
+
+
+class PersonalBudgetIn(Schema):
+    account_id: UUID = Field(description="An income or spending category")
+    monthly_amount: str = Field(pattern=AMOUNT, description="0 ends the budget")
+    from_month: date = Field(description="Any day of the first month it applies to")
+
+
+class PersonalBudgetLineOut(Schema):
+    account_id: UUID
+    name: str
+    type: str
+    budgeted: str
+    actual: str
+    remaining: str
+    over: bool = Field(description="Spending above budget, or income below it")
+
+
+class PersonalBudgetOut(Schema):
+    month: date
+    lines: list[PersonalBudgetLineOut]
+    budgeted_spending: str
+    actual_spending: str
+
+
+def _budget_out(b: plans.MonthBudget) -> PersonalBudgetOut:
+    lines = [
+        PersonalBudgetLineOut(
+            account_id=x.account.id, name=x.account.name, type=x.account.type,
+            budgeted=_money(x.budgeted), actual=_money(x.actual), remaining=_money(x.remaining),
+            over=bool(x.budgeted) and ((x.actual > x.budgeted) if x.account.type == "EXPENSE"
+                                       else (x.actual < x.budgeted)),
+        )
+        for x in b.lines
+    ]  # fmt: skip
+    spend = [x for x in b.lines if x.account.type == "EXPENSE"]
+    return PersonalBudgetOut(
+        month=b.month, lines=lines,
+        budgeted_spending=_money(sum((x.budgeted for x in spend), Decimal(0))),
+        actual_spending=_money(sum((x.actual for x in spend), Decimal(0))),
+    )  # fmt: skip
+
+
+class MonthQuery(Schema):
+    month: date | None = Field(None, description="Any day of the month; default: this month")
+
+
+@router.get(f"{BASE}/budget", response=PersonalBudgetOut)
+@requires("reports.read")
+def month_budget(request: HttpRequest, slug: str, entity_id: UUID,
+                 q: Query[MonthQuery]) -> PersonalBudgetOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _budget_out(plans.month_budget(ctx, entity_id, q.month or timezone.localdate()))
+
+
+@router.put(f"{BASE}/budget", response=PersonalBudgetOut)
+@requires("ledger.entry.create")
+def set_budget(request: HttpRequest, slug: str, entity_id: UUID,
+               payload: PersonalBudgetIn) -> PersonalBudgetOut:  # fmt: skip
+    """Set a category's monthly amount from a month on (kept as a new version)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    plans.set_budget(ctx, entity_id, account_id=payload.account_id,
+                     monthly=payload.monthly_amount, from_month=payload.from_month)  # fmt: skip
+    return _budget_out(plans.month_budget(ctx, entity_id, payload.from_month))
+
+
+class PersonalGoalIn(Schema):
+    kind: Literal["SAVINGS", "EMERGENCY_FUND", "DEBT_PAYOFF"]
+    name: str = Field(min_length=1, max_length=120)
+    account_ids: list[UUID] = Field(min_length=1, max_length=20)
+    target_date: date
+    target_amount: str = Field("0", pattern=AMOUNT)
+    months: int | None = Field(None, description="Emergency fund: months of spending")
+
+
+class PersonalGoalOut(Schema):
+    id: UUID
+    kind: str
+    name: str
+    account_ids: list[UUID]
+    target_date: date
+    months: int | None
+    retired_at: datetime | None
+    current: str
+    target: str
+    months_left: int
+    needed_per_month: str | None
+    pace_per_month: str
+    projected: str
+    status: str = Field(description="ON_TRACK, AT_RISK (within 5%) or OFF_TRACK")
+    average_spending: str | None = Field(description="Emergency fund: per month, last 3 months")
+
+
+def _goal_out(s: plans.GoalStatus) -> PersonalGoalOut:
+    g = s.goal
+    return PersonalGoalOut(
+        id=g.id, kind=g.kind, name=g.name, account_ids=[UUID(a) for a in g.account_ids],
+        target_date=g.target_date, months=g.months, retired_at=g.retired_at,
+        current=_money(s.current), target=_money(s.target), months_left=s.months_left,
+        needed_per_month=None if s.needed_per_month is None else _money(s.needed_per_month),
+        pace_per_month=_money(s.pace_per_month), projected=_money(s.projected), status=s.status,
+        average_spending=None if s.average_spending is None else _money(s.average_spending),
+    )  # fmt: skip
+
+
+class GoalsQuery(Schema):
+    include_retired: bool = False
+
+
+@router.get(f"{BASE}/goals", response=list[PersonalGoalOut])
+@requires("reports.read")
+def list_goals(request: HttpRequest, slug: str, entity_id: UUID,
+               q: Query[GoalsQuery]) -> list[PersonalGoalOut]:  # fmt: skip
+    """Each goal evaluated now from your books and valuations."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = plans.goals(ctx, entity_id, include_retired=q.include_retired)
+    return [_goal_out(s) for s in found]
+
+
+@router.post(f"{BASE}/goals", response={201: PersonalGoalOut})
+@requires("ledger.entry.create")
+def create_goal(request: HttpRequest, slug: str, entity_id: UUID,
+                payload: PersonalGoalIn) -> Status[PersonalGoalOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    goal = plans.create_goal(ctx, entity_id, plans.GoalInput(
+        kind=payload.kind, name=payload.name, account_ids=payload.account_ids,
+        target_date=payload.target_date, target_amount=payload.target_amount,
+        months=payload.months,
+    ))  # fmt: skip
+    return Status(201, _goal_out(plans.evaluate(ctx, entity_id, goal)))
+
+
+@router.post(f"{BASE}/goals/{{uuid:goal_id}}/retire", response=PersonalGoalOut)
+@requires("ledger.entry.create")
+def retire_goal(request: HttpRequest, slug: str, entity_id: UUID,
+                goal_id: UUID) -> PersonalGoalOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    goal = plans.retire_goal(ctx, entity_id, goal_id)
+    return _goal_out(plans.evaluate(ctx, entity_id, goal))
+
+
+class ProjectionMonthOut(Schema):
+    month: date
+    income: str
+    spending: str
+    closing_cash: str
+    nature: str = Field(description="BUDGET when every amount is budgeted, otherwise FORECAST")
+
+
+class ProjectionOut(Schema):
+    as_of: date
+    opening_cash: str = Field(description="Money accounts you have, without valued assets")
+    months: list[ProjectionMonthOut]
+    first_negative: date | None = Field(description="The first month cash would fall below 0")
+
+
+@router.get(f"{BASE}/projection", response=ProjectionOut)
+@requires("reports.read")
+def projection(request: HttpRequest, slug: str, entity_id: UUID) -> ProjectionOut:
+    """The next 12 months: the budget where set, otherwise the last 3 months' average."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = plans.projection(ctx, entity_id)
+    return ProjectionOut(
+        as_of=p.as_of, opening_cash=_money(p.opening_cash),
+        months=[ProjectionMonthOut(month=m.month, income=_money(m.income),
+                                   spending=_money(m.spending), closing_cash=_money(m.closing_cash),
+                                   nature="BUDGET" if m.from_budget else "FORECAST")
+                for m in p.months],
+        first_negative=p.first_negative,
+    )  # fmt: skip

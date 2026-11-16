@@ -6086,6 +6086,17 @@
         "title": "GoalVersionOut",
         "type": "object"
       },
+      "GoalsQuery": {
+        "properties": {
+          "include_retired": {
+            "default": false,
+            "title": "Include Retired",
+            "type": "boolean"
+          }
+        },
+        "title": "GoalsQuery",
+        "type": "object"
+      },
       "HistoryQuery": {
         "properties": {
           "limit": {
@@ -7678,6 +7689,25 @@
         "title": "MetricValueOut",
         "type": "object"
       },
+      "MonthQuery": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Any day of the month; default: this month",
+            "title": "Month"
+          }
+        },
+        "title": "MonthQuery",
+        "type": "object"
+      },
       "MonthlyOut": {
         "properties": {
           "facts": {
@@ -8529,6 +8559,292 @@
         "title": "PersonalAccountOut",
         "type": "object"
       },
+      "PersonalBudgetIn": {
+        "properties": {
+          "account_id": {
+            "description": "An income or spending category",
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "from_month": {
+            "description": "Any day of the first month it applies to",
+            "format": "date",
+            "title": "From Month",
+            "type": "string"
+          },
+          "monthly_amount": {
+            "description": "0 ends the budget",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Monthly Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "monthly_amount",
+          "from_month"
+        ],
+        "title": "PersonalBudgetIn",
+        "type": "object"
+      },
+      "PersonalBudgetLineOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "actual": {
+            "title": "Actual",
+            "type": "string"
+          },
+          "budgeted": {
+            "title": "Budgeted",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "over": {
+            "description": "Spending above budget, or income below it",
+            "title": "Over",
+            "type": "boolean"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "name",
+          "type",
+          "budgeted",
+          "actual",
+          "remaining",
+          "over"
+        ],
+        "title": "PersonalBudgetLineOut",
+        "type": "object"
+      },
+      "PersonalBudgetOut": {
+        "properties": {
+          "actual_spending": {
+            "title": "Actual Spending",
+            "type": "string"
+          },
+          "budgeted_spending": {
+            "title": "Budgeted Spending",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalBudgetLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "lines",
+          "budgeted_spending",
+          "actual_spending"
+        ],
+        "title": "PersonalBudgetOut",
+        "type": "object"
+      },
+      "PersonalGoalIn": {
+        "properties": {
+          "account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "SAVINGS",
+              "EMERGENCY_FUND",
+              "DEBT_PAYOFF"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Emergency fund: months of spending",
+            "title": "Months"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "target_amount": {
+            "default": "0",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Target Amount",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "account_ids",
+          "target_date"
+        ],
+        "title": "PersonalGoalIn",
+        "type": "object"
+      },
+      "PersonalGoalOut": {
+        "properties": {
+          "account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "average_spending": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Emergency fund: per month, last 3 months",
+            "title": "Average Spending"
+          },
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Months"
+          },
+          "months_left": {
+            "title": "Months Left",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needed_per_month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needed Per Month"
+          },
+          "pace_per_month": {
+            "title": "Pace Per Month",
+            "type": "string"
+          },
+          "projected": {
+            "title": "Projected",
+            "type": "string"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired At"
+          },
+          "status": {
+            "description": "ON_TRACK, AT_RISK (within 5%) or OFF_TRACK",
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "account_ids",
+          "target_date",
+          "months",
+          "retired_at",
+          "current",
+          "target",
+          "months_left",
+          "needed_per_month",
+          "pace_per_month",
+          "projected",
+          "status",
+          "average_spending"
+        ],
+        "title": "PersonalGoalOut",
+        "type": "object"
+      },
       "PersonalOpeningIn": {
         "properties": {
           "account_id": {
@@ -8995,6 +9311,83 @@
           "alerts"
         ],
         "title": "PortfolioRowOut",
+        "type": "object"
+      },
+      "ProjectionMonthOut": {
+        "properties": {
+          "closing_cash": {
+            "title": "Closing Cash",
+            "type": "string"
+          },
+          "income": {
+            "title": "Income",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "nature": {
+            "description": "BUDGET when every amount is budgeted, otherwise FORECAST",
+            "title": "Nature",
+            "type": "string"
+          },
+          "spending": {
+            "title": "Spending",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "income",
+          "spending",
+          "closing_cash",
+          "nature"
+        ],
+        "title": "ProjectionMonthOut",
+        "type": "object"
+      },
+      "ProjectionOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "first_negative": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first month cash would fall below 0",
+            "title": "First Negative"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionMonthOut"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "opening_cash": {
+            "description": "Money accounts you have, without valued assets",
+            "title": "Opening Cash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "opening_cash",
+          "months",
+          "first_negative"
+        ],
+        "title": "ProjectionOut",
         "type": "object"
       },
       "RateType": {
@@ -21758,6 +22151,302 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/personal/budget": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_month_budget",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Any day of the month; default: this month",
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any day of the month; default: this month",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalBudgetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Month Budget",
+        "tags": [
+          "personal"
+        ]
+      },
+      "put": {
+        "description": "Set a category's monthly amount from a month on (kept as a new version).",
+        "operationId": "fcp_modules_personal_api_set_budget",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalBudgetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalBudgetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Budget",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/goals": {
+      "get": {
+        "description": "Each goal evaluated now from your books and valuations.",
+        "operationId": "fcp_modules_personal_api_list_goals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalGoalOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Goals",
+        "tags": [
+          "personal"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_personal_api_create_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalGoalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalGoalOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Goal",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/goals/{goal_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_personal_api_retire_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalGoalOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Goal",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/personal/net-worth": {
       "get": {
         "operationId": "fcp_modules_personal_api_net_worth",
@@ -21876,6 +22565,54 @@
           }
         ],
         "summary": "Opening Balance",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/projection": {
+      "get": {
+        "description": "The next 12 months: the budget where set, otherwise the last 3 months' average.",
+        "operationId": "fcp_modules_personal_api_projection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Projection",
         "tags": [
           "personal"
         ]

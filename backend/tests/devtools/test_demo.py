@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 24
+    assert len(result.steps) == 25
     budget_step = next(s for s in result.steps if s.startswith("budget "))
     assert "approved by the owner: total 738000.00" in budget_step
     assert "sales 600000.00 phased like" in budget_step
@@ -69,6 +69,8 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
         "personal workspace (separate books): net worth 187884.35 on 2026-01-31, including a "
         "home valuation (estimate)"
     ) in result.steps, result.steps
+    assert any(s.startswith("personal budget (groceries 400 a month) and 2 goals: Emergency fund")
+               for s in result.steps), result.steps  # fmt: skip
     assert any(s.startswith("client portfolio refused in a business workspace")
                for s in result.steps), result.steps  # fmt: skip
     assert all(line.startswith("✔") for line in said)

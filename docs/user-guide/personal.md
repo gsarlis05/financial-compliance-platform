@@ -33,3 +33,21 @@ shown in your net worth as an estimate (**Valuation**) and is never booked.
   over the last year.
 - **Transactions** shows a month's income, spending and what is left over, and spending by
   category.
+
+## Budget, goals and the year ahead
+**Budget and goals** is in the **My money** menu.
+
+- **Budget:** set a monthly amount for a spending category, from a month onwards. The page shows
+  each category's budget against what you spent that month. A new amount replaces the old one from
+  its month; earlier months keep the old amount.
+- **Goals:**
+  - **Savings:** reach an amount in chosen accounts by a date.
+  - **Emergency fund:** keep a number of months of your average spending.
+  - **Debt payoff:** bring chosen loans or cards to zero by a date.
+
+  Each goal shows where you are, how much you need each month, your pace over the last three
+  months and where that pace takes you: **on track**, **at risk** or **off track**. Retire a goal
+  you no longer need; it stays in the history.
+- **The next 12 months:** starting from your cash, each month adds your average income and takes
+  away your budget (or your average spending where there is no budget). These are estimates,
+  labelled **Budget** or **Forecast**. If a month would go below zero, it is highlighted.

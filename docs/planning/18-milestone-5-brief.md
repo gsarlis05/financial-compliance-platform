@@ -39,7 +39,7 @@ so continue with what is easier for now for best coding". Backlog:
 | Opening balances | Per money account at a date, against "Opening net worth". |
 | Valuations | Property, investments and a business stake can be given a value at a date (nature `EXPECTED`). Net worth uses the latest valuation on or before the date, otherwise the ledger balance. Valuations are versioned and never posted. |
 | Net worth | Assets − liabilities at a date, each line labelled actual or valuation, plus month ends for the last 12 months. |
-| Personal budget and goals (M5-2) | Reuse M4 budgets (annual, by category) and goals (savings, emergency fund in months of spending, debt payoff). The 12-month projection reuses the goal projection: actuals, then the budget or the 3-month run rate. |
+| Personal budget and goals (M5-2) | A monthly budget per category and three goal kinds (savings, emergency fund in months of spending, debt payoff) in the `personal` module, without the M4 approval workflow (ADR-0032). The 12-month projection starts from cash and uses the budget or the 3-month run rate. |
 | Pilot environment (M5-5) | Terraform only, validated in CI (`fmt`, `validate`, `tflint`, `checkov`) and **never applied** without approval; backup/restore drill runbook against the local stack. |
 | Data export (M5-6) | One ZIP with JSON per table of the workspace, plus document files, and a manifest with hashes. Deletion: a request, then confirmation by the owner with a recent sign-in, then an audited purge after a 30-day grace period (configurable). |
 | Charts and design | SVG drawn in React, as in M3–M4. The visual design will change later (owner, 2026-11-10). |

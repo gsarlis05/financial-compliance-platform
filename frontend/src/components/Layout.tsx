@@ -195,6 +195,7 @@ function MainNav({ base }: { base: string }) {
     links: [
       [`${base}/personal`, "nav.myOverview"],
       [`${base}/personal/transactions`, "nav.myTransactions"],
+      [`${base}/personal/plan`, "nav.myPlan"],
     ],
   };
   const all: NavGroupSpec[] = [
