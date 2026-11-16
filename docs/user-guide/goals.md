@@ -23,8 +23,9 @@ give a reason; this makes a new version with the same baseline.
 ## Evaluate
 Select **Evaluate** (as of today, or an earlier date). Each evaluation is kept and shows:
 - **Actual to date**: up to the last month end on or before that date.
-- **Likely outcome**: actuals, then the approved budget for the remaining months. Without a budget,
-  each account's average of the last 3 months is used instead. Cash goals use the latest 13-week
+- **Likely outcome**: actuals, then the latest published projection for the remaining months it
+  covers (see Projections), otherwise the approved budget. Where neither covers a month, each
+  account's average of the last 3 months is used instead. Cash goals use the latest 13-week
   cash forecast. The method is written above the figures, and the outcome is labelled with its
   nature (budget or forecast).
 - **Gap**: from the target to the likely outcome, and to the actual.

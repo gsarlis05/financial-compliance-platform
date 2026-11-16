@@ -23,6 +23,7 @@ from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.cashflow.api import latest_cash_forecast
 from fcp.modules.kpi.api import kpi_inputs, period_months
 from fcp.modules.metrics.api import CalcRun, calc_results, execute, get_calc_run, taxonomy_lines
+from fcp.modules.projections.api import projected_plan
 from fcp.modules.reporting.api import posted_since
 from fcp.modules.tenancy.api import WorkspaceContext, active_members, get_entity
 
@@ -341,7 +342,11 @@ def evaluation_refs(ctx: WorkspaceContext, view: GoalView, as_of: date,
     cut = cut_over(as_of)
     months = period_months(goal.period_start, month_start(goal.period_end))
     snapshot = kpi_inputs(ctx, entity_id, goal.period_start, goal.period_end)
-    plan = approved_plan(ctx, entity_id, months) if goal.metric_kind != BALANCE else None
+    plan: dict[str, Any] | None = None
+    if goal.metric_kind != BALANCE:  # a published projection first (M6-5), else the budget
+        plan = projected_plan(ctx, entity_id, [m for m in months if m > month_start(cut)])
+        if plan is None and (budget := approved_plan(ctx, entity_id, months)) is not None:
+            plan = {"versions": budget.versions, "amounts": budget.amounts}
     return {
         "goal": {
             "id": str(goal.id), "version_id": str(v.id), "number": v.number,
@@ -359,7 +364,7 @@ def evaluation_refs(ctx: WorkspaceContext, view: GoalView, as_of: date,
         "accounts": snapshot["accounts"],
         "operational": snapshot["operational"],
         "lines": _lines(ctx, entity_id),
-        "plan": None if plan is None else {"versions": plan.versions, "amounts": plan.amounts},
+        "plan": plan,
         "forecast": _forecast(ctx, entity_id) if goal.metric_kind == BALANCE else None,
     }  # fmt: skip
 

@@ -51,7 +51,11 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 32
+    assert len(result.steps) == 33
+    assert (
+        "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
+        "revenue 1320000.00"
+    ) in result.steps, result.steps
     assert (
         "rolling forecast: the next 12 months from the approved assumptions, VALID, current; "
         "re-run hourly when the books move"

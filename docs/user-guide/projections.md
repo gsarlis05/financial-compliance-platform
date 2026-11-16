@@ -50,5 +50,15 @@ repeat the set's value for the same month of the year.
 **Accuracy** compares, for each of the last 12 closed months, what the forecasts made one, three
 and six months earlier expected with what happened: revenue, EBITDA and cash at the month end.
 
+## Full-year outlook
+The outlook shows a whole fiscal year (`GET .../outlook?day=...`, screens follow in M6-6): the
+months up to the latest published projection's cut-over come from your posted books and are marked
+**actual**; the later months come from that projection and are marked **forecast**. A divider
+separates the two. Quarters and the year are sums of their months (cash: the month-end figure);
+a quarter or year that spans the divider is marked **actual + forecast**. Without a published
+projection for the year, the outlook shows the actual months only and says so.
+
+Goals use the published projection as their likely outcome for the months it covers, and say so.
+
 The tax rate is the one from your books or the one you enter; the platform does not assume a rate
 from tax law.

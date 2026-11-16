@@ -9455,6 +9455,126 @@
         "title": "OpenItemQuery",
         "type": "object"
       },
+      "OutlookColumnOut": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "granularity": {
+            "description": "MONTH, QUARTER or YEAR",
+            "title": "Granularity",
+            "type": "string"
+          },
+          "nature": {
+            "description": "ACTUAL, FORECAST, ACTUAL+FORECAST, or empty (not shown)",
+            "title": "Nature",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "granularity",
+          "nature"
+        ],
+        "title": "OutlookColumnOut",
+        "type": "object"
+      },
+      "OutlookOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/OutlookColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "cutover": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last actual month end (the divider)",
+            "title": "Cutover"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "projection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Id"
+          },
+          "rows": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "description": "12 months, 4 quarters, the year",
+            "title": "Rows",
+            "type": "object"
+          },
+          "year_start": {
+            "format": "date",
+            "title": "Year Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "year_start",
+          "cutover",
+          "projection_id",
+          "note",
+          "columns",
+          "rows"
+        ],
+        "title": "OutlookOut",
+        "type": "object"
+      },
+      "OutlookQuery": {
+        "properties": {
+          "day": {
+            "description": "Any day of the fiscal year to show",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day"
+        ],
+        "title": "OutlookQuery",
+        "type": "object"
+      },
       "OverrideIn": {
         "properties": {
           "amount": {
@@ -24744,6 +24864,66 @@
         "summary": "Set Metric Value",
         "tags": [
           "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/outlook": {
+      "get": {
+        "description": "Actual months from the books and forecast months from the latest published projection,\neach column with its nature; quarters and the year are sums of their months.",
+        "operationId": "fcp_modules_projections_api_get_outlook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Any day of the fiscal year to show",
+            "in": "query",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "description": "Any day of the fiscal year to show",
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutlookOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Outlook",
+        "tags": [
+          "projections"
         ]
       }
     },
