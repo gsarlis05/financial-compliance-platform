@@ -3,7 +3,7 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check e2e-login ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check e2e-login e2e-ui ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
@@ -82,6 +82,10 @@ iac-check:
 # Live MFA sign-in check against the local stack (needs `make dev` and `make run-backend`).
 e2e-login:
 	scripts/e2e/keycloak-mfa-login.sh
+
+# Browser smoke test of the web UI (needs make services, run-backend and run-frontend; resets nothing).
+e2e-ui:
+	node scripts/e2e/ui-smoke.js
 
 # Nightly operational checks (audit chains and ledger integrity for every workspace).
 ops-checks:

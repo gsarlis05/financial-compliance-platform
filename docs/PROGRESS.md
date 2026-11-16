@@ -25,8 +25,8 @@ in order.
 | M1-9 Reversals, period locks, unlock | `claude/m1-9-corrections` | #15 | Open |
 | M1-10 Balances, TB, GL, export | `claude/m1-10-reports` | #16 | Open |
 | M1-11 Integrity job | `claude/m1-11-integrity` | #17 | Open |
-| M1-12 UI | `claude/m1-12-ui` | — | Next |
-| M1-13 Docs, sample data | — | — | Planned |
+| M1-12 UI | `claude/m1-12-ui` | #18 | Open |
+| M1-13 Docs, sample data | `claude/m1-13-docs` | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
