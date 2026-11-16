@@ -11,8 +11,8 @@ in order.
 
 **Milestone 1 is complete** (see `docs/milestone-1-report.md`). **Milestone 2 is complete and
 awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
-according to our existing roadmap"). **Milestone 3 has started** (owner: "Continue", 2026-11-04;
-brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
+according to our existing roadmap"). **Milestone 3 is complete and awaits review** (see `docs/milestone-3-report.md`; owner: "Continue",
+2026-11-04; brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -59,7 +59,8 @@ brief `docs/planning/16-milestone-3-brief.md`). Cloud-readiness review:
 | M3-8 Forecast freshness, refresh, history, accuracy (issue #62) | `claude/m3-8-reruns` | #115 | Open |
 | M3-9 What-ifs on a forecast (issue #63) | `claude/m3-9-what-ifs` | #116 | Open |
 | M3-10 Cash forecast dashboard (issue #64) | `claude/m3-10-cash-dashboard` | #117 | Open |
-| M3-11 Milestone 3 report | — | — | Next |
+| M3-11 Milestone 3 report (issue #118) | `claude/m3-11-report` | #119 | Open |
+| Owner review of Milestone 3, then M4 | — | — | Next (waiting for the owner) |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
