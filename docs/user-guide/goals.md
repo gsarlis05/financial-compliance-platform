@@ -38,9 +38,23 @@ Select **Evaluate** (as of today, or an earlier date). Each evaluation is kept a
 
   Assumptions are stated: other lines stay as projected, and balances stay at their latest actual
   value.
-- **Contribution analysis**: how much each line explains of the difference from the budget (or
-  from the same months a year earlier). Any part not explained by single lines is shown as a
-  residual.
+- **Benchmarks**: the published projection is the forward reference; the approved budget stays a
+  separate benchmark. A table shows, each with the difference:
+  - the likely outcome against the goal;
+  - the likely outcome against the approved budget for the whole period;
+  - the actual to date against the budget for the same months;
+  - the actual against what the published projection expected, for the months to date that it
+    projected (named in the table).
+  Where the budget does not cover the period, or no published projection covers a month to date,
+  the table says so. The month-by-month comparisons are on **Budgets → Variance** (actual against
+  budget) and **Projections → Against actuals** (actual against any projection).
+- **Contribution analysis**: how much each line explains of the difference from the approved
+  budget for the period (or, without one, from the same months a year earlier). Any part not
+  explained by single lines is shown as a residual.
+
+Goals never change by themselves: a new projection, a published forecast or a revised budget
+changes the evaluation, never the goal's target, baseline or versions. Only a person can revise a
+goal, as a new version.
 - **Month by month**: the metric to date, then projected.
 
 Every figure is a stored calculation that can be reproduced and explained down to accounts. If
