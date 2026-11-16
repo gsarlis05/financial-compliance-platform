@@ -1,0 +1,10 @@
+# gitleaks configuration: default rules plus project additions.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfiles contain integrity hashes, not secrets."
+paths = [
+  '''backend/uv\.lock''',
+  '''frontend/pnpm-lock\.yaml''',
+]

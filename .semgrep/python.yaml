@@ -1,0 +1,68 @@
+rules:
+  - id: fcp-swallowed-exception
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Exception swallowed silently. Errors must be visible and actionable (directive principle 15):
+      handle it, log it with context, or re-raise.
+    pattern-either:
+      - pattern: |
+          try:
+            ...
+          except:
+            pass
+      - pattern: |
+          try:
+            ...
+          except $E:
+            pass
+      - pattern: |
+          try:
+            ...
+          except $E as $V:
+            pass
+      - pattern: contextlib.suppress(Exception)
+      - pattern: contextlib.suppress(BaseException)
+
+  - id: fcp-log-request-payload
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Request payloads must never be logged: they can contain personal data, credentials,
+      amounts or document content. Log identifiers only (CONTRIBUTING, threat T20).
+    patterns:
+      - pattern-either:
+          - pattern: $LOG.$METHOD(..., $REQ.body, ...)
+          - pattern: $LOG.$METHOD(..., $REQ.POST, ...)
+          - pattern: $LOG.$METHOD(..., $REQ.data, ...)
+          - pattern: $LOG.$METHOD(..., $REQ.headers, ...)
+          - pattern: $LOG.$METHOD(..., $REQ.META, ...)
+          - pattern: $LOG.$METHOD(..., $X=$REQ.body, ...)
+          - pattern: $LOG.$METHOD(..., $X=$REQ.POST, ...)
+          - pattern: $LOG.$METHOD(..., $X=$REQ.data, ...)
+          - pattern: $LOG.$METHOD(..., $X=$REQ.headers, ...)
+          - pattern: $LOG.$METHOD(..., $X=$REQ.META, ...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(debug|info|warning|warn|error|exception|critical|log|msg)$
+
+  - id: fcp-sql-string-building
+    languages: [python]
+    severity: ERROR
+    message: >-
+      SQL built with string formatting is an injection risk. Use parameters
+      (cursor.execute(sql, params)) or the ORM.
+    pattern-either:
+      - pattern: $C.execute(f"...", ...)
+      - pattern: $C.execute("..." % $X, ...)
+      - pattern: $C.execute("...".format(...), ...)
+      - pattern: $C.execute("..." + $X, ...)
+      - pattern: $M.objects.raw(f"...", ...)
+      - pattern: $M.objects.raw("..." % $X, ...)
+      - pattern: $M.objects.raw("...".format(...), ...)
+
+  - id: fcp-float-call
+    languages: [python]
+    severity: ERROR
+    message: Binary floating point is forbidden for financial values (ADR-0003). Use Decimal/Money.
+    pattern: float(...)
