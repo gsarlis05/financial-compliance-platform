@@ -10,6 +10,10 @@
 
 ## Engineering rules (enforced in CI where possible)
 - Money is `Decimal` via `fcp.core.money`. Never use binary floating point for financial values (ADR-0003). On the frontend, money travels as decimal strings.
+  - `Money.of("10.50", "EUR")` (float input raises `TypeError`). Add and subtract only in the same currency. `multiply()` is exact.
+  - Rounding is always explicit: `.round()` (currency minor units, HALF_UP) or `.round(RoundingPolicy(scale, mode))`.
+  - Splitting amounts uses `allocate()` / `split_evenly()`. The parts always sum exactly to the total.
+  - `fcp.core.money` must keep 100% branch coverage.
 - Modules communicate only through `fcp.modules.<name>.api`. Planning modules never import ledger internals (ADR-0001, ADR-0007).
 - Errors are visible and actionable: no silent `except: pass`.
 - Logs carry identifiers only, never personal data, document content or amounts.
