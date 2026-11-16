@@ -15,8 +15,8 @@
   - Splitting amounts uses `allocate()` / `split_evenly()`. The parts always sum exactly to the total.
   - `fcp.core.money` must keep 100% branch coverage.
 - Modules communicate only through `fcp.modules.<name>.api`. Planning modules never import ledger internals (ADR-0001, ADR-0007).
-- Errors are visible and actionable: no silent `except: pass`.
-- Logs carry identifiers only, never personal data, document content or amounts.
+- Errors are visible and actionable: no silent `except: pass`. Raise a `fcp.core.errors.DomainError` subclass with a stable `code` and a user-safe message. It becomes an RFC 9457 `application/problem+json` response with the request's `correlation_id`. Unexpected exceptions return a generic 500 and are logged with their traceback.
+- Logs carry identifiers only, never personal data, document content or amounts. Use `structlog.get_logger(__name__)` with a **static event name** and keyword arguments: `log.info("entry.posted", entity_id=..., count=n)`. Keys outside the allow-list in `fcp/core/logging/redaction.py` are logged as `[REDACTED]`, and allowed values are scrubbed of e-mails, IBANs, tax IDs, long numbers and amounts. Adding a key to the allow-list needs a reviewed justification.
 
 ## Layout
 ```
@@ -46,7 +46,7 @@ make prove-gates # proves each custom gate rejects a deliberate violation
 | Tests and coverage | pytest (branch coverage at least 90%), Vitest |
 | Module boundaries | import-linter: public `api.py` only, `fcp.core` independent, planning and AI never import the ledger |
 | No floating point in domain code | `tools/fcp_lint/no_float.py` (AST) and Semgrep `fcp-float-call` |
-| Project security rules | Semgrep (`.semgrep/`): swallowed exceptions, logging request payloads, SQL string building |
+| Project security rules | Semgrep (`.semgrep/`): swallowed exceptions, logging request payloads, non-literal log messages, SQL string building |
 | Secrets | gitleaks over the full history |
 | Dependencies | pip-audit, `pnpm audit` (high and critical block), Dependabot weekly |
 | Gate proof | `scripts/ci/prove-gates.sh` injects violations in a temp dir and expects failures |

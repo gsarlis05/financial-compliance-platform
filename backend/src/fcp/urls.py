@@ -11,6 +11,9 @@ def healthz(_request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok"})
 
 
+handler404 = "fcp.core.http.problem.handler404"
+handler500 = "fcp.core.http.problem.handler500"
+
 urlpatterns = [
     path("healthz", healthz, name="healthz"),
 ]

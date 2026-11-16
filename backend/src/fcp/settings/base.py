@@ -9,6 +9,8 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
+from fcp.core.logging import build_logging_config, configure_structlog
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -30,8 +32,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "fcp.core.http.middleware.CorrelationIdMiddleware",
+    "fcp.core.http.middleware.RequestLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "fcp.core.http.middleware.ProblemDetailsMiddleware",
 ]
 
 ROOT_URLCONF = "fcp.urls"
@@ -61,3 +66,7 @@ USE_TZ = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+# Logging: JSON lines, redacted by an allow-list (fcp.core.logging.redaction).
+LOGGING = build_logging_config(env("LOG_LEVEL", "INFO"))
+configure_structlog()
