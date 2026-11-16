@@ -9,6 +9,7 @@ import unicodedata
 import uuid
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Any
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -25,19 +26,69 @@ from fcp.modules.identity.api import User
 
 from .entitlements import Feature, Role, allowed_roles, require_feature
 from .models import Invitation, LegalEntity, Membership, RoleAssignment, Tenant
+from .permissions import is_known, permissions_for
 
 INVITATION_LIFETIME = timedelta(days=7)
-ADMIN_ROLES = frozenset({Role.OWNER, Role.TENANT_ADMIN})
+
+type Assignment = tuple[str, uuid.UUID | None]  # (role_key, legal_entity_id or None = all)
 
 
 @dataclass(frozen=True)
 class WorkspaceContext:
-    """The authenticated user acting inside one workspace (doc 11 §2: exactly one per request)."""
+    """The authenticated user acting inside one workspace (doc 11 §2: exactly one per request).
+
+    Authorization (doc 04 §3.3): a permission is granted by any current role assignment that is
+    workspace-wide or scoped to the legal entity concerned. Deny by default.
+    """
 
     tenant: Tenant
     user: User
     membership: Membership
-    roles: frozenset[str]
+    assignments: tuple[Assignment, ...]
+
+    @property
+    def roles(self) -> frozenset[str]:
+        return frozenset(role for role, _ in self.assignments)
+
+    def can(self, permission: str, entity_id: uuid.UUID | None = None) -> bool:
+        for role, scope in self.assignments:
+            if permission in permissions_for(role) and (scope is None or scope == entity_id):
+                return True
+        return False
+
+    def permitted_entity_ids(self, permission: str) -> frozenset[uuid.UUID] | None:
+        """``None`` means every entity; otherwise only these entities (entity-scoped roles)."""
+        scopes = [scope for role, scope in self.assignments if permission in permissions_for(role)]
+        if any(scope is None for scope in scopes):
+            return None
+        return frozenset(scope for scope in scopes if scope is not None)
+
+    def permissions(self, entity_id: uuid.UUID | None = None) -> frozenset[str]:
+        granted: set[str] = set()
+        for role, scope in self.assignments:
+            if scope is None or scope == entity_id:
+                granted |= permissions_for(role)
+        return frozenset(granted)
+
+    def authorize(self, permission: str, entity_id: uuid.UUID | None = None) -> None:
+        """Raise unless the permission is granted (for ``entity_id`` if given).
+
+        Without an entity, an entity-scoped grant suffices; callers then restrict results with
+        ``permitted_entity_ids``. A denial for an entity the user cannot see at all is a 404, so
+        the entity's existence is not disclosed.
+        """
+        if not is_known(permission):
+            raise PermissionDeniedError(f"Unknown permission {permission!r}.")
+        if entity_id is None:
+            if self.permitted_entity_ids(permission) != frozenset():
+                return
+        elif self.can(permission, entity_id):
+            return
+        else:
+            visible = self.permitted_entity_ids("tenancy.workspace.read")
+            if visible is not None and entity_id not in visible:
+                raise NotFoundError("Legal entity not found.")
+        raise PermissionDeniedError("You do not have permission to do this.")
 
 
 # --- workspace lifecycle -----------------------------------------------------------------------
@@ -90,7 +141,7 @@ def create_workspace(
             entity_type=entity_type or LegalEntity.EntityType.COMPANY,
             created_by=user,
         )
-    return WorkspaceContext(tenant, user, membership, frozenset({Role.OWNER}))
+    return WorkspaceContext(tenant, user, membership, ((Role.OWNER, None),))
 
 
 def list_workspaces(user: User) -> list[Tenant]:
@@ -120,18 +171,13 @@ def enter_workspace(user: User, slug: str) -> WorkspaceContext:
     ).first()
     if membership is None:
         raise NotFoundError("Workspace not found.")
-    now = timezone.now()
-    roles = frozenset(
+    assignments = tuple(
         RoleAssignment.objects.filter(membership=membership)
-        .exclude(valid_until__lt=now)
-        .values_list("role_key", flat=True)
+        .exclude(valid_until__lt=timezone.now())
+        .order_by("role_key")
+        .values_list("role_key", "legal_entity_id")
     )
-    return WorkspaceContext(tenant, user, membership, roles)
-
-
-def _require_admin(ctx: WorkspaceContext) -> None:
-    if not ctx.roles & ADMIN_ROLES:
-        raise PermissionDeniedError("Only workspace owners and administrators can do this.")
+    return WorkspaceContext(tenant, user, membership, assignments)
 
 
 # --- legal entities ----------------------------------------------------------------------------
@@ -141,7 +187,9 @@ def _require_admin(ctx: WorkspaceContext) -> None:
 def create_entity(
     ctx: WorkspaceContext, *, legal_name: str, entity_type: str, registration_no: str = ""
 ) -> LegalEntity:
-    _require_admin(ctx)
+    ctx.authorize("tenancy.entity.manage")
+    if ctx.permitted_entity_ids("tenancy.entity.manage") is not None:
+        raise PermissionDeniedError("Only workspace-wide administrators can add legal entities.")
     existing = LegalEntity.objects.filter(tenant=ctx.tenant).count()
     if existing >= 1:
         require_feature(ctx.tenant.kind, Feature.MULTIPLE_ENTITIES)
@@ -160,12 +208,21 @@ def create_entity(
     )
 
 
+def visible_entities(ctx: WorkspaceContext, permission: str = "tenancy.workspace.read") -> Any:
+    """Entities the user may see for ``permission`` (entity-scoped roles see only theirs)."""
+    queryset = LegalEntity.objects.filter(tenant=ctx.tenant)
+    scope = ctx.permitted_entity_ids(permission)
+    return queryset if scope is None else queryset.filter(id__in=scope)
+
+
 def list_entities(ctx: WorkspaceContext) -> list[LegalEntity]:
-    return list(LegalEntity.objects.filter(tenant=ctx.tenant).order_by("legal_name"))
+    return list(visible_entities(ctx).order_by("legal_name"))
 
 
-def get_entity(ctx: WorkspaceContext, entity_id: uuid.UUID) -> LegalEntity:
-    entity = LegalEntity.objects.filter(tenant=ctx.tenant, id=entity_id).first()
+def get_entity(
+    ctx: WorkspaceContext, entity_id: uuid.UUID, permission: str = "tenancy.workspace.read"
+) -> LegalEntity:
+    entity: LegalEntity | None = visible_entities(ctx, permission).filter(id=entity_id).first()
     if entity is None:
         raise NotFoundError("Legal entity not found.")
     return entity
@@ -188,11 +245,18 @@ class IssuedInvitation:
 def invite_member(
     ctx: WorkspaceContext, *, email: str, role_key: str, legal_entity_id: uuid.UUID | None = None
 ) -> IssuedInvitation:
-    _require_admin(ctx)
+    ctx.authorize("tenancy.members.manage", legal_entity_id)
     require_feature(ctx.tenant.kind, Feature.INVITE_MEMBERS)
     if role_key not in allowed_roles(ctx.tenant.kind) or role_key == Role.OWNER:
         raise ValidationFailedError(
             "This role cannot be granted in this workspace.", field_errors={"role_key": ["invalid"]}
+        )
+    # Nobody can grant more than they hold (AC-B7).
+    missing = permissions_for(role_key) - ctx.permissions(legal_entity_id)
+    if missing:
+        raise PermissionDeniedError(
+            "You cannot grant a role with permissions you do not hold yourself: "
+            + ", ".join(sorted(missing))
         )
     entity = get_entity(ctx, legal_entity_id) if legal_entity_id else None
     # The tenant id prefix lets acceptance bind the RLS context before looking the invite up.
@@ -248,3 +312,83 @@ def accept_invitation(user: User, token: str) -> WorkspaceContext:
     invitation.save(update_fields=["accepted_at", "accepted_by"])
     tenant = Tenant.objects.get(id=tenant_id)
     return enter_workspace(user, tenant.slug)
+
+
+# --- members and roles -----------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class MemberView:
+    membership: Membership
+    user: User
+    assignments: list[RoleAssignment]
+
+
+def list_members(ctx: WorkspaceContext) -> list[MemberView]:
+    ctx.authorize("tenancy.members.manage")
+    members = (
+        Membership.objects.filter(tenant=ctx.tenant).select_related("user").order_by("created_at")
+    )
+    assignments: dict[uuid.UUID, list[RoleAssignment]] = {}
+    for a in RoleAssignment.objects.filter(tenant=ctx.tenant).order_by("role_key"):
+        assignments.setdefault(a.membership_id, []).append(a)
+    return [MemberView(m, m.user, assignments.get(m.id, [])) for m in members]
+
+
+def _membership(ctx: WorkspaceContext, membership_id: uuid.UUID) -> Membership:
+    membership = Membership.objects.filter(tenant=ctx.tenant, id=membership_id).first()
+    if membership is None:
+        raise NotFoundError("Member not found.")
+    return membership
+
+
+@transaction.atomic
+def grant_role(
+    ctx: WorkspaceContext,
+    membership_id: uuid.UUID,
+    *,
+    role_key: str,
+    legal_entity_id: uuid.UUID | None = None,
+) -> RoleAssignment:
+    ctx.authorize("tenancy.members.manage", legal_entity_id)
+    if role_key not in allowed_roles(ctx.tenant.kind) or role_key == Role.OWNER:
+        raise ValidationFailedError(
+            "This role cannot be granted in this workspace.", field_errors={"role_key": ["invalid"]}
+        )
+    missing = permissions_for(role_key) - ctx.permissions(legal_entity_id)
+    if missing:
+        raise PermissionDeniedError(
+            "You cannot grant a role with permissions you do not hold yourself: "
+            + ", ".join(sorted(missing))
+        )
+    membership = _membership(ctx, membership_id)
+    entity = get_entity(ctx, legal_entity_id) if legal_entity_id else None
+    assignment, created = RoleAssignment.objects.get_or_create(
+        tenant=ctx.tenant,
+        membership=membership,
+        role_key=role_key,
+        legal_entity=entity,
+        defaults={"granted_by": ctx.user},
+    )
+    if not created:
+        raise ConflictError("The member already has this role.")
+    return assignment
+
+
+@transaction.atomic
+def revoke_role(ctx: WorkspaceContext, assignment_id: uuid.UUID) -> None:
+    assignment = (
+        RoleAssignment.objects.select_for_update()
+        .filter(tenant=ctx.tenant, id=assignment_id)
+        .first()
+    )
+    if assignment is None:
+        raise NotFoundError("Role assignment not found.")
+    ctx.authorize("tenancy.members.manage", assignment.legal_entity_id)
+    if assignment.role_key == Role.OWNER:
+        owners = RoleAssignment.objects.filter(tenant=ctx.tenant, role_key=Role.OWNER).count()
+        if owners <= 1:
+            raise ConflictError("A workspace must keep at least one owner.")
+        if Role.OWNER not in ctx.roles:
+            raise PermissionDeniedError("Only an owner can remove another owner.")
+    assignment.delete()
