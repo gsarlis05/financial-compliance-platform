@@ -22,13 +22,20 @@ from fcp.modules.budgeting.api import approved_plan
 from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.cashflow.api import latest_cash_forecast
 from fcp.modules.kpi.api import kpi_inputs, period_months
-from fcp.modules.metrics.api import CalcRun, calc_results, execute, get_calc_run, taxonomy_lines
+from fcp.modules.metrics.api import (
+    CalcRun,
+    RunInputs,
+    calc_results,
+    execute,
+    get_calc_run,
+    taxonomy_lines,
+)
 from fcp.modules.projections.api import projected_plan
-from fcp.modules.reporting.api import posted_since
+from fcp.modules.reporting.api import current_watermark, posted_since
 from fcp.modules.tenancy.api import WorkspaceContext, active_members, get_entity
 
 from .catalogue import BALANCE, Metric, metric, metrics
-from .engine import BASELINE_KIND, EVAL_KIND, STATUSES, cut_over
+from .engine import BASELINE_KIND, EVAL_ENGINE, EVAL_KIND, STATUSES, cut_over, method_note
 from .models import Goal, GoalEvaluation, GoalVersion
 
 READ, MANAGE, RUN = "planning.read", "goal.manage", "planning.run"
@@ -455,3 +462,59 @@ def latest_evaluation(ctx: WorkspaceContext, entity_id: UUID, goal_id: UUID) -> 
     if summary is None:
         raise NotFoundError("This goal has not been evaluated yet.")
     return _evaluation(ctx, goal, get_calc_run(ctx, entity.id, summary.run_id), summary)
+
+
+# --- goals against scenarios (M7-5) ------------------------------------------------------------
+
+PlanFor = Callable[[list[date]], dict[str, Any] | None]
+
+
+@dataclass(frozen=True)
+class Outlook:
+    """A goal's evaluation computed now and not stored: its likely outcome under a plan (the
+    base's usual plan, or a scenario's), with no alerts and no change to the goal."""
+
+    label: str
+    applicable: bool
+    reason: str
+    status: str
+    method: str
+    note: str
+    nature: str
+    projected: Decimal | None
+    gap: Decimal | None  # target - likely outcome
+
+
+def outlook(ctx: WorkspaceContext, entity_id: UUID, goal_id: UUID, *, label: str = "Base",
+            plan_for: PlanFor | None = None) -> Outlook:  # fmt: skip
+    """The goal evaluated now, in memory: with ``plan_for`` (a scenario's months, M7-5) as the
+    forward plan in place of the published projection or budget."""
+    entity = get_entity(ctx, entity_id, RUN)
+    view = _view(_goal(entity.id, goal_id))
+    if view.goal.status != Goal.Status.ACTIVE:
+        raise ConflictError("A retired goal is not evaluated.")
+    as_of = timezone.localdate()
+    refs = evaluation_refs(ctx, view, as_of)
+    if plan_for is not None:
+        if view.goal.metric_kind == BALANCE:
+            return Outlook(label, False, "A cash goal follows the 13-week cash forecast; a "
+                           "scenario changes the monthly projection.", "UNDETERMINED", "", "",
+                           "HYPOTHETICAL", None, None)  # fmt: skip
+        cut = cut_over(as_of)
+        months = period_months(view.goal.period_start, month_start(view.goal.period_end))
+        refs["plan"] = plan_for([m for m in months if m > month_start(cut)])
+    inputs = RunInputs(EVAL_KIND, EVAL_ENGINE.version, entity.id, as_of,
+                       current_watermark(ctx, entity.id), refs)  # fmt: skip
+    values = EVAL_ENGINE.compute(inputs, EVAL_ENGINE.load(ctx, inputs)).values
+    status, method, nature = "UNDETERMINED", "", ""
+    projected = gap = None
+    for v in values:
+        if v.series_key == "goal.status":
+            status, method, nature = v.dimensions[0], v.dimensions[1], str(v.nature)
+        elif v.series_key == "goal.projected" and projected is None:
+            projected = v.value
+        elif v.series_key == "goal.gap" and v.dimensions and v.dimensions[0] == "PROJECTED":
+            gap = v.value
+    return Outlook(label, True, "", status if status in STATUSES else "UNDETERMINED", method,
+                   method_note(method, cut_over(as_of)) if method else "", nature, projected,
+                   gap)  # fmt: skip

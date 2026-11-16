@@ -15,11 +15,12 @@ from django.http import HttpRequest
 from ninja import Field, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.core.errors import ValidationFailedError
 from fcp.modules.projections.api import SetInfo
 from fcp.modules.tenancy.api import workspace_ctx
 
+from . import goal_outlooks, sensitivity, sensitivity_runs, services, working_capital
 from . import runs as scenario_runs
-from . import sensitivity, sensitivity_runs, services, working_capital
 from .models import Scenario, ScenarioOverride
 from .overrides import MAX_OVERRIDES
 
@@ -584,3 +585,43 @@ def working_capital_days_worth(request: HttpRequest, slug: str, entity_id: UUID,
         net_working_capital_change=f"{d.net_working_capital_change:.2f}",
         by_month=[{"month": m.isoformat(), "cash_change": f"{v:.2f}"} for m, v in d.by_month],
     )  # fmt: skip
+
+
+# --- goals against scenarios (M7-5) ---------------------------------------------------------------
+
+
+class GoalOutlookOut(Schema):
+    label: str = Field(description="Base, or the scenario's name")
+    applicable: bool
+    reason: str
+    status: str = Field(description="ON_TRACK, AT_RISK, OFF_TRACK or UNDETERMINED")
+    method: str = Field(description="e.g. PROJECTION, BUDGET, SCENARIO")
+    note: str = Field(description="How the likely outcome was projected, in words")
+    nature: str = Field(description="Of the likely outcome: FORECAST, BUDGET or HYPOTHETICAL")
+    projected: str | None = Field(description="The likely outcome")
+    gap: str | None = Field(description="Target - likely outcome")
+
+
+def _number(value: Decimal | None) -> str | None:
+    return None if value is None else f"{value.normalize():f}"
+
+
+@router.get("/w/{slug}/entities/{uuid:entity_id}/goals/{uuid:goal_id}/scenario-outlooks",
+            response=list[GoalOutlookOut])  # fmt: skip
+@requires("planning.run")
+def goal_scenario_outlooks(request: HttpRequest, slug: str, entity_id: UUID, goal_id: UUID,
+                           scenario_ids: str = "") -> list[GoalOutlookOut]:  # fmt: skip
+    """The goal against its base and up to three shared scenarios (comma-separated ids), side by
+    side, computed now. Nothing is stored and the goal never changes."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    try:
+        ids = [UUID(x.strip()) for x in scenario_ids.split(",") if x.strip()]
+    except ValueError:
+        message = "scenario_ids: scenario ids separated by commas."
+        raise ValidationFailedError(message, field_errors={"scenario_ids": [message]}) from None
+    return [
+        GoalOutlookOut(label=o.label, applicable=o.applicable, reason=o.reason, status=o.status,
+                       method=o.method, note=o.note, nature=o.nature,
+                       projected=_number(o.projected), gap=_number(o.gap))
+        for o in goal_outlooks.goal_outlooks(ctx, entity_id, goal_id, ids)
+    ]  # fmt: skip
