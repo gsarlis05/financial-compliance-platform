@@ -60,7 +60,7 @@ def test_value_of_days_by_hand() -> None:
     assert later.closing_cash_change == D("2903.22")
     for bad, field in ((("dso", 0), "days"), (("revenue", 5), "driver"), (("dio", 400), "days")):
         with pytest.raises(ValidationFailedError) as refused:
-            wc.value_of_days(base(), *bad)  # type: ignore[arg-type]
+            wc.value_of_days(base(), *bad)
         assert list(refused.value.field_errors) == [field]
 
 
