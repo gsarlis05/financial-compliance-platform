@@ -46,6 +46,7 @@ ENV_ARGS=(
   -e POSTGRES_APP_USER=fcp_app -e POSTGRES_APP_PASSWORD="$APP_PW"
   -e OIDC_ISSUER=https://id.example.test/realms/fcp -e OIDC_CLIENT_ID=fcp-backend -e OIDC_CLIENT_SECRET="$(rand 24)"
   -e OIDC_REDIRECT_URI=https://localhost/auth/callback -e OIDC_POST_LOGOUT_REDIRECT_URI=https://localhost/
+  -e DOCUMENTS_BUCKET=fcp-documents-smoke -e DOCUMENTS_KMS_KEY_ID=smoke-test-not-used -e CLAMD_HOST=clamav.invalid
 )
 RUN_ARGS=(--network "$NET" --read-only --tmpfs /tmp -v "$WORK/server.crt:/tls/ca.crt:ro")
 

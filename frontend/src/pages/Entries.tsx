@@ -14,7 +14,13 @@ import {
   useVatCodes,
 } from "../api/hooks";
 import type { EntryInput, JournalEntry } from "../api/types";
-import { Loading, Page, ProblemMessage, StatusBadge } from "../components/common";
+import {
+  Loading,
+  Page,
+  ProblemMessage,
+  StatusBadge,
+} from "../components/common";
+import { DocumentsPanel } from "../components/Documents";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount } from "../money";
 import { EntryForm } from "./EntryForm";
@@ -44,7 +50,9 @@ function EntryTable({ entries }: { entries: JournalEntry[] }) {
             <td>{e.accounting_date}</td>
             <td>{e.entry_no ? `${e.journal}-${e.entry_no}` : "—"}</td>
             <td>
-              <Link to={`/w/${slug}/e/${entityId}/entries/${e.id}`}>{e.description}</Link>
+              <Link to={`/w/${slug}/e/${entityId}/entries/${e.id}`}>
+                {e.description}
+              </Link>
             </td>
             <td className="amount">{formatAmount(e.total_debit, locale)}</td>
             <td>
@@ -65,12 +73,19 @@ export function EntriesPage() {
     <Page
       title={t("je.title")}
       actions={
-        <Link className="button primary" to={`/w/${slug}/e/${entityId}/entries/new`}>
+        <Link
+          className="button primary"
+          to={`/w/${slug}/e/${entityId}/entries/new`}
+        >
           {t("je.new")}
         </Link>
       }
     >
-      {entries.isPending ? <Loading /> : <EntryTable entries={entries.data ?? []} />}
+      {entries.isPending ? (
+        <Loading />
+      ) : (
+        <EntryTable entries={entries.data ?? []} />
+      )}
       <ProblemMessage error={entries.error} />
     </Page>
   );
@@ -83,9 +98,17 @@ export function ApprovalsPage() {
   return (
     <Page title={t("ap.title")}>
       <h2>{t("ap.toApprove")}</h2>
-      {submitted.isPending ? <Loading /> : <EntryTable entries={submitted.data ?? []} />}
+      {submitted.isPending ? (
+        <Loading />
+      ) : (
+        <EntryTable entries={submitted.data ?? []} />
+      )}
       <h2>{t("ap.toPost")}</h2>
-      {approved.isPending ? <Loading /> : <EntryTable entries={approved.data ?? []} />}
+      {approved.isPending ? (
+        <Loading />
+      ) : (
+        <EntryTable entries={approved.data ?? []} />
+      )}
       <ProblemMessage error={submitted.error ?? approved.error} />
     </Page>
   );
@@ -109,7 +132,8 @@ export function NewEntryPage() {
       { body },
       {
         onSuccess: (entry) => {
-          const go = () => void navigate(`/w/${slug}/e/${entityId}/entries/${entry.id}`);
+          const go = () =>
+            void navigate(`/w/${slug}/e/${entityId}/entries/${entry.id}`);
           if (submit) {
             act.mutate({ id: entry.id, action: "submit" }, { onSettled: go });
           } else {
@@ -137,14 +161,19 @@ export function NewEntryPage() {
 
 /** Read-only view with the workflow actions allowed for the entry's status. A posted entry is
  * never editable; its only action is "Reverse" (AC-F2). */
-export function EntryActions({ entry, myId, onAct }: {
+export function EntryActions({
+  entry,
+  myId,
+  onAct,
+}: {
   entry: JournalEntry;
   myId: string | undefined;
   onAct: (action: EntryAction, reason?: string) => void;
 }) {
   const { t } = useI18n();
   const [reason, setReason] = useState("");
-  const withReason = (action: EntryAction) => (reason.trim().length >= 5 ? onAct(action, reason) : undefined);
+  const withReason = (action: EntryAction) =>
+    reason.trim().length >= 5 ? onAct(action, reason) : undefined;
   switch (entry.status) {
     case "DRAFT":
     case "REJECTED":
@@ -159,7 +188,11 @@ export function EntryActions({ entry, myId, onAct }: {
     case "SUBMITTED":
       return (
         <div className="actions">
-          <button className="primary" disabled={myId === entry.prepared_by_id} onClick={() => onAct("approve")}>
+          <button
+            className="primary"
+            disabled={myId === entry.prepared_by_id}
+            onClick={() => onAct("approve")}
+          >
             {t("je.approve")}
           </button>
           {/* Without an approval policy (e.g. personal books) a submitted entry can be posted;
@@ -167,7 +200,11 @@ export function EntryActions({ entry, myId, onAct }: {
           <button onClick={() => onAct("post")}>{t("je.post")}</button>
           <label>
             <span className="visually-hidden">{t("je.rejectReason")}</span>
-            <input placeholder={t("je.rejectReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <input
+              placeholder={t("je.rejectReason")}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
           </label>
           <button onClick={() => withReason("reject")}>{t("je.reject")}</button>
         </div>
@@ -184,13 +221,20 @@ export function EntryActions({ entry, myId, onAct }: {
       return (
         <div className="actions">
           <p className="notice">{t("je.postedReadOnly")}</p>
-          {entry.reversed_by_entry_id || entry.entry_type === "REVERSAL" ? null : (
+          {entry.reversed_by_entry_id ||
+          entry.entry_type === "REVERSAL" ? null : (
             <>
               <label>
                 <span className="visually-hidden">{t("je.reverseReason")}</span>
-                <input placeholder={t("je.reverseReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+                <input
+                  placeholder={t("je.reverseReason")}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
               </label>
-              <button onClick={() => withReason("reverse")}>{t("je.reverse")}</button>
+              <button onClick={() => withReason("reverse")}>
+                {t("je.reverse")}
+              </button>
             </>
           )}
         </div>
@@ -222,7 +266,12 @@ export function EntryDetailPage() {
   }
   const e = entry.data;
   const editable = e.status === "DRAFT" || e.status === "REJECTED";
-  const names = new Map((accounts.data ?? []).map((a) => [a.id, locale === "el" && a.name_el ? a.name_el : a.name]));
+  const names = new Map(
+    (accounts.data ?? []).map((a) => [
+      a.id,
+      locale === "el" && a.name_el ? a.name_el : a.name,
+    ]),
+  );
   const onAct = (action: EntryAction, reason?: string) =>
     act.mutate(
       { id: e.id, action, ...(reason ? { reason } : {}) },
@@ -237,22 +286,38 @@ export function EntryDetailPage() {
   return (
     <Page
       title={e.description}
-      actions={editable && !editing ? <button onClick={() => setEditing(true)}>{t("je.edit")}</button> : null}
+      actions={
+        editable && !editing ? (
+          <button onClick={() => setEditing(true)}>{t("je.edit")}</button>
+        ) : null
+      }
     >
       <p>
         <StatusBadge prefix="je.status" status={e.status} /> {e.accounting_date}
         {e.entry_no ? ` · ${e.journal}-${e.entry_no}` : ""}
-        {e.unlock_request_id ? <span className="badge badge-warn"> {t("je.restated")}</span> : null}
+        {e.unlock_request_id ? (
+          <span className="badge badge-warn"> {t("je.restated")}</span>
+        ) : null}
       </p>
-      {e.rejection_reason ? <p className="notice warn">{e.rejection_reason}</p> : null}
+      {e.rejection_reason ? (
+        <p className="notice warn">{e.rejection_reason}</p>
+      ) : null}
       {e.reverses_entry_id ? (
         <p>
-          {t("je.reverses")}: <Link to={`/w/${slug}/e/${entityId}/entries/${e.reverses_entry_id}`}>↗</Link>
+          {t("je.reverses")}:{" "}
+          <Link to={`/w/${slug}/e/${entityId}/entries/${e.reverses_entry_id}`}>
+            ↗
+          </Link>
         </p>
       ) : null}
       {e.reversed_by_entry_id ? (
         <p>
-          {t("je.reversedBy")}: <Link to={`/w/${slug}/e/${entityId}/entries/${e.reversed_by_entry_id}`}>↗</Link>
+          {t("je.reversedBy")}:{" "}
+          <Link
+            to={`/w/${slug}/e/${entityId}/entries/${e.reversed_by_entry_id}`}
+          >
+            ↗
+          </Link>
         </p>
       ) : null}
       {editing ? (
@@ -300,11 +365,17 @@ export function EntryDetailPage() {
                   <td>
                     {l.account_code} · {names.get(l.account_id) ?? ""}
                   </td>
-                  <td className="amount">{l.debit === "0.00" ? "" : formatAmount(l.debit, locale)}</td>
-                  <td className="amount">{l.credit === "0.00" ? "" : formatAmount(l.credit, locale)}</td>
+                  <td className="amount">
+                    {l.debit === "0.00" ? "" : formatAmount(l.debit, locale)}
+                  </td>
+                  <td className="amount">
+                    {l.credit === "0.00" ? "" : formatAmount(l.credit, locale)}
+                  </td>
                   <td>
                     {l.memo}
-                    {l.vat_code ? <span className="tag">VAT {l.vat_code}</span> : null}
+                    {l.vat_code ? (
+                      <span className="tag">VAT {l.vat_code}</span>
+                    ) : null}
                     {l.counterparty_code ? (
                       <span className="tag">
                         {l.counterparty_code}
@@ -314,7 +385,11 @@ export function EntryDetailPage() {
                     {l.dimensions.length ? (
                       <span className="tags">
                         {l.dimensions.map((d) => (
-                          <span key={d.dimension_id} className="tag" title={d.value_name}>
+                          <span
+                            key={d.dimension_id}
+                            className="tag"
+                            title={d.value_name}
+                          >
                             {d.dimension_code}: {d.value_code}
                           </span>
                         ))}
@@ -327,8 +402,12 @@ export function EntryDetailPage() {
             <tfoot>
               <tr>
                 <th scope="row">{t("je.totals")}</th>
-                <td className="amount">{formatAmount(e.total_debit, locale)}</td>
-                <td className="amount">{formatAmount(e.total_credit, locale)}</td>
+                <td className="amount">
+                  {formatAmount(e.total_debit, locale)}
+                </td>
+                <td className="amount">
+                  {formatAmount(e.total_credit, locale)}
+                </td>
                 <td />
               </tr>
             </tfoot>
@@ -337,6 +416,7 @@ export function EntryDetailPage() {
         </>
       )}
       <ProblemMessage error={act.error} />
+      <DocumentsPanel entryId={e.id} />
     </Page>
   );
 }

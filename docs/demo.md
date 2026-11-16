@@ -22,6 +22,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ 65 customers and suppliers registered
 ✔ 95 entries drafted by the accountant, approved and posted by the reviewer
 ✔ entry GJ-96 reversed with a reason and re-posted
+✔ invoice cleaning-invoice.pdf attached to the cleaning entry (virus-scanned, type checked; the same file again is the same document); the EICAR test virus was refused
 ✔ periods 1-11 locked; posting into January is refused (409), rejected and voided
 ✔ trial balance at 2026-12-31: 1810572.51 = 1810572.51; bank 371514.38 matches the synthetic statement
 ✔ 442 payments matched to invoices; receivables 203631.60 and payables 102084.19 reconcile to the ledger
@@ -56,6 +57,8 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
   statement's closing balance (less the 350.00 cleaning correction). Every euro is booked.
 - **Correction.** A December cleaning bill is posted to *Utilities* by mistake, reversed with a
   reason (the reversal goes through approval too), and posted again to *Other operating expenses*.
+- **Documents.** A synthetic cleaning invoice (PDF) is attached to the corrected entry. Uploading
+  it again returns the same document, and the EICAR antivirus test file is refused by ClamAV.
 - **Close.** January–November are soft-closed by the accountant and locked by the owner. An
   attempt to post a late January invoice is refused by the API (409, `ledger.period.locked`); the
   reviewer rejects it and the accountant voids it.

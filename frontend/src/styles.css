@@ -167,3 +167,7 @@ form.reconcile { margin-top: 1.25rem; border-top: 1px solid var(--border); paddi
 /* Form controls never overflow narrow screens (long option texts in selects). */
 .form label, .inline-form label { min-width: 0; max-width: 100%; }
 .form select, .form input, .inline-form select, .inline-form input { max-width: 100%; }
+
+/* Documents (M2-4) */
+ul.documents { list-style: none; padding: 0; margin: 0 0 0.75rem; display: grid; gap: 0.35rem; }
+ul.documents a { overflow-wrap: anywhere; }

@@ -38,6 +38,10 @@ PERMISSIONS: dict[str, str] = {
     "banking.account.manage": "Create bank accounts and their CSV column mappings",
     "banking.statement.manage": "Import statements, match, ignore and book statement lines",
     "banking.reconcile": "Reconcile a bank account to its statement",
+    # documents (M2-4)
+    "documents.read": "See and download documents",
+    "documents.upload": "Upload documents",
+    "documents.link": "Attach documents to entries and open items",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -54,6 +58,7 @@ _READ = frozenset(
         "registers.counterparty.read",
         "reports.read",
         "banking.read",
+        "documents.read",
     }
 )
 _PREPARE = _READ | {
@@ -66,6 +71,8 @@ _PREPARE = _READ | {
     "banking.account.manage",
     "banking.statement.manage",
     "banking.reconcile",
+    "documents.upload",
+    "documents.link",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}

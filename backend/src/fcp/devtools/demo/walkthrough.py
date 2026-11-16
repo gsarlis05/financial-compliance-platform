@@ -62,6 +62,20 @@ class DemoClient(Client):
             )
         return response.json()
 
+    def upload_document(self, path: str, content: bytes, name: str, expect: int = 201,
+                        **form: str) -> Any:  # fmt: skip
+        from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: PLC0415
+
+        csrf = self.cookies["__Host-fcp_csrftoken"].value
+        data = {"file": SimpleUploadedFile(name, content), **form}
+        response = self.post(path, data, headers={"X-CSRFToken": csrf})
+        if response.status_code != expect:
+            raise DemoStepError(
+                f"POST {path} returned {response.status_code}, expected {expect}: "
+                f"{response.content[:500]!r}"
+            )
+        return response.json()
+
     def call(self, method: str, path: str, body: Any = None, expect: int = 200) -> Any:
         headers = {}
         if method != "GET":
@@ -98,6 +112,22 @@ class DemoResult:
     locked_periods: int
     steps: list[str] = field(default_factory=list)
     statements: dict[str, Any] = field(default_factory=dict)
+
+
+def _demo_invoice_pdf(text: str, amount: str) -> bytes:
+    """A one-page synthetic invoice (fictional; never real client data)."""
+    import io  # noqa: PLC0415
+
+    from reportlab.lib.pagesizes import A4  # noqa: PLC0415
+    from reportlab.pdfgen import canvas  # noqa: PLC0415
+
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4, invariant=True)  # deterministic bytes
+    pdf.drawString(72, 760, "INVOICE (Demo) - fictional, for demonstration only")
+    pdf.drawString(72, 730, text)
+    pdf.drawString(72, 700, f"Total EUR {amount}")
+    pdf.save()
+    return buffer.getvalue()
 
 
 def _demo_user(role: str) -> User:
@@ -218,12 +248,27 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         201,
     )
     through_workflow(reversal)
-    through_workflow(
+    cleaning_entry = through_workflow(
         draft(december, "Office cleaning December (Demo)",
               [("6900", Decimal("350.00"), Decimal(0)), (BANK, Decimal(0), Decimal("350.00"))])
     )  # fmt: skip
     posted += 3
     step(f"entry {wrong['journal']}-{wrong['entry_no']} reversed with a reason and re-posted")
+
+    # Documents (M2-4): the cleaning invoice is attached as evidence; a test virus is refused.
+    invoice = _demo_invoice_pdf(f"Cleaning services December {year} (Demo)", "350.00")
+    attached = accountant.upload_document(f"{base}/documents", invoice, "cleaning-invoice.pdf",
+                                          entry_id=cleaning_entry["id"])  # fmt: skip
+    accountant.upload_document(f"{base}/documents", invoice, "cleaning-invoice-copy.pdf",
+                               expect=200)  # fmt: skip
+    eicar = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+    refused = accountant.upload_document(f"{base}/documents", eicar, "notes.txt", expect=422)
+    if refused.get("code") != "documents.malware_detected":
+        raise DemoStepError(f"The test virus was not refused: {refused}")
+    step(
+        f"invoice {attached['filename']} attached to the cleaning entry (virus-scanned, type "
+        "checked; the same file again is the same document); the EICAR test virus was refused"
+    )
 
     # Close January..November: soft-close by the accountant, lock by the owner.
     to_lock = [p for p in fiscal_year["periods"] if not p["is_adjustment"] and p["number"] <= 11]

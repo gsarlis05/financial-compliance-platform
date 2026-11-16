@@ -40,7 +40,7 @@ def test_demo_entry_nets_each_account_to_one_side() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.usefixtures("reference_data")
+@pytest.mark.usefixtures("reference_data", "document_bucket")
 def test_demo_walkthrough_runs_end_to_end() -> None:
     viewer = User.objects.create(idp_subject="https://idp.test|viewer", email="viewer@example.test")
     said: list[str] = []
@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 16
+    assert len(result.steps) == 17
     assert all(line.startswith("✔") for line in said)
     _assert_golden_statements(result.statements)
 
@@ -88,7 +88,7 @@ def _assert_golden_statements(statements: dict[str, Any]) -> None:
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.usefixtures("reference_data")
+@pytest.mark.usefixtures("reference_data", "document_bucket")
 def test_demo_share_with_unknown_user_is_reported_not_fatal() -> None:
     said: list[str] = []
     result = run(share_with="nobody@example.test", say=said.append)

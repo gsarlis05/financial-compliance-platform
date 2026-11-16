@@ -79,3 +79,11 @@ def reference_data() -> None:
     from django.core.management import call_command  # noqa: PLC0415
 
     call_command("seed_reference_data", verbosity=0)
+
+
+@pytest.fixture(scope="session")
+def document_bucket() -> None:
+    """The documents bucket in the local or CI object store (SeaweedFS)."""
+    from fcp.modules.documents.storage import ensure_bucket  # noqa: PLC0415
+
+    ensure_bucket()

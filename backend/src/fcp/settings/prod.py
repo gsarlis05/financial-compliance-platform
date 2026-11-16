@@ -63,6 +63,18 @@ DATABASES["default"]["OPTIONS"] = {
     "sslrootcert": env("POSTGRES_SSLROOTCERT", "/etc/ssl/certs/rds-global-bundle.pem"),
 }
 
+# --- Document vault (ADR-0016) ------------------------------------------------------------------
+DOCUMENTS_BUCKET = env("DOCUMENTS_BUCKET")
+DOCUMENTS_KMS_KEY_ID = env("DOCUMENTS_KMS_KEY_ID")  # SSE-KMS is mandatory when deployed
+CLAMD_HOST = env("CLAMD_HOST")
+S3_ENDPOINT = env("S3_ENDPOINT", "")
+if S3_ENDPOINT and not S3_ENDPOINT.startswith("https://"):
+    raise ImproperlyConfigured("S3_ENDPOINT must be empty (AWS S3) or an https:// URL.")
+if not DOCUMENTS_KMS_KEY_ID:
+    raise ImproperlyConfigured(
+        "DOCUMENTS_KMS_KEY_ID must be set: documents are encrypted (SSE-KMS)."
+    )
+
 # --- Identity provider ---------------------------------------------------------------------------
 OIDC_ISSUER = _https("OIDC_ISSUER")
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID")

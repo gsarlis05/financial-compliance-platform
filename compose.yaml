@@ -49,6 +49,19 @@ services:
       - "s3data:/data"
       - "./infra/local/seaweedfs-entrypoint.sh:/fcp/seaweedfs-entrypoint.sh:ro"
 
+  antivirus:
+    # ClamAV (GPL-2.0) runs as a separate service and is never linked into the application (M2-4).
+    # The image bundles its signature databases; updates are off locally (no outbound downloads).
+    image: clamav/clamav:1.4.3
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "true"
+    ports: ["127.0.0.1:3310:3310"]
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
   mail:
     image: axllent/mailpit:v1.33.0
     ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]

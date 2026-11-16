@@ -27,6 +27,7 @@ dev-env:
 # `$(MAKE)` re-reads .env after dev-env may have created it.
 dev: dev-env install
 	$(MAKE) services migrate
+	cd backend && uv run python manage.py documents_dev_bucket
 
 services:
 	docker compose up -d --wait
