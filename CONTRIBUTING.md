@@ -24,6 +24,10 @@ docs/       Planning documents and ADRs
 
 ## Local commands
 ```
+make dev         # first run: creates .env with random secrets, installs deps,
+                 # starts PostgreSQL 17, Keycloak, S3 (SeaweedFS), Mailpit, runs migrations
+make run-backend # http://localhost:8000      make run-frontend  # http://localhost:5173
+make dev-down    # stop services (keeps data)  make dev-reset    # delete local data
 make test        # backend + frontend tests
 make lint        # linters, type checks, module boundaries, no-float rule
 make security    # Semgrep project rules + gitleaks (needs Docker)
@@ -42,7 +46,12 @@ make prove-gates # proves each custom gate rejects a deliberate violation
 | Secrets | gitleaks over the full history |
 | Dependencies | pip-audit, `pnpm audit` (high and critical block), Dependabot weekly |
 | Gate proof | `scripts/ci/prove-gates.sh` injects violations in a temp dir and expects failures |
-Prerequisites: Python 3.13 with uv, Node 22 with pnpm 10, and Docker (for local services, added in M0-3).
+Prerequisites: Python 3.13 with uv, Node 22 with pnpm 10, and Docker with Compose.
+
+Local services (all bound to 127.0.0.1): PostgreSQL 17 on 5432; Keycloak on 8080 (realm `fcp-dev`,
+admin console credentials in `.env`; **MFA is required**: every user must configure TOTP at first
+login, and WebAuthn is available); S3-compatible storage on 8333; Mailpit on 8025 (web) and 1025 (SMTP).
+There are no pre-created users. Create one in the Keycloak admin console (realm `fcp-dev`).
 
 ## Licensing
 This is proprietary software; all rights reserved. Source files do not carry licence headers.
