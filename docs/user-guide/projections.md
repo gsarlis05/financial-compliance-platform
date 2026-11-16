@@ -55,7 +55,7 @@ opening balance. If an account with a balance is not mapped to a statement line,
 ### Reading a projection
 - **Natures.** Every column says **Actual** (the opening balance sheet, from your books) or
   **Forecast**, in words as well as by its border style. Show it by month, quarter or year.
-- **Checks.** The six checks are listed with **holds** or **fails**; a failed check names the month
+- **Checks.** The seven checks are listed with **holds** or **fails**; a failed check names the month
   where it failed, and such a projection cannot be published.
 - **Explain a line.** Select any figure to see where it comes from: the assumption and how it is
   used, the fixed-asset register, your books, or which other lines it is worked out from.

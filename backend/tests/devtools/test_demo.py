@@ -64,7 +64,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     # 2028 revenue = 2026 revenue x 1.1^2 (the approved assumptions); the run is checked and
     # published (M6-3).
     assert projection_step == (
-        "three-statement projection 2027-2028: VALID, 6 invariants hold, published; 2028: "
+        "three-statement projection 2027-2028: VALID, 7 invariants hold, published; 2028: "
         "revenue 1452000.00, net income 196572.33, closing cash 550508.64"
     ), projection_step
     budget_step = next(s for s in result.steps if s.startswith("budget "))
