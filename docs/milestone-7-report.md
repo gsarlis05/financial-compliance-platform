@@ -58,7 +58,7 @@ and run through a tornado. User guides: [scenarios](user-guide/scenarios.md),
 | **AC-SC3** Every month of any scenario satisfies the invariants; a failing one is INVALID and says where | `test_runs.py::test_any_scenario_keeps_the_invariants_and_its_effects_add_up` (property test); `test_timing_capex_and_refusals`; demo: "all checks hold" |
 | **AC-SC4** Every scenario value HYPOTHETICAL in API, screens and export; lineage per changed figure; what changed sums to the total | `test_runs.py::test_lineage_names_each_override_and_its_effect`, `test_runs_api.py::test_comparison_save_and_promote` (July revenue changed by override 1 only; effects add up); `test_export.py` (Nature row, note on every sheet); `scenarios.test.tsx` (label in words, dotted line) |
 | **AC-SC5** A scenario never changes its base or any approved or published object; promotion makes a draft only | `test_scenarios.py::test_the_database_keeps_scenarios` (guards as the runtime role); `metrics.calc.publish` refuses kind `SCENARIO`; `test_comparison_save_and_promote` (promotion → DRAFT set) |
-| **AC-SC6** Same base, overrides and engine version give the same hash; new postings don't change a saved run | `test_comparison_save_and_promote` (saving again gives the same output hash). Saved scenario runs are stored calculation runs pinned to the ledger watermark, which later postings never rewrite (the M3-2 guards, tested for projections in M6); **there is no scenario-specific test with a later posting** |
+| **AC-SC6** Same base, overrides and engine version give the same hash; new postings don't change a saved run | `test_comparison_save_and_promote` (saving again gives the same output hash); `test_a_saved_run_ignores_later_postings` (a posting after the save leaves the run's watermark, hash and values unchanged; a new run includes it) |
 | **AC-SE1** Results equal single engine runs; tornado ranks by swing, ties by name | `test_sensitivity.py::test_results_equal_single_engine_runs`, `test_tornado_by_hand_and_ties_by_name` |
 | **AC-SE2** Quotas, time limit and caching; 25 drivers on 24 months within target | `test_api_cache_quota_and_bases` (second request from the cache; 429 with a message past the quota; time limit). Measured on the demo's 24-month set: every distinct driver (19; the list cannot reach 25) at ±7%, **0.83 s** (39 engine runs), **0.22 s** from the cache, against a 30 s limit |
 | **AC-WC1** View equals the projection's balance sheet; N days worth equals two engine runs | `test_working_capital.py::test_table_by_hand`, `test_value_of_days_by_hand` |
@@ -93,8 +93,10 @@ sensitivity runs use the existing calculation-run tables. Migrations were applie
 Measured on 2026-11-16 on the M7-7 branch, on a fresh test database (`make test`, `make lint`,
 `make openapi-check`, `make security`, `make validation`, all passing):
 - Backend: **1,303 tests passed**, **96.24%** line and branch coverage overall; the `scenarios`
-  module **98.43%**. The brief's target of 100% branch coverage on calculation engines is **not
-  met**: `apply.py` is at 96.70% and `sensitivity.py` at 98.70% (a few refusal and edge branches).
+  module **98.43%**. The calculation engines `apply.py` and `sensitivity.py` were first at 96.70%
+  and 98.70% branch coverage; tests for the missing branches (a month shift that loses nothing,
+  rate changes on the facility or an unnamed loan, a loan rate below zero, an unknown output)
+  bring both to **100%**, as the brief requires.
 - Frontend: **69 tests**, including axe on all four new screens; ESLint strict, `tsc`, build.
 - Security: Semgrep 0 findings; gitleaks no leaks. Validation package: all six scenarios match
   the independent model to EUR 0.01.

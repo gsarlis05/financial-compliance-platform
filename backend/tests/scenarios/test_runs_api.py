@@ -7,6 +7,8 @@ from typing import Any
 import pytest
 
 from ..ledger.conftest import books, join
+from ..ledger.test_dimensions import commit_point
+from ..metrics.test_mapping import defaults, post
 
 pytestmark = pytest.mark.django_db
 Make = Callable[..., Any]
@@ -145,3 +147,29 @@ def test_refusals_and_permissions(plan: dict[str, Any], make_user: Make,
     assert viewer.get(f"{empty}/comparison").status_code == 403
     assert viewer.post_json(f"{empty}/runs", {}).status_code == 403
     assert viewer.get(f"{empty}/runs").status_code == 200
+
+
+def test_a_saved_run_ignores_later_postings(plan: dict[str, Any]) -> None:
+    """AC-SC6: a saved scenario run is pinned to the ledger watermark; a posting made after it
+    changes neither the run nor its values, while a new run sees it."""
+    c = plan["client"]
+    surl = scenario(plan, ("PCT_CHANGE", {"driver": "revenue", "percent": "10"}))
+    saved = c.post_json(f"{surl}/runs", {}).json()
+    calc = f"{plan['base']}/calc-runs/{saved['id']}"
+    before = c.get(calc).json()
+    assert before["kind"] == "SCENARIO"
+
+    c.put_json(f"{plan['base']}/ledger-settings", {"approval_policy": "NONE"})
+    defaults(plan)  # postings must map to statement lines before a run can read them
+    post(plan, ("1300", "50.00", "0"), ("4000", "0", "50.00"), day="2026-12-20")
+    commit_point()
+    after = c.get(calc).json()
+    assert (after["actuals_watermark"], after["output_hash"]) == (
+        before["actuals_watermark"], before["output_hash"])  # fmt: skip
+    assert after["results"] == before["results"]
+    rerun = c.post_json(f"{surl}/runs", {})
+    assert rerun.status_code == 201, rerun.content
+    newer = rerun.json()
+    fresh = c.get(f"{plan['base']}/calc-runs/{newer['id']}").json()
+    assert fresh["actuals_watermark"] > before["actuals_watermark"]
+    assert fresh["input_hash"] != before["input_hash"]  # the new run includes the posting
