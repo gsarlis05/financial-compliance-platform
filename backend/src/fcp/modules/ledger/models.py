@@ -12,6 +12,50 @@ from fcp.core.db.models import TenantOwned
 LEGAL_ENTITY = "tenancy.LegalEntity"
 
 
+class VatCode(models.Model):
+    """VAT code catalogue as reference data, versioned by validity window (M2-3, doc 03 TAX_CODE).
+
+    Global (not tenant data), seeded by migrations from ``vat/<jurisdiction>.json`` and read-only
+    for the runtime role. ``verified`` stays False until a qualified tax professional confirms the
+    entry (owner decision #93); the UI shows unverified codes as such. No VAT return in M2.
+    """
+
+    class Treatment(models.TextChoices):
+        STANDARD = "STANDARD"
+        REDUCED = "REDUCED"
+        ZERO = "ZERO"
+        EXEMPT = "EXEMPT"
+        REVERSE_CHARGE = "REVERSE_CHARGE"
+        OUT_OF_SCOPE = "OUT_OF_SCOPE"
+        SETTLEMENT = "SETTLEMENT"
+
+    id = models.CharField(primary_key=True, max_length=40)  # e.g. "CY:S19:2000-01-01"
+    jurisdiction = models.CharField(max_length=2)
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=200)
+    name_el = models.CharField(max_length=200, blank=True)
+    treatment = models.CharField(max_length=16, choices=Treatment.choices)
+    rate = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True, help_text="Null: no lower bound")
+    valid_to = models.DateField(null=True, blank=True, help_text="Null: still valid")
+    verified = models.BooleanField(default=False)
+    verification_note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "ledger_vat_code"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["jurisdiction", "code", "valid_from"], name="ledger_vat_code_version_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(valid_to__isnull=True)
+                | models.Q(valid_from__isnull=True)
+                | models.Q(valid_to__gte=models.F("valid_from")),
+                name="ledger_vat_code_window_ordered",
+            ),
+        ]
+
+
 class Account(TenantOwned):
     class Type(models.TextChoices):
         ASSET = "ASSET"
@@ -58,6 +102,14 @@ class Account(TenantOwned):
     control_type = models.CharField(
         max_length=10, choices=Control.choices, blank=True, default=Control.NONE
     )
+
+    class VatRole(models.TextChoices):
+        NONE = "", "None"
+        INPUT = "INPUT"
+        OUTPUT = "OUTPUT"
+
+    # VAT control accounts (M2-3): every line needs a VAT code valid on the accounting date.
+    vat_role = models.CharField(max_length=6, choices=VatRole.choices, blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
@@ -276,6 +328,9 @@ class JournalLine(TenantOwned):
     )
     reference = models.CharField(max_length=50, blank=True, help_text="Invoice or document no.")
     due_date = models.DateField(null=True, blank=True)
+    vat_code = models.ForeignKey(
+        VatCode, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
 
     class Meta:
         db_table = "ledger_journal_line"

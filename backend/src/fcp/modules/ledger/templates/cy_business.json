@@ -81,7 +81,8 @@
       "name": "VAT receivable (input VAT)",
       "name_el": "ΦΠΑ εισροών",
       "type": "ASSET",
-      "parent": "11"
+      "parent": "11",
+      "vat": "INPUT"
     },
     {
       "code": "1300",
@@ -161,7 +162,8 @@
       "name": "VAT payable (output VAT)",
       "name_el": "ΦΠΑ εκροών",
       "type": "LIABILITY",
-      "parent": "21"
+      "parent": "21",
+      "vat": "OUTPUT"
     },
     {
       "code": "2130",

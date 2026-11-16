@@ -138,6 +138,7 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
         "POST", f"{base}/accounts/apply-template", {"template": "cy_business"}, 201
     )
     by_code = {a["code"]: a["id"] for a in accounts}
+    vat_accounts = {a["code"] for a in accounts if a["vat_role"]}
     fiscal_year = accountant.call(
         "POST", f"{base}/fiscal-years", {"start_date": books.fiscal_year_start.isoformat()}, 201
     )
@@ -153,12 +154,15 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
 
     def lines(rows: list[tuple[str, Decimal, Decimal]]) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
-        for key, dr, cr in rows:
+        for spec, dr, cr in rows:
+            key, _, vat = spec.partition("!")  # "2120!SETTLE": VAT line with code SETTLE
             code, _, party = key.partition("@")  # "1200@C008": control line of customer C008
             line: dict[str, Any] = {"account_id": by_code[code], "debit": f"{dr:.2f}",
                                     "credit": f"{cr:.2f}"}  # fmt: skip
             if party:
                 line["counterparty_id"] = parties[party]
+            if code in vat_accounts:
+                line["vat_code_id"] = f"CY:{vat or 'S19'}:open"
             result.append(line)
         return result
 

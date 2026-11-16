@@ -11,11 +11,11 @@ import { EntryForm, periodFor } from "./pages/EntryForm";
 
 const accounts: Account[] = [
   { id: "a1", code: "1300", name: "Bank", name_el: "Τράπεζα", type: "ASSET", normal_side: "DEBIT",
-    parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "" },
+    parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "", vat_role: "" },
   { id: "a2", code: "4000", name: "Sales revenue", name_el: "Πωλήσεις", type: "INCOME",
-    normal_side: "CREDIT", parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "" },
+    normal_side: "CREDIT", parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "", vat_role: "" },
   { id: "h1", code: "4", name: "Income", name_el: "Έσοδα", type: "INCOME", normal_side: "CREDIT",
-    parent_id: null, is_postable: false, status: "ACTIVE", currency: "", control_type: "" },
+    parent_id: null, is_postable: false, status: "ACTIVE", currency: "", control_type: "", vat_role: "" },
 ];
 
 const years: FiscalYear[] = [
@@ -193,6 +193,7 @@ describe("EntryForm dimensions (M2-1)", () => {
         line_no: 1, account_id: "a1", account_code: "1300", debit: "5.00", credit: "0.00", memo: "",
         dimensions: [{ dimension_id: "d1", dimension_code: "DEPT", value_id: "v2", value_code: "OLD", value_name: "Old" }],
         counterparty_id: null, counterparty_code: null, reference: "", due_date: null,
+        vat_code_id: null, vat_code: null,
       }],
     };
     const { container } = renderForm({ dimensions: dims, initial });
@@ -203,7 +204,7 @@ describe("EntryForm dimensions (M2-1)", () => {
 
 const arAccount: Account = {
   id: "ar", code: "1200", name: "Trade receivables", name_el: "", type: "ASSET", normal_side: "DEBIT",
-  parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "RECEIVABLE",
+  parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "RECEIVABLE", vat_role: "",
 };
 const parties: Counterparty[] = [
   { id: "c1", code: "C1", name: "Alpha (Demo)", kind: "CUSTOMER", vat_no: "", email: "", payment_terms_days: 30, status: "ACTIVE" },
@@ -228,6 +229,35 @@ describe("EntryForm customers and suppliers (M2-2)", () => {
     const [body] = onSave.mock.calls[0] as [{ lines: { counterparty_id: string | null; reference: string }[] }];
     expect(body.lines[0]).toMatchObject({ counterparty_id: "c1", reference: "INV-17" });
     expect(body.lines[1]?.counterparty_id).toBeNull();
+  });
+});
+
+describe("EntryForm VAT codes (M2-3)", () => {
+  const vatAccount: Account = {
+    id: "vat", code: "2120", name: "VAT payable", name_el: "", type: "LIABILITY", normal_side: "CREDIT",
+    parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "", vat_role: "OUTPUT",
+  };
+  const codes = [
+    { id: "CY:S19:open", code: "S19", name: "Standard rate 19%", name_el: "", treatment: "STANDARD", rate: "0.1900",
+      valid_from: null, valid_to: null, verified: false, verification_note: "" },
+  ];
+  it("marks unverified rates, requires a code on VAT accounts and sends it", async () => {
+    const { onSave, container } = renderForm({ accounts: [...accounts, vatAccount], vatCodes: codes });
+    fill("Description", "Cash sale");
+    fill("Account 1", "a1");
+    fill("Debit 1", "19.00");
+    fill("Account 2", "vat");
+    fill("Credit 2", "19.00");
+    const picker = screen.getByLabelText<HTMLSelectElement>("VAT 2");
+    expect(picker.required).toBe(true);
+    expect(screen.getByLabelText<HTMLSelectElement>("VAT 1").required).toBe(false);
+    expect(Array.from(picker.options).map((o) => o.text)).toContain("S19 · Standard rate 19% (unverified)");
+    fill("VAT 2", "CY:S19:open");
+    expect(screen.getByText(/not yet verified by a Cyprus tax professional/)).toBeInTheDocument();
+    await noAxeViolations(container);
+    fireEvent.click(screen.getByRole("button", { name: "Save and submit" }));
+    const [body] = onSave.mock.calls[0] as [{ lines: { vat_code_id: string | null }[] }];
+    expect(body.lines.map((l) => l.vat_code_id)).toEqual([null, "CY:S19:open"]);
   });
 });
 

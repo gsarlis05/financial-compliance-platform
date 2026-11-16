@@ -29,7 +29,7 @@ _BANK_COUNTER_ACCOUNT = {
     "Payroll (Demo)": ("Payroll", "6000"),
     "Office rent (Demo)": ("Office rent", "6100"),
     "Operating expenses (Demo)": ("Operating expenses", "6900"),
-    "VAT payment (Demo)": ("VAT payments", "2120"),
+    "VAT payment (Demo)": ("VAT payments", "2120!SETTLE"),
     "Term loan drawdown (Demo)": ("Term loan drawdown", "2010"),
 }
 
@@ -50,7 +50,8 @@ class DemoEntry:
     accounting_date: date
     description: str
     # line key -> (debit, credit). The key is an account code, or "code@counterparty" for
-    # control-account lines (trade receivables and payables need a counterparty, M2-2).
+    # control-account lines (trade receivables and payables need a counterparty, M2-2), or
+    # "code!VAT" to choose the VAT code of a VAT-account line (default: standard rate, M2-3).
     lines: dict[str, list[Decimal]] = field(default_factory=dict)
 
     def add(self, code: str, debit: Decimal = Decimal(0), credit: Decimal = Decimal(0)) -> None:

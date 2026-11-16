@@ -25,12 +25,20 @@ def lines(*pairs: tuple[str, str, str]) -> list[dict[str, str]]:
     return [{"account_id": acc, "debit": d, "credit": c} for acc, d, c in pairs]
 
 
+# VAT accounts need a VAT code on every line (M2-3); tests use the standard rate by default.
+STANDARD_VAT = "CY:S19:open"
+
+
 def payload(
     books: dict[str, Any], *line_list: tuple[str, str, str], day: str = "2026-03-15", **extra: Any
 ) -> dict[str, Any]:
     acc = books["accounts"]
     resolved = [(acc[code]["id"] if code in acc else code, d, c) for code, d, c in line_list]
-    return {"accounting_date": day, "description": "Test entry", "lines": lines(*resolved), **extra}
+    built = lines(*resolved)
+    for line, (code, _d, _c) in zip(built, line_list, strict=True):
+        if code in acc and acc[code].get("vat_role"):
+            line["vat_code_id"] = STANDARD_VAT
+    return {"accounting_date": day, "description": "Test entry", "lines": built, **extra}
 
 
 SALE = (("1300", "1190.00", "0"), ("4000", "0", "1000.00"), ("2120", "0", "190.00"))

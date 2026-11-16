@@ -1,0 +1,14 @@
+{
+  "jurisdiction": "CY",
+  "note": "Seeded from widely published Cyprus VAT rates. Every entry is UNVERIFIED until a qualified Cyprus tax professional confirms it (owner decision #93). Validity windows are open-ended until verified dates are supplied. The 3% rate named in the M2 brief is deliberately not seeded until its scope is verified.",
+  "codes": [
+    {"code": "S19", "name": "Standard rate 19%", "name_el": "Κανονικός συντελεστής 19%", "treatment": "STANDARD", "rate": "0.19"},
+    {"code": "R9", "name": "Reduced rate 9%", "name_el": "Μειωμένος συντελεστής 9%", "treatment": "REDUCED", "rate": "0.09"},
+    {"code": "R5", "name": "Reduced rate 5%", "name_el": "Μειωμένος συντελεστής 5%", "treatment": "REDUCED", "rate": "0.05"},
+    {"code": "Z0", "name": "Zero rate", "name_el": "Μηδενικός συντελεστής", "treatment": "ZERO", "rate": "0"},
+    {"code": "EX", "name": "Exempt", "name_el": "Απαλλασσόμενη", "treatment": "EXEMPT", "rate": null},
+    {"code": "RC", "name": "EU reverse charge", "name_el": "Αντίστροφη επιβάρυνση ΕΕ", "treatment": "REVERSE_CHARGE", "rate": "0.19"},
+    {"code": "OUT", "name": "Outside the scope of VAT", "name_el": "Εκτός πεδίου ΦΠΑ", "treatment": "OUT_OF_SCOPE", "rate": null},
+    {"code": "SETTLE", "name": "VAT settlement (payment or refund)", "name_el": "Εκκαθάριση ΦΠΑ (πληρωμή ή επιστροφή)", "treatment": "SETTLEMENT", "rate": null}
+  ]
+}

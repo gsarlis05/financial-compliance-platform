@@ -21,7 +21,7 @@ from django.utils import timezone
 from fcp.core.errors import NotFoundError
 from fcp.core.money import Money, MoneyError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import Tenant, WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import LegalEntity, Tenant, WorkspaceContext, get_entity
 
 from . import dimensions
 from .errors import (
@@ -39,6 +39,8 @@ from .errors import (
     SegregationOfDutiesError,
     TooFewLinesError,
     UnbalancedEntryError,
+    VatCodeInvalidError,
+    VatCodeRequiredError,
 )
 from .models import (
     Account,
@@ -50,6 +52,7 @@ from .models import (
     LineDimension,
     Period,
     PostingCounter,
+    VatCode,
 )
 from .periods import period_for_date
 
@@ -68,6 +71,7 @@ class LineInput:
     counterparty_id: UUID | None = None
     reference: str = ""
     due_date: date | None = None
+    vat_code_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -209,6 +213,7 @@ def _validated_lines(
         entity_id, [ln.dimension_value_ids for ln in lines], allow_inactive=mirror
     )
     _counterparties(entity_id, lines, allow_inactive=mirror)
+    _vat_codes(entity_id, lines)
     result = []
     for i, line in enumerate(lines):
         debit = _amount(line.debit, currency, f"lines.{i}.debit")
@@ -239,6 +244,7 @@ def _validated_lines(
                 "counterparty_id": line.counterparty_id,
                 "reference": line.reference.strip(),
                 "due_date": line.due_date,
+                "vat_code_id": line.vat_code_id,
                 "tags": tags[i],
             }
         )
@@ -275,9 +281,57 @@ def _counterparties(
     return found
 
 
+def _vat_codes(entity_id: UUID, lines: Sequence[LineInput]) -> None:
+    """VAT codes must exist in the catalogue of the entity's jurisdiction (dates: at submission)."""
+    wanted = {ln.vat_code_id for ln in lines if ln.vat_code_id}
+    if not wanted:
+        return
+    jurisdiction = LegalEntity.objects.filter(id=entity_id).values_list("jurisdiction", flat=True)
+    found = set(
+        VatCode.objects.filter(id__in=wanted, jurisdiction__in=jurisdiction).values_list(
+            "id", flat=True
+        )
+    )
+    for i, ln in enumerate(lines):
+        if ln.vat_code_id and ln.vat_code_id not in found:
+            raise VatCodeInvalidError(
+                "Unknown VAT code for this entity's country.",
+                field_errors={f"lines.{i}.vat_code_id": ["not found"]},
+            )
+
+
+def _check_vat(entry: JournalEntry, lines: list[JournalLine]) -> None:
+    """VAT accounts need a code, and every code must be valid on the accounting date (AC-M2-3).
+    A reversal is checked against its original's date, because it mirrors that entry."""
+    day = entry.accounting_date
+    if entry.entry_type == JournalEntry.EntryType.REVERSAL and entry.reverses_entry_id:
+        day = JournalEntry.objects.values_list("accounting_date", flat=True).get(
+            id=entry.reverses_entry_id
+        )
+    for ln in lines:
+        field = f"lines.{ln.line_no - 1}.vat_code_id"
+        if ln.account.vat_role and ln.vat_code_id is None:
+            raise VatCodeRequiredError(
+                f"Line {ln.line_no}: account {ln.account.code} is a VAT account; "
+                "choose a VAT code.",
+                field_errors={field: ["required"]},
+            )
+        code = ln.vat_code
+        if code is not None and (
+            (code.valid_from is not None and day < code.valid_from)
+            or (code.valid_to is not None and day > code.valid_to)
+        ):
+            raise VatCodeInvalidError(
+                f"Line {ln.line_no}: VAT code {code.code} is not valid on {day.isoformat()}.",
+                field_errors={field: ["not valid on this date"]},
+            )
+
+
 def _check_complete(entry: JournalEntry) -> None:
     """Posting-level checks: at least two lines and balanced (AC-C1)."""
-    lines = list(entry.lines.select_related("account").prefetch_related("dimension_tags__value"))
+    lines = list(
+        entry.lines.select_related("account", "vat_code").prefetch_related("dimension_tags__value")
+    )
     if len(lines) < 2:
         raise TooFewLinesError("An entry needs at least two lines.")
     debits = sum((ln.debit for ln in lines), Decimal(0))
@@ -300,6 +354,7 @@ def _check_complete(entry: JournalEntry) -> None:
                 "choose the customer or supplier.",
                 field_errors={f"lines.{ln.line_no - 1}.counterparty_id": ["required"]},
             )
+    _check_vat(entry, lines)
     if entry.entry_type != JournalEntry.EntryType.REVERSAL:  # reversals mirror the original
         dimensions.check_rules(entry.legal_entity_id, lines)
 
@@ -315,6 +370,8 @@ def _hash_line(ln: JournalLine) -> list[Any]:
     tags = sorted(str(t.value_id) for t in ln.dimension_tags.all())
     if tags:  # untagged lines hash exactly as before dimensions existed
         row.append(tags)
+    if ln.vat_code_id:  # likewise for the VAT code
+        row.append(f"vat={ln.vat_code_id}")
     if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
         row.append(
             [
@@ -387,6 +444,7 @@ def list_entries(  # noqa: PLR0913 - keyword-only filters
     queryset = JournalEntry.objects.filter(legal_entity_id=entity_id).prefetch_related(
         "lines__account",
         "lines__counterparty",
+        "lines__vat_code",
         "lines__dimension_tags__value",
         "lines__dimension_tags__dimension",
     )
@@ -427,6 +485,8 @@ def _line_snapshot(entry: JournalEntry) -> list[list[str]]:
         row += _tag_codes(ln)
         if ln.counterparty_id:
             row += [f"counterparty={ln.counterparty_id}", f"ref={ln.reference}"]
+        if ln.vat_code_id:
+            row += [f"vat={ln.vat_code_id}"]
         snapshot.append(row)
     return snapshot
 

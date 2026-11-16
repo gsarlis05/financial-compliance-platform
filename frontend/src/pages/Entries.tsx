@@ -11,6 +11,7 @@ import {
   useFiscalYears,
   useMe,
   useScope,
+  useVatCodes,
 } from "../api/hooks";
 import type { EntryInput, JournalEntry } from "../api/types";
 import { Loading, Page, ProblemMessage, StatusBadge } from "../components/common";
@@ -95,6 +96,7 @@ export function NewEntryPage() {
   const accounts = useAccounts();
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
+  const vatCodes = useVatCodes();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -123,6 +125,7 @@ export function NewEntryPage() {
         accounts={accounts.data ?? []}
         dimensions={dimensions.data ?? []}
         counterparties={counterparties.data ?? []}
+        vatCodes={vatCodes.data ?? []}
         fiscalYears={years.data ?? []}
         saving={save.isPending || act.isPending}
         error={save.error}
@@ -206,6 +209,7 @@ export function EntryDetailPage() {
   const accounts = useAccounts();
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
+  const vatCodes = useVatCodes();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -256,6 +260,7 @@ export function EntryDetailPage() {
           accounts={accounts.data ?? []}
           dimensions={dimensions.data ?? []}
           counterparties={counterparties.data ?? []}
+          vatCodes={vatCodes.data ?? []}
           fiscalYears={years.data ?? []}
           initial={e}
           saving={save.isPending}
@@ -299,6 +304,7 @@ export function EntryDetailPage() {
                   <td className="amount">{l.credit === "0.00" ? "" : formatAmount(l.credit, locale)}</td>
                   <td>
                     {l.memo}
+                    {l.vat_code ? <span className="tag">VAT {l.vat_code}</span> : null}
                     {l.counterparty_code ? (
                       <span className="tag">
                         {l.counterparty_code}

@@ -45,6 +45,7 @@ class AccountIn(Schema):
     is_postable: bool = True
     currency: str = Field(default="", pattern=r"^([A-Z]{3})?$")
     control_type: Literal["", "RECEIVABLE", "PAYABLE"] = ""
+    vat_role: Literal["", "INPUT", "OUTPUT"] = ""
 
 
 class AccountPatch(Schema):
@@ -52,6 +53,7 @@ class AccountPatch(Schema):
     name_el: str | None = Field(default=None, max_length=200)
     status: Account.Status | None = None
     control_type: Literal["", "RECEIVABLE", "PAYABLE"] | None = None
+    vat_role: Literal["", "INPUT", "OUTPUT"] | None = None
 
 
 class AccountOut(Schema):
@@ -66,6 +68,7 @@ class AccountOut(Schema):
     status: str
     currency: str
     control_type: str
+    vat_role: str
 
 
 class TemplateIn(Schema):
@@ -153,6 +156,49 @@ def apply_template(
 ) -> Status[list[Account]]:
     ctx = workspace_ctx(request, slug, entity_id)
     return Status(201, accounts.apply_template(ctx, entity_id, payload.template))
+
+
+# --- VAT codes (M2-3) -----------------------------------------------------------------------
+
+
+class VatCodeOut(Schema):
+    id: str
+    code: str
+    name: str
+    name_el: str
+    treatment: str
+    rate: str | None
+    valid_from: date | None
+    valid_to: date | None
+    verified: bool
+    verification_note: str
+
+
+class VatCodeQuery(Schema):
+    on: date | None = Field(default=None, description="Only codes valid on this date")
+
+
+@router.get(f"{BASE}/vat-codes", response=list[VatCodeOut])
+@requires("ledger.account.read")
+def list_vat_codes(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[VatCodeQuery]
+) -> list[VatCodeOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [
+        VatCodeOut(
+            id=v.id,
+            code=v.code,
+            name=v.name,
+            name_el=v.name_el,
+            treatment=v.treatment,
+            rate=f"{v.rate:.4f}" if v.rate is not None else None,
+            valid_from=v.valid_from,
+            valid_to=v.valid_to,
+            verified=v.verified,
+            verification_note=v.verification_note,
+        )
+        for v in accounts.vat_codes(ctx, entity_id, on=q.on)
+    ]
 
 
 # --- dimensions (M2-1) -----------------------------------------------------------------------
@@ -346,6 +392,9 @@ class LineIn(Schema):
     )
     reference: str = Field(default="", max_length=50, description="Invoice or document number")
     due_date: date | None = None
+    vat_code_id: str | None = Field(
+        default=None, max_length=40, description="VAT code id; required on VAT-account lines"
+    )
 
 
 class EntryIn(Schema):
@@ -377,6 +426,8 @@ class LineOut(Schema):
     counterparty_code: str | None
     reference: str
     due_date: date | None
+    vat_code_id: str | None
+    vat_code: str | None
 
 
 class EntryOut(Schema):
@@ -470,6 +521,8 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 counterparty_code=ln.counterparty.code if ln.counterparty else None,
                 reference=ln.reference,
                 due_date=ln.due_date,
+                vat_code_id=ln.vat_code_id,
+                vat_code=ln.vat_code.code if ln.vat_code else None,
             )
             for ln in lines
         ],
@@ -493,6 +546,7 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
                 ln.counterparty_id,
                 ln.reference,
                 ln.due_date,
+                ln.vat_code_id,
             )
             for ln in payload.lines
         ],

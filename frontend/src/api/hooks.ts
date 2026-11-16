@@ -20,6 +20,7 @@ import type {
   PeriodUnlock,
   Side,
   TrialBalance,
+  VatCode,
   Workspace,
 } from "./types";
 
@@ -290,4 +291,9 @@ export function useAllocationMutations() {
       onSuccess: refresh,
     }),
   };
+}
+
+export function useVatCodes() {
+  const { base, entityId } = useScope();
+  return useQuery({ queryKey: ["vat-codes", entityId], queryFn: () => api<VatCode[]>(`${base}/vat-codes`), staleTime: 300_000 });
 }

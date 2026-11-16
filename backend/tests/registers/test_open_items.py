@@ -59,7 +59,8 @@ def invoice(ar: dict[str, Any], party: str, day: str, gross: str, ref: str = "",
     line = {"account_id": "1200", "debit": gross, "counterparty_id": ar["parties"][party],
             "reference": ref, **({"due_date": due} if due else {})}  # fmt: skip
     posted: dict[str, Any] = post(ar, day, [line, {"account_id": "4000", "credit": f"{net:.2f}"},
-                          {"account_id": "2120", "credit": f"{Decimal(gross) - net:.2f}"}],
+                          {"account_id": "2120", "credit": f"{Decimal(gross) - net:.2f}",
+                           "vat_code_id": "CY:S19:open"}],
                 f"Invoice {ref}")  # fmt: skip
     return posted
 

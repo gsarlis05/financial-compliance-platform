@@ -23,6 +23,7 @@ from .services import WorkspaceContext, enter_workspace, get_entity
 
 __all__ = [
     "Feature",
+    "LegalEntity",
     "Role",
     "Tenant",
     "WorkspaceContext",

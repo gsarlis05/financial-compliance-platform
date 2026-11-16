@@ -34,7 +34,7 @@ producing a P&L, balance sheet and cash flow statement. These are also the input
 |---|---|---|
 | M2-1 | Dimensions | `dimension` and `dimension_value` tables per entity (department, project, cost centre, custom), with optional dimension tags on journal lines, rules per account (required, allowed, blocked), dimension filters on TB/GL, and a UI to manage dimensions. |
 | M2-2 | Counterparties + open items | Counterparty register (PII fields classified). An open item is created from a posted entry on a control account; settlements are matched by posted entries; there is an ageing report. Sub-ledger postings use `ledger.api` with `source`/`source_ref` (doc 05 §8). |
-| M2-3 | VAT codes | Versioned VAT code catalogue as data (seeded for CY, marked unverified). A `tax_code` on lines is validated against the accounting date, and VAT control accounts accept only VAT-coded postings. |
+| M2-3 | VAT codes | Versioned VAT code catalogue as data (seeded for CY, marked unverified; the 3% rate is withheld until verified). A `tax_code` on lines is validated against the accounting date, and VAT control accounts accept only VAT-coded postings. |
 | M2-6 | Taxonomy + mapping | Versioned report-line taxonomy (IFRS-style, small-company level), account → line mapping, and a completeness task that blocks statements while accounts are unmapped. |
 | M2-7 | `reporting.actuals` | `fact_actuals_monthly` and `fact_cash_daily` read model, rebuilt from the ledger, verified nightly against the trial balance, and tagged with `posting_seq` watermarks. |
 | M2-8 | Statements | P&L, balance sheet and indirect cash flow statement from the taxonomy, with comparatives and drill-down to entries, plus CSV/XLSX/PDF export. |
