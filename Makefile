@@ -3,12 +3,13 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
 	@echo "make run-backend   Django dev server on http://localhost:8000"
 	@echo "make run-frontend  Vite dev server on http://localhost:5173"
+	@echo "make synthetic     generate synthetic business + household datasets into var/"
 	@echo "make test | lint | security | prove-gates"
 	@echo "make dev-down      stop services (data kept); make dev-reset deletes local data"
 
@@ -31,6 +32,11 @@ dev-down:
 
 dev-reset:
 	docker compose down --volumes
+
+# Synthetic datasets for development (git-ignored var/ directory). ADR-0010: no real data.
+synthetic:
+	cd backend && uv run python -m fcp.devtools.synthetic business --seed 42 --out ../var/synthetic/business
+	cd backend && uv run python -m fcp.devtools.synthetic household --seed 7 --out ../var/synthetic/household
 
 migrate:
 	cd backend && uv run python manage.py migrate --noinput
