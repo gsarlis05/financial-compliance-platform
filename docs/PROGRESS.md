@@ -7,10 +7,11 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Branches are stacked: each PR targets the previous one and is merged
 in order.
 
-## Status (updated 2026-11-03)
+## Status (updated 2026-11-04)
 
-**Milestone 1 is complete** (see `docs/milestone-1-report.md`). Milestone 2 is in progress (go-ahead
-2026-11-03: "continue developing according to our existing roadmap"). Cloud-readiness review:
+**Milestone 1 is complete** (see `docs/milestone-1-report.md`). **Milestone 2 is complete and
+awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
+according to our existing roadmap"). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -46,7 +47,8 @@ in order.
 | M2-11 Grouped navigation (issue #99) | `claude/m2-11-nav` | #103 | Open |
 | M2-5 Bank import, matching, reconciliation (issue #53) | `claude/m2-5-bank` | #104 | Open |
 | M2-4 Document vault (issue #54) | `claude/m2-4-documents` | #105 | Open |
-| Milestone 2 report and owner review | — | — | Next (all M2 items are in review) |
+| M2-12 Milestone 2 report (issue #106) | `claude/m2-12-report` | #107 | Open |
+| Owner review of Milestone 2, then M3 | — | — | Next (waiting for the owner) |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
