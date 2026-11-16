@@ -19,7 +19,7 @@ from fcp.modules.identity.api import User, require_recent_auth
 from . import services
 from .entitlements import Feature, Role, has_feature
 from .models import LegalEntity, Tenant
-from .services import WorkspaceContext, enter_workspace
+from .services import WorkspaceContext, enter_workspace, get_entity
 
 __all__ = [
     "Feature",
@@ -27,6 +27,7 @@ __all__ = [
     "WorkspaceContext",
     "all_tenant_ids",
     "enter_workspace",
+    "get_entity",
     "router",
     "workspace_ctx",
 ]
@@ -146,13 +147,13 @@ def get_workspace(request: HttpRequest, slug: str) -> WorkspaceOut:
 
 @router.get("/w/{slug}/entities", response=list[EntityOut])
 @requires("tenancy.workspace.read")
-def list_entities(request: HttpRequest, slug: str) -> list[LegalEntity]:
+def list_entities_route(request: HttpRequest, slug: str) -> list[LegalEntity]:
     return services.list_entities(workspace_ctx(request, slug))
 
 
 @router.post("/w/{slug}/entities", response={201: EntityOut})
 @requires("tenancy.entity.manage")
-def create_entity(request: HttpRequest, slug: str, payload: EntityIn) -> Status[LegalEntity]:
+def create_entity_route(request: HttpRequest, slug: str, payload: EntityIn) -> Status[LegalEntity]:
     ctx = workspace_ctx(request, slug)
     entity = services.create_entity(
         ctx,
@@ -165,7 +166,7 @@ def create_entity(request: HttpRequest, slug: str, payload: EntityIn) -> Status[
 
 @router.get("/w/{slug}/entities/{entity_id}", response=EntityOut)
 @requires("tenancy.workspace.read")
-def get_entity(request: HttpRequest, slug: str, entity_id: UUID) -> LegalEntity:
+def get_entity_route(request: HttpRequest, slug: str, entity_id: UUID) -> LegalEntity:
     return services.get_entity(workspace_ctx(request, slug, entity_id), entity_id)
 
 
