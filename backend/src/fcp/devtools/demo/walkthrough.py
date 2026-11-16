@@ -437,6 +437,15 @@ def _projection(owner: "DemoClient", base: str, set_id: str) -> dict[str, Any]:
     }
 
 
+def _rolling(owner: "DemoClient", base: str, set_id: str) -> dict[str, Any]:
+    """A rolling 12-month forecast from the approved assumptions, run once (M6-4)."""
+    owner.call("PUT", f"{base}/rolling-forecast", {"assumption_set_id": set_id, "horizon": 12})
+    got: dict[str, Any] = owner.call("POST", f"{base}/rolling-forecast/refresh", {})
+    if got["latest"] is None or got["latest"]["status"] != "VALID" or got["stale"]:
+        raise DemoStepError(f"The rolling forecast did not run cleanly: {got['stale_reasons']}")
+    return got
+
+
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
     """The full export of the workspace, checked against its own manifest; and the two-step
     deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
@@ -818,6 +827,9 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{projected['checks']} invariants hold, published; {year + 2}: revenue "
          f"{projected['revenue']}, net income {projected['net_income']}, closing cash "
          f"{projected['cash']}")  # fmt: skip
+    rolled = _rolling(owner, base, plan["id"])
+    step(f"rolling forecast: the next {rolled['horizon']} months from the approved assumptions, "
+         f"{rolled['latest']['status']}, current; re-run hourly when the books move")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "

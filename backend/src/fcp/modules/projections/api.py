@@ -1,5 +1,5 @@
 """Public interface of the ``projections`` module and its HTTP routes (M6-2: assumption sets;
-M6-3: projections, published through the calculation-run routes).
+M6-3: projections, published through the calculation-run routes; M6-4: rolling forecasts).
 
 Routes are entity-scoped (``/api/w/{slug}/entities/{entity_id}/...``). Values are decimal strings:
 amounts in money, percentages as e.g. ``35`` for 35%, days and months as numbers.
@@ -15,9 +15,9 @@ from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
 from fcp.modules.metrics.api import CalcRun
-from fcp.modules.tenancy.api import workspace_ctx
+from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
-from . import assumptions, runs
+from . import assumptions, rolling, runs
 from .drivers import DRIVERS
 from .models import AssumptionSet
 
@@ -261,3 +261,102 @@ def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUI
         rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
         failures=found.failures,
     )  # fmt: skip
+
+
+# --- rolling forecasts (M6-4) ---------------------------------------------------------------------
+
+
+class RollingIn(Schema):
+    assumption_set_id: UUID = Field(description="Any version; its family's approved one is used")
+    horizon: Literal[12, 24] = 12
+    active: bool = True
+
+
+class RollingOut(Schema):
+    configured: bool
+    family_id: UUID | None = None
+    assumption_set_id: UUID | None = Field(None, description="The approved version in use")
+    horizon: int | None = None
+    active: bool = False
+    latest: ProjectionRunOut | None = None
+    stale: bool = False
+    stale_reasons: list[str] = Field(default_factory=list)
+    history: list[ProjectionRunOut] = Field(default_factory=list)
+
+
+def _rolling_out(ctx: WorkspaceContext, entity_id: UUID) -> RollingOut:
+    found = rolling.setting(ctx, entity_id)
+    if found is None:
+        return RollingOut(configured=False, assumption_set_id=None)
+    done = [r for r in rolling.runs_of(ctx, entity_id, found, 50) if r.status in rolling.FINISHED]
+    latest = done[0] if done else None
+    fresh = rolling.freshness(ctx, entity_id, found, latest) if latest else None
+    current = rolling.approved_version(found.legal_entity_id, found.family_id)
+    return RollingOut(
+        configured=True, family_id=found.family_id,
+        assumption_set_id=current.id if current else None, horizon=found.horizon,
+        active=found.active, latest=_projection_out(latest) if latest else None,
+        stale=fresh.stale if fresh else True,
+        stale_reasons=list(fresh.reasons) if fresh else ["not run yet"],
+        history=[_projection_out(r) for r in done],
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/rolling-forecast", response=RollingOut)
+@requires("planning.read")
+def get_rolling(request: HttpRequest, slug: str, entity_id: UUID) -> RollingOut:
+    """The setting, the latest run, whether it is stale and why, and the earlier runs."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _rolling_out(ctx, entity_id)
+
+
+@router.put(f"{BASE}/rolling-forecast", response=RollingOut)
+@requires("planning.run")
+def put_rolling(request: HttpRequest, slug: str, entity_id: UUID,
+                payload: RollingIn) -> RollingOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    rolling.configure(ctx, entity_id, payload.assumption_set_id, payload.horizon, payload.active)
+    return _rolling_out(ctx, entity_id)
+
+
+@router.post(f"{BASE}/rolling-forecast/refresh", response=RollingOut)
+@requires("planning.run")
+def refresh_rolling(request: HttpRequest, slug: str, entity_id: UUID) -> RollingOut:
+    """Re-run now if the latest run is stale (the scheduled job does the same every hour)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    rolling.refresh(ctx, entity_id, trigger=CalcRun.Trigger.USER)
+    return _rolling_out(ctx, entity_id)
+
+
+class ForecastComparisonOut(Schema):
+    months_before: int
+    run_id: UUID
+    forecast: str
+    error: str
+    error_pct: str | None = Field(description="|error| / |actual| in %; null when actual is 0")
+
+
+class AccuracyMonthOut(Schema):
+    month: date
+    actual: dict[str, str]
+    comparisons: dict[str, list[ForecastComparisonOut]]
+
+
+@router.get(f"{BASE}/rolling-forecast/accuracy", response=list[AccuracyMonthOut])
+@requires("planning.read")
+def rolling_accuracy(request: HttpRequest, slug: str, entity_id: UUID) -> list[AccuracyMonthOut]:
+    """For each of the last 12 closed months: revenue, EBITDA and closing cash as forecast 1, 3
+    and 6 months earlier, against the actual."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [
+        AccuracyMonthOut(
+            month=m.month,
+            actual={k: str(v.quantize(Decimal("0.01"))) for k, v in m.actual.items()},
+            comparisons={k: [ForecastComparisonOut(months_before=c.horizon, run_id=c.run_id,
+                                           forecast=str(c.forecast.quantize(Decimal("0.01"))),
+                                           error=str(c.error.quantize(Decimal("0.01"))),
+                                           error_pct=None if c.pct is None else str(c.pct))
+                             for c in cs] for k, cs in m.comparisons.items()},
+        )
+        for m in rolling.accuracy(ctx, entity_id)
+    ]  # fmt: skip

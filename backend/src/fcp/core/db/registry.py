@@ -42,6 +42,7 @@ APPEND_ONLY_TABLES: set[str] = {
 RUNTIME_FUNCTIONS: set[str] = {
     "banking_pending_tenant_ids()",
     "cashflow_forecast_tenant_ids()",
+    "projections_rolling_tenant_ids()",
     # Engagement grants (M5-4): each returns only what the caller is entitled to.
     "app_firm_lookup(text)",
     "app_firm_engagements()",

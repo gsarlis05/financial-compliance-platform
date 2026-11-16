@@ -67,11 +67,12 @@ locals {
 
   # Scheduled one-off tasks (EventBridge Scheduler). Times are UTC.
   schedules = {
-    audit-verify     = { task = "ops", expression = "cron(15 1 * * ? *)", command = ["python", "manage.py", "audit_verify"] }
-    ledger-integrity = { task = "ops", expression = "cron(30 1 * * ? *)", command = ["python", "manage.py", "ledger_integrity_check"] }
-    actuals-verify   = { task = "ops", expression = "cron(45 1 * * ? *)", command = ["python", "manage.py", "actuals_verify"] }
-    purge-workspaces = { task = "ops", expression = "cron(0 2 * * ? *)", command = ["python", "manage.py", "tenancy_purge_workspaces"] }
-    cashflow-refresh = { task = "api", expression = "rate(15 minutes)", command = ["python", "manage.py", "cashflow_refresh"] }
+    audit-verify        = { task = "ops", expression = "cron(15 1 * * ? *)", command = ["python", "manage.py", "audit_verify"] }
+    ledger-integrity    = { task = "ops", expression = "cron(30 1 * * ? *)", command = ["python", "manage.py", "ledger_integrity_check"] }
+    actuals-verify      = { task = "ops", expression = "cron(45 1 * * ? *)", command = ["python", "manage.py", "actuals_verify"] }
+    purge-workspaces    = { task = "ops", expression = "cron(0 2 * * ? *)", command = ["python", "manage.py", "tenancy_purge_workspaces"] }
+    cashflow-refresh    = { task = "api", expression = "rate(15 minutes)", command = ["python", "manage.py", "cashflow_refresh"] }
+    projections-refresh = { task = "api", expression = "rate(1 hour)", command = ["python", "manage.py", "projections_refresh"] }
   }
 }
 
