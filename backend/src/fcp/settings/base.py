@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "fcp.modules.personal",
     "fcp.modules.assets",
     "fcp.modules.projections",
+    "fcp.modules.scenarios",
     "fcp.modules.taxrules",
 ]
 

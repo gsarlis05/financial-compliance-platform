@@ -15,8 +15,8 @@ push). `main` contains the 27 planning documents of #1 unchanged and Milestones 
 Milestone 6 follow-up. Checks on `main`: CI green; 1,238 backend tests (96.02% coverage) and 64
 frontend tests pass; lint, OpenAPI, security (Semgrep 0 findings, gitleaks no leaks) and
 `fcp.devtools.validation --check` (6 scenarios) pass. Issues #78 (Gate P) and #153 (professional
-review) stay open by owner decision. **Milestone 7 brief** (`docs/planning/21-milestone-7-brief.md`)
-is a draft waiting for the owner's approval; no M7 code is written before it.
+review) stay open by owner decision. **Milestone 7 in progress** (brief `docs/planning/21-milestone-7-brief.md`; owner,
+2026-11-16: "Continue as you think it's better", so the brief's defaults are taken).
 
 
 **Milestone 1 is complete** (see `docs/milestone-1-report.md`). **Milestone 2 is complete and
@@ -113,7 +113,7 @@ until validated and signed by a qualified professional; brief
 | M6F-8 Validation package: independent 24-month model, six scenarios (losses, negative cash, early repayments, changing revenues, unexpected expenses), line-by-line comparison at EUR 0.01, reconciliation, discrepancy report, acceptance checklist, reviewer sign-off form; engine stays PENDING_PROFESSIONAL_REVIEW (issue #153) | `claude/m6f-8-validation` | #162 | Merged 2026-11-16 |
 | Owner items: professional review of the validation package (U1), Cyprus tax rules verification (#154) | — | — | Waiting for the owner |
 | **Milestone 7** (epic #82) | | | |
-| M7 brief: scenarios, sensitivity and tornado, working capital, goals against scenarios, advanced KPIs | `claude/m7-0-brief` | — | Draft, waiting for the owner's approval |
+| M7-1 Scenario model and typed overrides (eight types, lifecycle, isolation), with the M7 brief (`docs/planning/21-milestone-7-brief.md`, approved 2026-11-16) (issue #176) | `claude/m7-1-scenarios` | #183 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
