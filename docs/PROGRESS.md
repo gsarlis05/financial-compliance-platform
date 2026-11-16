@@ -97,7 +97,8 @@ until validated and signed by a qualified professional; brief
 | M6F-2 Tax rule sets: sourced, versioned, per jurisdiction; Cyprus seeded pending verification (issue #147) | `claude/m6f-2-tax-rules` | #156 | Open |
 | M6F-3 Depreciation from available for use (IAS 16); separate tax capital allowances; capex commencement and method in projections (issue #148) | `claude/m6f-3-depreciation-allowances` | #157 | Open |
 | M6F-4 Loans in projections: structures, rate paths, early repayment, drawdowns, register loans, debt reconciliation (issue #149) | `claude/m6f-4-debt` | #158 | Open |
-| M6F-5 Corporate tax in projections (issue #150) | — | — | Next |
+| M6F-5 Corporate tax in projections: current and deferred tax, losses by year, provisional and final payments from the versioned rules; income tax separate from VAT (issue #150) | `claude/m6f-5-tax` | #159 | Open |
+| M6F-6 Rolling forecasts on material changes; past forecasts against actuals (issue #151) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

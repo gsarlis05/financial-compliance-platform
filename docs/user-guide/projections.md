@@ -11,8 +11,8 @@ Open **Cash & planning → Assumptions**.
    12, 24 or 36 months, and choose where to start from:
    - **Last year's actuals:** revenue and costs repeat the same month of the last 12 months, with
      revenue grown by the % a year you enter. Gross margin, the days customers take to pay (DSO),
-     stock days (DIO), the days you take to pay suppliers (DPO), the tax rate and the interest
-     rate are taken from your books. Where the books cannot tell, the value is 0.
+     stock days (DIO), the days you take to pay suppliers (DPO) and the interest rate are taken
+     from your books. Where the books cannot tell, the value is 0.
    - **The approved budget:** revenue, costs and margin from the budget for the months it
      covers; the last 12 months for the others.
    - **Empty.**
@@ -37,17 +37,46 @@ the later payments and keeps the end date. The part of each loan due within 12 m
 short-term debt. Debt in your books that these loans do not cover is projected with the
 borrowing, repayment and interest-rate rows.
 
+## Corporate tax
+Corporate income tax is worked out from the **tax rules** of the entity's country for each tax
+year (see *Tax rules* below); the rule sets used are listed in the set's **Corporate tax** section
+with their verification status. In that section enter the tax position at the cut-over:
+- **unused tax losses** brought forward, by the year each loss arose (each can be used for the
+  number of years the rules of that year allow; the oldest are used first);
+- **provisional tax already paid** for the tax year of the cut-over;
+- whether to **recognise a deferred tax asset on unused losses**: a judgement under IAS 12.34,
+  only when future taxable profit to use them is probable. A deferred tax asset already in
+  your books counts as the asset on the losses brought forward; any rest is recognised (credited
+  to profit) in the first projected month. The projection then shows the asset being used, and
+  any asset on new losses.
+
+The projection then shows, every month:
+- **current tax**: tax on taxable profit to date (profit before tax + depreciation − capital
+  allowances + the **tax adjustments** row: non-deductible costs as positive amounts, non-taxable
+  income as negative), after usable losses, at the year's rate; each month's charge is the change;
+- **deferred tax**: on capital allowances that differ from the depreciation of the same assets,
+  and on losses if recognised;
+- **payments**: provisional tax on the rules' dates (each bringing the year's payments to its share
+  of the year's tax as projected at that month), the final balance (or refund) on the final date,
+  and the balance owed for earlier years on its due date;
+- on the balance sheet, **income tax payable** (a receivable if negative) and **deferred tax**
+  separately from VAT and other taxes, which stay at their balance at the cut-over.
+
+Tax years must be calendar years. Late-payment interest, penalties and the charge for
+underestimating provisional tax are not modelled. The figures are a projection, not tax advice,
+and the rules are pending verification by a tax professional.
+
 ## Running a projection
 With an approved set, open **Cash & planning → Projections**, choose the set and select **Run**. It starts
 from your actual balance sheet at the cut-over, read from the posted books, and works out each
-month in a fixed order: income statement, interest on the debt at the start of the month, tax,
-receivables, stock and payables from the days, fixed assets, debt, equity, the cash flow
+month in a fixed order: income statement, interest on the debt at the start of the month,
+corporate tax, receivables, stock and payables from the days, fixed assets, debt, equity, the cash flow
 statement, then the credit facility to keep the minimum cash.
 
 Every run checks that the three statements agree: the balance sheet balances, the cash on it equals
 the cash flow statement, retained earnings move only by profit and dividends, each month starts
-where the last ended, quarters and years add up, and each loan, the interest and the debt lines
-reconcile. A run that fails a check is marked
+where the last ended, quarters and years add up, each loan, the interest and the debt lines
+reconcile, and the tax expense, tax balances, payments and losses reconcile. A run that fails a check is marked
 **invalid**, says which check failed in which month, and cannot be published. Lines the
 assumptions do not cover (intangibles, investments, other receivables and payables) stay at their
 opening balance. If an account with a balance is not mapped to a statement line, map it first.
@@ -55,7 +84,7 @@ opening balance. If an account with a balance is not mapped to a statement line,
 ### Reading a projection
 - **Natures.** Every column says **Actual** (the opening balance sheet, from your books) or
   **Forecast**, in words as well as by its border style. Show it by month, quarter or year.
-- **Checks.** The seven checks are listed with **holds** or **fails**; a failed check names the month
+- **Checks.** The eight checks are listed with **holds** or **fails**; a failed check names the month
   where it failed, and such a projection cannot be published.
 - **Explain a line.** Select any figure to see where it comes from: the assumption and how it is
   used, the fixed-asset register, your books, or which other lines it is worked out from.
@@ -103,5 +132,5 @@ These rules are **pending verification** by a Cyprus tax professional and are sh
 wherever they are used. They are not tax advice, and the platform never files a tax return.
 See them with `GET .../tax-rules`.
 
-The tax rate is the one from your books or the one you enter; the platform does not assume a rate
-from tax law.
+Projections use these rule sets (see *Corporate tax*); a projection whose years no rule set
+covers cannot be run. Each run records the rule set of each year and whether it was verified.

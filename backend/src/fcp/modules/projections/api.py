@@ -55,6 +55,12 @@ class AssumptionSetOut(Schema):
     supersedes_id: UUID | None
     created_at: datetime
     approved_at: datetime | None
+    tax_losses_bf: dict[str, str] = Field(
+        description="Unused tax losses at the start of the first projected tax year, by the "
+        "year they arose"
+    )
+    tax_paid_ytd: str = Field(description="Provisional tax paid for the cut-over's tax year")
+    recognise_loss_dta: bool = Field(description="Deferred tax asset recognised on losses")
 
 
 def _set_out(s: AssumptionSet) -> AssumptionSetOut:
@@ -62,7 +68,15 @@ def _set_out(s: AssumptionSet) -> AssumptionSetOut:
         id=s.id, family_id=s.family_id, version=s.version, name=s.name, cutover=s.cutover,
         months=s.months, start_from=s.start_from, note=s.note, status=s.status,
         supersedes_id=s.supersedes_id, created_at=s.created_at, approved_at=s.approved_at,
+        tax_losses_bf=dict(s.tax_losses_bf), tax_paid_ytd=f"{s.tax_paid_ytd:.2f}",
+        recognise_loss_dta=s.recognise_loss_dta,
     )  # fmt: skip
+
+
+class TaxPositionIn(Schema):
+    tax_losses_bf: dict[str, str] = Field(default_factory=dict, max_length=30)
+    tax_paid_ytd: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$")
+    recognise_loss_dta: bool = False
 
 
 class GridRowOut(Schema):
@@ -165,6 +179,18 @@ def revise_set(request: HttpRequest, slug: str, entity_id: UUID,
     """A new draft version with the same values."""
     ctx = workspace_ctx(request, slug, entity_id)
     return Status(201, _set_out(assumptions.revise(ctx, entity_id, set_id)))
+
+
+@router.put(f"{BASE}/assumption-sets/{{uuid:set_id}}/tax", response=AssumptionSetOut)
+@requires("planning.run")
+def set_tax_position(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+                     payload: TaxPositionIn) -> AssumptionSetOut:  # fmt: skip
+    """The tax position at the cut-over (M6F-5): losses brought forward by year, provisional tax
+    paid so far this tax year, and whether a deferred tax asset is recognised on losses."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = assumptions.TaxPosition(payload.tax_losses_bf, payload.tax_paid_ytd,
+                                   payload.recognise_loss_dta)  # fmt: skip
+    return _set_out(assumptions.set_tax_position(ctx, entity_id, set_id, data))
 
 
 class LoanIn(Schema):

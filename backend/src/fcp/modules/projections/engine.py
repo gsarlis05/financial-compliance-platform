@@ -5,14 +5,16 @@ Order of calculation per month (doc 10 §4.1):
    services; operating costs per line; depreciation of the registered assets and of new capital
    expenditure (straight-line over its life, from the month after it is spent).
 2. Interest on the **opening** debt and credit facility of the month (no circularity).
-3. Tax on a positive profit before tax at the assumed rate (no relief for losses); net income.
+3. Corporate income tax (M6F-5, ``tax.py``): current tax on taxable profit year to date under the
+   tax rule set of the year, with losses carried forward; deferred tax on temporary differences;
+   net income.
 4. Working capital from days: receivables = revenue x DSO / days in the month; inventory and
    payables = cost of sales x DIO (or DPO) / days in the month. Fixed assets roll forward
    (+ capex, - depreciation).
 5. Debt rolls forward: + new borrowing, - repayments (capped at what is owed; current debt first).
 6. Equity rolls forward: + net income - dividends + new share capital.
-7. Cash flow statement (indirect method). Tax payable is paid in the first month of each fiscal
-   year (the balance owed at the start of that month).
+7. Cash flow statement (indirect method): the tax expense is added back and the tax actually paid
+   (provisional instalments, final payments) is shown on its own line.
 8. Closing cash = opening cash + net cash flow; then the credit facility: drawn up to its limit
    when cash would fall below the minimum, repaid when cash is above it.
 9. Balance sheet from the roll-forwards. Lines the drivers do not cover (intangibles,
@@ -35,7 +37,9 @@ from fcp.modules.assets.api import (
     DECLINING_BALANCE,
     FULL_MONTH,
     STRAIGHT_LINE,
+    AllowanceRate,
     AssetTerms,
+    allowance_schedule,
     schedule,
 )
 from fcp.modules.calendar.api import add_months, month_end
@@ -43,6 +47,7 @@ from fcp.modules.metrics.api import Nature, Output, Source, Value
 
 from .debt import LoanMonth, LoanTerms, opening_current, project_loan
 from .drivers import DEFAULTS, OPEX_LINES, REVENUE_LINES
+from .tax import TaxBook, TaxInputs, TaxMonth
 
 # The engine is not production-ready until the validation package passes and a qualified
 # independent professional has signed it (owner decision D9, 2026-11-15; brief 20 §5). Changed
@@ -53,7 +58,9 @@ ZERO = Decimal("0.00")
 HUNDRED, TWELVE = Decimal(100), Decimal(12)
 ASSETS = ("BS.PPE.GROSS", "BS.PPE.ACCDEP", "BS.INTANGIBLES", "BS.INVESTMENTS", "BS.INVENTORY",
           "BS.AR", "BS.OTHER_REC", "BS.TAX_REC", "BS.CASH")  # fmt: skip
-LIABILITIES = ("BS.DEBT.NONCURRENT", "BS.DEBT.CURRENT", "BS.AP", "BS.OTHER_PAY", "BS.TAX_PAY")
+# BS.TAX_PAY and BS.TAX_REC hold VAT and other taxes (held); income tax has its own lines (M6F-5).
+LIABILITIES = ("BS.DEBT.NONCURRENT", "BS.DEBT.CURRENT", "BS.AP", "BS.OTHER_PAY", "BS.TAX_PAY",
+               "BS.INCOME_TAX", "BS.DEFERRED_TAX")  # fmt: skip
 EQUITY = ("BS.EQUITY.SHARE_CAPITAL", "BS.EQUITY.SHARE_PREMIUM", "BS.EQUITY.RETAINED")
 BS_LINES = ASSETS + LIABILITIES + EQUITY
 INVARIANTS = (
@@ -64,6 +71,7 @@ INVARIANTS = (
     "roll_forwards_tie",
     "aggregation_consistent",
     "debt_reconciles",  # M6F-4: each loan's roll-forward, interest and the debt lines
+    "tax_reconciles",  # M6F-5: income tax, deferred tax and the loss pool roll forward
 )
 
 
@@ -84,6 +92,7 @@ class EngineInput:
     fiscal_year_starts: set[date] = field(default_factory=set)  # months that start a year
     currency: str = "EUR"  # the entity's functional currency (ISO 4217)
     loans: tuple[LoanTerms, ...] = ()  # M6F-4: loans of the assumption set
+    tax: TaxInputs | None = None  # M6F-5: tax rules and positions; None: no income tax
 
 
 @dataclass
@@ -94,6 +103,7 @@ class Month:
     cf: dict[str, Decimal]
     loans: dict[str, LoanMonth] = field(default_factory=dict)  # M6F-4, by loan code
     other_debt: dict[str, Decimal] = field(default_factory=dict)  # M6F-4
+    tax: TaxMonth | None = None  # M6F-5
 
 
 @dataclass
@@ -117,10 +127,22 @@ def _dd(inp: EngineInput, key: str, month: date) -> Decimal:
     return series[month]
 
 
-def _new_capex_depreciation(inp: EngineInput) -> dict[date, Decimal]:
+@dataclass(frozen=True)
+class NewCapex:
+    depreciation: dict[date, Decimal]
+    qualifying: dict[date, Decimal]  # of capex with a capital allowance rate
+    allowances: dict[int, Decimal]  # by tax year
+
+
+def _new_capex(inp: EngineInput) -> NewCapex:
     """New capex is depreciated from ``capex_start`` months after the month it is spent (a full
-    first month), straight-line, or declining balance at ``capex_db_rate`` (M6F-3, #148)."""
+    first month), straight-line, or declining balance at ``capex_db_rate`` (M6F-3, #148). Its tax
+    capital allowances run by tax year from the year of spend at ``capex_allowance_rate``, a full
+    year's allowance in that year (M6F-5)."""
     found: dict[date, Decimal] = defaultdict(lambda: ZERO)
+    qualifying: dict[date, Decimal] = defaultdict(lambda: ZERO)
+    allowances: dict[int, Decimal] = defaultdict(lambda: ZERO)
+    last_year = inp.months[-1].year if inp.months else 0
     for month in inp.months:
         spent = cents(_d(inp, "capex", month))
         if spent <= 0:
@@ -134,9 +156,16 @@ def _new_capex_depreciation(inp: EngineInput) -> dict[date, Decimal]:
             annual_rate=db_rate if db_rate > 0 else None,
             available_on=add_months(month, offset), commencement=FULL_MONTH,
         )  # fmt: skip
+        allowance_rate = _dd(inp, "capex_allowance_rate", month) / HUNDRED
         for row in schedule(terms):
             found[row.month] += row.depreciation
-    return found
+            if allowance_rate > 0:
+                qualifying[row.month] += row.depreciation
+        if allowance_rate > 0:
+            rates = [AllowanceRate(date(1900, 1, 1), min(allowance_rate, Decimal(1)))]
+            for a in allowance_schedule(spent, month, rates, until_year=last_year):
+                allowances[a.tax_year] += a.allowance
+    return NewCapex(dict(found), dict(qualifying), dict(allowances))
 
 
 def _income(inp: EngineInput, month: date, depreciation: Decimal,
@@ -157,16 +186,16 @@ def _income(inp: EngineInput, month: date, depreciation: Decimal,
     pl["PL.EBIT"] = pl["PL.EBITDA"] - depreciation
     pl["PL.INTEREST"] = interest
     pl["PL.PBT"] = pl["PL.EBIT"] - pl["PL.INTEREST"]
-    rate = _d(inp, "tax_rate", month)
-    pl["PL.TAX"] = cents(pl["PL.PBT"] * rate / HUNDRED) if pl["PL.PBT"] > 0 else ZERO
-    pl["PL.NET_INCOME"] = pl["PL.PBT"] - pl["PL.TAX"]
     return pl
 
 
 def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc 10's order)
     """Project the three statements month by month (see the module text)."""
     opening = {line: cents(inp.opening.get(line, ZERO)) for line in BS_LINES}
-    new_dep = _new_capex_depreciation(inp)
+    capex_plan = _new_capex(inp)
+    new_dep = capex_plan.depreciation
+    book = (TaxBook(inp.tax, inp.cutover, inp.months[0], opening["BS.INCOME_TAX"],
+                    opening["BS.DEFERRED_TAX"]) if inp.tax and inp.months else None)  # fmt: skip
     bs = dict(opening)
     revolver = ZERO  # part of current debt, tracked for its own rate and rule
     months: list[Month] = []
@@ -190,6 +219,18 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         revolver_interest = cents(revolver * _d(inp, "revolver_rate", month) / HUNDRED / TWELVE)
         loan_interest = sum((r.interest for r in loans.values()), ZERO)
         pl = _income(inp, month, dep, loan_interest + other_interest + revolver_interest)
+        tax_month = None
+        if book is not None and inp.tax is not None:
+            tax_month = book.step(
+                month, pbt=pl["PL.PBT"], da=dep, adjustment=cents(_d(inp, "tax_adjustment", month)),
+                new_allowances=capex_plan.allowances.get(month.year, ZERO),
+                qualifying_dep=inp.tax.qualifying_dep.get(month, ZERO)
+                + capex_plan.qualifying.get(month, ZERO),
+            )  # fmt: skip
+        pl["PL.TAX.CURRENT"] = tax_month.current if tax_month else ZERO
+        pl["PL.TAX.DEFERRED"] = tax_month.deferred if tax_month else ZERO
+        pl["PL.TAX"] = pl["PL.TAX.CURRENT"] + pl["PL.TAX.DEFERRED"]
+        pl["PL.NET_INCOME"] = pl["PL.PBT"] - pl["PL.TAX"]
         # Working capital and fixed assets.
         bs["BS.AR"] = cents(pl["PL.REVENUE"] * _d(inp, "dso", month) / days)
         bs["BS.INVENTORY"] = cents(pl["PL.COGS"] * _d(inp, "dio", month) / days)
@@ -197,9 +238,10 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         capex = cents(_d(inp, "capex", month))
         bs["BS.PPE.GROSS"] = prev["BS.PPE.GROSS"] + capex
         bs["BS.PPE.ACCDEP"] = prev["BS.PPE.ACCDEP"] - dep
-        # Tax: accrued this month; last year's balance paid in the first month of a fiscal year.
-        tax_paid = prev["BS.TAX_PAY"] if month in inp.fiscal_year_starts else ZERO
-        bs["BS.TAX_PAY"] = prev["BS.TAX_PAY"] - tax_paid + pl["PL.TAX"]
+        # Income tax (M6F-5): what is owed and deferred, from the tax book.
+        tax_paid = tax_month.paid if tax_month else ZERO
+        bs["BS.INCOME_TAX"] = tax_month.income_tax if tax_month else prev["BS.INCOME_TAX"]
+        bs["BS.DEFERRED_TAX"] = tax_month.deferred_tax if tax_month else prev["BS.DEFERRED_TAX"]
         # Other debt: new borrowing is non-current; repayments reduce current debt first.
         borrowing = cents(_d(inp, "borrowing", month))
         asked = cents(_d(inp, "repayment", month))
@@ -224,10 +266,11 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         cf["CF.WC.AR"] = prev["BS.AR"] - bs["BS.AR"]
         cf["CF.WC.INVENTORY"] = prev["BS.INVENTORY"] - bs["BS.INVENTORY"]
         cf["CF.WC.AP"] = bs["BS.AP"] - prev["BS.AP"]
-        cf["CF.WC.TAX"] = bs["BS.TAX_PAY"] - prev["BS.TAX_PAY"]
-        cf["CF.OPERATING"] = sum((cf[k] for k in ("CF.NET_INCOME", "CF.DA", "CF.WC.AR",
-                                                   "CF.WC.INVENTORY", "CF.WC.AP", "CF.WC.TAX")),
-                                 ZERO)  # fmt: skip
+        cf["CF.TAX_EXPENSE"] = pl["PL.TAX"]
+        cf["CF.TAX_PAID"] = -tax_paid
+        cf["CF.OPERATING"] = sum((cf[k] for k in ("CF.NET_INCOME", "CF.DA", "CF.TAX_EXPENSE",
+                                                   "CF.WC.AR", "CF.WC.INVENTORY", "CF.WC.AP",
+                                                   "CF.TAX_PAID")), ZERO)  # fmt: skip
         cf["CF.CAPEX"] = -capex
         cf["CF.INVESTING"] = cf["CF.CAPEX"]
         cf["CF.BORROWING"], cf["CF.REPAYMENT"] = borrowing + drawn, -(repayment + repaid)
@@ -259,7 +302,7 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
                  "repayment": repayment, "closing": other_current + other_noncurrent,
                  "revolver_opening": revolver_opening, "revolver_interest": revolver_interest,
                  "revolver": revolver}  # fmt: skip
-        months.append(Month(month, pl, dict(bs), cf, loans, other))
+        months.append(Month(month, pl, dict(bs), cf, loans, other, tax_month))
     projection = Projection(opening, months, {}, notes)
     projection.invariants = check(projection, inp)
     return projection
@@ -274,7 +317,7 @@ def totals(bs: dict[str, Decimal]) -> tuple[Decimal, Decimal, Decimal]:
 
 
 HELD = ("BS.INTANGIBLES", "BS.INVESTMENTS", "BS.OTHER_REC", "BS.TAX_REC", "BS.OTHER_PAY",
-        "BS.EQUITY.SHARE_PREMIUM")  # fmt: skip
+        "BS.TAX_PAY", "BS.EQUITY.SHARE_PREMIUM")  # fmt: skip
 
 
 def _debt_reconciles(m: Month, start: dict[str, Decimal]) -> bool:
@@ -297,6 +340,27 @@ def _debt_reconciles(m: Month, start: dict[str, Decimal]) -> bool:
                 + o["revolver_interest"])  # fmt: skip
     other_ok = o["opening"] + o["borrowing"] - o["repayment"] == o["closing"]
     return loans_ok and other_ok and debt == closing and m.pl["PL.INTEREST"] == interest
+
+
+def _tax_reconciles(m: Month, prev: dict[str, Decimal]) -> bool:
+    """M6F-5: income tax owed rolls forward by the current tax less what is paid; deferred tax by
+    the deferred tax expense; the tax expense is their sum; the statements carry the tax book's
+    expense, payments and balances; at a year end the loss pool rolls
+    forward (before + arising - used - expired = after)."""
+    pl, bs, cf = m.pl, m.bs, m.cf
+    ok = (bs["BS.INCOME_TAX"] - prev["BS.INCOME_TAX"] == pl["PL.TAX.CURRENT"] + cf["CF.TAX_PAID"]
+          and bs["BS.DEFERRED_TAX"] - prev["BS.DEFERRED_TAX"] == pl["PL.TAX.DEFERRED"]
+          and pl["PL.TAX"] == pl["PL.TAX.CURRENT"] + pl["PL.TAX.DEFERRED"]
+          and cf["CF.TAX_EXPENSE"] == pl["PL.TAX"])  # fmt: skip
+    t = m.tax
+    if t is not None:  # the statements carry the tax book's figures
+        ok = ok and (pl["PL.TAX.CURRENT"] == t.current and pl["PL.TAX.DEFERRED"] == t.deferred
+                     and cf["CF.TAX_PAID"] == -t.paid and bs["BS.INCOME_TAX"] == t.income_tax
+                     and bs["BS.DEFERRED_TAX"] == t.deferred_tax)  # fmt: skip
+    if t is not None and t.year and m.month.month == 12:
+        ok = ok and (t.pool_before + t.losses_arising - t.losses_used - t.losses_expired
+                     == t.pool_after) and t.losses_used >= 0  # fmt: skip
+    return ok
 
 
 def _month_checks(m: Month, prev: dict[str, Decimal],
@@ -322,6 +386,7 @@ def _month_checks(m: Month, prev: dict[str, Decimal],
             == m.cf["CF.SHARE_CAPITAL"],
         )),
         "debt_reconciles": _debt_reconciles(m, loan_start),
+        "tax_reconciles": _tax_reconciles(m, prev),
     }  # fmt: skip
 
 
@@ -408,6 +473,7 @@ def values(p: Projection, inp: EngineInput) -> list[Value]:
             out.append(Value(key, m.month, Nature.FORECAST, amount, inp.currency, period_end=end,
                              granularity="MONTH", lineage=_lineage(key, m, inp)))  # fmt: skip
         out += _loan_values(m, inp, end)
+        out += _tax_values(m, inp, end)
     for size, granularity in ((3, "QUARTER"), (12, "YEAR")):
         for start, end, flows, bs in aggregate(p, size):
             for key, amount in {**flows, **bs}.items():
@@ -435,6 +501,28 @@ def _loan_values(m: Month, inp: EngineInput, end: date) -> list[Value]:
     return out
 
 
+def _tax_source(m: Month) -> Source:
+    t = m.tax
+    if t is None:
+        return Source("FORMULA", "tax:none", None, "no tax rules: no income tax")
+    status = "verified" if t.verified else "pending professional verification"
+    return Source("ASSUMPTION", f"tax_rules:{t.rule_id}", None, f"rule set {status}")
+
+
+def _tax_values(m: Month, inp: EngineInput, end: date) -> list[Value]:
+    """The tax book's month (M6F-5): taxable profit to date, tax paid, losses available."""
+    t = m.tax
+    if t is None:
+        return []
+    lineage = (_tax_source(m),)
+    return [
+        Value(key, m.month, Nature.FORECAST, amount, inp.currency, period_end=end,
+              granularity="MONTH", lineage=lineage)
+        for key, amount in (("TAX.TAXABLE_YTD", t.taxable_ytd), ("TAX.PAID", t.paid),
+                            ("TAX.LOSSES_AVAILABLE", t.losses_available))
+    ]  # fmt: skip
+
+
 def _lineage(key: str, m: Month, inp: EngineInput) -> tuple[Source, ...]:
     ref = f"assumption_set:{inp.set_id}"
     month = f"{m.month:%Y-%m}"
@@ -450,7 +538,10 @@ def _lineage(key: str, m: Month, inp: EngineInput) -> tuple[Source, ...]:
             "on opening balances: each loan at its rate, other debt "
             "and the credit facility at theirs",
         ),
-        "PL.TAX": ("tax_rate", "on a positive profit before tax; no relief for losses"),
+        "PL.TAX": (
+            "tax_adjustment",
+            "current tax (rule set, losses carried forward) plus deferred tax",
+        ),
         "BS.AR": ("dso", "revenue x DSO / days in the month"),
         "BS.INVENTORY": ("dio", "cost of sales x DIO / days in the month"),
         "BS.AP": ("dpo", "cost of sales x DPO / days in the month"),
@@ -461,6 +552,9 @@ def _lineage(key: str, m: Month, inp: EngineInput) -> tuple[Source, ...]:
         "CF.SHARE_CAPITAL": ("share_capital", "new share capital"),
         "CF.REVOLVER": ("revolver_limit", "credit facility drawn or repaid around minimum cash"),
     }
+    if key in ("PL.TAX.CURRENT", "PL.TAX.DEFERRED", "BS.INCOME_TAX", "BS.DEFERRED_TAX",
+               "CF.TAX_PAID"):  # fmt: skip
+        return (_tax_source(m),)
     if key in simple:
         driver, note = simple[key]
         return (Source("ASSUMPTION", f"{ref}:{driver}:{month}", None, note),)

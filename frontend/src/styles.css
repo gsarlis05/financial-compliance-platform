@@ -260,6 +260,7 @@ select {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
+  max-width: 100%; /* long option texts never widen the page on a phone */
 }
 input[aria-invalid="true"] {
   border-color: var(--danger);

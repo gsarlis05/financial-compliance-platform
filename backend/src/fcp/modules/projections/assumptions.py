@@ -100,17 +100,13 @@ def observed(h: History) -> dict[str, Decimal]:
     sales = _total(h, "REV.SALES", "REV.SERVICES")
     cogs = _total(h, "COGS")
     revenue = _total(h, *REVENUE_LINES)
-    profit = revenue - cogs - _total(h, *OPEX_LINES, "DA.DEPRECIATION", "DA.AMORTISATION") \
-        + _total(h, "INT.INCOME") - _total(h, "INT.EXPENSE", "FX.DIFF")  # fmt: skip
     debt = -(h.balances.get("BS.DEBT.NONCURRENT", Decimal(0))
              + h.balances.get("BS.DEBT.CURRENT", Decimal(0)))  # fmt: skip
-    tax = _ratio(_total(h, "TAX.INCOME"), profit, HUNDRED) if profit > 0 else Decimal(0)
     return {
         "gross_margin": _ratio(sales - cogs, sales, HUNDRED),
         "dso": _ratio(h.balances.get("BS.AR", Decimal(0)), revenue, DAYS_A_YEAR),
         "dio": _ratio(h.balances.get("BS.INVENTORY", Decimal(0)), cogs, DAYS_A_YEAR),
         "dpo": _ratio(-h.balances.get("BS.AP", Decimal(0)), cogs, DAYS_A_YEAR),
-        "tax_rate": min(max(tax, Decimal(0)), HUNDRED),
         "interest_rate": _ratio(_total(h, "INT.EXPENSE"), debt, HUNDRED)
         if debt > 0
         else Decimal(0),
@@ -187,9 +183,10 @@ def _month(
                        Source.BUDGET))  # fmt: skip
     else:
         values.append(("gross_margin", "", month, ratios["gross_margin"], Source.ACTUALS))
-    for key in ("dso", "dio", "dpo", "tax_rate", "interest_rate"):
+    for key in ("dso", "dio", "dpo", "interest_rate"):
         values.append((key, "", month, ratios[key], Source.ACTUALS))
-    for key in ("capex_life", "capex_start", "capex_db_rate", "capex_allowance_rate", "capex",
+    for key in ("capex_life", "capex_start", "capex_db_rate", "capex_allowance_rate",
+                "tax_adjustment", "capex",
                 "borrowing", "repayment", "dividends", "share_capital", "minimum_cash",
                 "revolver_limit", "revolver_rate"):  # fmt: skip
         values.append((key, "", month, Decimal(DEFAULTS.get(key, 0)), Source.DEFAULT))
@@ -365,6 +362,52 @@ def rename(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, name: str) -> A
     return made
 
 
+@dataclass(frozen=True)
+class TaxPosition:
+    losses_bf: dict[str, str]  # year the loss arose -> unused amount at the start of the year
+    paid_ytd: str  # provisional tax paid for the cut-over's tax year, before the cut-over
+    recognise_loss_dta: bool
+
+
+@transaction.atomic
+def set_tax_position(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID,
+                     data: TaxPosition) -> AssumptionSet:  # fmt: skip
+    """The set's tax position at the cut-over (M6F-5), while it is a draft."""
+    made = _set(ctx, entity_id, set_id, RUN)
+    if made.status != AssumptionSet.Status.DRAFT:
+        raise ConflictError("This set is approved and never changes. Revise it as a new version.")
+    first_year = horizon(made.cutover, made.months)[0].year
+    losses: dict[str, str] = {}
+    for year, raw in sorted(data.losses_bf.items()):
+        if not year.isdigit() or not 2000 <= int(year) < first_year:
+            raise _invalid(
+                "tax_losses_bf",
+                f"{year}: losses brought forward must have arisen "
+                f"in a tax year before {first_year}, the first projected year.",
+            )
+        amount = _cents(raw, "tax_losses_bf")
+        if amount:
+            losses[year] = f"{amount:.2f}"
+    made.tax_losses_bf = losses
+    made.tax_paid_ytd = _cents(data.paid_ytd, "tax_paid_ytd")
+    made.recognise_loss_dta = data.recognise_loss_dta
+    made.save(update_fields=["tax_losses_bf", "tax_paid_ytd", "recognise_loss_dta"])
+    _audit(ctx, "tax_position_set", made, losses=losses, paid_ytd=str(made.tax_paid_ytd),
+           recognise_loss_dta=made.recognise_loss_dta)  # fmt: skip
+    return made
+
+
+def _cents(raw: str, field: str) -> Decimal:
+    try:
+        value = Decimal(raw)
+    except InvalidOperation:
+        value = Decimal("NaN")
+    if (not value.is_finite() or not Decimal(0) <= value < Decimal("1e12")
+            or value != value.quantize(CENT)):  # fmt: skip
+        raise _invalid(field, "Enter an amount in cents, such as 1500.00.")
+    return value
+
+
 @transaction.atomic
 def approve(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> AssumptionSet:
     """Approve a draft (it then never changes); the family's earlier approved version is
@@ -396,7 +439,8 @@ def revise(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> AssumptionSe
         tenant=ctx.tenant, legal_entity_id=made.legal_entity_id, family_id=made.family_id,
         version=number, name=made.name, cutover=made.cutover, months=made.months,
         start_from=made.start_from, note=f"Revision of version {made.version}. {made.note}"[:500],
-        supersedes=made, created_by=ctx.user,
+        supersedes=made, created_by=ctx.user, tax_losses_bf=made.tax_losses_bf,
+        tax_paid_ytd=made.tax_paid_ytd, recognise_loss_dta=made.recognise_loss_dta,
     )  # fmt: skip
     AssumptionValue.objects.bulk_create(
         AssumptionValue(tenant=ctx.tenant, assumption_set=draft, driver=v.driver, line=v.line,

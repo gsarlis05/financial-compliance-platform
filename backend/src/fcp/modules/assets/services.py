@@ -520,13 +520,18 @@ class MonthlyDepreciation:
 
 
 def depreciation_plan(
-    ctx: WorkspaceContext, entity_id: UUID, months: list[date]
+    ctx: WorkspaceContext, entity_id: UUID, months: list[date], *, qualifying_only: bool = False
 ) -> list[MonthlyDepreciation]:
-    """Depreciation of the registered assets in each month, as the schedules have it."""
+    """Depreciation of the registered assets in each month, as the schedules have it.
+    ``qualifying_only``: only assets with a capital allowance class (whose depreciation is a
+    temporary difference for deferred tax, M6F-5)."""
     entity = _entity(ctx, entity_id, READ)
     wanted = [month_start(m) for m in months]
     totals = dict.fromkeys(wanted, Decimal("0.00"))
-    for asset in FixedAsset.objects.filter(legal_entity_id=entity):
+    assets = FixedAsset.objects.filter(legal_entity_id=entity)
+    if qualifying_only:
+        assets = assets.exclude(allowance_class_code="")
+    for asset in assets:
         for row in schedule(terms(asset)):
             if row.month in totals:
                 totals[row.month] += row.depreciation

@@ -77,10 +77,12 @@ def test_start_from_actuals_by_hand(hist: dict[str, Any]) -> None:
     assert r[("opex", "OPEX.RENT")]["values"][:2] == ["600", "500"]  # costs are not grown
     # Gross margin (2,300 - 800) / 2,300 = 65.2174%; DSO 300 / 2,300 x 365 = 47.6087 days;
     # DPO and DIO are 0 (no payables or stock); no tax, no debt.
-    keys = ("gross_margin", "dso", "dio", "dpo", "tax_rate", "interest_rate", "capex_life")
+    # The tax rate comes from the tax rule set (M6F-5): the set holds tax adjustments only.
+    keys = ("gross_margin", "dso", "dio", "dpo", "tax_adjustment", "interest_rate", "capex_life")
     single = {k: r[(k, "")]["values"][0] for k in keys}
     assert single == {"gross_margin": "65.2174", "dso": "47.6087", "dio": "0", "dpo": "0",
-                      "tax_rate": "0", "interest_rate": "0", "capex_life": "60"}  # fmt: skip
+                      "tax_adjustment": "0", "interest_rate": "0", "capex_life": "60"}  # fmt: skip
+    assert ("tax_rate", "") not in r
     assert r[("capex", "")]["sources"][0] == "DEFAULT"
 
     empty = make(hist, start_from="EMPTY", months=12).json()
