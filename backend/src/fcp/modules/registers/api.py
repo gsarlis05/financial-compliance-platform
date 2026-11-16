@@ -21,7 +21,10 @@ from fcp.modules.tenancy.api import workspace_ctx
 from . import services
 from .models import Allocation, Counterparty
 
-__all__ = ["Counterparty", "router"]
+__all__ = ["Counterparty", "OpenItem", "open_items", "router"]
+
+OpenItem = services.OpenItem
+open_items = services.open_items
 
 router = Router(tags=["registers"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

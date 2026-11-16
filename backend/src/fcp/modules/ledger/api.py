@@ -3,7 +3,9 @@
 All routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -13,7 +15,7 @@ from ninja import Field, Query, Router, Schema, Status
 from fcp.core.api.permissions import requires
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
-from fcp.modules.tenancy.api import workspace_ctx
+from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
 from . import (
     accounts,
@@ -42,17 +44,78 @@ from .models import (
 
 __all__ = [
     "Account",
+    "EntryInput",
     "FiscalYear",
     "JournalEntry",
     "JournalLine",
+    "LineInput",
     "Period",
+    "PostedLine",
     "TrialBalanceRow",
+    "account_balance",
     "account_list",
+    "create_entry_draft",
     "fiscal_year_list",
+    "posted_lines",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
 ]
+
+EntryInput = entries.EntryInput
+LineInput = entries.LineInput
+
+
+@dataclass(frozen=True)
+class PostedLine:
+    """A posted line on one account, for sub-ledgers such as bank matching (M2-5)."""
+
+    line_id: UUID
+    entry_id: UUID
+    entry_ref: str
+    accounting_date: date
+    net_debit: Decimal
+    reference: str
+    memo: str
+    description: str
+
+
+def posted_lines(
+    ctx: Any, entity_id: UUID, account_id: UUID, *, date_from: date, date_to: date
+) -> list[PostedLine]:
+    """Posted lines of an account dated in the range (requires ``reports.read``)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    rows = (
+        JournalLine.objects.filter(
+            entry__legal_entity_id=entity.id, account_id=account_id,
+            entry__status=JournalEntry.Status.POSTED,
+            entry__accounting_date__gte=date_from, entry__accounting_date__lte=date_to,
+        )
+        .select_related("entry__journal")
+        .order_by("entry__accounting_date", "entry__posting_seq", "line_no")
+    )  # fmt: skip
+    return [
+        PostedLine(
+            ln.id, ln.entry_id, f"{ln.entry.journal.code}-{ln.entry.entry_no}",
+            ln.entry.accounting_date, ln.debit - ln.credit, ln.reference, ln.memo,
+            ln.entry.description,
+        )
+        for ln in rows
+    ]  # fmt: skip
+
+
+def account_balance(ctx: Any, entity_id: UUID, account_id: UUID, *, as_of: date) -> Decimal:
+    """Net debit balance of one account from all postings up to ``as_of``."""
+    row = next((r for r in trial_balance_rows(ctx, entity_id, as_of=as_of)
+                if r.account_id == account_id), None)  # fmt: skip
+    return row.debit_total - row.credit_total if row else Decimal(0)
+
+
+def create_entry_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> JournalEntry:
+    """A draft from another module (e.g. a bank statement line), source IMPORT; it follows the
+    normal workflow (doc 05 §8: sub-ledgers never write journal lines directly)."""
+    return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.IMPORT)
+
 
 # Read functions for other modules (the reporting gateway, M2-6 onwards).
 account_list = accounts.list_accounts

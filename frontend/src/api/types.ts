@@ -384,3 +384,74 @@ export interface CloseStatus {
   reopen_entry_id: string | null;
   checks: { code: string; ok: boolean; details: string[] }[];
 }
+
+export interface Reconciliation {
+  as_of: string;
+  statement_balance: Amount;
+  ledger_balance: Amount;
+  difference: Amount;
+  unmatched_lines: number;
+  reconciled: boolean;
+}
+
+export interface BankAccount {
+  id: string;
+  name: string;
+  iban: string;
+  currency: string;
+  ledger_account_id: string;
+  status: string;
+  csv_mapping: Record<string, unknown> | null;
+  last_reconciled: Reconciliation | null;
+  unmatched_lines: number;
+}
+
+export interface StatementImport {
+  id: string;
+  format: "CAMT053" | "CSV";
+  filename: string;
+  status: "PENDING" | "DONE" | "FAILED";
+  error: string;
+  statement_id: string;
+  opening_balance: Amount | null;
+  closing_balance: Amount | null;
+  closing_date: string | null;
+  lines_created: number;
+  lines_duplicate: number;
+  created_at: string;
+  processed_at: string | null;
+}
+
+export interface StatementLine {
+  id: string;
+  booking_date: string;
+  value_date: string | null;
+  amount: Amount;
+  description: string;
+  counterparty_name: string;
+  reference: string;
+  bank_ref: string;
+  status: "UNMATCHED" | "MATCHED" | "IGNORED";
+  matched_line_id: string | null;
+  note: string;
+}
+
+export interface MatchCandidate {
+  journal_line_id: string;
+  entry_id: string;
+  entry_ref: string;
+  accounting_date: string;
+  amount: Amount;
+  reference: string;
+  description: string;
+}
+
+export interface PaymentSuggestion {
+  counterparty_id: string;
+  counterparty_code: string;
+  account_code: string;
+  reference: string;
+  due_date: string;
+  open_amount: Amount;
+  reference_matches: boolean;
+}

@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "fcp.modules.audit_log",
     "fcp.modules.ledger",
     "fcp.modules.registers",
+    "fcp.modules.banking",
     "fcp.modules.reporting",
     "fcp.modules.metrics",
 ]
@@ -124,3 +125,9 @@ OIDC_MFA_AMR_VALUES = frozenset(env("OIDC_MFA_AMR_VALUES", "otp,mfa,hwk,swk,weba
 OIDC_MFA_ACR_VALUES = frozenset(v for v in env("OIDC_MFA_ACR_VALUES", "").split(",") if v)
 LOGIN_REDIRECT_URL = env("LOGIN_REDIRECT_URL", "/")
 LOGOUT_REDIRECT_URL = env("LOGOUT_REDIRECT_URL", "/")
+
+# Bank statement imports (M2-5, ADR-0015): parsed by the worker (banking_process_imports), never in
+# the request. Development and tests may process inline for convenience; deployed settings never.
+BANKING_PROCESS_INLINE = env("BANKING_PROCESS_INLINE", "false").lower() == "true"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # a 5 MB statement plus form overhead
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # uploads stay in memory (read-only root filesystem)

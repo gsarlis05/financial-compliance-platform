@@ -94,4 +94,9 @@ echo "6. Scheduled job tasks (integrity checks, audit verification)"
 docker run --rm "${RUN_ARGS[@]}" "${ENV_ARGS[@]}" -e DB_ROLE=owner "$API_IMAGE" \
   sh -c "python manage.py ledger_integrity_check && python manage.py audit_verify" >/dev/null
 
+echo "7. Bank statement import worker (runtime role, one pass)"
+docker run --rm "${RUN_ARGS[@]}" "${ENV_ARGS[@]}" "$API_IMAGE" \
+  python manage.py banking_process_imports >/dev/null || fail "import worker did not run"
+echo "   ok  import worker runs with the runtime role"
+
 echo "Container smoke test passed."

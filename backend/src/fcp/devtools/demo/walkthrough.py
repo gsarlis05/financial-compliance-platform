@@ -24,6 +24,7 @@ from django.test import Client
 from fcp.modules.identity.api import User
 
 from .books import BANK, DemoBooks, build_demo_books
+from .camt import Txn, camt053
 
 Say = Callable[[str], None]
 
@@ -46,6 +47,20 @@ class DemoClient(Client):
         session["fcp_login_at"] = now
         session.save()
         self.call("GET", "/api/me")  # receives the CSRF cookie
+
+    def upload(self, path: str, content: bytes, fmt: str, name: str, expect: int = 201) -> Any:
+        """Multipart upload, as the SPA sends a statement file."""
+        from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: PLC0415
+
+        csrf = self.cookies["__Host-fcp_csrftoken"].value
+        form = {"file": SimpleUploadedFile(name, content), "format": fmt}
+        response = self.post(path, form, headers={"X-CSRFToken": csrf})
+        if response.status_code != expect:
+            raise DemoStepError(
+                f"POST {path} returned {response.status_code}, expected {expect}: "
+                f"{response.content[:500]!r}"
+            )
+        return response.json()
 
     def call(self, method: str, path: str, body: Any = None, expect: int = 200) -> Any:
         headers = {}
@@ -257,6 +272,40 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         raise DemoStepError("Ageing does not reconcile to the control accounts")
     step(f"{matched} payments matched to invoices; receivables {receivable['total']} and "
          f"payables {payable['total']} reconcile to the ledger")  # fmt: skip
+
+    # Bank (M2-5): the synthetic statement for the year, plus the December cleaning payment.
+    cleaning = Txn(december, Decimal("-350.00"), "Office cleaning December (Demo)", "", "",
+                   "CLEAN-12")  # fmt: skip
+    txns = [
+        Txn(day, amount, text, ref, "", f"BANK-{n:04d}")
+        for n, (day, amount, text, ref) in enumerate(books.bank_transactions, start=1)
+    ]
+    statement = camt053(
+        [*txns, cleaning],
+        iban="CY00DEMO0000000000000000000000",
+        opening=books.opening_cash,
+        statement_id=f"DEMO-{year}",
+        period=(books.fiscal_year_start, december),
+    )
+    ledger_bank = next(a for a in accountant.call("GET", f"{base}/accounts") if a["code"] == BANK)
+    # Synthetic IBANs have deliberately invalid check digits (never a real account), so the bank
+    # account is created without one; the statement still names its (fictional) account.
+    bank_account = owner.call("POST", f"{base}/bank-accounts",
+                              {"ledger_account_id": ledger_bank["id"],
+                               "name": "Current account (Demo)"}, 201)  # fmt: skip
+    bank_url = f"{base}/bank-accounts/{bank_account['id']}"
+    imported = accountant.upload(f"{bank_url}/imports", statement, "CAMT053", f"demo-{year}.xml")
+    if imported["status"] != "DONE":
+        raise DemoStepError(f"Statement import failed: {imported}")
+    accountant.upload(f"{bank_url}/imports", statement, "CAMT053", f"demo-{year}.xml", expect=409)
+    auto = accountant.call("POST", f"{bank_url}/auto-match", {})["matched"]
+    reconciled = accountant.call("POST", f"{bank_url}/reconcile", {"as_of": december.isoformat()})
+    if not reconciled["reconciled"]:
+        raise DemoStepError(f"Bank does not reconcile: {reconciled}")
+    step(f"bank statement imported ({imported['lines_created']} lines); importing it again created "
+         f"no duplicates; {auto} matched to ledger entries automatically; reconciled at "
+         f"{december}: ledger {reconciled['ledger_balance']} = statement "
+         f"{reconciled['statement_balance']}")  # fmt: skip
 
     mapped = accountant.call("POST", f"{base}/account-mapping/apply-defaults",
                              {"template": "cy_business"})["mapped"]  # fmt: skip

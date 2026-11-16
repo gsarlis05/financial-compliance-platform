@@ -33,6 +33,11 @@ PERMISSIONS: dict[str, str] = {
     "registers.counterparty.read": "See customers, suppliers and their open items",
     "registers.counterparty.manage": "Create and edit customers and suppliers",
     "registers.allocation.manage": "Match payments to invoices (allocate and unallocate)",
+    # banking (M2-5)
+    "banking.read": "See bank accounts, statements and reconciliations",
+    "banking.account.manage": "Create bank accounts and their CSV column mappings",
+    "banking.statement.manage": "Import statements, match, ignore and book statement lines",
+    "banking.reconcile": "Reconcile a bank account to its statement",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -48,6 +53,7 @@ _READ = frozenset(
         "ledger.entry.read",
         "registers.counterparty.read",
         "reports.read",
+        "banking.read",
     }
 )
 _PREPARE = _READ | {
@@ -57,6 +63,9 @@ _PREPARE = _READ | {
     "ledger.period.unlock_request",
     "registers.counterparty.manage",
     "registers.allocation.manage",
+    "banking.account.manage",
+    "banking.statement.manage",
+    "banking.reconcile",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}

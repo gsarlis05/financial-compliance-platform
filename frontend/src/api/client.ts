@@ -75,7 +75,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (method !== "GET") {
     headers["X-CSRFToken"] = csrfToken();
   }
-  if (options.body !== undefined) {
+  const form = options.body instanceof FormData;
+  if (options.body !== undefined && !form) {
     headers["Content-Type"] = "application/json";
   }
   if (options.idempotencyKey) {
@@ -83,7 +84,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
   const init: RequestInit = { method, headers, credentials: "same-origin" };
   if (options.body !== undefined) {
-    init.body = JSON.stringify(options.body);
+    // A FormData body (file upload) is sent as multipart; the browser sets the boundary.
+    init.body = form ? (options.body as FormData) : JSON.stringify(options.body);
   }
   const response = await fetch(apiUrl(path, options.query), init);
   if (!response.ok) {

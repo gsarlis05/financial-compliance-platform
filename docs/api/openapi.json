@@ -753,6 +753,148 @@
         "title": "AutoAllocateIn",
         "type": "object"
       },
+      "BankAccountIn": {
+        "properties": {
+          "iban": {
+            "default": "",
+            "maxLength": 42,
+            "title": "Iban",
+            "type": "string"
+          },
+          "ledger_account_id": {
+            "format": "uuid",
+            "title": "Ledger Account Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ledger_account_id",
+          "name"
+        ],
+        "title": "BankAccountIn",
+        "type": "object"
+      },
+      "BankAccountOut": {
+        "properties": {
+          "csv_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Mapping"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "iban": {
+            "title": "Iban",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_reconciled": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReconciliationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ledger_account_id": {
+            "format": "uuid",
+            "title": "Ledger Account Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unmatched_lines": {
+            "title": "Unmatched Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "iban",
+          "currency",
+          "ledger_account_id",
+          "status",
+          "csv_mapping",
+          "last_reconciled",
+          "unmatched_lines"
+        ],
+        "title": "BankAccountOut",
+        "type": "object"
+      },
+      "CandidateOut": {
+        "properties": {
+          "accounting_date": {
+            "format": "date",
+            "title": "Accounting Date",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "entry_ref": {
+            "title": "Entry Ref",
+            "type": "string"
+          },
+          "journal_line_id": {
+            "format": "uuid",
+            "title": "Journal Line Id",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "journal_line_id",
+          "entry_id",
+          "entry_ref",
+          "accounting_date",
+          "amount",
+          "reference",
+          "description"
+        ],
+        "title": "CandidateOut",
+        "type": "object"
+      },
       "ChainStatusOut": {
         "properties": {
           "broken_at_seq": {
@@ -1213,6 +1355,153 @@
           }
         },
         "title": "CounterpartyPatch",
+        "type": "object"
+      },
+      "CreateEntryIn": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Description",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "maxLength": 50,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "CreateEntryIn",
+        "type": "object"
+      },
+      "CreatedEntryOut": {
+        "properties": {
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_id",
+          "status"
+        ],
+        "title": "CreatedEntryOut",
+        "type": "object"
+      },
+      "CsvMappingIn": {
+        "properties": {
+          "amount": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Amount",
+            "type": "string"
+          },
+          "balance": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Balance",
+            "type": "string"
+          },
+          "counterparty": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Counterparty",
+            "type": "string"
+          },
+          "credit": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Credit",
+            "type": "string"
+          },
+          "date": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Date",
+            "type": "string"
+          },
+          "date_format": {
+            "default": "%Y-%m-%d",
+            "description": "One of %Y-%m-%d, %d/%m/%Y, %d.%m.%Y, %d-%m-%Y, %m/%d/%Y",
+            "title": "Date Format",
+            "type": "string"
+          },
+          "debit": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Debit",
+            "type": "string"
+          },
+          "decimal_comma": {
+            "default": false,
+            "title": "Decimal Comma",
+            "type": "boolean"
+          },
+          "delimiter": {
+            "default": ",",
+            "enum": [
+              ",",
+              ";",
+              "\t",
+              "|"
+            ],
+            "title": "Delimiter",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Description",
+            "type": "string"
+          },
+          "encoding": {
+            "default": "utf-8-sig",
+            "description": "One of utf-8-sig, utf-8, cp1253, latin-1",
+            "title": "Encoding",
+            "type": "string"
+          },
+          "has_header": {
+            "default": true,
+            "title": "Has Header",
+            "type": "boolean"
+          },
+          "reference": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "CsvMappingIn",
         "type": "object"
       },
       "DefaultsIn": {
@@ -2165,6 +2454,126 @@
         "title": "HistoryOut",
         "type": "object"
       },
+      "IgnoreIn": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "IgnoreIn",
+        "type": "object"
+      },
+      "ImportOut": {
+        "properties": {
+          "closing_balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Balance"
+          },
+          "closing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Date"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines_created": {
+            "title": "Lines Created",
+            "type": "integer"
+          },
+          "lines_duplicate": {
+            "title": "Lines Duplicate",
+            "type": "integer"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "statement_id": {
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "format",
+          "filename",
+          "status",
+          "error",
+          "statement_id",
+          "opening_balance",
+          "closing_balance",
+          "closing_date",
+          "lines_created",
+          "lines_duplicate",
+          "created_at",
+          "processed_at"
+        ],
+        "title": "ImportOut",
+        "type": "object"
+      },
       "IntegrityCheckOut": {
         "properties": {
           "created_at": {
@@ -2552,6 +2961,28 @@
         "title": "LineOut",
         "type": "object"
       },
+      "LinesQuery": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UNMATCHED",
+                  "MATCHED",
+                  "IGNORED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "LinesQuery",
+        "type": "object"
+      },
       "MappingIn": {
         "properties": {
           "line_code": {
@@ -2647,6 +3078,33 @@
           "has_activity"
         ],
         "title": "MappingRowOut",
+        "type": "object"
+      },
+      "MatchIn": {
+        "properties": {
+          "journal_line_id": {
+            "format": "uuid",
+            "title": "Journal Line Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "journal_line_id"
+        ],
+        "title": "MatchIn",
+        "type": "object"
+      },
+      "MatchedOut": {
+        "properties": {
+          "matched": {
+            "title": "Matched",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matched"
+        ],
+        "title": "MatchedOut",
         "type": "object"
       },
       "MeOut": {
@@ -2992,6 +3450,71 @@
           "status"
         ],
         "title": "PeriodStatusIn",
+        "type": "object"
+      },
+      "ReconcileIn": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "statement_balance": {
+            "anyOf": [
+              {
+                "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Balance"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "ReconcileIn",
+        "type": "object"
+      },
+      "ReconciliationOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "ledger_balance": {
+            "title": "Ledger Balance",
+            "type": "string"
+          },
+          "reconciled": {
+            "title": "Reconciled",
+            "type": "boolean"
+          },
+          "statement_balance": {
+            "title": "Statement Balance",
+            "type": "string"
+          },
+          "unmatched_lines": {
+            "title": "Unmatched Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "statement_balance",
+          "ledger_balance",
+          "difference",
+          "unmatched_lines",
+          "reconciled"
+        ],
+        "title": "ReconciliationOut",
         "type": "object"
       },
       "RejectIn": {
@@ -3405,6 +3928,51 @@
         ],
         "title": "Status",
         "type": "string"
+      },
+      "SuggestionOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "counterparty_code": {
+            "title": "Counterparty Code",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "format": "uuid",
+            "title": "Counterparty Id",
+            "type": "string"
+          },
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          },
+          "open_amount": {
+            "title": "Open Amount",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "reference_matches": {
+            "title": "Reference Matches",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "counterparty_id",
+          "counterparty_code",
+          "account_code",
+          "reference",
+          "due_date",
+          "open_amount",
+          "reference_matches"
+        ],
+        "title": "SuggestionOut",
+        "type": "object"
       },
       "TemplateIn": {
         "properties": {
@@ -5312,6 +5880,594 @@
         "summary": "Delete Allocation",
         "tags": [
           "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts": {
+      "get": {
+        "operationId": "fcp_modules_banking_api_bank_accounts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BankAccountOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Bank Accounts",
+        "tags": [
+          "banking"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_banking_api_create_bank_account",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Bank Account",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/auto-match": {
+      "post": {
+        "operationId": "fcp_modules_banking_api_auto_match",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchedOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Auto Match",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/csv-mapping": {
+      "put": {
+        "operationId": "fcp_modules_banking_api_set_csv_mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CsvMappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Csv Mapping",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/imports": {
+      "get": {
+        "operationId": "fcp_modules_banking_api_statement_imports",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Statement Imports",
+        "tags": [
+          "banking"
+        ]
+      },
+      "post": {
+        "description": "Upload a statement (at most 5 MB). It is parsed by the import worker; the same file is\nrefused a second time (409 ``banking.import.duplicate``).",
+        "operationId": "fcp_modules_banking_api_upload_statement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  },
+                  "format": {
+                    "enum": [
+                      "CAMT053",
+                      "CSV"
+                    ],
+                    "title": "Format",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file",
+                  "format"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Upload Statement",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/lines": {
+      "get": {
+        "operationId": "fcp_modules_banking_api_statement_lines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "UNMATCHED",
+                    "MATCHED",
+                    "IGNORED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LineOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Statement Lines",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/reconcile": {
+      "post": {
+        "description": "Reconciled (and recorded) only when the ledger balance equals the statement balance.",
+        "operationId": "fcp_modules_banking_api_reconcile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reconcile",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/reconciliations": {
+      "get": {
+        "operationId": "fcp_modules_banking_api_reconciliations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReconciliationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reconciliations",
+        "tags": [
+          "banking"
         ]
       }
     },
@@ -7962,6 +9118,388 @@
         "summary": "Trial Balance Csv",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/candidates": {
+      "get": {
+        "operationId": "fcp_modules_banking_api_match_candidates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Match Candidates",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/create-entry": {
+      "post": {
+        "description": "A draft entry for an unmatched line (normal approval workflow; matched once posted).",
+        "operationId": "fcp_modules_banking_api_create_entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedEntryOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Entry",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/ignore": {
+      "post": {
+        "operationId": "fcp_modules_banking_api_ignore_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IgnoreIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Ignore Line",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/match": {
+      "post": {
+        "operationId": "fcp_modules_banking_api_match_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Match Line",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/suggestions": {
+      "get": {
+        "description": "Open invoices this payment probably settles (same open amount; matching reference first).",
+        "operationId": "fcp_modules_banking_api_line_suggestions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Line Suggestions",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statement-lines/{line_id}/unmatch": {
+      "post": {
+        "operationId": "fcp_modules_banking_api_unmatch_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Unmatch Line",
+        "tags": [
+          "banking"
         ]
       }
     },

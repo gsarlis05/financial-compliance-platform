@@ -6,11 +6,13 @@ Identifiers are composed with psycopg's ``sql.Identifier`` (they cannot be query
 never with string formatting.
 """
 
+from typing import Any
+
 from django.conf import settings
 from django.db import connections
 from psycopg import sql
 
-from .registry import APPEND_ONLY_TABLES, READ_ONLY_TABLES
+from .registry import APPEND_ONLY_TABLES, READ_ONLY_TABLES, RUNTIME_FUNCTIONS
 
 _STATEMENTS = (
     "GRANT USAGE ON SCHEMA public TO {role}",
@@ -18,6 +20,17 @@ _STATEMENTS = (
     "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role}",
     "REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM {role}",
 )
+
+
+def _existing(cursor: Any, tables: set[str]) -> list[str]:
+    """Tables that exist now (a module's migrations may be unapplied, e.g. while reversing)."""
+    found = []
+    for table in tables:
+        cursor.execute("SELECT to_regclass(%s) IS NOT NULL", [table])
+        row = cursor.fetchone()
+        if row and row[0]:
+            found.append(table)
+    return found
 
 
 def apply_runtime_grants(using: str = "default") -> None:
@@ -29,13 +42,23 @@ def apply_runtime_grants(using: str = "default") -> None:
         role = sql.Identifier(role_name)
         for statement in _STATEMENTS:
             cursor.execute(sql.SQL(statement).format(role=role))
-        for table in sorted(APPEND_ONLY_TABLES):
+        for table in sorted(_existing(cursor, APPEND_ONLY_TABLES)):
             cursor.execute(
                 sql.SQL("REVOKE UPDATE, DELETE ON {table} FROM {role}").format(
                     table=sql.Identifier(table), role=role
                 )
             )
-        for table in sorted(READ_ONLY_TABLES):
+        for signature in sorted(RUNTIME_FUNCTIONS):
+            cursor.execute("SELECT to_regprocedure(%s) IS NOT NULL", [signature])
+            row = cursor.fetchone()
+            if row and row[0]:  # created by a migration already applied
+                name = signature.removesuffix("()")
+                cursor.execute(
+                    sql.SQL("GRANT EXECUTE ON FUNCTION {fn}() TO {role}").format(
+                        fn=sql.Identifier(name), role=role
+                    )
+                )
+        for table in sorted(_existing(cursor, READ_ONLY_TABLES)):
             cursor.execute(
                 sql.SQL("REVOKE INSERT, UPDATE, DELETE ON {table} FROM {role}").format(
                     table=sql.Identifier(table), role=role

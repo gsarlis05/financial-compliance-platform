@@ -31,6 +31,7 @@ def _https(name: str) -> str:
 
 
 DEBUG = False
+BANKING_PROCESS_INLINE = False  # imports are parsed by the worker only (ADR-0015)
 ALLOWED_HOSTS = _required_list("DJANGO_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = _required_list("CSRF_TRUSTED_ORIGINS")
 if any(not origin.startswith("https://") for origin in CSRF_TRUSTED_ORIGINS):
