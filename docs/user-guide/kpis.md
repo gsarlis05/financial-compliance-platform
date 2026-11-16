@@ -99,3 +99,22 @@ sold or MRR. You enter them by hand each month.
 - A calculation keeps the values it used, so a later correction does not change it.
 - Every KPI that uses an operational metric is marked **Includes data not from the ledger**.
 - A total metric with a month missing is shown as not meaningful.
+
+## Library version 1.1 (new KPI sets)
+New KPI sets use library **CORE@1.1**: the KPIs above, unchanged, plus four more.
+
+| KPI | How it is worked out | Not meaningful when |
+|---|---|---|
+| Net debt / EBITDA | (borrowings − cash) at the end of the period over EBITDA of the 12 months to the end of the period. Negative means more cash than debt. | EBITDA of those 12 months is zero or negative |
+| Debt service coverage (DSCR) | (EBITDA − income tax of the 12 months) over the year's interest plus the debt due within 12 months of the period end | there is no interest and no debt due within 12 months |
+| Receivables turnover | revenue of the period, per year, over average receivables | average receivables are zero |
+| Inventory turnover | cost of sales of the period, per year, over average stock | average stock is zero |
+
+Earlier KPI sets keep the definitions they were calculated with (CORE@1.0).
+
+## KPIs on projected and scenario figures
+For any year of an approved assumption set, or of a shared scenario next to its base, the same KPIs
+are worked out on the projected figures (labelled forecast, or hypothetical for a scenario). A KPI
+that needs months the projection does not cover (for example growth against the year before the
+cut-over) shows why instead of a number.
+

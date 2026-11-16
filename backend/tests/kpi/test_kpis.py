@@ -104,7 +104,7 @@ def close(a: Decimal | str, b: str) -> bool:
 def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> None:
     body = run(k)
     assert body["status"] == "VALID"
-    assert body["library"] == "CORE@1.0"
+    assert body["library"] == "CORE@1.1"
     assert body["unmapped_accounts"] == 0
     v = values(body)
     expected = {
@@ -134,7 +134,7 @@ def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> No
     first = body["values"][0]
     assert (first["nature"], first["definition_id"], first["display"]) == (
         "ACTUAL",
-        "CORE@1.0:GROSS_MARGIN",
+        "CORE@1.1:GROSS_MARGIN",
         "percent",
     )
 
@@ -169,7 +169,7 @@ def test_drill_down_reproducibility_and_latest(k: dict[str, Any]) -> None:
         .json()
     )
     refs = {(ln["input_kind"], ln["input_ref"]) for ln in explained["lineage"]}
-    assert ("FORMULA", "CORE@1.0:DSO") in refs
+    assert ("FORMULA", "CORE@1.1:DSO") in refs
     ar = k["accounts"]["1200"]["id"]
     sales = k["accounts"]["4000"]["id"]
     amounts = {ln["input_ref"]: ln["amount"] for ln in explained["lineage"]}
@@ -191,7 +191,7 @@ def test_drill_down_reproducibility_and_latest(k: dict[str, Any]) -> None:
         == 404
     )
     definitions = k["client"].get(f"{k['base']}/kpi-definitions").json()
-    assert len(definitions) == 19
+    assert len(definitions) == 23
     assert all(d["convention"] and d["example"] for d in definitions)
 
 
@@ -256,7 +256,7 @@ def test_negative_equity_and_cash_burn_in_the_pure_engine() -> None:
 
 
 def test_every_library_formula_compiles_with_the_documented_unit() -> None:
-    assert seed_libraries() == 19  # idempotent at runtime too
+    assert seed_libraries() == 42  # CORE@1.0 (19) and CORE@1.1 (23); idempotent at runtime too
     units = {
         "percent": "ratio",
         "ratio": "ratio",

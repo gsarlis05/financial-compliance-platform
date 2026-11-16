@@ -134,7 +134,7 @@ def test_golden_six_sample_goals(g: dict[str, Any]) -> None:  # noqa: PLR0915 (o
     assert (projected["nature"], projected["dimensions"]) == ("BUDGET", ["BLENDED", "BUDGET"])
 
     margin = goal(g, "EBITDA margin 35%", "kpi:EBITDA_MARGIN", "ABSOLUTE", "0.35")
-    assert margin["metric_ref"] == "CORE@1.0:EBITDA_MARGIN"
+    assert margin["metric_ref"] == "CORE@1.1:EBITDA_MARGIN"
     assert near(Decimal(margin["current"]["baseline_value"]), str(Decimal(1600) / 2800))
     ev = evaluate(g, margin["id"])
     assert ev["status"] == "OFF_TRACK"
