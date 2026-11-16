@@ -16,10 +16,18 @@ from ninja import Field, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
+from fcp.modules.kpi.api import DEFAULT_LIBRARY
 from fcp.modules.projections.api import SetInfo
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import goal_outlooks, sensitivity, sensitivity_runs, services, working_capital
+from . import (
+    goal_outlooks,
+    projected_kpis,
+    sensitivity,
+    sensitivity_runs,
+    services,
+    working_capital,
+)
 from . import runs as scenario_runs
 from .models import Scenario, ScenarioOverride
 from .overrides import MAX_OVERRIDES
@@ -625,3 +633,47 @@ def goal_scenario_outlooks(request: HttpRequest, slug: str, entity_id: UUID, goa
                        projected=_number(o.projected), gap=_number(o.gap))
         for o in goal_outlooks.goal_outlooks(ctx, entity_id, goal_id, ids)
     ]  # fmt: skip
+
+
+# --- KPIs on projected and scenario figures (M7-6) ---------------------------------------------
+
+
+class ProjectedKpiOut(Schema):
+    key: str
+    name: str
+    display: str = Field(description="percent, ratio, times, days or months")
+    value: str | None
+    nm_reason: str
+    base_value: str | None = Field(default=None, description="For a scenario: its base's value")
+
+
+class ProjectedKpisOut(Schema):
+    label: str
+    nature: str = Field(description="FORECAST (assumption set) or HYPOTHETICAL (scenario)")
+    library: str
+    year: int
+    start: date
+    end: date
+    kpis: list[ProjectedKpiOut]
+    engine_status: str = sensitivity_runs.ENGINE_STATUS
+
+
+@router.get("/w/{slug}/entities/{uuid:entity_id}/projected-kpis", response=ProjectedKpisOut)
+@requires("planning.run")
+def projected_kpis_view(request: HttpRequest, slug: str, entity_id: UUID, year: int,
+                        base_set_id: UUID | None = None,
+                        scenario_id: UUID | None = None) -> ProjectedKpisOut:  # fmt: skip
+    """The KPI library on a projected year of an approved set, or of a shared scenario next to
+    its base (computed now; not stored)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    r = projected_kpis.projected_kpis(ctx, entity_id, set_id=base_set_id,
+                                      scenario_id=scenario_id, year=year)  # fmt: skip
+    base = {k.key: k for k in r.base or []}
+    return ProjectedKpisOut(
+        label=r.label, nature=r.nature, library=DEFAULT_LIBRARY, year=r.year, start=r.start,
+        end=r.end,
+        kpis=[ProjectedKpiOut(
+            key=k.key, name=k.name, display=k.display, value=_number(k.value),
+            nm_reason=k.nm_reason,
+            base_value=_number(base[k.key].value) if k.key in base else None) for k in r.values],
+    )  # fmt: skip
