@@ -257,6 +257,13 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
     step(f"{matched} payments matched to invoices; receivables {receivable['total']} and "
          f"payables {payable['total']} reconcile to the ledger")  # fmt: skip
 
+    mapped = accountant.call("POST", f"{base}/account-mapping/apply-defaults",
+                             {"template": "cy_business"})["mapped"]  # fmt: skip
+    mapping = reviewer.call("GET", f"{base}/account-mapping/completeness?as_of={december}")
+    if not mapping["complete"]:
+        raise DemoStepError(f"Account mapping incomplete: {mapping['unmapped_blocking']}")
+    step(f"{mapped} accounts mapped to the financial taxonomy; mapping complete for statements")
+
     check = owner.call("POST", f"/api/w/{slug}/integrity-checks", None, 201)
     if check["status"] != "PASSED":
         raise DemoStepError(f"Integrity check {check['status']}: {check['results']}")

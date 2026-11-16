@@ -25,6 +25,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ periods 1-11 locked; posting into January is refused (409), rejected and voided
 ✔ trial balance at 2026-12-31: 1810572.51 = 1810572.51; bank 371514.38 matches the synthetic statement
 ✔ 442 payments matched to invoices; receivables 203631.60 and payables 102084.19 reconcile to the ledger
+✔ 43 accounts mapped to the financial taxonomy; mapping complete for statements
 ✔ integrity checks passed (balance, snapshots, gapless numbering, audit chain)
 ✔ shared with you@example.com as finance_manager
 ```

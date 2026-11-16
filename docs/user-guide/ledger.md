@@ -128,13 +128,28 @@ Each line can carry a **VAT code** from the Cyprus catalogue: S19 (standard 19%)
 The catalogue is reference data maintained by the platform (versioned by validity dates); the app
 itself can only read it.
 
-## 11. Integrity checks
+## 11. Statement mapping
+Every postable account feeds one **line of the financial statements** (for example *1300 Bank*
+→ *Cash and cash equivalents*; *6100 Rent* → *Rent*). The same structure will drive KPIs, budgets
+and projections, so each figure is defined once. The structure (taxonomy *IFRS_SME_CY 1.0*) is
+reference data maintained by the platform.
+
+On **Statement mapping**, *Apply default mapping* maps the whole Cyprus business chart in one go
+(existing choices are kept). Each account can only be mapped to a line that fits its type: assets,
+liabilities and equity to the balance sheet, income and expenses to the profit and loss.
+
+At any date, the page says whether the mapping is **complete**. An account with a balance but no
+mapping blocks the statements (M2-8) until it is mapped; *9999 Suspense* is deliberately unmapped, so
+statements stay blocked while it holds a balance. Every change keeps the previous version (history
+per account) and is recorded in the audit trail.
+
+## 12. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on the **Integrity**
 tab (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 12. Try it with demo data
+## 13. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).

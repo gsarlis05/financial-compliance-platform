@@ -549,6 +549,20 @@
         "title": "Approval",
         "type": "string"
       },
+      "AsOf": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "AsOf",
+        "type": "object"
+      },
       "AuditEventOut": {
         "properties": {
           "action": {
@@ -718,6 +732,56 @@
           "reason"
         ],
         "title": "ChainStatusOut",
+        "type": "object"
+      },
+      "CompletenessOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "mapped": {
+            "title": "Mapped",
+            "type": "integer"
+          },
+          "taxonomy": {
+            "title": "Taxonomy",
+            "type": "string"
+          },
+          "unmapped_blocking": {
+            "items": {
+              "$ref": "#/components/schemas/MappingRowOut"
+            },
+            "title": "Unmapped Blocking",
+            "type": "array"
+          },
+          "unmapped_idle": {
+            "title": "Unmapped Idle",
+            "type": "integer"
+          },
+          "unmapped_warning": {
+            "items": {
+              "$ref": "#/components/schemas/MappingRowOut"
+            },
+            "title": "Unmapped Warning",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "taxonomy",
+          "complete",
+          "mapped",
+          "unmapped_blocking",
+          "unmapped_warning",
+          "unmapped_idle"
+        ],
+        "title": "CompletenessOut",
         "type": "object"
       },
       "CounterpartyFilter": {
@@ -904,6 +968,31 @@
           }
         },
         "title": "CounterpartyPatch",
+        "type": "object"
+      },
+      "DefaultsIn": {
+        "properties": {
+          "template": {
+            "default": "cy_business",
+            "maxLength": 40,
+            "title": "Template",
+            "type": "string"
+          }
+        },
+        "title": "DefaultsIn",
+        "type": "object"
+      },
+      "DefaultsOut": {
+        "properties": {
+          "mapped": {
+            "title": "Mapped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mapped"
+        ],
+        "title": "DefaultsOut",
         "type": "object"
       },
       "DimensionIn": {
@@ -1654,6 +1743,44 @@
         "title": "FlagOut",
         "type": "object"
       },
+      "HistoryOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "line_code": {
+            "title": "Line Code",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          }
+        },
+        "required": [
+          "line_code",
+          "created_at",
+          "superseded_at",
+          "created_by_id"
+        ],
+        "title": "HistoryOut",
+        "type": "object"
+      },
       "IntegrityCheckOut": {
         "properties": {
           "created_at": {
@@ -1992,6 +2119,102 @@
       },
       "LineOut": {
         "properties": {
+          "account_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Account Types",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "name_el",
+          "statement",
+          "section",
+          "account_types",
+          "direction",
+          "order"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
+      "MappingIn": {
+        "properties": {
+          "line_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None: unmap",
+            "title": "Line Code"
+          }
+        },
+        "title": "MappingIn",
+        "type": "object"
+      },
+      "MappingOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "line_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Code"
+          }
+        },
+        "required": [
+          "account_id",
+          "line_code"
+        ],
+        "title": "MappingOut",
+        "type": "object"
+      },
+      "MappingRowOut": {
+        "properties": {
           "account_code": {
             "title": "Account Code",
             "type": "string"
@@ -2001,69 +2224,24 @@
             "title": "Account Id",
             "type": "string"
           },
-          "counterparty_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Counterparty Code"
-          },
-          "counterparty_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Counterparty Id"
-          },
-          "credit": {
-            "title": "Credit",
+          "account_name": {
+            "title": "Account Name",
             "type": "string"
           },
-          "debit": {
-            "title": "Debit",
+          "account_type": {
+            "title": "Account Type",
             "type": "string"
           },
-          "dimensions": {
-            "items": {
-              "$ref": "#/components/schemas/LineDimensionOut"
-            },
-            "title": "Dimensions",
-            "type": "array"
-          },
-          "due_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due Date"
-          },
-          "line_no": {
-            "title": "Line No",
-            "type": "integer"
-          },
-          "memo": {
-            "title": "Memo",
+          "balance": {
+            "description": "Posted debits minus credits up to as_of",
+            "title": "Balance",
             "type": "string"
           },
-          "reference": {
-            "title": "Reference",
-            "type": "string"
+          "has_activity": {
+            "title": "Has Activity",
+            "type": "boolean"
           },
-          "vat_code": {
+          "line_code": {
             "anyOf": [
               {
                 "type": "string"
@@ -2072,36 +2250,19 @@
                 "type": "null"
               }
             ],
-            "title": "Vat Code"
-          },
-          "vat_code_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vat Code Id"
+            "title": "Line Code"
           }
         },
         "required": [
-          "line_no",
           "account_id",
           "account_code",
-          "debit",
-          "credit",
-          "memo",
-          "dimensions",
-          "counterparty_id",
-          "counterparty_code",
-          "reference",
-          "due_date",
-          "vat_code_id",
-          "vat_code"
+          "account_name",
+          "account_type",
+          "line_code",
+          "balance",
+          "has_activity"
         ],
-        "title": "LineOut",
+        "title": "MappingRowOut",
         "type": "object"
       },
       "MeOut": {
@@ -3459,6 +3620,309 @@
         "summary": "Get Entity Route",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/account-mapping": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MappingRowOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Mapping",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/account-mapping/apply-defaults": {
+      "post": {
+        "operationId": "fcp_modules_metrics_api_apply_defaults",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefaultsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Apply Defaults",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/account-mapping/completeness": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_mapping_completeness",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletenessOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Mapping Completeness",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/account-mapping/{account_id}": {
+      "put": {
+        "operationId": "fcp_modules_metrics_api_set_mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Mapping",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/account-mapping/{account_id}/history": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_mapping_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Mapping History",
+        "tags": [
+          "metrics"
         ]
       }
     },
@@ -6447,6 +6911,57 @@
         "summary": "Trial Balance Csv",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/taxonomy": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_taxonomy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LineOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Taxonomy",
+        "tags": [
+          "metrics"
         ]
       }
     },

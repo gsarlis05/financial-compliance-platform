@@ -14,11 +14,14 @@ import type {
   IntegrityRun,
   JournalEntry,
   LegalEntity,
+  MappingCompleteness,
+  MappingRow,
   Me,
   OpenItem,
   PeriodStatus,
   PeriodUnlock,
   Side,
+  TaxonomyLine,
   TrialBalance,
   VatCode,
   Workspace,
@@ -296,4 +299,48 @@ export function useAllocationMutations() {
 export function useVatCodes() {
   const { base, entityId } = useScope();
   return useQuery({ queryKey: ["vat-codes", entityId], queryFn: () => api<VatCode[]>(`${base}/vat-codes`), staleTime: 300_000 });
+}
+
+export function useTaxonomy() {
+  const { base, entityId } = useScope();
+  return useQuery({ queryKey: ["taxonomy", entityId], queryFn: () => api<TaxonomyLine[]>(`${base}/taxonomy`), staleTime: 300_000 });
+}
+
+export function useMapping(asOf: string) {
+  const { base, entityId } = useScope();
+  const rows = useQuery({
+    queryKey: ["mapping", entityId, asOf],
+    queryFn: () => api<MappingRow[]>(`${base}/account-mapping`, { query: { as_of: asOf } }),
+    enabled: !!asOf,
+  });
+  const completeness = useQuery({
+    queryKey: ["mapping-completeness", entityId, asOf],
+    queryFn: () => api<MappingCompleteness>(`${base}/account-mapping/completeness`, { query: { as_of: asOf } }),
+    enabled: !!asOf,
+  });
+  return { rows, completeness };
+}
+
+export function useMappingMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: ["mapping", entityId] });
+    void client.invalidateQueries({ queryKey: ["mapping-completeness", entityId] });
+  };
+  return {
+    set: useMutation({
+      mutationFn: ({ accountId, lineCode }: { accountId: string; lineCode: string | null }) =>
+        api<unknown>(`${base}/account-mapping/${accountId}`, { method: "PUT", body: { line_code: lineCode } }),
+      onSuccess: refresh,
+    }),
+    applyDefaults: useMutation({
+      mutationFn: () =>
+        api<{ mapped: number }>(`${base}/account-mapping/apply-defaults`, {
+          method: "POST",
+          body: { template: "cy_business" },
+        }),
+      onSuccess: refresh,
+    }),
+  };
 }

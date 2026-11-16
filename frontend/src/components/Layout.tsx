@@ -78,6 +78,7 @@ export function Layout() {
         [`${base}/counterparties`, "nav.counterparties"],
         [`${base}/receivables`, "nav.receivables"],
         [`${base}/dimensions`, "nav.dimensions"],
+        [`${base}/mapping`, "nav.mapping"],
         [`${base}/periods`, "nav.periods"],
         [`${base}/trial-balance`, "nav.trialBalance"],
         [`/w/${slug ?? ""}/e/${entityId ?? ""}/integrity`, "nav.integrity"],
