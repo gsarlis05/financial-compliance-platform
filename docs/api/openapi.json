@@ -10129,93 +10129,70 @@
       },
       "OverrideIn": {
         "properties": {
-          "params": {
-            "additionalProperties": true,
-            "description": "Parameters of the type (see the user guide)",
-            "title": "Params",
-            "type": "object"
+          "amount": {
+            "default": "0",
+            "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
           },
-          "rationale": {
+          "category": {
             "default": "",
-            "maxLength": 1000,
-            "title": "Rationale",
+            "maxLength": 20,
+            "title": "Category",
+            "type": "string"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "days": {
+            "default": 0,
+            "maximum": 365,
+            "minimum": -365,
+            "title": "Days",
+            "type": "integer"
+          },
+          "party": {
+            "default": "",
+            "description": "Customer or supplier code",
+            "maxLength": 30,
+            "title": "Party",
+            "type": "string"
+          },
+          "percent": {
+            "default": "0",
+            "pattern": "^-?\\d{1,4}(\\.\\d{1,2})?$",
+            "title": "Percent",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Reason",
             "type": "string"
           },
           "type": {
             "enum": [
-              "PCT_CHANGE",
-              "ABS_CHANGE",
               "TIMING_SHIFT",
-              "NEW_DEBT",
-              "NEW_HIRE",
-              "CAPEX",
-              "ONE_OFF",
-              "RATE_CHANGE"
+              "PCT_CHANGE",
+              "ONE_OFF"
             ],
             "title": "Type",
             "type": "string"
           }
         },
         "required": [
-          "type",
-          "params"
+          "type"
         ],
         "title": "OverrideIn",
-        "type": "object"
-      },
-      "OverrideOrderIn": {
-        "properties": {
-          "order": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 50,
-            "minItems": 1,
-            "title": "Order",
-            "type": "array"
-          }
-        },
-        "required": [
-          "order"
-        ],
-        "title": "OverrideOrderIn",
-        "type": "object"
-      },
-      "OverrideOut": {
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "params": {
-            "additionalProperties": true,
-            "title": "Params",
-            "type": "object"
-          },
-          "rationale": {
-            "title": "Rationale",
-            "type": "string"
-          },
-          "seq": {
-            "description": "The order in which the override applies (1 first)",
-            "title": "Seq",
-            "type": "integer"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "seq",
-          "type",
-          "params",
-          "rationale"
-        ],
-        "title": "OverrideOut",
         "type": "object"
       },
       "PeriodIn": {
@@ -12640,7 +12617,7 @@
           },
           "overrides": {
             "items": {
-              "$ref": "#/components/schemas/OverrideOut"
+              "$ref": "#/components/schemas/ScenarioOverrideOut"
             },
             "title": "Overrides",
             "type": "array"
@@ -12776,6 +12753,97 @@
           "archived_at"
         ],
         "title": "ScenarioOut",
+        "type": "object"
+      },
+      "ScenarioOverrideIn": {
+        "properties": {
+          "params": {
+            "additionalProperties": true,
+            "description": "Parameters of the type (see the user guide)",
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "PCT_CHANGE",
+              "ABS_CHANGE",
+              "TIMING_SHIFT",
+              "NEW_DEBT",
+              "NEW_HIRE",
+              "CAPEX",
+              "ONE_OFF",
+              "RATE_CHANGE"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "params"
+        ],
+        "title": "ScenarioOverrideIn",
+        "type": "object"
+      },
+      "ScenarioOverrideOrderIn": {
+        "properties": {
+          "order": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Order",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order"
+        ],
+        "title": "ScenarioOverrideOrderIn",
+        "type": "object"
+      },
+      "ScenarioOverrideOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "seq": {
+            "description": "The order in which the override applies (1 first)",
+            "title": "Seq",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "type",
+          "params",
+          "rationale"
+        ],
+        "title": "ScenarioOverrideOut",
         "type": "object"
       },
       "ScenarioRenameIn": {
@@ -29815,7 +29883,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OverrideIn"
+                "$ref": "#/components/schemas/ScenarioOverrideIn"
               }
             }
           },
@@ -29826,7 +29894,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OverrideOut"
+                  "$ref": "#/components/schemas/ScenarioOverrideOut"
                 }
               }
             },
@@ -29881,7 +29949,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OverrideOrderIn"
+                "$ref": "#/components/schemas/ScenarioOverrideOrderIn"
               }
             }
           },
@@ -29893,7 +29961,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/OverrideOut"
+                    "$ref": "#/components/schemas/ScenarioOverrideOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -30020,7 +30088,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OverrideIn"
+                "$ref": "#/components/schemas/ScenarioOverrideIn"
               }
             }
           },
@@ -30031,7 +30099,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OverrideOut"
+                  "$ref": "#/components/schemas/ScenarioOverrideOut"
                 }
               }
             },

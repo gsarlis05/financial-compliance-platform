@@ -48,17 +48,17 @@ class ScenarioCopyIn(Schema):
     )
 
 
-class OverrideIn(Schema):
+class ScenarioOverrideIn(Schema):
     type: OverrideType
     params: dict[str, Any] = Field(description="Parameters of the type (see the user guide)")
     rationale: str = Field(default="", max_length=1000)
 
 
-class OverrideOrderIn(Schema):
+class ScenarioOverrideOrderIn(Schema):
     order: list[UUID] = Field(min_length=1, max_length=MAX_OVERRIDES)
 
 
-class OverrideOut(Schema):
+class ScenarioOverrideOut(Schema):
     id: UUID
     seq: int = Field(description="The order in which the override applies (1 first)")
     type: str
@@ -94,7 +94,7 @@ class ScenarioBaseOut(Schema):
 class ScenarioDetailOut(Schema):
     scenario: ScenarioOut
     base: ScenarioBaseOut
-    overrides: list[OverrideOut]
+    overrides: list[ScenarioOverrideOut]
 
 
 def _out(s: Scenario) -> ScenarioOut:
@@ -105,8 +105,10 @@ def _out(s: Scenario) -> ScenarioOut:
     )  # fmt: skip
 
 
-def _override_out(o: ScenarioOverride) -> OverrideOut:
-    return OverrideOut(id=o.id, seq=o.seq, type=o.type, params=o.params, rationale=o.rationale)
+def _override_out(o: ScenarioOverride) -> ScenarioOverrideOut:
+    return ScenarioOverrideOut(
+        id=o.id, seq=o.seq, type=o.type, params=o.params, rationale=o.rationale
+    )
 
 
 def _detail_out(d: services.Detail) -> ScenarioDetailOut:
@@ -155,10 +157,10 @@ def rename_scenario(request: HttpRequest, slug: str, entity_id: UUID, scenario_i
     return _out(services.rename(ctx, entity_id, scenario_id, **payload.dict()))
 
 
-@router.post(f"{BASE}/{{uuid:scenario_id}}/overrides", response={201: OverrideOut})
+@router.post(f"{BASE}/{{uuid:scenario_id}}/overrides", response={201: ScenarioOverrideOut})
 @requires("planning.run")
 def add_override(request: HttpRequest, slug: str, entity_id: UUID, scenario_id: UUID,
-                 payload: OverrideIn) -> Status[OverrideOut]:  # fmt: skip
+                 payload: ScenarioOverrideIn) -> Status[ScenarioOverrideOut]:  # fmt: skip
     """Add an override at the end of the list (it applies after the others)."""
     ctx = workspace_ctx(request, slug, entity_id)
     made = services.add_override(ctx, entity_id, scenario_id, kind=payload.type,
@@ -166,10 +168,13 @@ def add_override(request: HttpRequest, slug: str, entity_id: UUID, scenario_id: 
     return Status(201, _override_out(made))
 
 
-@router.put(f"{BASE}/{{uuid:scenario_id}}/overrides/{{uuid:override_id}}", response=OverrideOut)
+@router.put(
+    f"{BASE}/{{uuid:scenario_id}}/overrides/{{uuid:override_id}}", response=ScenarioOverrideOut
+)
 @requires("planning.run")
 def change_override(request: HttpRequest, slug: str, entity_id: UUID, scenario_id: UUID,
-                    override_id: UUID, payload: OverrideIn) -> OverrideOut:  # fmt: skip
+                    override_id: UUID,
+                    payload: ScenarioOverrideIn) -> ScenarioOverrideOut:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     return _override_out(services.change_override(
         ctx, entity_id, scenario_id, override_id, kind=payload.type, params=payload.params,
@@ -186,10 +191,10 @@ def remove_override(request: HttpRequest, slug: str, entity_id: UUID, scenario_i
     return Status(204, None)
 
 
-@router.put(f"{BASE}/{{uuid:scenario_id}}/overrides", response=list[OverrideOut])
+@router.put(f"{BASE}/{{uuid:scenario_id}}/overrides", response=list[ScenarioOverrideOut])
 @requires("planning.run")
 def reorder_overrides(request: HttpRequest, slug: str, entity_id: UUID, scenario_id: UUID,
-                      payload: OverrideOrderIn) -> list[OverrideOut]:  # fmt: skip
+                      payload: ScenarioOverrideOrderIn) -> list[ScenarioOverrideOut]:  # fmt: skip
     """Put the overrides in a new order: list every override's id once."""
     ctx = workspace_ctx(request, slug, entity_id)
     return [_override_out(o) for o in services.reorder(ctx, entity_id, scenario_id,
