@@ -126,6 +126,15 @@ def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> No
         "NET_PROFIT_GROWTH": "-0.75",
         "DEBT_TO_EQUITY": "0.15",
         "INTEREST_COVERAGE": "25",
+        # CORE@1.1 (M7-6). EBITDA of the 12 months to March 2026: 1,000 - 600 - 100 = 300 (the
+        # February 2025 sale is outside them). Net debt: loan 300 - cash 2,290 = -1,990 (net cash).
+        "NET_DEBT_TO_EBITDA": str(Decimal(-1990) / Decimal(300)),
+        # (EBITDA 300 - tax 40) / (interest 10 + the loan, all due within 12 months: 300).
+        "DSCR": str(Decimal(260) / Decimal(310)),
+        # Revenue 1,000 x 365 / 90 over average receivables (0 + 500) / 2 = 250.
+        "RECEIVABLES_TURNOVER": str(Decimal(1000) * Decimal(365) / Decimal(90) / Decimal(250)),
+        # Cost of sales 600 x 365 / 90 over average stock 200.
+        "INVENTORY_TURNOVER": str(Decimal(600) * Decimal(365) / Decimal(90) / Decimal(200)),
     }
     for key, want in expected.items():
         assert close(v[key], want), (key, v[key], want)
@@ -269,6 +278,7 @@ def test_every_library_formula_compiles_with_the_documented_unit() -> None:
     assert {f.name for f in functions} == {
         "flow",
         "prior_flow",
+        "ltm_flow",
         "balance",
         "opening",
         "avg_balance",
