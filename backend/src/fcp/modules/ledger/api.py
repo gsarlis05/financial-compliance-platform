@@ -7,14 +7,15 @@ from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, corrections, entries, idempotency, periods
+from . import accounts, corrections, entries, idempotency, periods, reports
 from .models import Account, FiscalYear, JournalEntry, LedgerSettings, Period, PeriodUnlock
 
 __all__ = ["Account", "FiscalYear", "JournalEntry", "Period", "router"]
@@ -537,3 +538,178 @@ def reject_unlock(
 def close_unlock(request: HttpRequest, slug: str, entity_id: UUID, unlock_id: UUID) -> PeriodUnlock:
     ctx = workspace_ctx(request, slug, entity_id)
     return corrections.close_unlock(ctx, entity_id, unlock_id)
+
+
+# --- reports (M1-10) ---------------------------------------------------------------------------
+
+
+class TrialBalanceQuery(Schema):
+    as_of: date
+    date_from: date | None = None
+    include_zero: bool = False
+
+
+class TrialBalanceRowOut(Schema):
+    account_id: UUID
+    code: str
+    name: str
+    type: str
+    debit: str
+    credit: str
+    balance: str
+
+
+class TrialBalanceOut(Schema):
+    as_of: date
+    date_from: date | None
+    rows: list[TrialBalanceRowOut]
+    total_debit: str
+    total_credit: str
+    unposted_entries: int
+    restated_after_lock: int
+
+
+class LedgerQuery(Schema):
+    date_from: date
+    date_to: date
+
+
+class LedgerLineOut(Schema):
+    entry_id: UUID
+    entry_ref: str
+    accounting_date: date
+    description: str
+    memo: str
+    debit: str
+    credit: str
+    running_balance: str
+    restated_after_lock: bool
+
+
+class AccountLedgerOut(Schema):
+    account_id: UUID
+    code: str
+    name: str
+    date_from: date
+    date_to: date
+    opening_balance: str
+    lines: list[LedgerLineOut]
+    closing_balance: str
+
+
+def _tb(request: HttpRequest, slug: str, entity_id: UUID, q: TrialBalanceQuery) -> Any:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return ctx, reports.trial_balance(
+        ctx, entity_id, as_of=q.as_of, date_from=q.date_from, include_zero=q.include_zero
+    )
+
+
+@router.get(f"{BASE}/reports/trial-balance", response=TrialBalanceOut)
+@requires("reports.read")
+def trial_balance(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[TrialBalanceQuery]
+) -> TrialBalanceOut:
+    _, tb = _tb(request, slug, entity_id, q)
+    return TrialBalanceOut(
+        as_of=tb.as_of,
+        date_from=tb.date_from,
+        rows=[
+            TrialBalanceRowOut(
+                account_id=r.account_id,
+                code=r.code,
+                name=r.name,
+                type=r.type,
+                debit=f"{r.balance_debit:.2f}",
+                credit=f"{r.balance_credit:.2f}",
+                balance=f"{r.balance:.2f}",
+            )
+            for r in tb.rows
+        ],
+        total_debit=f"{tb.total_debit:.2f}",
+        total_credit=f"{tb.total_credit:.2f}",
+        unposted_entries=tb.unposted_entries,
+        restated_after_lock=tb.restated_after_lock,
+    )
+
+
+def _csv(ctx: Any, entity_id: UUID, content: str, filename: str, report: str) -> HttpResponse:
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action="reports.exported",
+        subject_type="report",
+        subject_id=report,
+        entity_id=entity_id,
+        changes={"format": "csv", "filename": filename},
+    )
+    response = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@router.get(f"{BASE}/reports/trial-balance.csv")
+@requires("reports.export")
+def trial_balance_csv(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[TrialBalanceQuery]
+) -> HttpResponse:
+    ctx, tb = _tb(request, slug, entity_id, q)
+    return _csv(
+        ctx,
+        entity_id,
+        reports.trial_balance_csv(tb),
+        f"trial-balance-{tb.as_of.isoformat()}.csv",
+        "trial_balance",
+    )
+
+
+def _gl(request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID, q: LedgerQuery) -> Any:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return ctx, reports.general_ledger(
+        ctx, entity_id, account_id, date_from=q.date_from, date_to=q.date_to
+    )
+
+
+@router.get(f"{BASE}/reports/general-ledger/{{uuid:account_id}}", response=AccountLedgerOut)
+@requires("reports.read")
+def general_ledger(
+    request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID, q: Query[LedgerQuery]
+) -> AccountLedgerOut:
+    _, gl = _gl(request, slug, entity_id, account_id, q)
+    return AccountLedgerOut(
+        account_id=gl.account.id,
+        code=gl.account.code,
+        name=gl.account.name,
+        date_from=gl.date_from,
+        date_to=gl.date_to,
+        opening_balance=f"{gl.opening_balance:.2f}",
+        lines=[
+            LedgerLineOut(
+                entry_id=ln.entry_id,
+                entry_ref=f"{ln.journal}-{ln.entry_no}",
+                accounting_date=ln.accounting_date,
+                description=ln.description,
+                memo=ln.memo,
+                debit=f"{ln.debit:.2f}",
+                credit=f"{ln.credit:.2f}",
+                running_balance=f"{ln.running_balance:.2f}",
+                restated_after_lock=ln.restated_after_lock,
+            )
+            for ln in gl.lines
+        ],
+        closing_balance=f"{gl.closing_balance:.2f}",
+    )
+
+
+@router.get(f"{BASE}/reports/general-ledger/{{uuid:account_id}}.csv")
+@requires("reports.export")
+def general_ledger_csv(
+    request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID, q: Query[LedgerQuery]
+) -> HttpResponse:
+    ctx, gl = _gl(request, slug, entity_id, account_id, q)
+    return _csv(
+        ctx,
+        entity_id,
+        reports.general_ledger_csv(gl),
+        f"general-ledger-{gl.account.code}-{gl.date_to.isoformat()}.csv",
+        "general_ledger",
+    )
