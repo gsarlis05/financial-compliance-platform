@@ -596,6 +596,14 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     raised = owner.call("GET", f"{base}/alerts")
     step(f"{len(raised)} in-app alert(s) raised by the evaluations: "
          + "; ".join(a["title"] for a in raised))  # fmt: skip
+    period = {"preset": "YTD", "month": f"{year}-12-01", "comparison": "BUDGET"}
+    owner.call("POST", f"{base}/dashboard/refresh", period)
+    query = "&".join(f"{k}={v}" for k, v in period.items())
+    board = owner.call("GET", f"{base}/dashboard?{query}")
+    shown = {w["type"]: w["status"] for w in board["widgets"]}
+    cards = next(w for w in board["widgets"] if w["type"] == "kpis")["data"].get("cards", [])
+    step(f"CFO dashboard for {year} year to date: " + ", ".join(f"{k} {v}" for k, v in
+         shown.items()) + f"; {len(cards)} KPI cards")  # fmt: skip
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

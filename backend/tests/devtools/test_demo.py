@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 21
+    assert len(result.steps) == 22
     budget_step = next(s for s in result.steps if s.startswith("budget "))
     assert "approved by the owner: total 738000.00" in budget_step
     assert "sales 600000.00 phased like" in budget_step
@@ -61,6 +61,9 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     alerts_step = next(s for s in result.steps if "in-app alert" in s)
     assert alerts_step.startswith("1 in-app alert(s) raised"), alerts_step
     assert "Goal DSO 30 days is off track" in alerts_step
+    board_step = next(s for s in result.steps if s.startswith("CFO dashboard"))
+    assert "kpis ok, cash ok" in board_step, board_step
+    assert board_step.endswith("6 KPI cards"), board_step
     assert all(line.startswith("✔") for line in said)
     _assert_golden_statements(result.statements)
 
