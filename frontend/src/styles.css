@@ -118,7 +118,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 /* Dimension tags on journal lines (M2-1) */
 .tags { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; margin-inline-start: 0.5rem; }
 .tag { font-size: 0.8rem; padding: 0.05rem 0.4rem; border-radius: 0.6rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-.table-scroll { overflow-x: auto; max-width: 100%; }
+.table-scroll { overflow-x: auto; max-width: 100%; position: relative; }
 .lines input, .lines select { width: 100%; min-width: 0; box-sizing: border-box; }
 .lines input.amount { min-width: 7rem; }
 .lines .dimension-picker { min-width: 9rem; max-width: 14rem; }
@@ -171,3 +171,9 @@ form.reconcile { margin-top: 1.25rem; border-top: 1px solid var(--border); paddi
 /* Documents (M2-4) */
 ul.documents { list-style: none; padding: 0; margin: 0 0 0.75rem; display: grid; gap: 0.35rem; }
 ul.documents a { overflow-wrap: anywhere; }
+
+/* Nature of a planned amount (doc 10 §10.1): a text label plus the border style, never colour alone. */
+.badge-committed { border-style: solid; border-color: var(--text); }
+.badge-expected { border-style: dashed; }
+.plain-list { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.25rem; }
+.table-actions { margin-top: 0; }

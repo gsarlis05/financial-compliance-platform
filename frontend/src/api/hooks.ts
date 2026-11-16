@@ -40,6 +40,13 @@ import type {
   TrialBalance,
   VatCode,
   Workspace,
+  CommitmentFlow,
+  Debt,
+  DebtInput,
+  Holiday,
+  Instalment,
+  Obligation,
+  ObligationInput,
 } from "./types";
 
 export function useScope(): { slug: string; entityId: string; base: string } {
@@ -751,4 +758,124 @@ export function useDocuments(entryId: string) {
       }),
   });
   return { list, upload };
+}
+
+// --- commitments (M3-4) -----------------------------------------------------------------------
+
+export function useObligations() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["obligations", entityId],
+    queryFn: () => api<Obligation[]>(`${base}/obligations`),
+  });
+}
+
+export function useDebts() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["debts", entityId],
+    queryFn: () => api<Debt[]>(`${base}/debt-instruments`),
+  });
+}
+
+export function useDebtSchedule(seriesId: string | null) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["debt-schedule", entityId, seriesId],
+    queryFn: () =>
+      api<Instalment[]>(`${base}/debt-instruments/${seriesId}/schedule`),
+    enabled: !!seriesId,
+  });
+}
+
+export function useHolidays() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["holidays", entityId],
+    queryFn: () => api<Holiday[]>(`${base}/holidays`),
+  });
+}
+
+export function useCommitmentFlows(dateFrom: string, dateTo: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["commitment-flows", entityId, dateFrom, dateTo],
+    queryFn: () =>
+      api<CommitmentFlow[]>(
+        `${base}/commitment-flows?date_from=${dateFrom}&date_to=${dateTo}`,
+      ),
+  });
+}
+
+export function useCommitmentMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () =>
+    Promise.all(
+      [
+        "obligations",
+        "debts",
+        "debt-schedule",
+        "holidays",
+        "commitment-flows",
+      ].map((key) => client.invalidateQueries({ queryKey: [key, entityId] })),
+    );
+  return {
+    saveObligation: useMutation({
+      mutationFn: ({
+        seriesId,
+        body,
+      }: {
+        seriesId: string | null;
+        body: ObligationInput;
+      }) =>
+        seriesId
+          ? api<Obligation>(`${base}/obligations/${seriesId}`, {
+              method: "PUT",
+              body,
+            })
+          : api<Obligation>(`${base}/obligations`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    saveDebt: useMutation({
+      mutationFn: ({
+        seriesId,
+        body,
+      }: {
+        seriesId: string | null;
+        body: DebtInput;
+      }) =>
+        seriesId
+          ? api<Debt>(`${base}/debt-instruments/${seriesId}`, {
+              method: "PUT",
+              body,
+            })
+          : api<Debt>(`${base}/debt-instruments`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    retire: useMutation({
+      mutationFn: ({
+        kind,
+        seriesId,
+      }: {
+        kind: "obligations" | "debt-instruments";
+        seriesId: string;
+      }) =>
+        api<unknown>(`${base}/${kind}/${seriesId}/retire`, {
+          method: "POST",
+          body: {},
+        }),
+      onSuccess: refresh,
+    }),
+    addHoliday: useMutation({
+      mutationFn: (body: { day: string; name: string }) =>
+        api<Holiday>(`${base}/holidays`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    removeHoliday: useMutation({
+      mutationFn: (id: string) =>
+        api<unknown>(`${base}/holidays/${id}`, { method: "DELETE" }),
+      onSuccess: refresh,
+    }),
+  };
 }

@@ -35,7 +35,7 @@ describe("Grouped navigation (M2-11)", () => {
     const { container } = renderAt("/w/demo/e/ent/statements");
     const nav = screen.getByRole("navigation", { name: "Main" });
     const groups = Array.from(nav.querySelectorAll(":scope > ul > li > button")).map((b) => b.textContent);
-    expect(groups).toEqual(["Bookkeeping ▾", "Customers & suppliers ▾", "Reports ▾", "Setup ▾", "Controls ▾"]);
+    expect(groups).toEqual(["Bookkeeping ▾", "Customers & suppliers ▾", "Cash & planning ▾", "Reports ▾", "Setup ▾", "Controls ▾"]);
     expect(nav.querySelector("li.current > button")).toHaveTextContent("Reports");
     expect(screen.queryByRole("link", { name: "Statements" })).not.toBeInTheDocument(); // hidden
 

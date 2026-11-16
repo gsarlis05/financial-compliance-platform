@@ -96,3 +96,154 @@ class OpenItemFlag(TenantOwned):
 
     class Meta:
         db_table = "registers_open_item_flag"
+
+
+# --- commitments: recurring obligations, loans and holidays (M3-4) -------------------------------
+#
+# Obligations and loans are versioned: a change supersedes the current version and adds a new one
+# with the same ``series_id`` (a forecast run pins the exact versions it used, doc 10 P4/P5).
+# Retiring one supersedes it without a successor. Versions are never deleted or edited (trigger).
+
+
+class Versioned(TenantOwned):
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    series_id = models.UUIDField()
+    version = models.PositiveIntegerField()
+    superseded_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        abstract = True
+
+
+class RecurringObligation(Versioned):
+    class Category(models.TextChoices):
+        RENT = "RENT"
+        PAYROLL = "PAYROLL"
+        SOCIAL_INSURANCE = "SOCIAL_INSURANCE"
+        SUBSCRIPTION = "SUBSCRIPTION"
+        LEASE = "LEASE"
+        INSURANCE = "INSURANCE"
+        UTILITIES = "UTILITIES"
+        INCOME = "INCOME"
+        OTHER = "OTHER"
+
+    class Direction(models.TextChoices):
+        OUTFLOW = "OUTFLOW"
+        INFLOW = "INFLOW"
+
+    name = models.CharField(max_length=120)
+    category = models.CharField(max_length=20, choices=Category.choices)
+    direction = models.CharField(max_length=8, choices=Direction.choices)
+    amount = models.DecimalField(max_digits=19, decimal_places=2)
+    currency = models.CharField(max_length=3, default="EUR")
+    frequency = models.CharField(max_length=10)  # schedules.Frequency
+    interval = models.PositiveSmallIntegerField(default=1)
+    day_of_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    adjust = models.CharField(max_length=20, default="NONE")  # calendar.Adjust
+    contractual = models.BooleanField(help_text="COMMITTED if contractual, else EXPECTED")
+    counterparty = models.ForeignKey(
+        Counterparty, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "registers_recurring_obligation"
+        constraints = [
+            models.UniqueConstraint(fields=["series_id", "version"], name="registers_obl_version"),
+            models.UniqueConstraint(
+                fields=["series_id"], condition=models.Q(superseded_at__isnull=True),
+                name="registers_obl_one_current",
+            ),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="registers_obl_amount"),
+            models.CheckConstraint(
+                condition=models.Q(end_date__isnull=True)
+                | models.Q(end_date__gte=models.F("start_date")),
+                name="registers_obl_dates",
+            ),
+        ]  # fmt: skip
+        indexes = [models.Index(fields=["legal_entity", "superseded_at"])]
+
+
+class DebtInstrument(Versioned):
+    class Kind(models.TextChoices):
+        TERM_LOAN = "TERM_LOAN"
+        LEASE = "LEASE"
+        DIRECTOR_LOAN = "DIRECTOR_LOAN"
+        OVERDRAFT = "OVERDRAFT"  # a facility: limit only, no schedule
+        REVOLVER = "REVOLVER"  # a facility: limit only, no schedule
+
+    class RateType(models.TextChoices):
+        FIXED = "FIXED"
+        VARIABLE = "VARIABLE"
+
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    lender = models.ForeignKey(
+        Counterparty, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    currency = models.CharField(max_length=3, default="EUR")
+    principal = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True)
+    facility_limit = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True)
+    start_date = models.DateField()
+    maturity_date = models.DateField(null=True, blank=True)
+    payment_frequency_months = models.PositiveSmallIntegerField(default=1)
+    rate_type = models.CharField(max_length=8, choices=RateType.choices)
+    fixed_rate = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    reference_rate_key = models.CharField(max_length=40, blank=True)
+    margin = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    assumed_reference_rate = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        help_text="Until scenarios supply it (M5): the reference rate assumed for the schedule",
+    )  # fmt: skip
+    day_count = models.CharField(max_length=8)  # schedules.DayCount
+    repayment_type = models.CharField(max_length=16, blank=True)  # schedules.Repayment
+    interest_only_periods = models.PositiveSmallIntegerField(default=0)
+    adjust = models.CharField(max_length=20, default="MODIFIED_FOLLOWING")
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "registers_debt_instrument"
+        constraints = [
+            models.UniqueConstraint(fields=["series_id", "version"], name="registers_debt_version"),
+            models.UniqueConstraint(
+                fields=["series_id"], condition=models.Q(superseded_at__isnull=True),
+                name="registers_debt_one_current",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind__in=["OVERDRAFT", "REVOLVER"], facility_limit__gt=0,
+                                   principal__isnull=True)
+                | (~models.Q(kind__in=["OVERDRAFT", "REVOLVER"])
+                   & models.Q(principal__gt=0, maturity_date__isnull=False)),
+                name="registers_debt_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rate_type="FIXED", fixed_rate__isnull=False)
+                | models.Q(rate_type="VARIABLE", margin__isnull=False,
+                           assumed_reference_rate__isnull=False),
+                name="registers_debt_rate",
+            ),
+        ]  # fmt: skip
+        indexes = [models.Index(fields=["legal_entity", "superseded_at"])]
+
+
+class EntityHoliday(TenantOwned):
+    """Non-business days of an entity, as data (no public holidays are built in: none are
+    verified). Used to move payment dates to business days."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    day = models.DateField()
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "registers_entity_holiday"
+        constraints = [
+            models.UniqueConstraint(fields=["legal_entity", "day"], name="registers_holiday_once"),
+        ]
