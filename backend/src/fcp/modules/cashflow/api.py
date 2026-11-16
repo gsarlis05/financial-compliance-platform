@@ -11,13 +11,13 @@ from uuid import UUID
 
 from django.http import HttpRequest
 from django.utils import timezone
-from ninja import Field, Router, Schema, Status
+from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
 from fcp.modules.metrics.api import Nature
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import services
+from . import services, tracking
 from .engine import KIND
 from .services import Forecast, prepare, run_forecast
 
@@ -75,6 +75,9 @@ class ForecastOut(Schema):
     as_of: date
     actuals_watermark: int
     stale: bool
+    stale_reasons: list[str] = Field(
+        default_factory=list, description="Why it is out of date (checked now)"
+    )
     is_published: bool
     created_at: datetime
     output_hash: str
@@ -152,8 +155,127 @@ def create_forecast(
 @router.get(f"{BASE}/cash-forecasts/latest", response=ForecastOut)
 @requires("planning.read")
 def latest_forecast(request: HttpRequest, slug: str, entity_id: UUID) -> ForecastOut:
+    """The latest forecast, with whether it is out of date now (new postings, changed inputs or
+    a passed as-of date)."""
     ctx = workspace_ctx(request, slug, entity_id)
-    return _out(services.latest(ctx, entity_id))
+    found = services.latest(ctx, entity_id)
+    out = _out(found)
+    fresh = tracking.freshness(ctx, entity_id, found.run)
+    out.stale, out.stale_reasons = fresh.stale, list(fresh.reasons)
+    return out
+
+
+@router.post(f"{BASE}/cash-forecasts/refresh", response={200: ForecastOut, 204: None})
+@requires("planning.run")
+def refresh_forecast(request: HttpRequest, slug: str, entity_id: UUID) -> Any:
+    """Re-run now if the latest forecast is out of date (204 when it is current)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = tracking.refresh(ctx, entity_id, trigger="USER")
+    if made is None:
+        return Status(204, None)
+    return Status(200, _out(services.forecast_of(made)))
+
+
+class HistoryOut(Schema):
+    run_id: UUID
+    as_of: date
+    created_at: datetime
+    status: str
+    stale: bool
+    trigger: str
+    supersedes_id: UUID | None
+    actuals_watermark: int
+    opening_cash: str
+    closing_week_13: str
+    first_shortfall: date | None
+
+
+class HistoryQuery(Schema):
+    limit: int = Field(20, ge=1, le=100)
+
+
+@router.get(f"{BASE}/cash-forecasts/history", response=list[HistoryOut])
+@requires("planning.read")
+def forecast_history(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[HistoryQuery]
+) -> list[HistoryOut]:
+    """Earlier forecasts, newest first: every run is kept (doc 10 §3.4)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    rows = []
+    for f in tracking.history(ctx, entity_id, q.limit):
+        row = tracking.summary(f)
+        rows.append(
+            HistoryOut(
+                **{
+                    **row,
+                    "opening_cash": _money(row["opening_cash"]),
+                    "closing_week_13": _money(row["closing_week_13"]),
+                }
+            )
+        )
+    return rows
+
+
+class AccuracyQuery(Schema):
+    as_of: date | None = Field(None, description="Defaults to today")
+    weeks: int = Field(13, ge=1, le=52)
+
+
+class ComparisonOut(Schema):
+    horizon_weeks: int
+    run_id: UUID
+    forecast: str
+    error: str
+    ape_percent: str | None = Field(description="Not meaningful (null) when the actual is 0")
+
+
+class AccuracyWeekOut(Schema):
+    label: str
+    start: date
+    actual: str
+    comparisons: list[ComparisonOut]
+
+
+class AccuracyOut(Schema):
+    weeks: list[AccuracyWeekOut]
+    mape_percent: dict[str, str | None] = Field(description="By horizon in weeks")
+    samples: dict[str, int]
+    note: str
+
+
+@router.get(f"{BASE}/cash-forecasts/accuracy", response=AccuracyOut)
+@requires("planning.read")
+def forecast_accuracy(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[AccuracyQuery]
+) -> AccuracyOut:
+    """For each full week, the net cash movement forecast 1, 4 and 13 weeks earlier against the
+    actual movement on the cash accounts (reported, not gated)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    result = tracking.accuracy(ctx, entity_id, q.as_of or timezone.localdate(), q.weeks)
+    pct = Decimal("0.01")
+    return AccuracyOut(
+        weeks=[
+            AccuracyWeekOut(
+                label=w.label,
+                start=w.start,
+                actual=_money(w.actual),
+                comparisons=[
+                    ComparisonOut(
+                        horizon_weeks=c.horizon,
+                        run_id=c.run_id,
+                        forecast=_money(c.forecast),
+                        error=_money(c.error),
+                        ape_percent=None if c.ape is None else f"{(c.ape * 100).quantize(pct)}",
+                    )
+                    for c in w.comparisons
+                ],
+            )
+            for w in result.weeks
+        ],
+        mape_percent={str(h): None if v is None else f"{v}" for h, v in result.mape.items()},
+        samples={str(h): n for h, n in result.samples.items()},
+        note="Net cash movement in total; actual bank movements are not yet categorised.",
+    )
 
 
 @router.get(f"{BASE}/cash-forecasts/{{uuid:run_id}}", response=ForecastOut)

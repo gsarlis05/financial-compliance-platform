@@ -36,6 +36,7 @@ __all__ = [
     "current_watermark",
     "fiscal_year_start",
     "opening_net",
+    "posted_since",
     "router",
 ]
 
@@ -99,6 +100,12 @@ def current_watermark(ctx: WorkspaceContext, entity_id: UUID) -> int:
     """The highest posting sequence included in the actuals now (refreshing them first)."""
     get_entity(ctx, entity_id, "reports.read")
     return actuals.refresh(ctx.tenant.id)
+
+
+def posted_since(ctx: WorkspaceContext, entity_id: UUID, watermark: int) -> bool:
+    """Whether the entity's actuals changed after ``watermark`` (requires ``reports.read``)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.posted_since(entity.id, ctx.tenant.id, watermark)
 
 
 def actuals_monthly(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,

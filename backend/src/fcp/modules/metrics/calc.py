@@ -231,7 +231,7 @@ def _plain_refs(refs: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 @transaction.atomic
-def execute(
+def execute(  # noqa: PLR0913 (keyword options)
     ctx: WorkspaceContext,
     entity_id: UUID,
     kind: str,
@@ -239,6 +239,7 @@ def execute(
     as_of: date,
     refs: Mapping[str, Any] | None = None,
     trigger: str = CalcRun.Trigger.USER,
+    supersedes: CalcRun | None = None,
 ) -> CalcRun:
     """Run the engine for ``kind`` on the current actuals and record the run and its values.
     User errors (permissions, validation) propagate; an engine failure is recorded as FAILED."""
@@ -249,7 +250,7 @@ def execute(
     run = CalcRun(
         tenant=ctx.tenant, legal_entity=entity, kind=kind, engine_version=engine.version,
         actuals_watermark=inputs.actuals_watermark, as_of_date=as_of, input_refs=inputs.refs,
-        input_hash=inputs.digest(), trigger=trigger,
+        input_hash=inputs.digest(), trigger=trigger, supersedes=supersedes,
         created_by=ctx.user if trigger == CalcRun.Trigger.USER else None,
     )  # fmt: skip
     try:
@@ -415,3 +416,18 @@ def mark_stale(entity_id: UUID, kinds: list[str] | None = None) -> int:
     if kinds is not None:
         runs = runs.filter(kind__in=kinds)
     return runs.update(stale=True)
+
+
+def latest_requesters(kind: str) -> list[tuple[UUID, Any]]:
+    """For platform jobs, within the current tenant context: each legal entity with user-started
+    runs of ``kind``, and the user who started its latest one (re-runs act with that user's
+    current permissions)."""
+    found: dict[UUID, Any] = {}
+    runs = (
+        CalcRun.objects.filter(kind=kind, trigger=CalcRun.Trigger.USER)
+        .select_related("created_by")
+        .order_by("legal_entity_id", "-created_at")
+    )
+    for run in runs:
+        found.setdefault(run.legal_entity_id, run.created_by)
+    return list(found.items())

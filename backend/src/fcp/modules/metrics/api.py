@@ -27,6 +27,7 @@ from .calc import (
     Value,
     execute,
     formula_value,
+    latest_requesters,
     mark_stale,
 )
 from .calc import get_run as get_calc_run
@@ -43,6 +44,7 @@ from .expr import (
     evaluate,
 )
 from .hashing import canonical_decimal
+from .hashing import digest as canonical_digest
 from .models import CalcResult, CalcRun, TaxonomyLine
 from .nature import ActualSeries, BlendedSeries, Nature, NatureMixError, PlanSeries, Point, blend
 from .services import Completeness, completeness, current_mapping
@@ -72,6 +74,7 @@ __all__ = [
     "Value",
     "blend",
     "calc_results",
+    "canonical_digest",
     "compile_expression",
     "completeness",
     "current_mapping",
@@ -79,6 +82,7 @@ __all__ = [
     "execute",
     "formula_value",
     "get_calc_run",
+    "latest_requesters",
     "list_calc_runs",
     "mark_stale",
     "register_engine",
