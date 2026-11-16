@@ -7,12 +7,18 @@ import { Layout } from "./components/Layout";
 import { I18nProvider, useI18n } from "./i18n/I18n";
 import { AccountsPage } from "./pages/Accounts";
 import { BankPage } from "./pages/Bank";
+import { CashForecastPage } from "./pages/CashForecast";
 import { CommitmentsPage } from "./pages/Commitments";
 import { CounterpartiesPage } from "./pages/Counterparties";
 import { DimensionsPage } from "./pages/Dimensions";
 import { MappingPage } from "./pages/Mapping";
 import { ReceivablesPage } from "./pages/Receivables";
-import { ApprovalsPage, EntriesPage, EntryDetailPage, NewEntryPage } from "./pages/Entries";
+import {
+  ApprovalsPage,
+  EntriesPage,
+  EntryDetailPage,
+  NewEntryPage,
+} from "./pages/Entries";
 import { PeriodsPage } from "./pages/Periods";
 import { StatementsPage } from "./pages/Statements";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
@@ -26,17 +32,30 @@ const router = createBrowserRouter([
       { path: "w/:slug", element: <WorkspaceHome /> },
       { path: "w/:slug/e/:entityId/entries", element: <EntriesPage /> },
       { path: "w/:slug/e/:entityId/entries/new", element: <NewEntryPage /> },
-      { path: "w/:slug/e/:entityId/entries/:entryId", element: <EntryDetailPage /> },
+      {
+        path: "w/:slug/e/:entityId/entries/:entryId",
+        element: <EntryDetailPage />,
+      },
       { path: "w/:slug/e/:entityId/approvals", element: <ApprovalsPage /> },
       { path: "w/:slug/e/:entityId/bank", element: <BankPage /> },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
+      {
+        path: "w/:slug/e/:entityId/cash-forecast",
+        element: <CashForecastPage />,
+      },
       { path: "w/:slug/e/:entityId/accounts", element: <AccountsPage /> },
       { path: "w/:slug/e/:entityId/dimensions", element: <DimensionsPage /> },
       { path: "w/:slug/e/:entityId/mapping", element: <MappingPage /> },
-      { path: "w/:slug/e/:entityId/counterparties", element: <CounterpartiesPage /> },
+      {
+        path: "w/:slug/e/:entityId/counterparties",
+        element: <CounterpartiesPage />,
+      },
       { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
-      { path: "w/:slug/e/:entityId/trial-balance", element: <TrialBalancePage /> },
+      {
+        path: "w/:slug/e/:entityId/trial-balance",
+        element: <TrialBalancePage />,
+      },
       { path: "w/:slug/e/:entityId/statements", element: <StatementsPage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
     ],
@@ -71,7 +90,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 15_000,
-      retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 2,
+      retry: (count, error) =>
+        !(error instanceof ApiError && error.status < 500) && count < 2,
     },
   },
 });
