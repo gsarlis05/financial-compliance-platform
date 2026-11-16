@@ -92,7 +92,7 @@ def _demo_user(role: str) -> User:
     return user
 
 
-def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
+def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one function
     *,
     seed: int = 42,
     share_with: str | None = None,
@@ -263,6 +263,11 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
     if not mapping["complete"]:
         raise DemoStepError(f"Account mapping incomplete: {mapping['unmapped_blocking']}")
     step(f"{mapped} accounts mapped to the financial taxonomy; mapping complete for statements")
+
+    actuals_check = owner.call("GET", f"/api/w/{slug}/actuals/verify")
+    if not actuals_check["ok"]:
+        raise DemoStepError(f"Actuals read model differs from the ledger: {actuals_check}")
+    step(f"actuals read model up to posting {actuals_check['watermark']} matches the ledger")
 
     check = owner.call("POST", f"/api/w/{slug}/integrity-checks", None, 201)
     if check["status"] != "PASSED":

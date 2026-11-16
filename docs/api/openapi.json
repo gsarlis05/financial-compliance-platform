@@ -1215,6 +1215,57 @@
         "title": "DimensionValuePatch",
         "type": "object"
       },
+      "DriftOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "facts_credit": {
+            "title": "Facts Credit",
+            "type": "string"
+          },
+          "facts_debit": {
+            "title": "Facts Debit",
+            "type": "string"
+          },
+          "grain": {
+            "title": "Grain",
+            "type": "string"
+          },
+          "ledger_credit": {
+            "title": "Ledger Credit",
+            "type": "string"
+          },
+          "ledger_debit": {
+            "title": "Ledger Debit",
+            "type": "string"
+          },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grain",
+          "entity_id",
+          "account_id",
+          "period",
+          "ledger_debit",
+          "ledger_credit",
+          "facts_debit",
+          "facts_credit"
+        ],
+        "title": "DriftOut",
+        "type": "object"
+      },
       "EntityIn": {
         "properties": {
           "entity_type": {
@@ -1616,6 +1667,46 @@
           "lines"
         ],
         "title": "EntryOut",
+        "type": "object"
+      },
+      "FactOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "net_debit": {
+            "title": "Net Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "month",
+          "debit",
+          "credit",
+          "net_debit"
+        ],
+        "title": "FactOut",
         "type": "object"
       },
       "FiscalYearIn": {
@@ -2354,6 +2445,47 @@
           "roles"
         ],
         "title": "MemberOut",
+        "type": "object"
+      },
+      "MonthlyOut": {
+        "properties": {
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactOut"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "watermark",
+          "facts"
+        ],
+        "title": "MonthlyOut",
+        "type": "object"
+      },
+      "MonthlyQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "MonthlyQuery",
         "type": "object"
       },
       "OpenItemOut": {
@@ -3163,6 +3295,38 @@
         "title": "VatCodeQuery",
         "type": "object"
       },
+      "VerifyOut": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "drifts": {
+            "items": {
+              "$ref": "#/components/schemas/DriftOut"
+            },
+            "title": "Drifts",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "watermark",
+          "ok",
+          "checked_at",
+          "drifts"
+        ],
+        "title": "VerifyOut",
+        "type": "object"
+      },
       "WorkspaceIn": {
         "properties": {
           "entity_name": {
@@ -3354,6 +3518,81 @@
         "summary": "Get Workspace",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/actuals/rebuild": {
+      "post": {
+        "description": "Recompute the read model from the ledger, then verify it (safe: facts are derived).",
+        "operationId": "fcp_modules_reporting_api_rebuild_actuals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Rebuild Actuals",
+        "tags": [
+          "reporting"
+        ]
+      }
+    },
+    "/api/w/{slug}/actuals/verify": {
+      "get": {
+        "operationId": "fcp_modules_reporting_api_verify_actuals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Verify Actuals",
+        "tags": [
+          "reporting"
         ]
       }
     },
@@ -4346,6 +4585,73 @@
         "summary": "Set Dimension Rules",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/actuals/monthly": {
+      "get": {
+        "operationId": "fcp_modules_reporting_api_monthly_actuals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Monthly Actuals",
+        "tags": [
+          "reporting"
         ]
       }
     },
