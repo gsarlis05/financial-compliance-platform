@@ -16,7 +16,7 @@ from fcp.modules.kpi.api import run_kpi_set
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import alerts as service
-from . import layouts, overview
+from . import layouts, overview, portfolio
 from .models import Alert
 
 __all__ = ["Alert", "router"]
@@ -232,3 +232,44 @@ def save_default_layout(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     saved = layouts.save(ctx, entity_id, payload.widgets, default=True)
     return LayoutOut(widgets=saved, source="WORKSPACE")
+
+
+# --- firm portfolio (M4-9) --------------------------------------------------------------------
+
+
+class PortfolioQuery(Schema):
+    month: date = Field(description="Any day of the month the year to date ends in")
+
+
+class PortfolioPartOut(Schema):
+    status: str = Field(description="ok, empty (with a reason) or denied")
+    reason: str
+    data: dict[str, Any]
+
+
+class PortfolioRowOut(Schema):
+    entity_id: UUID
+    legal_name: str
+    entity_type: str
+    cash: PortfolioPartOut
+    kpis: PortfolioPartOut
+    goals: PortfolioPartOut
+    alerts: PortfolioPartOut
+
+
+@router.get("/w/{slug}/portfolio", response=list[PortfolioRowOut])
+@requires("planning.read")
+def firm_portfolio(request: HttpRequest, slug: str,
+                   q: Query[PortfolioQuery]) -> list[PortfolioRowOut]:  # fmt: skip
+    """One row per client entity you may see (AC-DB6), computed now under your permissions."""
+    ctx = workspace_ctx(request, slug)
+    rows = portfolio.portfolio(ctx, q.month)
+    return [
+        PortfolioRowOut(
+            entity_id=r["entity"].id, legal_name=r["entity"].legal_name,
+            entity_type=r["entity"].entity_type,
+            **{k: PortfolioPartOut(status=w.status, reason=w.reason, data=w.data)
+               for k, w in r["parts"].items()},
+        )
+        for r in rows
+    ]  # fmt: skip

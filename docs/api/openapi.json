@@ -8361,6 +8361,86 @@
         "title": "PersonalValueOut",
         "type": "object"
       },
+      "PortfolioPartOut": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "description": "ok, empty (with a reason) or denied",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "data"
+        ],
+        "title": "PortfolioPartOut",
+        "type": "object"
+      },
+      "PortfolioQuery": {
+        "properties": {
+          "month": {
+            "description": "Any day of the month the year to date ends in",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "PortfolioQuery",
+        "type": "object"
+      },
+      "PortfolioRowOut": {
+        "properties": {
+          "alerts": {
+            "$ref": "#/components/schemas/PortfolioPartOut"
+          },
+          "cash": {
+            "$ref": "#/components/schemas/PortfolioPartOut"
+          },
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "goals": {
+            "$ref": "#/components/schemas/PortfolioPartOut"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/PortfolioPartOut"
+          },
+          "legal_name": {
+            "title": "Legal Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "legal_name",
+          "entity_type",
+          "cash",
+          "kpis",
+          "goals",
+          "alerts"
+        ],
+        "title": "PortfolioRowOut",
+        "type": "object"
+      },
       "RateType": {
         "enum": [
           "FIXED",
@@ -22871,6 +22951,60 @@
         "summary": "Grant Role",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/portfolio": {
+      "get": {
+        "description": "One row per client entity you may see (AC-DB6), computed now under your permissions.",
+        "operationId": "fcp_modules_dashboards_api_firm_portfolio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Any day of the month the year to date ends in",
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "description": "Any day of the month the year to date ends in",
+              "format": "date",
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioRowOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Firm Portfolio",
+        "tags": [
+          "dashboards"
         ]
       }
     },

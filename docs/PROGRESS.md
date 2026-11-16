@@ -7,13 +7,13 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Branches are stacked: each PR targets the previous one and is merged
 in order.
 
-## Status (updated 2026-11-04)
+## Status (updated 2026-11-10)
 
 **Milestone 1 is complete** (see `docs/milestone-1-report.md`). **Milestone 2 is complete and
 awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
 according to our existing roadmap"). **Milestone 3 is complete and awaits review** (see `docs/milestone-3-report.md`; owner: "Continue",
-2026-11-04; brief `docs/planning/16-milestone-3-brief.md`). **Milestone 4 is in progress** (owner: "Let continue", 2026-11-04; brief
-`docs/planning/17-milestone-4-brief.md`). Cloud-readiness review:
+2026-11-04; brief `docs/planning/16-milestone-3-brief.md`). **Milestone 4 is complete and awaits review** (see `docs/milestone-4-report.md`; owner: "Let continue",
+2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -68,8 +68,9 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M4-5 Custom KPIs (personal, workspace with approval) and operational metrics (issue #69) | `claude/m4-5-custom-kpis` | #124 | Open, CI green |
 | M4-6 Goals: frozen baselines, evaluations, goal-seek, contribution analysis (issue #70) | `claude/m4-6-goals` | #125 | Open, CI green |
 | M4-7 In-app alerts: goal status and breaches, budget overruns and trends (issue #71) | `claude/m4-7-alerts` | #126 | Open, CI green |
-| M4-8 CFO dashboard: widgets, presets and comparisons, layouts, nature contract (issue #72) | `claude/m4-8-dashboard` | #127 | Open |
-| M4-9 Firm portfolio (issue #73) | — | — | Next |
+| M4-8 CFO dashboard: widgets, presets and comparisons, layouts, nature contract (issue #72) | `claude/m4-8-dashboard` | #127 | Open, CI green |
+| M4-9 Firm portfolio of accessible client entities (issue #73) | `claude/m4-9-portfolio` | #128 | Open |
+| M4 report (`docs/milestone-4-report.md`) | `claude/m4-9-portfolio` | #128 | Open, with M4-9 |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
