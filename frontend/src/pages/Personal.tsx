@@ -13,6 +13,7 @@ import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
+import { CounterpartSection } from "./PersonalCounterpart";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = (d: string) => `${d.slice(0, 7)}-01`;
@@ -481,6 +482,9 @@ export function PersonalTransactionsPage() {
     <Page title={t("my.transactions")}>
       {accounts.data && accounts.data.length === 0 ? <Setup /> : null}
       {accounts.data?.length ? <RecordForm accounts={accounts.data} /> : null}
+      {accounts.data?.length ? (
+        <CounterpartSection accounts={accounts.data} />
+      ) : null}
       <label>
         {t("my.month")}
         <input

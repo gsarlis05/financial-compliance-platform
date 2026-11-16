@@ -17,7 +17,7 @@ from fcp.core.api.permissions import requires
 from fcp.modules.ledger.api import Account
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import plans, services
+from . import counterpart, plans, services
 from .models import Valuation
 
 __all__ = ["Valuation", "router"]
@@ -526,3 +526,128 @@ def projection(request: HttpRequest, slug: str, entity_id: UUID) -> ProjectionOu
                 for m in p.months],
         first_negative=p.first_negative,
     )  # fmt: skip
+
+
+# --- counterpart hints (M5-3) ---------------------------------------------------------------------
+
+
+class CounterpartLinkIn(Schema):
+    business_slug: str = Field(max_length=64, description="One of your business workspaces")
+    business_entity_id: UUID
+    business_account_id: UUID = Field(description="e.g. the director's loan account")
+    label: str = Field(max_length=200, description="How the link is named here")
+    account_id: UUID = Field(description="Your money account the payments arrive in")
+    category_id: UUID = Field(description="Your income category for them")
+    since: date = Field(description="Suggest payments from this date")
+
+
+class CounterpartLinkOut(Schema):
+    id: UUID
+    business_slug: str
+    business_entity_id: UUID
+    business_account_id: UUID
+    label: str
+    account_id: UUID
+    category_id: UUID
+    since: date
+    created_at: datetime
+
+
+class CounterpartDecisionIn(Schema):
+    business_entry_id: UUID = Field(description="The business entry the suggestion comes from")
+    date: date
+    amount: str = Field(pattern=AMOUNT)
+    description: str = Field(max_length=300)
+
+
+def _decision(payload: CounterpartDecisionIn) -> counterpart.DecisionInput:
+    return counterpart.DecisionInput(
+        business_entry_id=payload.business_entry_id, day=payload.date, amount=payload.amount,
+        description=payload.description,
+    )  # fmt: skip
+
+
+class CounterpartDecisionOut(Schema):
+    id: UUID
+    business_entry_id: UUID
+    decision: str = Field(description="CONFIRMED (recorded here) or DISMISSED")
+    amount: str
+    entry_date: date
+    personal_entry_id: UUID | None
+    created_at: datetime
+
+
+def _link_out(link: counterpart.CounterpartLink) -> CounterpartLinkOut:
+    return CounterpartLinkOut(
+        id=link.id, business_slug=link.business_slug, business_entity_id=link.business_entity_id,
+        business_account_id=link.business_account_id, label=link.label,
+        account_id=link.account_id, category_id=link.category_id, since=link.since,
+        created_at=link.created_at,
+    )  # fmt: skip
+
+
+def _decision_out(d: counterpart.CounterpartDecision) -> CounterpartDecisionOut:
+    return CounterpartDecisionOut(
+        id=d.id, business_entry_id=d.business_entry_id, decision=d.decision,
+        amount=_money(d.amount), entry_date=d.entry_date, personal_entry_id=d.personal_entry_id,
+        created_at=d.created_at,
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/counterpart-links", response=list[CounterpartLinkOut])
+@requires("reports.read")
+def list_counterpart_links(request: HttpRequest, slug: str,
+                           entity_id: UUID) -> list[CounterpartLinkOut]:  # fmt: skip
+    """Your opt-in links to business accounts (no business figures are stored here)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_link_out(link) for link in counterpart.links(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/counterpart-links", response={201: CounterpartLinkOut})
+@requires("ledger.entry.create")
+def create_counterpart_link(request: HttpRequest, slug: str, entity_id: UUID,
+                            payload: CounterpartLinkIn) -> Status[CounterpartLinkOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    link = counterpart.create_link(ctx, entity_id, counterpart.LinkInput(**payload.dict()))
+    return Status(201, _link_out(link))
+
+
+@router.post(f"{BASE}/counterpart-links/{{uuid:link_id}}/revoke", response={204: None})
+@requires("ledger.entry.create")
+def revoke_counterpart_link(request: HttpRequest, slug: str, entity_id: UUID,
+                            link_id: UUID) -> Status[None]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    counterpart.revoke_link(ctx, entity_id, link_id)
+    return Status(204, None)
+
+
+@router.get(f"{BASE}/counterpart-links/{{uuid:link_id}}/decisions",
+            response=list[CounterpartDecisionOut])  # fmt: skip
+@requires("reports.read")
+def list_counterpart_decisions(request: HttpRequest, slug: str, entity_id: UUID,
+                               link_id: UUID) -> list[CounterpartDecisionOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_decision_out(d) for d in counterpart.decided(ctx, entity_id, link_id)]
+
+
+@router.post(f"{BASE}/counterpart-links/{{uuid:link_id}}/confirm",
+             response={201: CounterpartDecisionOut})  # fmt: skip
+@requires("ledger.entry.create")
+def confirm_counterpart(
+    request: HttpRequest, slug: str, entity_id: UUID, link_id: UUID, payload: CounterpartDecisionIn
+) -> Status[CounterpartDecisionOut]:
+    """Record a suggested business payment as money received here."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = counterpart.confirm(ctx, entity_id, link_id, _decision(payload))
+    return Status(201, _decision_out(made))
+
+
+@router.post(f"{BASE}/counterpart-links/{{uuid:link_id}}/dismiss",
+             response={201: CounterpartDecisionOut})  # fmt: skip
+@requires("ledger.entry.create")
+def dismiss_counterpart(
+    request: HttpRequest, slug: str, entity_id: UUID, link_id: UUID, payload: CounterpartDecisionIn
+) -> Status[CounterpartDecisionOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = counterpart.dismiss(ctx, entity_id, link_id, _decision(payload))
+    return Status(201, _decision_out(made))

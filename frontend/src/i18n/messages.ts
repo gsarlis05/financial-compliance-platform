@@ -1061,6 +1061,24 @@ export const en = {
   "plan.cashToday": "Cash today",
   "plan.firstNegative": "Cash would fall below zero in",
   "plan.cash": "Cash at month end",
+  "biz.title": "From my business",
+  "biz.text":
+    "Optional. Link an account of a business you belong to, such as the director's loan account. Payments from it to you are suggested here; each one is recorded in your books only when you confirm it. Your business never sees this workspace.",
+  "biz.suggestions": "Suggested payments",
+  "biz.actions": "Actions",
+  "biz.confirm": "Record it",
+  "biz.dismiss": "Not for my books",
+  "biz.none": "Nothing new to record.",
+  "biz.noAccess":
+    "You cannot read this business account any more, so nothing is suggested.",
+  "biz.revoke": "Stop suggestions",
+  "biz.newLink": "Link a business account",
+  "biz.business": "Business",
+  "biz.businessAccount": "Business account",
+  "biz.into": "Into",
+  "biz.as": "As income",
+  "biz.since": "From",
+  "biz.link": "Link",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2142,6 +2160,24 @@ export const el: Record<MessageKey, string> = {
   "plan.cashToday": "Διαθέσιμα σήμερα",
   "plan.firstNegative": "Τα διαθέσιμα θα γίνουν αρνητικά τον",
   "plan.cash": "Διαθέσιμα στο τέλος του μήνα",
+  "biz.title": "Από την επιχείρησή μου",
+  "biz.text":
+    "Προαιρετικό. Συνδέστε έναν λογαριασμό μιας επιχείρησης στην οποία ανήκετε, όπως τον λογαριασμό δανείων συμβούλου. Οι πληρωμές του προς εσάς προτείνονται εδώ· η καθεμία καταχωρείται στα βιβλία σας μόνο όταν την επιβεβαιώσετε. Η επιχείρησή σας δεν βλέπει ποτέ αυτόν τον χώρο εργασίας.",
+  "biz.suggestions": "Προτεινόμενες πληρωμές",
+  "biz.actions": "Ενέργειες",
+  "biz.confirm": "Καταχώρηση",
+  "biz.dismiss": "Όχι για τα βιβλία μου",
+  "biz.none": "Δεν υπάρχει κάτι νέο για καταχώρηση.",
+  "biz.noAccess":
+    "Δεν έχετε πλέον πρόσβαση σε αυτόν τον λογαριασμό της επιχείρησης, οπότε δεν προτείνεται τίποτα.",
+  "biz.revoke": "Διακοπή προτάσεων",
+  "biz.newLink": "Σύνδεση λογαριασμού επιχείρησης",
+  "biz.business": "Επιχείρηση",
+  "biz.businessAccount": "Λογαριασμός επιχείρησης",
+  "biz.into": "Σε",
+  "biz.as": "Ως έσοδο",
+  "biz.since": "Από",
+  "biz.link": "Σύνδεση",
 };
 
 export const catalogs = { en, el } as const;

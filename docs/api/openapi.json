@@ -2925,6 +2925,211 @@
         "title": "CompletenessOut",
         "type": "object"
       },
+      "CounterpartDecisionIn": {
+        "properties": {
+          "amount": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "business_entry_id": {
+            "description": "The business entry the suggestion comes from",
+            "format": "uuid",
+            "title": "Business Entry Id",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 300,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "business_entry_id",
+          "date",
+          "amount",
+          "description"
+        ],
+        "title": "CounterpartDecisionIn",
+        "type": "object"
+      },
+      "CounterpartDecisionOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "business_entry_id": {
+            "format": "uuid",
+            "title": "Business Entry Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "description": "CONFIRMED (recorded here) or DISMISSED",
+            "title": "Decision",
+            "type": "string"
+          },
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "personal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personal Entry Id"
+          }
+        },
+        "required": [
+          "id",
+          "business_entry_id",
+          "decision",
+          "amount",
+          "entry_date",
+          "personal_entry_id",
+          "created_at"
+        ],
+        "title": "CounterpartDecisionOut",
+        "type": "object"
+      },
+      "CounterpartLinkIn": {
+        "properties": {
+          "account_id": {
+            "description": "Your money account the payments arrive in",
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "business_account_id": {
+            "description": "e.g. the director's loan account",
+            "format": "uuid",
+            "title": "Business Account Id",
+            "type": "string"
+          },
+          "business_entity_id": {
+            "format": "uuid",
+            "title": "Business Entity Id",
+            "type": "string"
+          },
+          "business_slug": {
+            "description": "One of your business workspaces",
+            "maxLength": 64,
+            "title": "Business Slug",
+            "type": "string"
+          },
+          "category_id": {
+            "description": "Your income category for them",
+            "format": "uuid",
+            "title": "Category Id",
+            "type": "string"
+          },
+          "label": {
+            "description": "How the link is named here",
+            "maxLength": 200,
+            "title": "Label",
+            "type": "string"
+          },
+          "since": {
+            "description": "Suggest payments from this date",
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "business_slug",
+          "business_entity_id",
+          "business_account_id",
+          "label",
+          "account_id",
+          "category_id",
+          "since"
+        ],
+        "title": "CounterpartLinkIn",
+        "type": "object"
+      },
+      "CounterpartLinkOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "business_account_id": {
+            "format": "uuid",
+            "title": "Business Account Id",
+            "type": "string"
+          },
+          "business_entity_id": {
+            "format": "uuid",
+            "title": "Business Entity Id",
+            "type": "string"
+          },
+          "business_slug": {
+            "title": "Business Slug",
+            "type": "string"
+          },
+          "category_id": {
+            "format": "uuid",
+            "title": "Category Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "business_slug",
+          "business_entity_id",
+          "business_account_id",
+          "label",
+          "account_id",
+          "category_id",
+          "since",
+          "created_at"
+        ],
+        "title": "CounterpartLinkOut",
+        "type": "object"
+      },
       "CounterpartyFilter": {
         "properties": {
           "kind": {
@@ -22268,6 +22473,359 @@
           }
         ],
         "summary": "Set Budget",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/counterpart-links": {
+      "get": {
+        "description": "Your opt-in links to business accounts (no business figures are stored here).",
+        "operationId": "fcp_modules_personal_api_list_counterpart_links",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CounterpartLinkOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Counterpart Links",
+        "tags": [
+          "personal"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_personal_api_create_counterpart_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterpartLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartLinkOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Counterpart Link",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/counterpart-links/{link_id}/confirm": {
+      "post": {
+        "description": "Record a suggested business payment as money received here.",
+        "operationId": "fcp_modules_personal_api_confirm_counterpart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterpartDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartDecisionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Confirm Counterpart",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/counterpart-links/{link_id}/decisions": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_list_counterpart_decisions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CounterpartDecisionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Counterpart Decisions",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/counterpart-links/{link_id}/dismiss": {
+      "post": {
+        "operationId": "fcp_modules_personal_api_dismiss_counterpart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterpartDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartDecisionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Dismiss Counterpart",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/counterpart-links/{link_id}/revoke": {
+      "post": {
+        "operationId": "fcp_modules_personal_api_revoke_counterpart_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revoke Counterpart Link",
         "tags": [
           "personal"
         ]
