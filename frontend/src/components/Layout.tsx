@@ -47,6 +47,7 @@ function WorkspaceSwitcher() {
           {(workspaces.data ?? []).map((w) => (
             <option key={w.slug} value={w.slug}>
               {w.name} · {t(`kind.${w.kind}` as MessageKey)}
+              {w.via_engagement ? ` · ${t("ws.viaFirm")}` : ""}
             </option>
           ))}
         </select>
@@ -244,6 +245,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/dimensions`, "nav.dimensions"],
         [`${base}/mapping`, "nav.mapping"],
         [`${base}/periods`, "nav.periods"],
+        [`${base}/engagements`, "nav.engagements"],
       ],
     },
     {

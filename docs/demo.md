@@ -41,6 +41,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ personal budget (groceries 400 a month) and 2 goals: Emergency fund ON_TRACK; Savings 20k OFF_TRACK; 12-month projection from cash 19884.35
 ✔ counterpart hint (opt-in): 1 business payment to the owner suggested, 1500.00 recorded in the personal books only after confirmation
 ✔ client portfolio refused in a business workspace (firms only): This is not available in a business workspace.
+✔ engagement grant: Demo Accountants let in as accountant + read_only, 1 client in the firm portfolio; after the owner revoked it, the firm's next request is refused and the client is gone from its portfolio
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the

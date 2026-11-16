@@ -5,7 +5,12 @@ that the user may see with ``planning.read`` (entity-scoped roles see only their
 row is computed on request,
 entity by entity, under the user's own permissions: no cross-tenant query, and nothing is stored,
 so a revoked role removes the client on the next request and leaves no derived metrics behind.
-Engagement grants to client-owned workspaces join in M5-4.
+
+Clients in their own workspaces join through engagement grants (M5-4, doc 11 §3): for each client
+workspace that granted this firm an engagement the user is staffed on, the rows are built inside
+that client's context (one workspace at a time, its own RLS), with the engagement's intersected
+permissions, and the firm's context is restored afterwards. A revoked or expired grant is gone
+on the next request.
 
 Per client:
 - cash: the latest 13-week forecast's opening and first shortfall, and whether it is out of date;
@@ -19,7 +24,15 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fcp.modules.tenancy.api import Feature, WorkspaceContext, permitted_entities, require_feature
+from fcp.core.errors import NotFoundError
+from fcp.modules.tenancy.api import (
+    Feature,
+    WorkspaceContext,
+    engaged_clients,
+    enter_workspace,
+    permitted_entities,
+    require_feature,
+)
 
 from .overview import Widget, _alerts, _cash, _goals, _guard, _kpis, period
 
@@ -51,6 +64,21 @@ def _summary(ctx: WorkspaceContext, entity_id: UUID, month: date) -> dict[str, W
 def portfolio(ctx: WorkspaceContext, month: date) -> list[dict[str, Any]]:
     """For firm workspaces only (doc 11 §5): elsewhere a 403, enforced here and not just hidden."""
     require_feature(ctx.tenant.kind, Feature.CLIENT_PORTFOLIO)
-    return [
-        {"entity": e, "parts": _summary(ctx, e.id, month)} for e in permitted_entities(ctx, READ)
+    rows: list[dict[str, Any]] = [
+        {"entity": e, "parts": _summary(ctx, e.id, month), "workspace": None}
+        for e in permitted_entities(ctx, READ)
     ]
+    clients = engaged_clients(ctx)
+    try:
+        for client in clients:
+            try:
+                there = enter_workspace(ctx.user, client.slug)
+            except NotFoundError:  # revoked or expired since the list was read
+                continue
+            rows += [
+                {"entity": e, "parts": _summary(there, e.id, month), "workspace": there.tenant}
+                for e in permitted_entities(there, READ)
+            ]
+    finally:
+        enter_workspace(ctx.user, ctx.tenant.slug)  # back to the firm's own context
+    return rows

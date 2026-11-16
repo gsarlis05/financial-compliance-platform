@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { catalogs, type Locale, type MessageKey } from "./messages";
 
 interface I18nValue {
@@ -21,7 +27,13 @@ function initialLocale(): Locale {
   return navigator.language.toLowerCase().startsWith("el") ? "el" : "en";
 }
 
-export function I18nProvider({ children, locale: fixed }: { children: ReactNode; locale?: Locale }) {
+export function I18nProvider({
+  children,
+  locale: fixed,
+}: {
+  children: ReactNode;
+  locale?: Locale;
+}) {
   const [locale, setLocaleState] = useState<Locale>(fixed ?? initialLocale());
   const value = useMemo<I18nValue>(
     () => ({

@@ -360,6 +360,29 @@ def _cash_forecast(owner: "DemoClient", base: str, year: int) -> dict[str, Any]:
     return forecast
 
 
+def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[str, Any]:
+    """A firm is let into the client's own workspace (M5-4): granted by the owner, staffed by the
+    firm, used through the grant, then revoked with immediate effect."""
+    partner = DemoClient(_demo_user("partner"), host)
+    firm = partner.call("POST", "/api/workspaces", {"name": "Demo Accountants", "kind": "FIRM"},
+                        201)  # fmt: skip
+    until = f"{year + 2}-12-31T23:59:59Z"
+    made = owner.call("POST", f"/api/w/{slug}/engagements", {
+        "firm_slug": firm["slug"], "scope_roles": ["accountant", "read_only"],
+        "valid_until": until}, 201)  # fmt: skip
+    me = partner.call("GET", f"/api/w/{firm['slug']}/members")[0]["membership_id"]
+    partner.call("POST", f"/api/w/{firm['slug']}/client-engagements/{made['id']}/staff",
+                 {"membership_id": me}, 201)  # fmt: skip
+    inside = partner.call("GET", f"/api/w/{slug}")
+    rows = partner.call("GET", f"/api/w/{firm['slug']}/portfolio?month={year}-12-01")
+    owner.call("POST", f"/api/w/{slug}/engagements/{made['id']}/revoke", {})
+    partner.call("GET", f"/api/w/{slug}", expect=404)
+    after = partner.call("GET", f"/api/w/{firm['slug']}/portfolio?month={year}-12-01")
+    if [r["client_slug"] for r in rows] != [slug] or after:
+        raise DemoStepError(f"The firm portfolio does not follow the grant: {rows} / {after}")
+    return {"firm": firm["name"], "roles": inside["roles"], "clients": len(rows)}
+
+
 def _demo_user(role: str) -> User:
     user, _ = User.objects.get_or_create(
         idp_subject=f"demo|{role}",
@@ -693,6 +716,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     )
     refused = owner.call("GET", f"/api/w/{slug}/portfolio?month={year}-12-01", expect=403)
     step(f"client portfolio refused in a business workspace (firms only): {refused['detail']}")
+    engaged = _engagement(owner, host, slug, year)
+    step(f"engagement grant: {engaged['firm']} let in as {' + '.join(engaged['roles'])}, "
+         f"{engaged['clients']} client in the firm portfolio; after the owner revoked it, the "
+         "firm's next request is refused and the client is gone from its portfolio")  # fmt: skip
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

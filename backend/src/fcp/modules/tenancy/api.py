@@ -11,13 +11,14 @@ from uuid import UUID
 
 from django.db import connection
 from django.http import HttpRequest
+from django.utils import timezone
 from ninja import Field, Router, Schema, Status
 
 from fcp.core.api.permissions import AUTHENTICATED, required_permission, requires
 from fcp.core.errors import PermissionDeniedError
 from fcp.modules.identity.api import User, require_recent_auth
 
-from . import services
+from . import engagements, services
 from .entitlements import Feature, Role, has_feature, require_feature
 from .models import LegalEntity, Membership, Tenant
 from .services import WorkspaceContext, enter_workspace, get_entity, visible_entities
@@ -30,6 +31,11 @@ def permitted_entities(ctx: WorkspaceContext, permission: str) -> list[LegalEnti
     return list(rows.order_by("legal_name"))
 
 
+def engaged_clients(ctx: WorkspaceContext) -> list[Tenant]:
+    """Client workspaces that granted this firm an engagement the user is staffed on (M5-4)."""
+    return engagements.engaged_workspaces(ctx.tenant.id)
+
+
 __all__ = [
     "Feature",
     "LegalEntity",
@@ -39,6 +45,7 @@ __all__ = [
     "WorkspaceContext",
     "active_members",
     "all_tenant_ids",
+    "engaged_clients",
     "enter_workspace",
     "get_entity",
     "permitted_entities",
@@ -108,6 +115,9 @@ class WorkspaceOut(Schema):
     name: str
     kind: str
     roles: list[str] = Field(default_factory=list)
+    via_engagement: str | None = Field(
+        default=None, description="The firm and engagement, when opened through a grant (M5-4)"
+    )
 
 
 class EntityIn(Schema):
@@ -146,7 +156,8 @@ class AcceptIn(Schema):
 
 def _workspace_out(ctx: WorkspaceContext) -> WorkspaceOut:
     t = ctx.tenant
-    return WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind, roles=sorted(ctx.roles))
+    return WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind, roles=sorted(ctx.roles),
+                        via_engagement=ctx.engagement)  # fmt: skip
 
 
 @router.post("/workspaces", response={201: WorkspaceOut})
@@ -165,9 +176,12 @@ def create_workspace(request: HttpRequest, payload: WorkspaceIn) -> Status[Works
 @router.get("/workspaces", response=list[WorkspaceOut])
 @requires(AUTHENTICATED)
 def list_workspaces(request: HttpRequest) -> list[WorkspaceOut]:
-    return [
-        WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind)
-        for t in services.list_workspaces(_user(request))
+    own = services.list_workspaces(_user(request))
+    known = {t.id for t in own}
+    engaged = [t for t in engagements.engaged_workspaces() if t.id not in known]
+    return [WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind) for t in own] + [
+        WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind, via_engagement="firm")
+        for t in engaged
     ]
 
 
@@ -296,3 +310,120 @@ def revoke_role(request: HttpRequest, slug: str, assignment_id: UUID) -> Status[
 def features(request: HttpRequest, slug: str) -> dict[str, bool]:
     ctx = workspace_ctx(request, slug)
     return {f.value: has_feature(ctx.tenant.kind, f) for f in Feature}
+
+
+# --- engagement grants (M5-4) --------------------------------------------------------------------
+
+
+class EngagementIn(Schema):
+    firm_slug: str = Field(min_length=1, max_length=64, description="The firm's workspace address")
+    scope_roles: list[str] = Field(min_length=1, max_length=3)
+    valid_until: datetime
+    legal_entity_id: UUID | None = Field(default=None, description="Omit for every entity")
+
+
+class EngagementOut(Schema):
+    id: UUID
+    firm_name: str
+    scope_roles: list[str]
+    legal_entity_id: UUID | None
+    valid_until: datetime
+    created_at: datetime
+    revoked_at: datetime | None
+    active: bool
+
+
+def _engagement_out(e: engagements.Engagement) -> EngagementOut:
+    return EngagementOut(
+        id=e.id, firm_name=e.firm_name, scope_roles=list(e.scope_roles),
+        legal_entity_id=e.legal_entity_id, valid_until=e.valid_until, created_at=e.created_at,
+        revoked_at=e.revoked_at,
+        active=e.revoked_at is None and e.valid_until > timezone.now(),
+    )  # fmt: skip
+
+
+@router.get("/w/{slug}/engagements", response=list[EngagementOut])
+@requires("tenancy.members.manage")
+def list_engagements(request: HttpRequest, slug: str) -> list[EngagementOut]:
+    """The firms this workspace has let in (client side)."""
+    return [_engagement_out(e) for e in engagements.grants(workspace_ctx(request, slug))]
+
+
+@router.post("/w/{slug}/engagements", response={201: EngagementOut})
+@requires("tenancy.members.manage")
+def grant_engagement(request: HttpRequest, slug: str,
+                     payload: EngagementIn) -> Status[EngagementOut]:  # fmt: skip
+    """Let a firm work in this workspace, within a scope and until a date."""
+    ctx = workspace_ctx(request, slug)
+    require_recent_auth(request.session, request.path)
+    made = engagements.grant(ctx, engagements.GrantInput(
+        firm_slug=payload.firm_slug, scope_roles=payload.scope_roles,
+        valid_until=payload.valid_until, legal_entity_id=payload.legal_entity_id,
+    ))  # fmt: skip
+    return Status(201, _engagement_out(made))
+
+
+@router.post("/w/{slug}/engagements/{engagement_id}/revoke", response=EngagementOut)
+@requires("tenancy.members.manage")
+def revoke_engagement(request: HttpRequest, slug: str, engagement_id: UUID) -> EngagementOut:
+    """End a firm's access now: its next request is refused."""
+    ctx = workspace_ctx(request, slug)
+    require_recent_auth(request.session, request.path)
+    return _engagement_out(engagements.revoke(ctx, engagement_id))
+
+
+class StaffOut(Schema):
+    id: UUID
+    membership_id: UUID
+    email: str
+    display_name: str
+
+
+class FirmEngagementOut(Schema):
+    engagement_id: UUID
+    client_slug: str
+    client_name: str
+    client_kind: str
+    scope_roles: list[str]
+    legal_entity_id: UUID | None
+    valid_until: datetime
+    staff: list[StaffOut]
+
+
+class StaffIn(Schema):
+    membership_id: UUID
+
+
+@router.get("/w/{slug}/client-engagements", response=list[FirmEngagementOut])
+@requires("tenancy.members.manage")
+def list_client_engagements(request: HttpRequest, slug: str) -> list[FirmEngagementOut]:
+    """Clients that have let this firm in, and who works on each (firm side)."""
+    found = engagements.firm_engagements(workspace_ctx(request, slug))
+    return [
+        FirmEngagementOut(
+            engagement_id=f.engagement_id, client_slug=f.client_slug, client_name=f.client_name,
+            client_kind=f.client_kind, scope_roles=f.scope_roles,
+            legal_entity_id=f.legal_entity_id, valid_until=f.valid_until,
+            staff=[StaffOut(id=s.id, membership_id=s.membership_id, email=s.membership.user.email,
+                            display_name=s.membership.user.display_name) for s in f.staff],
+        )
+        for f in found
+    ]  # fmt: skip
+
+
+@router.post("/w/{slug}/client-engagements/{engagement_id}/staff", response={201: StaffOut})
+@requires("tenancy.members.manage")
+def add_engagement_staff(request: HttpRequest, slug: str, engagement_id: UUID,
+                         payload: StaffIn) -> Status[StaffOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug)
+    s = engagements.add_staff(ctx, engagement_id, payload.membership_id)
+    return Status(201, StaffOut(id=s.id, membership_id=s.membership_id,
+                                email=s.membership.user.email,
+                                display_name=s.membership.user.display_name))  # fmt: skip
+
+
+@router.post("/w/{slug}/client-engagements/staff/{staff_id}/remove", response={204: None})
+@requires("tenancy.members.manage")
+def remove_engagement_staff(request: HttpRequest, slug: str, staff_id: UUID) -> Status[None]:
+    engagements.remove_staff(workspace_ctx(request, slug), staff_id)
+    return Status(204, None)

@@ -251,6 +251,9 @@ class PortfolioRowOut(Schema):
     entity_id: UUID
     legal_name: str
     entity_type: str
+    client_slug: str | None = Field(
+        default=None, description="The client's own workspace, for a client with an engagement"
+    )
     cash: PortfolioPartOut
     kpis: PortfolioPartOut
     goals: PortfolioPartOut
@@ -268,6 +271,7 @@ def firm_portfolio(request: HttpRequest, slug: str,
         PortfolioRowOut(
             entity_id=r["entity"].id, legal_name=r["entity"].legal_name,
             entity_type=r["entity"].entity_type,
+            client_slug=r["workspace"].slug if r["workspace"] else None,
             **{k: PortfolioPartOut(status=w.status, reason=w.reason, data=w.data)
                for k, w in r["parts"].items()},
         )

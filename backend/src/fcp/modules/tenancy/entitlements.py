@@ -15,6 +15,7 @@ class Feature(StrEnum):
     INVITE_MEMBERS = "invite_members"
     CLIENT_PORTFOLIO = "client_portfolio"
     PERSONAL_FINANCES = "personal_finances"  # simplified personal screens (M5-1)
+    GRANT_ENGAGEMENTS = "grant_engagements"  # let a firm work in this workspace (M5-4)
 
 
 class Role(StrEnum):
@@ -34,8 +35,12 @@ _FEATURES: dict[str, frozenset[Feature]] = {
     Tenant.Kind.FIRM: frozenset(
         {Feature.MULTIPLE_ENTITIES, Feature.INVITE_MEMBERS, Feature.CLIENT_PORTFOLIO}
     ),
-    Tenant.Kind.BUSINESS: frozenset({Feature.MULTIPLE_ENTITIES, Feature.INVITE_MEMBERS}),
-    Tenant.Kind.PERSONAL: frozenset({Feature.INVITE_MEMBERS, Feature.PERSONAL_FINANCES}),
+    Tenant.Kind.BUSINESS: frozenset(
+        {Feature.MULTIPLE_ENTITIES, Feature.INVITE_MEMBERS, Feature.GRANT_ENGAGEMENTS}
+    ),
+    Tenant.Kind.PERSONAL: frozenset(
+        {Feature.INVITE_MEMBERS, Feature.PERSONAL_FINANCES, Feature.GRANT_ENGAGEMENTS}
+    ),
 }
 
 _ROLES: dict[str, frozenset[Role]] = {

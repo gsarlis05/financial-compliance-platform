@@ -112,8 +112,11 @@ export function WorkspaceHome() {
     if (first && kind) {
       const page = kind === "PERSONAL" ? "personal" : "entries";
       void navigate(`/w/${slug}/e/${first.id}/${page}`, { replace: true });
+    } else if (entities.data?.length === 0) {
+      // No legal entity (e.g. a new firm): the workspace-level page still works (M5-4).
+      void navigate(`/w/${slug}/engagements`, { replace: true });
     }
-  }, [first, kind, navigate, slug]);
+  }, [first, kind, navigate, slug, entities.data]);
   return entities.error ? (
     <ProblemMessage error={entities.error} />
   ) : (

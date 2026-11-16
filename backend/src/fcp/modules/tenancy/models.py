@@ -127,3 +127,52 @@ class Invitation(TenantOwned):
 
     class Meta:
         db_table = "tenancy_invitation"
+
+
+class Engagement(TenantOwned):
+    """A client-owned workspace's grant to a firm (M5-4, doc 11 §3), stored in the **client's**
+    workspace. The firm's staff act inside the client's workspace with the intersection of
+    ``scope_roles`` and their firm role, until ``valid_until`` or revocation. A grant never
+    changes; it can only be revoked (database trigger). The firm is referenced by ID only: no
+    foreign key and no query crosses workspaces."""
+
+    firm_tenant_id = models.UUIDField()
+    firm_name = models.CharField(max_length=200)  # as it was when granted
+    scope_roles = models.JSONField(default=list)  # e.g. ["accountant", "read_only"]
+    legal_entity = models.ForeignKey(
+        LegalEntity, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )  # NULL: every legal entity of the client
+    valid_until = models.DateTimeField()
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "tenancy_engagement"
+
+
+class EngagementStaff(TenantOwned):
+    """A firm member assigned to an engagement, stored in the **firm's** workspace. Assignments
+    are removed, never edited or deleted (database trigger)."""
+
+    engagement_id = models.UUIDField()  # tenancy_engagement in the client's workspace
+    client_tenant_id = models.UUIDField()
+    membership = models.ForeignKey(Membership, on_delete=models.PROTECT, related_name="+")
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    removed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tenancy_engagement_staff"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["engagement_id", "membership"],
+                condition=models.Q(removed_at__isnull=True),
+                name="tenancy_engagement_staff_once",
+            )
+        ]

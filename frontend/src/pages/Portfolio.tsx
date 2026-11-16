@@ -30,9 +30,12 @@ function Row({ row }: { row: PortfolioRow }) {
   return (
     <tr>
       <th scope="row">
-        <Link to={`/w/${slug}/e/${row.entity_id}/dashboard`}>
+        <Link to={`/w/${row.client_slug ?? slug}/e/${row.entity_id}/dashboard`}>
           {row.legal_name}
         </Link>
+        {row.client_slug ? (
+          <span className="muted"> · {t("pf.ownWorkspace")}</span>
+        ) : null}
       </th>
       <td className="num">
         {row.cash.status === "ok" ? (

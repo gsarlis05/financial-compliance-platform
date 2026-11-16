@@ -47,3 +47,6 @@ one row each:
 
 The figures are calculated when you open the page, with your own permissions. A client you lose
 access to disappears at once. Select a client to open its dashboard.
+
+Clients who keep their own workspace and have let your firm in appear here too; see
+[Firm access](engagements.md).

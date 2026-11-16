@@ -6,6 +6,7 @@ Identifiers are composed with psycopg's ``sql.Identifier`` (they cannot be query
 never with string formatting.
 """
 
+import re
 from typing import Any
 
 from django.conf import settings
@@ -52,9 +53,12 @@ def apply_runtime_grants(using: str = "default") -> None:
             cursor.execute("SELECT to_regprocedure(%s) IS NOT NULL", [signature])
             row = cursor.fetchone()
             if row and row[0]:  # created by a migration already applied
-                name = signature.removesuffix("()")
+                name, _, rest = signature.partition("(")
+                args = rest.removesuffix(")")
+                if not re.fullmatch(r"[a-z ,]*", args):  # registry constants: type names only
+                    raise ValueError(f"Unexpected function signature {signature!r}")
                 cursor.execute(
-                    sql.SQL("GRANT EXECUTE ON FUNCTION {fn}() TO {role}").format(
+                    sql.SQL("GRANT EXECUTE ON FUNCTION {fn}(" + args + ") TO {role}").format(
                         fn=sql.Identifier(name), role=role
                     )
                 )

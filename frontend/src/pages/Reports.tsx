@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router";
 import { apiUrl } from "../api/client";
-import { useDimensions, useIntegrity, useScope, useTrialBalance } from "../api/hooks";
+import {
+  useDimensions,
+  useIntegrity,
+  useScope,
+  useTrialBalance,
+} from "../api/hooks";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount } from "../money";
@@ -31,12 +36,19 @@ export function TrialBalancePage() {
       <div className="form inline">
         <label>
           {t("tb.asOf")}
-          <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => setAsOf(e.target.value)}
+          />
         </label>
         {dimensions.data?.length ? (
           <label>
             {t("tb.dimension")}
-            <select value={valueId} onChange={(e) => setValueId(e.target.value)}>
+            <select
+              value={valueId}
+              onChange={(e) => setValueId(e.target.value)}
+            >
               <option value="">{t("tb.allLines")}</option>
               {dimensions.data.map((d) => (
                 <optgroup key={d.id} label={`${d.code} · ${d.name}`}>
@@ -87,8 +99,14 @@ export function TrialBalancePage() {
                   <tr key={r.account_id}>
                     <td>{r.code}</td>
                     <td>{r.name}</td>
-                    <td className="amount">{r.debit === "0.00" ? "" : formatAmount(r.debit, locale)}</td>
-                    <td className="amount">{r.credit === "0.00" ? "" : formatAmount(r.credit, locale)}</td>
+                    <td className="amount">
+                      {r.debit === "0.00" ? "" : formatAmount(r.debit, locale)}
+                    </td>
+                    <td className="amount">
+                      {r.credit === "0.00"
+                        ? ""
+                        : formatAmount(r.credit, locale)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -97,8 +115,12 @@ export function TrialBalancePage() {
                   <th scope="row" colSpan={2}>
                     {t("tb.total")}
                   </th>
-                  <td className="amount">{formatAmount(tb.data.total_debit, locale)}</td>
-                  <td className="amount">{formatAmount(tb.data.total_credit, locale)}</td>
+                  <td className="amount">
+                    {formatAmount(tb.data.total_debit, locale)}
+                  </td>
+                  <td className="amount">
+                    {formatAmount(tb.data.total_credit, locale)}
+                  </td>
                 </tr>
               </tfoot>
             </table>
@@ -115,14 +137,27 @@ export function IntegrityPage() {
   const { runs, run } = useIntegrity(slug);
   const latest = runs.data?.[0];
   return (
-    <Page title={t("int.title")} actions={<button onClick={() => run.mutate()}>{t("int.run")}</button>}>
+    <Page
+      title={t("int.title")}
+      actions={<button onClick={() => run.mutate()}>{t("int.run")}</button>}
+    >
       {runs.isPending ? <Loading /> : null}
       <ProblemMessage error={runs.error ?? run.error} />
-      {runs.data?.length === 0 ? <p className="muted">{t("int.none")}</p> : null}
+      {runs.data?.length === 0 ? (
+        <p className="muted">{t("int.none")}</p>
+      ) : null}
       {latest ? (
-        <section className={`panel ${latest.status === "PASSED" ? "ok" : "warn"}`}>
-          <h2>{latest.status === "PASSED" ? t("int.passed") : t("int.failed")}</h2>
-          <p className="muted">{new Date(latest.created_at).toLocaleString(locale === "el" ? "el-GR" : "en-GB")}</p>
+        <section
+          className={`panel ${latest.status === "PASSED" ? "ok" : "warn"}`}
+        >
+          <h2>
+            {latest.status === "PASSED" ? t("int.passed") : t("int.failed")}
+          </h2>
+          <p className="muted">
+            {new Date(latest.created_at).toLocaleString(
+              locale === "el" ? "el-GR" : "en-GB",
+            )}
+          </p>
           <ul>
             {latest.results.map((r) => (
               <li key={r.check}>
@@ -136,4 +171,3 @@ export function IntegrityPage() {
     </Page>
   );
 }
-

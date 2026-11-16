@@ -14,7 +14,7 @@ from typing import Any
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from fcp.core.db.rls import set_context
+from fcp.core.db.rls import set_context, set_engagement
 from fcp.core.errors import (
     ConflictError,
     NotFoundError,
@@ -25,6 +25,7 @@ from fcp.core.ids import uuid7
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import User
 
+from .engagements import access_through_engagement
 from .entitlements import Feature, Role, allowed_roles, require_feature
 from .models import Invitation, LegalEntity, Membership, RoleAssignment, Tenant
 from .permissions import is_known, permissions_for
@@ -44,8 +45,9 @@ class WorkspaceContext:
 
     tenant: Tenant
     user: User
-    membership: Membership
+    membership: Membership | None  # None when acting through an engagement grant (M5-4)
     assignments: tuple[Assignment, ...]
+    engagement: str | None = None  # the firm and engagement, for a firm user (M5-4)
 
     @property
     def roles(self) -> frozenset[str]:
@@ -209,9 +211,14 @@ def enter_workspace(user: User, slug: str) -> WorkspaceContext:
     existence is never disclosed (doc 04 §5).
     """
     set_context(user_id=user.id)
+    set_engagement("")
     tenant = Tenant.objects.filter(slug=slug, status=Tenant.Status.ACTIVE).first()
     if tenant is None:
-        raise NotFoundError("Workspace not found.")
+        # Not a member: perhaps a firm user staffed on an engagement grant (M5-4, doc 11 §3).
+        engaged = access_through_engagement(user, slug)
+        return WorkspaceContext(
+            engaged.tenant, user, None, engaged.assignments, engagement=engaged.firm_name
+        )
     set_context(tenant_id=tenant.id, user_id=user.id)
     membership = Membership.objects.filter(
         tenant=tenant, user=user, status=Membership.Status.ACTIVE

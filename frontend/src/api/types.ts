@@ -19,6 +19,7 @@ export interface Workspace {
   name: string;
   kind: WorkspaceKind;
   roles: string[];
+  via_engagement?: string | null; // reached through a firm's engagement grant (M5-4)
 }
 
 export interface LegalEntity {

@@ -10,7 +10,12 @@ import {
   useYearEndMutations,
 } from "../api/hooks";
 import type { FiscalYear, Period } from "../api/types";
-import { Loading, Page, ProblemMessage, StatusBadge } from "../components/common";
+import {
+  Loading,
+  Page,
+  ProblemMessage,
+  StatusBadge,
+} from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
@@ -25,7 +30,9 @@ function YearEnd({ year }: { year: FiscalYear }) {
   const status = useCloseStatus(year.id, open);
   const accounts = useAccounts();
   const { close, reopen } = useYearEndMutations(year.id);
-  const equity = (accounts.data ?? []).filter((a) => a.type === "EQUITY" && a.is_postable && a.status === "ACTIVE");
+  const equity = (accounts.data ?? []).filter(
+    (a) => a.type === "EQUITY" && a.is_postable && a.status === "ACTIVE",
+  );
   const fallback = equity.find((a) => a.code === "3200") ?? equity[0];
   const accountId = chosen || fallback?.id || "";
   const entryLink = (id: string, label: string) => (
@@ -33,7 +40,10 @@ function YearEnd({ year }: { year: FiscalYear }) {
   );
   const s = status.data;
   return (
-    <details className="year-end" onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details
+      className="year-end"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
       <summary>{t("ye.title")}</summary>
       <p className="muted">{t("ye.help")}</p>
       {status.isPending && open ? <Loading /> : null}
@@ -52,7 +62,8 @@ function YearEnd({ year }: { year: FiscalYear }) {
           ) : null}
           {s.closing_entry_id && s.status === "OPEN" ? (
             <p>
-              {entryLink(s.closing_entry_id, t("ye.entry"))} · {s.closing_entry_status}
+              {entryLink(s.closing_entry_id, t("ye.entry"))} ·{" "}
+              {s.closing_entry_status}
             </p>
           ) : null}
           {s.status === "OPEN" && !s.blockers.length ? (
@@ -64,19 +75,29 @@ function YearEnd({ year }: { year: FiscalYear }) {
               }}
             >
               <p>
-                {t("ye.result")}: <strong>{formatAmount(s.result, locale)}</strong>
+                {t("ye.result")}:{" "}
+                <strong>{formatAmount(s.result, locale)}</strong>
               </p>
               <label>
                 {t("ye.account")}
-                <select value={accountId} onChange={(e) => setChosen(e.target.value)} required>
+                <select
+                  value={accountId}
+                  onChange={(e) => setChosen(e.target.value)}
+                  required
+                >
                   {equity.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.code} · {locale === "el" && a.name_el ? a.name_el : a.name}
+                      {a.code} ·{" "}
+                      {locale === "el" && a.name_el ? a.name_el : a.name}
                     </option>
                   ))}
                 </select>
               </label>
-              <button type="submit" className="primary" disabled={close.isPending || !accountId}>
+              <button
+                type="submit"
+                className="primary"
+                disabled={close.isPending || !accountId}
+              >
                 {t("ye.generate")}
               </button>
             </form>
@@ -103,7 +124,9 @@ function YearEnd({ year }: { year: FiscalYear }) {
                   }}
                 >
                   <label>
-                    <span className="visually-hidden">{t("ye.reopenReason")}</span>
+                    <span className="visually-hidden">
+                      {t("ye.reopenReason")}
+                    </span>
                     <input
                       placeholder={t("ye.reopenReason")}
                       value={reason}
@@ -129,14 +152,18 @@ function PeriodActions({ period }: { period: Period }) {
   const { t } = useI18n();
   const { setStatus, requestUnlock } = usePeriodMutations();
   const [reason, setReason] = useState("");
-  const set = (status: Period["status"]) => setStatus.mutate({ periodId: period.id, status });
+  const set = (status: Period["status"]) =>
+    setStatus.mutate({ periodId: period.id, status });
   if (period.status === "LOCKED") {
     return (
       <form
         className="inline-form"
         onSubmit={(e) => {
           e.preventDefault();
-          requestUnlock.mutate({ periodId: period.id, reason }, { onSuccess: () => setReason("") });
+          requestUnlock.mutate(
+            { periodId: period.id, reason },
+            { onSuccess: () => setReason("") },
+          );
         }}
       >
         <label>
@@ -156,8 +183,12 @@ function PeriodActions({ period }: { period: Period }) {
   }
   return (
     <span className="row-actions">
-      {period.status === "OPEN" ? <button onClick={() => set("SOFT_CLOSED")}>{t("per.softClose")}</button> : null}
-      {period.status === "SOFT_CLOSED" ? <button onClick={() => set("OPEN")}>{t("per.reopen")}</button> : null}
+      {period.status === "OPEN" ? (
+        <button onClick={() => set("SOFT_CLOSED")}>{t("per.softClose")}</button>
+      ) : null}
+      {period.status === "SOFT_CLOSED" ? (
+        <button onClick={() => set("OPEN")}>{t("per.reopen")}</button>
+      ) : null}
       <button onClick={() => set("LOCKED")}>{t("per.lock")}</button>
       <ProblemMessage error={setStatus.error} />
     </span>
@@ -174,10 +205,15 @@ export function PeriodsPage() {
 
   function create(event: SyntheticEvent) {
     event.preventDefault();
-    createYear.mutate({ start_date: start, months: Number.parseInt(months, 10) });
+    createYear.mutate({
+      start_date: start,
+      months: Number.parseInt(months, 10),
+    });
   }
 
-  const openUnlocks = (unlocks.data ?? []).filter((u) => u.status === "REQUESTED" || u.status === "ACTIVE");
+  const openUnlocks = (unlocks.data ?? []).filter(
+    (u) => u.status === "REQUESTED" || u.status === "ACTIVE",
+  );
   return (
     <Page title={t("per.title")}>
       {years.isPending ? <Loading /> : null}
@@ -185,8 +221,13 @@ export function PeriodsPage() {
       {(years.data ?? []).map((year) => (
         <section key={year.id} className="panel">
           <h2>
-            {year.name} <span className="muted">({year.start_date} – {year.end_date})</span>
-            {year.status === "CLOSED" ? <span className="badge badge-locked">{t("ye.closed")}</span> : null}
+            {year.name}{" "}
+            <span className="muted">
+              ({year.start_date} – {year.end_date})
+            </span>
+            {year.status === "CLOSED" ? (
+              <span className="badge badge-locked">{t("ye.closed")}</span>
+            ) : null}
           </h2>
           <table>
             <thead>
@@ -231,10 +272,24 @@ export function PeriodsPage() {
                 <strong>{u.status}</strong> · {u.reason}{" "}
                 {u.status === "REQUESTED" ? (
                   <>
-                    <button onClick={() => decideUnlock.mutate({ unlockId: u.id, decision: "approve" })}>
+                    <button
+                      onClick={() =>
+                        decideUnlock.mutate({
+                          unlockId: u.id,
+                          decision: "approve",
+                        })
+                      }
+                    >
                       {t("per.approveUnlock")}
                     </button>{" "}
-                    <button onClick={() => decideUnlock.mutate({ unlockId: u.id, decision: "reject" })}>
+                    <button
+                      onClick={() =>
+                        decideUnlock.mutate({
+                          unlockId: u.id,
+                          decision: "reject",
+                        })
+                      }
+                    >
                       {t("per.rejectUnlock")}
                     </button>
                   </>
@@ -249,11 +304,22 @@ export function PeriodsPage() {
         <h2>{t("per.createYear")}</h2>
         <label>
           {t("per.startDate")}
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            required
+          />
         </label>
         <label>
           {t("per.months")}
-          <input type="number" min={1} max={18} value={months} onChange={(e) => setMonths(e.target.value)} />
+          <input
+            type="number"
+            min={1}
+            max={18}
+            value={months}
+            onChange={(e) => setMonths(e.target.value)}
+          />
         </label>
         <ProblemMessage error={createYear.error} />
         <button type="submit" disabled={createYear.isPending}>

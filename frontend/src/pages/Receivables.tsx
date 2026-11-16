@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { apiUrl } from "../api/client";
-import { useAgeing, useAllocationMutations, useOpenItems, useScope } from "../api/hooks";
+import {
+  useAgeing,
+  useAllocationMutations,
+  useOpenItems,
+  useScope,
+} from "../api/hooks";
 import { BUCKETS, type Side } from "../api/types";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 
-function OpenItems({ counterpartyId, asOf }: { counterpartyId: string; asOf: string }) {
+function OpenItems({
+  counterpartyId,
+  asOf,
+}: {
+  counterpartyId: string;
+  asOf: string;
+}) {
   const { t, locale } = useI18n();
   const { slug = "", entityId = "" } = useParams();
   const items = useOpenItems(asOf, counterpartyId);
@@ -26,7 +37,9 @@ function OpenItems({ counterpartyId, asOf }: { counterpartyId: string; asOf: str
       </div>
       <ProblemMessage error={items.error ?? autoAllocate.error} />
       {items.isPending ? <Loading /> : null}
-      {items.data?.length === 0 ? <p className="muted">{t("ar.allSettled")}</p> : null}
+      {items.data?.length === 0 ? (
+        <p className="muted">{t("ar.allSettled")}</p>
+      ) : null}
       {items.data?.length ? (
         <table>
           <thead>
@@ -48,16 +61,28 @@ function OpenItems({ counterpartyId, asOf }: { counterpartyId: string; asOf: str
               <tr key={i.line_id}>
                 <td>{i.accounting_date}</td>
                 <td>
-                  <Link to={`/w/${slug}/e/${entityId}/entries/${i.entry_id}`}>{i.entry_ref}</Link>
-                  {i.reference ? <span className="muted"> · {i.reference}</span> : null}
-                  {i.disputed ? <span className="tag"> {t("ar.disputed")}</span> : null}
+                  <Link to={`/w/${slug}/e/${entityId}/entries/${i.entry_id}`}>
+                    {i.entry_ref}
+                  </Link>
+                  {i.reference ? (
+                    <span className="muted"> · {i.reference}</span>
+                  ) : null}
+                  {i.disputed ? (
+                    <span className="tag"> {t("ar.disputed")}</span>
+                  ) : null}
                 </td>
                 <td>{t(`ar.kind.${i.kind}` as MessageKey)}</td>
-                <td className={i.kind === "INVOICE" && i.days_overdue > 0 ? "warn" : ""}>
+                <td
+                  className={
+                    i.kind === "INVOICE" && i.days_overdue > 0 ? "warn" : ""
+                  }
+                >
                   {i.kind === "INVOICE" ? i.due_date : ""}
                 </td>
                 <td className="amount">{formatAmount(i.amount, locale)}</td>
-                <td className="amount">{formatAmount(i.open_amount, locale)}</td>
+                <td className="amount">
+                  {formatAmount(i.open_amount, locale)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -78,7 +103,10 @@ export function ReceivablesPage() {
     <Page
       title={t("ar.title")}
       actions={
-        <a className="button" href={apiUrl(`${base}/reports/ageing.csv`, { as_of: asOf, side })}>
+        <a
+          className="button"
+          href={apiUrl(`${base}/reports/ageing.csv`, { as_of: asOf, side })}
+        >
           {t("tb.export")}
         </a>
       }
@@ -86,7 +114,11 @@ export function ReceivablesPage() {
       <div className="form inline">
         <label>
           {t("tb.asOf")}
-          <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => setAsOf(e.target.value)}
+          />
         </label>
         <label>
           {t("ar.side")}
@@ -106,8 +138,13 @@ export function ReceivablesPage() {
       <ProblemMessage error={report.error} />
       {report.data ? (
         <>
-          <p className={report.data.reconciles ? "notice" : "notice warn"} data-testid="reconciliation">
-            {report.data.reconciles ? t("ar.reconciles") : t("ar.doesNotReconcile")}{" "}
+          <p
+            className={report.data.reconciles ? "notice" : "notice warn"}
+            data-testid="reconciliation"
+          >
+            {report.data.reconciles
+              ? t("ar.reconciles")
+              : t("ar.doesNotReconcile")}{" "}
             {formatAmount(report.data.control_balance, locale)}
           </p>
           {report.data.rows.length === 0 ? (
@@ -133,24 +170,43 @@ export function ReceivablesPage() {
                 </thead>
                 <tbody>
                   {report.data.rows.map((r) => (
-                    <tr key={r.counterparty_id} className={selected === r.counterparty_id ? "selected" : ""}>
+                    <tr
+                      key={r.counterparty_id}
+                      className={
+                        selected === r.counterparty_id ? "selected" : ""
+                      }
+                    >
                       <td>
                         <button
                           type="button"
                           className="link-button"
                           aria-expanded={selected === r.counterparty_id}
-                          onClick={() => setSelected(selected === r.counterparty_id ? "" : r.counterparty_id)}
+                          onClick={() =>
+                            setSelected(
+                              selected === r.counterparty_id
+                                ? ""
+                                : r.counterparty_id,
+                            )
+                          }
                         >
                           {r.counterparty_code} · {r.counterparty_name}
                         </button>
                       </td>
                       {BUCKETS.map((b) => (
                         <td className="amount" key={b}>
-                          {r.buckets[b] === "0.00" ? "" : formatAmount(r.buckets[b], locale)}
+                          {r.buckets[b] === "0.00"
+                            ? ""
+                            : formatAmount(r.buckets[b], locale)}
                         </td>
                       ))}
-                      <td className="amount">{r.unapplied === "0.00" ? "" : formatAmount(r.unapplied, locale)}</td>
-                      <td className="amount">{formatAmount(r.total, locale)}</td>
+                      <td className="amount">
+                        {r.unapplied === "0.00"
+                          ? ""
+                          : formatAmount(r.unapplied, locale)}
+                      </td>
+                      <td className="amount">
+                        {formatAmount(r.total, locale)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -162,14 +218,20 @@ export function ReceivablesPage() {
                         {formatAmount(report.data.totals[b], locale)}
                       </td>
                     ))}
-                    <td className="amount">{formatAmount(report.data.unapplied, locale)}</td>
-                    <td className="amount">{formatAmount(report.data.total, locale)}</td>
+                    <td className="amount">
+                      {formatAmount(report.data.unapplied, locale)}
+                    </td>
+                    <td className="amount">
+                      {formatAmount(report.data.total, locale)}
+                    </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           )}
-          {selected ? <OpenItems counterpartyId={selected} asOf={asOf} /> : null}
+          {selected ? (
+            <OpenItems counterpartyId={selected} asOf={asOf} />
+          ) : null}
         </>
       ) : null}
     </Page>

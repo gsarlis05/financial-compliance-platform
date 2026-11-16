@@ -60,6 +60,7 @@ const rows = [
     entity_id: "e2",
     legal_name: "Client B",
     entity_type: "COMPANY",
+    client_slug: "client-b", // a client in its own workspace (engagement grant, M5-4)
     cash: {
       status: "empty",
       reason: "No cash forecast yet: run one first.",
@@ -123,6 +124,11 @@ describe("Firm portfolio (M4-9)", () => {
     const b = within(table).getByRole("row", { name: /Client B/ });
     expect(b).toHaveTextContent("No cash forecast yet");
     expect(b).toHaveTextContent("No KPI set for the year to date yet.");
+    expect(b).toHaveTextContent("client's own workspace");
+    expect(within(b).getByRole("link", { name: "Client B" })).toHaveAttribute(
+      "href",
+      "/w/client-b/e/e2/dashboard",
+    );
     const results = await axe.run(container, {
       rules: { "color-contrast": { enabled: false } },
     });
