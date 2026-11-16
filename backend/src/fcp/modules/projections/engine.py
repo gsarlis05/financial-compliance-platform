@@ -31,11 +31,17 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-from fcp.modules.assets.api import AssetTerms, schedule
+from fcp.modules.assets.api import (
+    DECLINING_BALANCE,
+    FULL_MONTH,
+    STRAIGHT_LINE,
+    AssetTerms,
+    schedule,
+)
 from fcp.modules.calendar.api import add_months, month_end
 from fcp.modules.metrics.api import Nature, Output, Source, Value
 
-from .drivers import OPEX_LINES, REVENUE_LINES
+from .drivers import DEFAULTS, OPEX_LINES, REVENUE_LINES
 
 # The engine is not production-ready until the validation package passes and a qualified
 # independent professional has signed it (owner decision D9, 2026-11-15; brief 20 §5). Changed
@@ -97,14 +103,33 @@ def _d(inp: EngineInput, key: str, month: date, line: str = "") -> Decimal:
     return inp.drivers.get((key, line), {}).get(month, Decimal(0))
 
 
+def _dd(inp: EngineInput, key: str, month: date) -> Decimal:
+    """A driver's value, or its default when the set has no row for it (sets made before the
+    driver existed)."""
+    series = inp.drivers.get((key, ""))
+    if series is None or month not in series:
+        return Decimal(DEFAULTS.get(key, 0))
+    return series[month]
+
+
 def _new_capex_depreciation(inp: EngineInput) -> dict[date, Decimal]:
+    """New capex is depreciated from ``capex_start`` months after the month it is spent (a full
+    first month), straight-line, or declining balance at ``capex_db_rate`` (M6F-3, #148)."""
     found: dict[date, Decimal] = defaultdict(lambda: ZERO)
     for month in inp.months:
         spent = cents(_d(inp, "capex", month))
         if spent <= 0:
             continue
-        life = max(int(_d(inp, "capex_life", month)), 1)
-        for row in schedule(AssetTerms(month, spent, Decimal(0), life)):
+        life = max(int(_dd(inp, "capex_life", month)), 1)
+        offset = max(int(_dd(inp, "capex_start", month)), 0)
+        db_rate = _dd(inp, "capex_db_rate", month) / HUNDRED
+        terms = AssetTerms(
+            month, spent, Decimal(0), life,
+            method=DECLINING_BALANCE if db_rate > 0 else STRAIGHT_LINE,
+            annual_rate=db_rate if db_rate > 0 else None,
+            available_on=add_months(month, offset), commencement=FULL_MONTH,
+        )  # fmt: skip
+        for row in schedule(terms):
             found[row.month] += row.depreciation
     return found
 

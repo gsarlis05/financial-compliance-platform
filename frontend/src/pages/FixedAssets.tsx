@@ -1,12 +1,18 @@
 // Fixed assets (M6-1): the register, each asset's depreciation schedule, disposals, and the
-// monthly depreciation prepared as a draft entry that still needs the normal approval.
+// monthly depreciation prepared as a draft entry that still needs the normal approval. M6F-3:
+// depreciation begins when the asset is available for use (IAS 16), and tax capital allowances
+// are kept separately, by allowance class.
 import { useState } from "react";
 import { Link } from "react-router";
 import {
+  type AllowanceClassInput,
   type AssetCategory,
   type AssetInput,
+  type Commencement,
   type DepreciationMethod,
+  type FirstYearRule,
   type FixedAsset,
+  useAllowanceClasses,
   useAssetMutations,
   useAssetSchedule,
   useDepreciationRuns,
@@ -32,6 +38,12 @@ const CATEGORIES: AssetCategory[] = [
   "OTHER",
 ];
 const today = () => new Date().toISOString().slice(0, 10);
+const COMMENCEMENTS: Commencement[] = [
+  "PRORATA_DAYS",
+  "NEXT_MONTH",
+  "FULL_MONTH",
+];
+const FIRST_YEAR: FirstYearRule[] = ["FULL_YEAR", "MONTHS_IN_USE", "NONE"];
 
 function Schedule({ asset }: { asset: FixedAsset }) {
   const { t, locale } = useI18n();
@@ -81,7 +93,174 @@ function Schedule({ asset }: { asset: FixedAsset }) {
           ))}
         </tbody>
       </table>
+      <h3>{t("fa.allowances")}</h3>
+      <p className="muted">{s.data.allowance_rules}</p>
+      {s.data.allowances.length === 0 ? (
+        <p className="muted">{t("fa.noAllowances")}</p>
+      ) : (
+        <table className="grid">
+          <caption>
+            {t("fa.allowances")}: {asset.code} {asset.name}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("fa.taxYear")}</th>
+              <th scope="col" className="num">
+                {t("fa.allowanceRate")}
+              </th>
+              <th scope="col" className="num">
+                {t("fa.allowance")}
+              </th>
+              <th scope="col" className="num">
+                {t("fa.writtenDown")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.data.allowances.map((r) => (
+              <tr key={r.tax_year}>
+                <td>{r.tax_year}</td>
+                <td className="num">{r.rate}%</td>
+                <td className="num">{formatAmount(r.allowance, locale)}</td>
+                <td className="num">{formatAmount(r.written_down, locale)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
+  );
+}
+
+function AllowanceClasses() {
+  const { t } = useI18n();
+  const classes = useAllowanceClasses();
+  const m = useAssetMutations();
+  const blank = (): AllowanceClassInput => ({
+    code: "",
+    name: "",
+    annual_rate: "",
+    first_year: "FULL_YEAR",
+    effective_from: `${new Date().getFullYear()}-01-01`,
+    source: "",
+  });
+  const [form, setForm] = useState<AllowanceClassInput>(blank);
+  const set = (patch: Partial<AllowanceClassInput>) =>
+    setForm({ ...form, ...patch });
+  return (
+    <section className="card" aria-labelledby="fa-classes">
+      <h2 id="fa-classes">{t("fa.classes")}</h2>
+      <p>{t("fa.classesIntro")}</p>
+      {classes.data?.length ? (
+        <div className="table-scroll">
+          <table className="grid">
+            <caption>{t("fa.classes")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("fa.classCode")}</th>
+                <th scope="col">{t("fa.className")}</th>
+                <th scope="col" className="num">
+                  {t("fa.allowanceRate")}
+                </th>
+                <th scope="col">{t("fa.firstYear")}</th>
+                <th scope="col">{t("fa.effectiveFrom")}</th>
+                <th scope="col">{t("fa.source")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classes.data.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.code}</td>
+                  <td>{c.name}</td>
+                  <td className="num">{c.annual_rate}%</td>
+                  <td>{t(`fa.fy.${c.first_year}` as MessageKey)}</td>
+                  <td>{c.effective_from}</td>
+                  <td>{c.source}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted">{t("fa.noClasses")}</p>
+      )}
+      <div className="form inline">
+        <label>
+          {t("fa.classCode")}
+          <input
+            value={form.code}
+            maxLength={20}
+            onChange={(e) => set({ code: e.target.value })}
+          />
+        </label>
+        <label>
+          {t("fa.className")}
+          <input
+            value={form.name}
+            maxLength={200}
+            onChange={(e) => set({ name: e.target.value })}
+          />
+        </label>
+        <label>
+          {t("fa.allowanceRate")}
+          <input
+            inputMode="decimal"
+            value={form.annual_rate}
+            onChange={(e) => set({ annual_rate: e.target.value })}
+          />
+          <FieldError error={m.addClass.error} field="annual_rate" />
+        </label>
+        <label>
+          {t("fa.firstYear")}
+          <select
+            value={form.first_year}
+            onChange={(e) =>
+              set({ first_year: e.target.value as FirstYearRule })
+            }
+          >
+            {FIRST_YEAR.map((r) => (
+              <option key={r} value={r}>
+                {t(`fa.fy.${r}` as MessageKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("fa.effectiveFrom")}
+          <input
+            type="date"
+            value={form.effective_from}
+            onChange={(e) => set({ effective_from: e.target.value })}
+          />
+          <FieldError error={m.addClass.error} field="effective_from" />
+        </label>
+        <label>
+          {t("fa.source")}
+          <input
+            value={form.source}
+            maxLength={500}
+            onChange={(e) => set({ source: e.target.value })}
+          />
+          <FieldError error={m.addClass.error} field="source" />
+        </label>
+        <button
+          type="button"
+          disabled={
+            !form.code.trim() ||
+            !form.name.trim() ||
+            !form.annual_rate ||
+            !form.source.trim() ||
+            m.addClass.isPending
+          }
+          onClick={() =>
+            m.addClass.mutate(form, { onSuccess: () => setForm(blank()) })
+          }
+        >
+          {t("fa.addClass")}
+        </button>
+      </div>
+      <ProblemMessage error={m.addClass.error} />
+    </section>
   );
 }
 
@@ -124,6 +303,7 @@ function Dispose({ asset, done }: { asset: FixedAsset; done: () => void }) {
 function AddAsset() {
   const { t } = useI18n();
   const accounts = useAccounts();
+  const classes = useAllowanceClasses();
   const m = useAssetMutations();
   const postable = (accounts.data ?? []).filter(
     (a) => a.is_postable && a.status === "ACTIVE",
@@ -143,6 +323,9 @@ function AddAsset() {
     useful_life_months: 60,
     method: "STRAIGHT_LINE",
     annual_rate: null,
+    available_on: null,
+    commencement: "PRORATA_DAYS",
+    allowance_class_code: "",
   });
   const [form, setForm] = useState<AssetInput | null>(null);
   if (!form) {
@@ -274,6 +457,46 @@ function AddAsset() {
             <FieldError error={m.create.error} field="annual_rate" />
           </label>
         ) : null}
+        <label>
+          {t("fa.availableOn")}
+          <input
+            type="date"
+            value={form.available_on ?? form.acquired_on}
+            onChange={(e) => set({ available_on: e.target.value || null })}
+          />
+          <FieldError error={m.create.error} field="available_on" />
+        </label>
+        <label>
+          {t("fa.commencement")}
+          <select
+            value={form.commencement}
+            onChange={(e) =>
+              set({ commencement: e.target.value as Commencement })
+            }
+          >
+            {COMMENCEMENTS.map((c) => (
+              <option key={c} value={c}>
+                {t(`fa.comm.${c}` as MessageKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("fa.allowanceClass")}
+          <select
+            value={form.allowance_class_code}
+            onChange={(e) => set({ allowance_class_code: e.target.value })}
+          >
+            <option value="">{t("fa.noAllowanceClass")}</option>
+            {[...new Set((classes.data ?? []).map((c) => c.code))].map(
+              (code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
         {select("asset_account_id", "ASSET", "fa.assetAccount")}
         {select("accumulated_account_id", "ASSET", "fa.accumulatedAccount")}
         {select("expense_account_id", "EXPENSE", "fa.expenseAccount")}
@@ -385,6 +608,7 @@ export function FixedAssetsPage() {
   return (
     <Page title={t("nav.fixedAssets")}>
       <AddAsset />
+      <AllowanceClasses />
       <label>
         {t("fa.asOf")}
         <input

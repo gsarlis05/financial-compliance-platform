@@ -68,7 +68,7 @@ def test_start_from_actuals_by_hand(hist: dict[str, Any]) -> None:
     assert grid["nature"] == "FORECAST"
     assert (grid["months"][0], grid["months"][-1]) == ("2027-01-01", "2028-12-01")
     r = rows(grid)
-    assert len(r) == 26  # 3 revenue lines, 8 cost lines and 15 single drivers
+    assert len(r) == 29  # 3 revenue lines, 8 cost lines and 18 single drivers
     sales = r[("revenue", "REV.SALES")]
     # Jan 2027 = Jan 2026 x 1.10; Feb 2027 = (800 + 300) x 1.10; Jan 2028 = 1,200 x 1.10^2.
     assert sales["values"][:3] == ["1320", "1210", "0"]

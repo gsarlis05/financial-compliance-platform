@@ -44,6 +44,12 @@ DRIVERS: dict[str, Driver] = {
         Driver("opex", Unit.AMOUNT, OPEX_LINES),
         Driver("capex", Unit.AMOUNT),
         Driver("capex_life", Unit.MONTHS),
+        # M6F-3 (#148): when depreciation of new capex starts (months after the month it is
+        # spent; 1 = the month after, the default), its method (a declining-balance rate a year;
+        # 0 = straight-line) and the tax capital allowance rate a year (used from M6F-5).
+        Driver("capex_start", Unit.MONTHS),
+        Driver("capex_db_rate", Unit.PERCENT),
+        Driver("capex_allowance_rate", Unit.PERCENT),
         Driver("dso", Unit.DAYS),
         Driver("dio", Unit.DAYS),
         Driver("dpo", Unit.DAYS),
@@ -60,3 +66,5 @@ DRIVERS: dict[str, Driver] = {
 }
 
 DEFAULT_CAPEX_LIFE = 60  # months, when a set starts empty or from actuals
+# Values a driver takes when a set starts, and when an older set has no row for it.
+DEFAULTS = {"capex_life": 60, "capex_start": 1}

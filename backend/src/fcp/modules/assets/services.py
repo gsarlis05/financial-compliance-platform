@@ -33,7 +33,8 @@ from fcp.modules.ledger.api import (
 )
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from .models import DepreciationRun, DepreciationRunLine, FixedAsset
+from .allowances import AllowanceRate, AllowanceRow, allowance_schedule
+from .models import CapitalAllowanceClass, DepreciationRun, DepreciationRunLine, FixedAsset
 from .schedule import CONVENTION, AssetTerms, ScheduleRow, book_value, disposal_result, schedule
 
 READ, MANAGE = "assets.read", "assets.manage"
@@ -72,6 +73,8 @@ def terms(asset: FixedAsset) -> AssetTerms:
         method=asset.method,
         annual_rate=asset.annual_rate,
         disposed_on=asset.disposed_on,
+        available_on=asset.available_on,
+        commencement=asset.commencement,
     )
 
 
@@ -92,6 +95,9 @@ class AssetInput:
     residual_value: str = "0"
     method: str = FixedAsset.Method.STRAIGHT_LINE
     annual_rate: str | None = None
+    available_on: date | None = None  # IAS 16 commencement; None: the acquisition date
+    commencement: str = FixedAsset.Commencement.PRORATA_DAYS
+    allowance_class_code: str = ""
 
 
 def _account(accounts: dict[UUID, Account], account_id: UUID, kind: str, name: str) -> None:
@@ -100,6 +106,19 @@ def _account(accounts: dict[UUID, Account], account_id: UUID, kind: str, name: s
             or found.type != kind):  # fmt: skip
         what = "an asset account" if kind == "ASSET" else "an expense account"
         raise _invalid(name, f"Choose {what} of this entity that can be posted to.")
+
+
+def _commencement_and_allowance(entity: UUID, data: AssetInput) -> str:
+    if data.commencement not in FixedAsset.Commencement.values:
+        raise _invalid("commencement", "Choose how depreciation starts.")
+    if data.available_on is not None and data.available_on < data.acquired_on:
+        raise _invalid("available_on", "An asset cannot be available for use before it is "
+                       "acquired.")  # fmt: skip
+    allowance = data.allowance_class_code.strip()
+    if allowance and not CapitalAllowanceClass.objects.filter(
+            legal_entity_id=entity, code=allowance).exists():  # fmt: skip
+        raise _invalid("allowance_class_code", "Choose a capital allowance class of this entity.")
+    return allowance
 
 
 def _validated(ctx: WorkspaceContext, entity: UUID, data: AssetInput) -> dict[str, object]:
@@ -112,6 +131,7 @@ def _validated(ctx: WorkspaceContext, entity: UUID, data: AssetInput) -> dict[st
         raise _invalid("category", "Choose a category.")
     if data.method not in FixedAsset.Method.values:
         raise _invalid("method", "Choose straight-line or declining balance.")
+    allowance = _commencement_and_allowance(entity, data)
     accounts = {a.id: a for a in account_list(ctx, entity)}
     _account(accounts, data.asset_account_id, "ASSET", "asset_account_id")
     _account(accounts, data.accumulated_account_id, "ASSET", "accumulated_account_id")
@@ -138,7 +158,8 @@ def _validated(ctx: WorkspaceContext, entity: UUID, data: AssetInput) -> dict[st
         "accumulated_account_id": data.accumulated_account_id,
         "expense_account_id": data.expense_account_id, "acquired_on": data.acquired_on,
         "cost": cost, "residual_value": residual, "useful_life_months": data.useful_life_months,
-        "method": data.method, "annual_rate": rate,
+        "method": data.method, "annual_rate": rate, "available_on": data.available_on,
+        "commencement": data.commencement, "allowance_class_code": allowance,
     }  # fmt: skip
 
 
@@ -166,7 +187,9 @@ def create_asset(ctx: WorkspaceContext, entity_id: UUID, data: AssetInput) -> Fi
     except IntegrityError:
         raise _invalid("code", "Another asset of this entity has this code.") from None
     _audit(ctx, "created", asset, cost=asset.cost, acquired_on=asset.acquired_on,
-           method=asset.method, life=asset.useful_life_months)  # fmt: skip
+           available_on=asset.available_on or asset.acquired_on,
+           commencement=asset.commencement, method=asset.method,
+           life=asset.useful_life_months, allowance_class=asset.allowance_class_code)  # fmt: skip
     return asset
 
 
@@ -198,7 +221,9 @@ def correct_asset(
     except IntegrityError:
         raise _invalid("code", "Another asset of this entity has this code.") from None
     _audit(ctx, "corrected", asset, cost=asset.cost, acquired_on=asset.acquired_on,
-           method=asset.method, life=asset.useful_life_months)  # fmt: skip
+           available_on=asset.available_on or asset.acquired_on,
+           commencement=asset.commencement, method=asset.method,
+           life=asset.useful_life_months, allowance_class=asset.allowance_class_code)  # fmt: skip
     return asset
 
 
@@ -258,7 +283,8 @@ def assets(ctx: WorkspaceContext, entity_id: UUID, *, as_of: date) -> list[Asset
 def asset_schedule(
     ctx: WorkspaceContext, entity_id: UUID, asset_id: UUID
 ) -> tuple[FixedAsset, list[ScheduleRow], dict[date, UUID]]:
-    """The schedule, and for each month already prepared the draft entry it went into."""
+    """The depreciation schedule, and for each month already prepared the draft entry it went
+    into. Capital allowances are separate: ``asset_allowances``."""
     entity = _entity(ctx, entity_id, READ)
     asset = _asset(entity, asset_id)
     prepared = {
@@ -267,6 +293,124 @@ def asset_schedule(
         .select_related("run")
     }  # fmt: skip
     return asset, schedule(terms(asset)), prepared
+
+
+# --- tax capital allowances (M6F-3, #148) -------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class NewAllowanceClass:
+    code: str
+    name: str
+    annual_rate: str  # percent a year, e.g. "10"
+    first_year: str
+    effective_from: date
+    source: str
+
+
+def allowance_classes(ctx: WorkspaceContext, entity_id: UUID) -> list[CapitalAllowanceClass]:
+    entity = _entity(ctx, entity_id, READ)
+    return list(CapitalAllowanceClass.objects.filter(legal_entity_id=entity)
+                .order_by("code", "effective_from"))  # fmt: skip
+
+
+@transaction.atomic
+def add_allowance_class(ctx: WorkspaceContext, entity_id: UUID,
+                        data: NewAllowanceClass) -> CapitalAllowanceClass:  # fmt: skip
+    """A class, or a new rate for an existing class from a later tax year."""
+    entity = _entity(ctx, entity_id, MANAGE)
+    code, name, source = data.code.strip(), data.name.strip(), data.source.strip()
+    if not code or len(code) > 20:
+        raise _invalid("code", "Give the class a code of 1 to 20 characters.")
+    if not name or len(name) > 200:
+        raise _invalid("name", "Give the class a name of 1 to 200 characters.")
+    if not source or len(source) > 500:
+        raise _invalid("source", "Say where the rate comes from (law, article or adviser).")
+    if data.first_year not in CapitalAllowanceClass.FirstYear.values:
+        raise _invalid("first_year", "Choose the first-year rule.")
+    try:
+        rate = Decimal(data.annual_rate) / 100
+    except InvalidOperation:
+        rate = Decimal("NaN")
+    if (
+        not rate.is_finite()
+        or not Decimal(0) <= rate <= 1
+        or rate != rate.quantize(Decimal("0.0001"))
+    ):
+        raise _invalid("annual_rate", "Enter a rate from 0 to 100% a year, at most 2 decimals.")
+    try:
+        with transaction.atomic():
+            made = CapitalAllowanceClass.objects.create(
+                tenant=ctx.tenant, legal_entity_id=entity, code=code, name=name,
+                annual_rate=rate, first_year=data.first_year,
+                effective_from=data.effective_from, source=source, created_by=ctx.user,
+            )  # fmt: skip
+    except IntegrityError:
+        raise _invalid("effective_from", "This class already has a rate from that date.") from None
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id,
+          action="assets.allowance_class.added", subject_type="allowance_class",
+          subject_id=made.id, entity_id=entity,
+          changes={"code": code, "rate": str(rate), "first_year": made.first_year,
+                   "from": made.effective_from.isoformat(), "source": source})  # fmt: skip
+    return made
+
+
+@transaction.atomic
+def set_allowance_class(ctx: WorkspaceContext, entity_id: UUID, asset_id: UUID,
+                        code: str) -> FixedAsset:  # fmt: skip
+    """Set or change an asset's allowance class (also after depreciation was prepared: tax data
+    does not change the accounting)."""
+    entity = _entity(ctx, entity_id, MANAGE)
+    asset = _asset(entity, asset_id)
+    code = code.strip()
+    if (
+        code
+        and not CapitalAllowanceClass.objects.filter(legal_entity_id=entity, code=code).exists()
+    ):
+        raise _invalid("allowance_class_code", "Choose a capital allowance class of this entity.")
+    before = asset.allowance_class_code
+    asset.allowance_class_code = code
+    asset.save(update_fields=["allowance_class_code"])
+    _audit(ctx, "allowance_class_set", asset, before=before, after=code)
+    return asset
+
+
+def _rates(entity: UUID) -> dict[str, list[AllowanceRate]]:
+    found: dict[str, list[AllowanceRate]] = {}
+    for c in CapitalAllowanceClass.objects.filter(legal_entity_id=entity):
+        found.setdefault(c.code, []).append(
+            AllowanceRate(c.effective_from, c.annual_rate, c.first_year)
+        )
+    return found
+
+
+def _allowances(asset: FixedAsset, rates: dict[str, list[AllowanceRate]],
+                until_year: int | None = None) -> list[AllowanceRow]:  # fmt: skip
+    if not asset.allowance_class_code:
+        return []
+    return allowance_schedule(asset.cost, asset.available_on or asset.acquired_on,
+                              rates.get(asset.allowance_class_code, []),
+                              disposed_on=asset.disposed_on, until_year=until_year)  # fmt: skip
+
+
+def asset_allowances(ctx: WorkspaceContext, entity_id: UUID,
+                     asset_id: UUID) -> list[AllowanceRow]:  # fmt: skip
+    entity = _entity(ctx, entity_id, READ)
+    return _allowances(_asset(entity, asset_id), _rates(entity))
+
+
+def capital_allowance_plan(ctx: WorkspaceContext, entity_id: UUID,
+                           years: list[int]) -> dict[int, Decimal]:  # fmt: skip
+    """Capital allowances of the registered assets by tax year (for projections, M6F-5)."""
+    entity = _entity(ctx, entity_id, READ)
+    rates = _rates(entity)
+    totals = dict.fromkeys(years, Decimal("0.00"))
+    last = max(years) if years else None
+    for asset in FixedAsset.objects.filter(legal_entity_id=entity):
+        for row in _allowances(asset, rates, until_year=last):
+            if row.tax_year in totals:
+                totals[row.tax_year] += row.allowance
+    return totals
 
 
 # --- prepared depreciation entries -------------------------------------------------------------

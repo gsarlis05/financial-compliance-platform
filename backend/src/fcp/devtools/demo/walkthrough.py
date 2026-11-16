@@ -388,10 +388,12 @@ def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[st
 
 def _fixed_assets(owner: "DemoClient", base: str, by_code: dict[str, str],
                   year: int) -> dict[str, Any]:  # fmt: skip
-    """Two synthetic assets bought in December, and January's depreciation prepared as a draft
-    entry (M6-1). The register only prepares; the normal workflow approves and posts it."""
+    """Two synthetic assets bought in December and brought into use on 1 January, so under IAS 16
+    depreciation starts in January (M6F-3); January's depreciation is prepared as a draft entry
+    (M6-1). The register only prepares; the normal workflow approves and posts it."""
     common = {"asset_account_id": by_code["1010"], "accumulated_account_id": by_code["1019"],
-              "expense_account_id": by_code["6600"], "acquired_on": f"{year}-12-10"}  # fmt: skip
+              "expense_account_id": by_code["6600"], "acquired_on": f"{year}-12-10",
+              "available_on": f"{year + 1}-01-01"}  # fmt: skip
     for body in (
         {"code": "VAN-1", "name": "Delivery van (Demo)", "category": "VEHICLES",
          "cost": "24000.00", "useful_life_months": 48},

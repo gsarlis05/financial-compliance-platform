@@ -16,14 +16,39 @@ from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import services
-from .schedule import AssetTerms, ScheduleRow, schedule
-from .services import CONVENTION, MonthlyDepreciation, depreciation_plan
+from .allowances import RULES_NOTE, AllowanceRate, AllowanceRow, allowance_schedule
+from .models import CapitalAllowanceClass
+from .schedule import (
+    DECLINING_BALANCE,
+    FULL_MONTH,
+    NEXT_MONTH,
+    PRORATA_DAYS,
+    STRAIGHT_LINE,
+    AssetTerms,
+    ScheduleRow,
+    schedule,
+)
+from .services import (
+    CONVENTION,
+    MonthlyDepreciation,
+    capital_allowance_plan,
+    depreciation_plan,
+)
 
 __all__ = [
     "CONVENTION",
+    "DECLINING_BALANCE",
+    "FULL_MONTH",
+    "NEXT_MONTH",
+    "PRORATA_DAYS",
+    "STRAIGHT_LINE",
+    "AllowanceRate",
+    "AllowanceRow",
     "AssetTerms",
     "MonthlyDepreciation",
     "ScheduleRow",
+    "allowance_schedule",
+    "capital_allowance_plan",
     "depreciation_plan",
     "router",
     "schedule",
@@ -34,6 +59,8 @@ BASE = "/w/{slug}/entities/{uuid:entity_id}"
 AMOUNT = r"^\d{1,12}(\.\d{1,2})?$"
 Category = Literal["BUILDINGS", "MACHINERY", "VEHICLES", "IT_EQUIPMENT", "FURNITURE", "OTHER"]
 Method = Literal["STRAIGHT_LINE", "DECLINING_BALANCE"]
+Commencement = Literal["PRORATA_DAYS", "NEXT_MONTH", "FULL_MONTH"]
+FirstYear = Literal["FULL_YEAR", "MONTHS_IN_USE", "NONE"]
 
 
 class AssetIn(Schema):
@@ -51,6 +78,14 @@ class AssetIn(Schema):
     annual_rate: str | None = Field(
         default=None, pattern=r"^\d{1,3}(\.\d{1,4})?$", description="Declining balance: % a year"
     )
+    available_on: date | None = Field(
+        default=None, description="IAS 16: when the asset is available for use (default: acquired)"
+    )
+    commencement: Commencement = Field(
+        default="PRORATA_DAYS",
+        description="PRORATA_DAYS (from the available-for-use date), NEXT_MONTH, or FULL_MONTH",
+    )
+    allowance_class_code: str = Field(default="", max_length=20, description="Tax allowances")
 
 
 class AssetOut(Schema):
@@ -67,6 +102,9 @@ class AssetOut(Schema):
     useful_life_months: int
     method: str
     annual_rate: str | None = Field(description="Declining balance: % a year")
+    available_on: date = Field(description="IAS 16 commencement (the acquisition date if not set)")
+    commencement: str
+    allowance_class_code: str
     disposed_on: date | None
     disposal_proceeds: str | None
     locked: bool = Field(description="Depreciation was prepared; the terms can no longer change")
@@ -85,7 +123,8 @@ def _out(view: services.AssetView) -> AssetOut:
         cost=f"{a.cost:.2f}", residual_value=f"{a.residual_value:.2f}",
         useful_life_months=a.useful_life_months, method=a.method,
         annual_rate=f"{a.annual_rate * 100:.2f}" if a.annual_rate is not None else None,
-        disposed_on=a.disposed_on,
+        available_on=a.available_on or a.acquired_on, commencement=a.commencement,
+        allowance_class_code=a.allowance_class_code, disposed_on=a.disposed_on,
         disposal_proceeds=f"{a.disposal_proceeds:.2f}" if a.disposal_proceeds is not None else None,
         locked=a.locked_at is not None, accumulated=f"{view.accumulated:.2f}",
         book_value=f"{view.book_value:.2f}", status=view.status,
@@ -159,10 +198,21 @@ class ScheduleRowOut(Schema):
     entry_id: UUID | None = Field(description="The draft or posted entry, once prepared")
 
 
+class AllowanceRowOut(Schema):
+    tax_year: int
+    rate: str = Field(description="% a year")
+    allowance: str
+    written_down: str = Field(description="Tax written-down value at the end of the tax year")
+
+
 class ScheduleOut(Schema):
     asset_id: UUID
     convention: str
     rows: list[ScheduleRowOut]
+    allowance_rules: str
+    allowances: list[AllowanceRowOut] = Field(
+        description="Tax capital allowances, separate from depreciation (none without a class)"
+    )
 
 
 @router.get(f"{BASE}/fixed-assets/{{uuid:asset_id}}/schedule", response=ScheduleOut)
@@ -171,7 +221,13 @@ def asset_schedule(request: HttpRequest, slug: str, entity_id: UUID,
                    asset_id: UUID) -> ScheduleOut:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     asset, rows, prepared = services.asset_schedule(ctx, entity_id, asset_id)
-    return ScheduleOut(asset_id=asset.id, convention=CONVENTION, rows=[
+    allowances = services.asset_allowances(ctx, entity_id, asset_id)
+    return ScheduleOut(asset_id=asset.id, convention=CONVENTION, allowance_rules=RULES_NOTE,
+                       allowances=[AllowanceRowOut(tax_year=a.tax_year,
+                                                   rate=f"{a.rate * 100:.2f}",
+                                                   allowance=f"{a.allowance:.2f}",
+                                                   written_down=f"{a.written_down:.2f}")
+                                   for a in allowances], rows=[
         ScheduleRowOut(month=r.month, opening=f"{r.opening:.2f}",
                        depreciation=f"{r.depreciation:.2f}", closing=f"{r.closing:.2f}",
                        accumulated=f"{r.accumulated:.2f}", entry_id=prepared.get(r.month))
@@ -217,3 +273,67 @@ def prepare_depreciation(request: HttpRequest, slug: str, entity_id: UUID,
     approval and posting; nothing is posted here."""
     ctx = workspace_ctx(request, slug, entity_id)
     return Status(201, _run_out(services.prepare_month(ctx, entity_id, payload.month)))
+
+
+# --- tax capital allowances (M6F-3, #148) -------------------------------------------------------
+
+
+class AllowanceClassIn(Schema):
+    code: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=200)
+    annual_rate: str = Field(pattern=r"^\d{1,3}(\.\d{1,2})?$", description="% a year")
+    first_year: FirstYear
+    effective_from: date = Field(description="First day of the first tax year the rate applies")
+    source: str = Field(min_length=1, max_length=500, description="Law and article, or adviser")
+
+
+class AllowanceClassOut(Schema):
+    id: UUID
+    code: str
+    name: str
+    annual_rate: str = Field(description="% a year")
+    first_year: str
+    effective_from: date
+    source: str
+    created_at: datetime
+
+
+def _class_out(c: CapitalAllowanceClass) -> AllowanceClassOut:
+    return AllowanceClassOut(id=c.id, code=c.code, name=c.name,
+                             annual_rate=f"{c.annual_rate * 100:.2f}", first_year=c.first_year,
+                             effective_from=c.effective_from, source=c.source,
+                             created_at=c.created_at)  # fmt: skip
+
+
+@router.get(f"{BASE}/capital-allowance-classes", response=list[AllowanceClassOut])
+@requires("assets.read")
+def list_allowance_classes(request: HttpRequest, slug: str,
+                           entity_id: UUID) -> list[AllowanceClassOut]:  # fmt: skip
+    """The entity's capital allowance classes and their rates by tax year (none built in)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_class_out(c) for c in services.allowance_classes(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/capital-allowance-classes", response={201: AllowanceClassOut})
+@requires("assets.manage")
+def add_allowance_class(request: HttpRequest, slug: str, entity_id: UUID,
+                        payload: AllowanceClassIn) -> Status[AllowanceClassOut]:  # fmt: skip
+    """A class, or a new rate for a class from a later tax year; never changed afterwards."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = services.NewAllowanceClass(**payload.model_dump())
+    made = services.add_allowance_class(ctx, entity_id, data)
+    return Status(201, _class_out(made))
+
+
+class AllowanceClassChoiceIn(Schema):
+    allowance_class_code: str = Field(max_length=20, description="Blank: no capital allowances")
+
+
+@router.put(f"{BASE}/fixed-assets/{{uuid:asset_id}}/allowance-class", response=AssetOut)
+@requires("assets.manage")
+def set_allowance_class(request: HttpRequest, slug: str, entity_id: UUID, asset_id: UUID,
+                        payload: AllowanceClassChoiceIn) -> AssetOut:  # fmt: skip
+    """Set or change the asset's allowance class, also after depreciation was prepared."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    services.set_allowance_class(ctx, entity_id, asset_id, payload.allowance_class_code)
+    return _one(request, slug, entity_id, asset_id)

@@ -1408,6 +1408,37 @@ export const en = {
   "ol.yearTotal": "Year",
   "ol.sums":
     "Quarters and the year are sums of their months; cash is the month-end figure. A total that spans actual and forecast months is marked Actual + Forecast.",
+  "fa.availableOn": "Available for use from",
+  "fa.commencement": "Depreciation starts",
+  "fa.comm.PRORATA_DAYS": "From the available-for-use date (pro rata by days)",
+  "fa.comm.NEXT_MONTH": "From the next month",
+  "fa.comm.FULL_MONTH": "Full month from the available-for-use month",
+  "fa.allowanceClass": "Capital allowance class (tax)",
+  "fa.noAllowanceClass": "None",
+  "fa.allowances": "Tax capital allowances",
+  "fa.noAllowances": "No capital allowances: the asset has no allowance class.",
+  "fa.taxYear": "Tax year",
+  "fa.allowanceRate": "Rate (% a year)",
+  "fa.allowance": "Allowance",
+  "fa.writtenDown": "Tax written-down value",
+  "fa.classes": "Capital allowance classes",
+  "fa.classesIntro":
+    "Tax capital allowances are kept separately from depreciation. No rates are built in: enter each class with its rate and the source you took it from (the law or your tax adviser). A new rate is added from a later tax year; earlier rates are never changed.",
+  "fa.noClasses": "No allowance classes yet.",
+  "fa.classCode": "Class code",
+  "fa.className": "Class name",
+  "fa.firstYear": "First year",
+  "fa.fy.FULL_YEAR": "Full annual allowance",
+  "fa.fy.MONTHS_IN_USE": "Months in use",
+  "fa.fy.NONE": "None in the first year",
+  "fa.effectiveFrom": "From tax year starting",
+  "fa.source": "Source",
+  "fa.addClass": "Add class or rate",
+  "as.driver.capex_start": "New assets depreciated from (months after spend)",
+  "as.driver.capex_db_rate":
+    "Declining-balance rate for new assets (0 = straight-line)",
+  "as.driver.capex_allowance_rate":
+    "Tax capital allowance rate for new assets (a year)",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2839,6 +2870,39 @@ export const el: Record<MessageKey, string> = {
   "ol.yearTotal": "Έτος",
   "ol.sums":
     "Τα τρίμηνα και το έτος είναι αθροίσματα των μηνών τους· τα διαθέσιμα είναι το ποσό τέλους μήνα. Σύνολο που περιλαμβάνει πραγματικούς μήνες και μήνες πρόβλεψης σημειώνεται Πραγματικό + Πρόβλεψη.",
+  "fa.availableOn": "Διαθέσιμο προς χρήση από",
+  "fa.commencement": "Έναρξη αποσβέσεων",
+  "fa.comm.PRORATA_DAYS":
+    "Από την ημερομηνία διαθεσιμότητας (αναλογικά ανά ημέρα)",
+  "fa.comm.NEXT_MONTH": "Από τον επόμενο μήνα",
+  "fa.comm.FULL_MONTH": "Ολόκληρος μήνας από τον μήνα διαθεσιμότητας",
+  "fa.allowanceClass": "Κατηγορία φορολογικών εκπτώσεων κεφαλαίου",
+  "fa.noAllowanceClass": "Καμία",
+  "fa.allowances": "Φορολογικές εκπτώσεις κεφαλαίου",
+  "fa.noAllowances":
+    "Χωρίς εκπτώσεις κεφαλαίου: το πάγιο δεν έχει κατηγορία εκπτώσεων.",
+  "fa.taxYear": "Φορολογικό έτος",
+  "fa.allowanceRate": "Συντελεστής (% ετησίως)",
+  "fa.allowance": "Έκπτωση",
+  "fa.writtenDown": "Αναπόσβεστη φορολογική αξία",
+  "fa.classes": "Κατηγορίες εκπτώσεων κεφαλαίου",
+  "fa.classesIntro":
+    "Οι φορολογικές εκπτώσεις κεφαλαίου τηρούνται χωριστά από τις αποσβέσεις. Δεν υπάρχουν προκαθορισμένοι συντελεστές: καταχωρίστε κάθε κατηγορία με τον συντελεστή και την πηγή του (νόμο ή φορολογικό σύμβουλο). Νέος συντελεστής προστίθεται από μεταγενέστερο φορολογικό έτος· οι προηγούμενοι δεν αλλάζουν.",
+  "fa.noClasses": "Δεν υπάρχουν ακόμη κατηγορίες εκπτώσεων.",
+  "fa.classCode": "Κωδικός κατηγορίας",
+  "fa.className": "Όνομα κατηγορίας",
+  "fa.firstYear": "Πρώτο έτος",
+  "fa.fy.FULL_YEAR": "Πλήρης ετήσια έκπτωση",
+  "fa.fy.MONTHS_IN_USE": "Μήνες χρήσης",
+  "fa.fy.NONE": "Καμία το πρώτο έτος",
+  "fa.effectiveFrom": "Από φορολογικό έτος που αρχίζει",
+  "fa.source": "Πηγή",
+  "fa.addClass": "Προσθήκη κατηγορίας ή συντελεστή",
+  "as.driver.capex_start": "Αποσβέσεις νέων παγίων από (μήνες μετά τη δαπάνη)",
+  "as.driver.capex_db_rate":
+    "Συντελεστής φθίνουσας απόσβεσης νέων παγίων (0 = σταθερή)",
+  "as.driver.capex_allowance_rate":
+    "Συντελεστής φορολογικών εκπτώσεων νέων παγίων (ετησίως)",
 };
 
 export const catalogs = { en, el } as const;

@@ -28,6 +28,11 @@ class FixedAsset(TenantOwned):
         STRAIGHT_LINE = "STRAIGHT_LINE"
         DECLINING_BALANCE = "DECLINING_BALANCE"
 
+    class Commencement(models.TextChoices):  # M6F-3 (#148), see schedule.py
+        PRORATA_DAYS = "PRORATA_DAYS"
+        NEXT_MONTH = "NEXT_MONTH"
+        FULL_MONTH = "FULL_MONTH"
+
     legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
     code = models.CharField(max_length=20)
     name = models.CharField(max_length=200)
@@ -41,6 +46,13 @@ class FixedAsset(TenantOwned):
     useful_life_months = models.PositiveIntegerField()
     method = models.CharField(max_length=20, choices=Method.choices, default=Method.STRAIGHT_LINE)
     annual_rate = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
+    # IAS 16.55: depreciation begins when the asset is available for use (M6F-3, #148).
+    available_on = models.DateField(null=True, blank=True)  # null: the acquisition date
+    commencement = models.CharField(
+        max_length=12, choices=Commencement.choices, default=Commencement.NEXT_MONTH
+    )
+    # Tax capital allowances, kept apart from depreciation (owner decision D3); blank: none.
+    allowance_class_code = models.CharField(max_length=20, blank=True)
     disposed_on = models.DateField(null=True, blank=True)
     disposal_proceeds = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True)
     locked_at = models.DateTimeField(null=True, blank=True)  # first depreciation prepared
@@ -71,6 +83,11 @@ class FixedAsset(TenantOwned):
                 condition=models.Q(disposed_on__isnull=True)
                 | models.Q(disposed_on__gte=models.F("acquired_on")),
                 name="assets_disposed_after_acquired",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(available_on__isnull=True)
+                | models.Q(available_on__gte=models.F("acquired_on")),
+                name="assets_available_after_acquired",
             ),
         ]
 
@@ -107,4 +124,41 @@ class DepreciationRunLine(TenantOwned):
         constraints = [
             models.UniqueConstraint(fields=["run", "asset"], name="assets_run_asset_once"),
             models.CheckConstraint(condition=models.Q(amount__gt=0), name="assets_line_amount"),
+        ]
+
+
+class CapitalAllowanceClass(TenantOwned):
+    """A tax capital allowance class of an entity, as data (M6F-3, #148; owner decision D3).
+
+    Entered with its source by the user or a tax professional: no rates are built in, because none
+    has been verified (owner decision #93). A class is versioned by ``effective_from`` (the first
+    tax year a rate applies to) and never changed or deleted; a new rate is a new version."""
+
+    class FirstYear(models.TextChoices):
+        FULL_YEAR = "FULL_YEAR"
+        MONTHS_IN_USE = "MONTHS_IN_USE"
+        NONE = "NONE"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=200)
+    annual_rate = models.DecimalField(max_digits=7, decimal_places=4)  # 0.1 for 10% a year
+    first_year = models.CharField(max_length=14, choices=FirstYear.choices)
+    effective_from = models.DateField()  # first day of the first tax year it applies to
+    source = models.CharField(max_length=500)  # e.g. the law and article, or the adviser's note
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "assets_allowance_class"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code", "effective_from"], name="assets_allowance_version"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(annual_rate__gte=0, annual_rate__lte=1),
+                name="assets_allowance_rate",
+            ),
+            models.CheckConstraint(condition=~models.Q(source=""), name="assets_allowance_source"),
         ]

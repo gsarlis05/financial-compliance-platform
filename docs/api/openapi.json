@@ -936,6 +936,157 @@
         "title": "AllocationOut",
         "type": "object"
       },
+      "AllowanceClassChoiceIn": {
+        "properties": {
+          "allowance_class_code": {
+            "description": "Blank: no capital allowances",
+            "maxLength": 20,
+            "title": "Allowance Class Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowance_class_code"
+        ],
+        "title": "AllowanceClassChoiceIn",
+        "type": "object"
+      },
+      "AllowanceClassIn": {
+        "properties": {
+          "annual_rate": {
+            "description": "% a year",
+            "pattern": "^\\d{1,3}(\\.\\d{1,2})?$",
+            "title": "Annual Rate",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "effective_from": {
+            "description": "First day of the first tax year the rate applies",
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "first_year": {
+            "enum": [
+              "FULL_YEAR",
+              "MONTHS_IN_USE",
+              "NONE"
+            ],
+            "title": "First Year",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "description": "Law and article, or adviser",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "annual_rate",
+          "first_year",
+          "effective_from",
+          "source"
+        ],
+        "title": "AllowanceClassIn",
+        "type": "object"
+      },
+      "AllowanceClassOut": {
+        "properties": {
+          "annual_rate": {
+            "description": "% a year",
+            "title": "Annual Rate",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "first_year": {
+            "title": "First Year",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "annual_rate",
+          "first_year",
+          "effective_from",
+          "source",
+          "created_at"
+        ],
+        "title": "AllowanceClassOut",
+        "type": "object"
+      },
+      "AllowanceRowOut": {
+        "properties": {
+          "allowance": {
+            "title": "Allowance",
+            "type": "string"
+          },
+          "rate": {
+            "description": "% a year",
+            "title": "Rate",
+            "type": "string"
+          },
+          "tax_year": {
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "written_down": {
+            "description": "Tax written-down value at the end of the tax year",
+            "title": "Written Down",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tax_year",
+          "rate",
+          "allowance",
+          "written_down"
+        ],
+        "title": "AllowanceRowOut",
+        "type": "object"
+      },
       "Approval": {
         "enum": [
           "NONE",
@@ -991,6 +1142,13 @@
             "title": "Acquired On",
             "type": "string"
           },
+          "allowance_class_code": {
+            "default": "",
+            "description": "Tax allowances",
+            "maxLength": 20,
+            "title": "Allowance Class Code",
+            "type": "string"
+          },
           "annual_rate": {
             "anyOf": [
               {
@@ -1010,6 +1168,19 @@
             "title": "Asset Account Id",
             "type": "string"
           },
+          "available_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "IAS 16: when the asset is available for use (default: acquired)",
+            "title": "Available On"
+          },
           "category": {
             "enum": [
               "BUILDINGS",
@@ -1026,6 +1197,17 @@
             "maxLength": 20,
             "minLength": 1,
             "title": "Code",
+            "type": "string"
+          },
+          "commencement": {
+            "default": "PRORATA_DAYS",
+            "description": "PRORATA_DAYS (from the available-for-use date), NEXT_MONTH, or FULL_MONTH",
+            "enum": [
+              "PRORATA_DAYS",
+              "NEXT_MONTH",
+              "FULL_MONTH"
+            ],
+            "title": "Commencement",
             "type": "string"
           },
           "cost": {
@@ -1098,6 +1280,10 @@
             "title": "Acquired On",
             "type": "string"
           },
+          "allowance_class_code": {
+            "title": "Allowance Class Code",
+            "type": "string"
+          },
           "annual_rate": {
             "anyOf": [
               {
@@ -1115,6 +1301,12 @@
             "title": "Asset Account Id",
             "type": "string"
           },
+          "available_on": {
+            "description": "IAS 16 commencement (the acquisition date if not set)",
+            "format": "date",
+            "title": "Available On",
+            "type": "string"
+          },
           "book_value": {
             "title": "Book Value",
             "type": "string"
@@ -1125,6 +1317,10 @@
           },
           "code": {
             "title": "Code",
+            "type": "string"
+          },
+          "commencement": {
+            "title": "Commencement",
             "type": "string"
           },
           "cost": {
@@ -1217,6 +1413,9 @@
           "useful_life_months",
           "method",
           "annual_rate",
+          "available_on",
+          "commencement",
+          "allowance_class_code",
           "disposed_on",
           "disposal_proceeds",
           "locked",
@@ -11924,6 +12123,18 @@
       },
       "ScheduleOut": {
         "properties": {
+          "allowance_rules": {
+            "title": "Allowance Rules",
+            "type": "string"
+          },
+          "allowances": {
+            "description": "Tax capital allowances, separate from depreciation (none without a class)",
+            "items": {
+              "$ref": "#/components/schemas/AllowanceRowOut"
+            },
+            "title": "Allowances",
+            "type": "array"
+          },
           "asset_id": {
             "format": "uuid",
             "title": "Asset Id",
@@ -11944,7 +12155,9 @@
         "required": [
           "asset_id",
           "convention",
-          "rows"
+          "rows",
+          "allowance_rules",
+          "allowances"
         ],
         "title": "ScheduleOut",
         "type": "object"
@@ -19038,6 +19251,114 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/capital-allowance-classes": {
+      "get": {
+        "description": "The entity's capital allowance classes and their rates by tax year (none built in).",
+        "operationId": "fcp_modules_assets_api_list_allowance_classes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllowanceClassOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Allowance Classes",
+        "tags": [
+          "fixed assets"
+        ]
+      },
+      "post": {
+        "description": "A class, or a new rate for a class from a later tax year; never changed afterwards.",
+        "operationId": "fcp_modules_assets_api_add_allowance_class",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllowanceClassIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceClassOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Allowance Class",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/cash-forecast-settings": {
       "get": {
         "operationId": "fcp_modules_cashflow_api_get_settings",
@@ -22671,6 +22992,74 @@
           }
         ],
         "summary": "Correct Asset",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets/{asset_id}/allowance-class": {
+      "put": {
+        "description": "Set or change the asset's allowance class, also after depreciation was prepared.",
+        "operationId": "fcp_modules_assets_api_set_allowance_class",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllowanceClassChoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Allowance Class",
         "tags": [
           "fixed assets"
         ]

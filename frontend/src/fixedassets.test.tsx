@@ -89,7 +89,31 @@ describe("Fixed assets (M6-1)", () => {
                   entry_id: "e1",
                 },
               ],
+              allowance_rules: "By tax year.",
+              allowances: [
+                {
+                  tax_year: 2026,
+                  rate: "20.00",
+                  allowance: "4800.00",
+                  written_down: "19200.00",
+                },
+              ],
             }),
+          );
+        if (url.includes("/capital-allowance-classes"))
+          return Promise.resolve(
+            respond([
+              {
+                id: "k1",
+                code: "VEH",
+                name: "Vehicles (Demo)",
+                annual_rate: "20.00",
+                first_year: "FULL_YEAR",
+                effective_from: "2020-01-01",
+                source: "Entered for the test",
+                created_at: "2026-11-15T00:00:00Z",
+              },
+            ]),
           );
         if (url.includes("/depreciation-runs"))
           return Promise.resolve(
@@ -139,6 +163,14 @@ describe("Fixed assets (M6-1)", () => {
     expect(
       within(schedule).getByRole("link", { name: "Prepared" }),
     ).toHaveAttribute("href", "/w/ws/e/e1/entries/e1");
+    // Tax capital allowances are a separate table (M6F-3).
+    const allowances = screen.getByRole("table", {
+      name: "Tax capital allowances: VAN-1 Delivery van",
+    });
+    expect(allowances).toHaveTextContent("4,800.00");
+    expect(
+      screen.getByRole("table", { name: "Capital allowance classes" }),
+    ).toHaveTextContent("Entered for the test");
 
     const runs = await screen.findByRole("table", { name: "Prepared months" });
     expect(runs).toHaveTextContent("Draft · draft");
