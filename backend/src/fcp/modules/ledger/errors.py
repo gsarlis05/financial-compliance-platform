@@ -66,3 +66,11 @@ class AlreadyReversedError(ConflictError):
 class IdempotencyConflictError(ConflictError):
     code = "ledger.idempotency.conflict"
     title = "Idempotency key reused with a different request"
+
+
+class PostingRejectedByDatabaseError(ConflictError):
+    """The database guard refused a posting the application had accepted (e.g. an unlock window
+    closed between the check and the write). Nothing was posted."""
+
+    code = "ledger.entry.rejected_by_database"
+    title = "Posting rejected by ledger safeguards"

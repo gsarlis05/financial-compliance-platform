@@ -3,7 +3,7 @@
 All routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -11,10 +11,11 @@ from django.http import HttpRequest
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.modules.identity.api import require_recent_auth
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, entries, idempotency, periods
-from .models import Account, FiscalYear, JournalEntry, LedgerSettings, Period
+from . import accounts, corrections, entries, idempotency, periods
+from .models import Account, FiscalYear, JournalEntry, LedgerSettings, Period, PeriodUnlock
 
 __all__ = ["Account", "FiscalYear", "JournalEntry", "Period", "router"]
 
@@ -219,6 +220,7 @@ class EntryOut(Schema):
     approved_by_id: UUID | None
     posted_by_id: UUID | None
     rejection_reason: str
+    unlock_request_id: UUID | None
     content_hash: str
     total_debit: str
     total_credit: str
@@ -262,6 +264,7 @@ def entry_out(entry: JournalEntry) -> EntryOut:
         approved_by_id=entry.approved_by_id,
         posted_by_id=entry.posted_by_id,
         rejection_reason=entry.rejection_reason,
+        unlock_request_id=entry.unlock_request_id,
         content_hash=entry.content_hash,
         total_debit=f"{sum(ln.debit for ln in lines):.2f}",
         total_credit=f"{sum(ln.credit for ln in lines):.2f}",
@@ -430,3 +433,107 @@ def put_settings(
         approval_policy=found.approval_policy,
         approval_threshold=f"{threshold:.2f}" if threshold is not None else None,
     )
+
+
+# --- corrections and period unlocks (M1-9) -------------------------------------------------------
+
+
+class ReverseIn(Schema):
+    reason: str = Field(min_length=1, max_length=500)
+    reversal_date: date | None = None
+
+
+class AdjustIn(EntryIn):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class UnlockIn(Schema):
+    reason: str = Field(min_length=1, max_length=500)
+    window_minutes: int = Field(default=60, ge=5, le=corrections.MAX_UNLOCK_MINUTES)
+
+
+class UnlockDecisionIn(Schema):
+    note: str = Field(default="", max_length=500)
+
+
+class UnlockOut(Schema):
+    id: UUID
+    period_id: UUID
+    reason: str
+    window_minutes: int
+    status: str
+    requested_by_id: UUID
+    first_approver_id: UUID | None
+    second_approver_id: UUID | None
+    active_from: datetime | None
+    active_until: datetime | None
+    closed_at: datetime | None
+    decision_note: str
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/reverse", response={201: EntryOut})
+@requires("ledger.entry.create")
+def reverse_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID, payload: ReverseIn
+) -> Status[EntryOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    reversal = corrections.reverse(
+        ctx, entity_id, entry_id, reason=payload.reason, reversal_date=payload.reversal_date
+    )
+    return Status(201, entry_out(reversal))
+
+
+@router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/adjust", response={201: EntryOut})
+@requires("ledger.entry.create")
+def adjust_entry(
+    request: HttpRequest, slug: str, entity_id: UUID, entry_id: UUID, payload: AdjustIn
+) -> Status[EntryOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    adjustment = corrections.adjust(
+        ctx, entity_id, entry_id, _entry_input(payload), reason=payload.reason
+    )
+    return Status(201, entry_out(adjustment))
+
+
+@router.post(f"{BASE}/periods/{{uuid:period_id}}/unlock-requests", response={201: UnlockOut})
+@requires("ledger.period.unlock_request")
+def request_unlock(
+    request: HttpRequest, slug: str, entity_id: UUID, period_id: UUID, payload: UnlockIn
+) -> Status[PeriodUnlock]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    unlock = corrections.request_unlock(
+        ctx, entity_id, period_id, reason=payload.reason, window_minutes=payload.window_minutes
+    )
+    return Status(201, unlock)
+
+
+@router.get(f"{BASE}/unlock-requests", response=list[UnlockOut])
+@requires("ledger.period.read")
+def list_unlocks(request: HttpRequest, slug: str, entity_id: UUID) -> list[PeriodUnlock]:
+    return corrections.list_unlocks(workspace_ctx(request, slug, entity_id), entity_id)
+
+
+@router.post(f"{BASE}/unlock-requests/{{uuid:unlock_id}}/approve", response=UnlockOut)
+@requires("ledger.period.unlock_approve")
+def approve_unlock(
+    request: HttpRequest, slug: str, entity_id: UUID, unlock_id: UUID
+) -> PeriodUnlock:
+    ctx = workspace_ctx(request, slug, entity_id)
+    require_recent_auth(request.session, request.path)  # step-up (doc 04 §2)
+    return corrections.approve_unlock(ctx, entity_id, unlock_id)
+
+
+@router.post(f"{BASE}/unlock-requests/{{uuid:unlock_id}}/reject", response=UnlockOut)
+@requires("ledger.period.unlock_approve")
+def reject_unlock(
+    request: HttpRequest, slug: str, entity_id: UUID, unlock_id: UUID, payload: UnlockDecisionIn
+) -> PeriodUnlock:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return corrections.reject_unlock(ctx, entity_id, unlock_id, payload.note)
+
+
+@router.post(f"{BASE}/unlock-requests/{{uuid:unlock_id}}/close", response=UnlockOut)
+@requires("ledger.period.unlock_request")
+def close_unlock(request: HttpRequest, slug: str, entity_id: UUID, unlock_id: UUID) -> PeriodUnlock:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return corrections.close_unlock(ctx, entity_id, unlock_id)

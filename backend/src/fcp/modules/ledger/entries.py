@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from django.db import connection, transaction
+from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 
 from fcp.core.errors import NotFoundError
@@ -31,6 +31,7 @@ from .errors import (
     NoPeriodError,
     PeriodLockedError,
     PeriodSoftClosedError,
+    PostingRejectedByDatabaseError,
     SegregationOfDutiesError,
     TooFewLinesError,
     UnbalancedEntryError,
@@ -454,7 +455,15 @@ def submit(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEnt
     if entry.status not in EDITABLE:
         raise InvalidStateError(f"A {entry.status.lower()} entry cannot be submitted.")
     _check_complete(entry)
-    _posting_period(ctx, entry)  # fail early on a missing or closed period
+    # Fail early if no period exists. Lock status is a posting-time rule, so a correction can be
+    # prepared and approved while an unlock is being requested.
+    if (
+        period_for_date(
+            entry.legal_entity_id, entry.accounting_date, adjustment=entry.use_adjustment_period
+        )
+        is None
+    ):
+        _posting_period(ctx, entry)  # raises the descriptive "no period" error
     entry.content_hash = content_hash(entry)
     entry.submitted_at = timezone.now()
     entry.rejection_reason = ""
@@ -519,11 +528,16 @@ def _posting_period(ctx: WorkspaceContext, entry: JournalEntry) -> Period:
             f"{entry.accounting_date}. Create the fiscal year first.",
             field_errors={"accounting_date": ["no period"]},
         )
-    if period.status == Period.Status.LOCKED and entry.unlock_request_id is None:
-        raise PeriodLockedError(
-            f"Period {period.number} of {period.fiscal_year.name} is locked. "
-            "Request an unlock, which needs two approvers."
-        )
+    if period.status == Period.Status.LOCKED:
+        from .corrections import active_unlock  # noqa: PLC0415 - avoids an import cycle
+
+        unlock = active_unlock(period)
+        if unlock is None:
+            raise PeriodLockedError(
+                f"Period {period.number} of {period.fiscal_year.name} is locked. "
+                "Request an unlock, which needs two approvers."
+            )
+        entry.unlock_request_id = unlock.id
     if period.status == Period.Status.SOFT_CLOSED and not ctx.can(
         "ledger.period.post_soft_closed", entry.legal_entity_id
     ):
@@ -593,9 +607,20 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
     entry.posted_by, entry.posted_at = ctx.user, timezone.now()
     previous = entry.status
     entry.status = Status.POSTED
-    entry.save()
+    try:
+        with transaction.atomic():
+            entry.save()
+    except IntegrityError as exc:
+        # Our guard messages contain no personal data; surface the first line to the user.
+        reason = str(exc).splitlines()[0] if str(exc) else "integrity rule"
+        raise PostingRejectedByDatabaseError(
+            f"Nothing was posted: {reason}. Check the period and try again."
+        ) from None
     from .balances import apply_posting  # noqa: PLC0415 - avoids an import cycle
+    from .corrections import link_reversal  # noqa: PLC0415
 
+    if entry.reverses_entry_id:
+        link_reversal(entry)
     apply_posting(entry)
     _audit(
         ctx,
@@ -608,6 +633,8 @@ def post(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEntry
             "period_id": period.id,
             "content_hash": entry.content_hash,
             "soft_closed": entry.posted_in_soft_closed,
+            "unlock_request_id": entry.unlock_request_id,
+            "reverses_entry_id": entry.reverses_entry_id,
         },
     )
     return entry
