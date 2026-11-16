@@ -681,6 +681,7 @@ function ComparisonPanel({ detail }: { detail: ScenarioDetail }) {
               className="button"
               href={apiUrl(`${base}/scenarios/${id}/comparison/export`, {
                 granularity,
+                lang: locale,
               })}
             >
               {t("sc.export")}
