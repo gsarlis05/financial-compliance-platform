@@ -26,6 +26,7 @@ GLOBAL_TABLES: dict[str, str] = {
 # Tables the runtime role may only INSERT into and SELECT from (no UPDATE or DELETE).
 APPEND_ONLY_TABLES: set[str] = {
     "audit_log_event",
+    "assets_depreciation_run_line",
     "banking_reconciliation",
     "budgeting_event",
     "budgeting_explanation",

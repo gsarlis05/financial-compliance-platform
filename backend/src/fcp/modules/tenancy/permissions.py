@@ -18,6 +18,8 @@ PERMISSIONS: dict[str, str] = {
     "tenancy.workspace.delete": "Request, confirm or cancel the deletion of the workspace",
     # chart of accounts and periods
     "ledger.account.read": "See the chart of accounts",
+    "assets.read": "See the fixed-asset register and depreciation schedules",
+    "assets.manage": "Add and correct fixed assets, record disposals, prepare depreciation",
     "ledger.account.manage": "Create and edit accounts",
     "ledger.period.read": "See fiscal years and periods",
     "ledger.period.manage": "Create fiscal years; open and soft-close periods",
@@ -80,6 +82,7 @@ _READ = frozenset(
     {
         "tenancy.workspace.read",
         "ledger.account.read",
+        "assets.read",
         "ledger.period.read",
         "ledger.entry.read",
         "registers.counterparty.read",
@@ -94,6 +97,7 @@ _READ = frozenset(
 )
 _PREPARE = _READ | {
     "ledger.account.manage",
+    "assets.manage",
     "ledger.period.manage",
     "ledger.entry.create",
     "ledger.period.unlock_request",
