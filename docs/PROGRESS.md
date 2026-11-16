@@ -119,6 +119,8 @@ until validated and signed by a qualified professional; brief
 | M7-4 Working-capital view (receivables, stock, payables, days, cash conversion cycle against observed days) and what N days are worth (issue #179) | `claude/m7-4-working-capital` | #186 | Open |
 | M7-5 Goals against up to three shared scenarios, side by side with the base, in memory (goal engine v3: method SCENARIO, nature HYPOTHETICAL) (issue #180) | `claude/m7-5-goals-scenarios` | #187 | Open |
 | M7-6 KPI library CORE@1.1 (net debt / EBITDA, DSCR, receivables and inventory turnover; `ltm_flow`) and KPIs on projected and scenario figures (issue #181) | `claude/m7-6-advanced-kpis` | #188 | Open |
+| M7-7 Screens: Scenarios (builder, comparison, cash chart with dotted scenario line, what changed, liquidity, KPIs), Sensitivity (tornado and one variable), Working capital, goals against scenarios; Excel export of a comparison; demo step; M7 report (`docs/milestone-7-report.md`) (issue #182) | `claude/m7-7-screens` | #189 | Open |
+| Owner items for M7: review and merge #183–#189; ADRs 0049–0052; defaults in the M7 report | — | — | Waiting for the owner |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
