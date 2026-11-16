@@ -32,6 +32,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ statements for 2026: balance sheet balances at 700545.98; profit 89973.47 = movement in equity; cash flow ends at the bank balance 371514.38
 ✔ year 2026 closed by the reviewed closing entry: profit 89973.47 moved to retained earnings; income and expense accounts are zero and the 2027 opening balances equal the closing balance sheet
 ✔ integrity checks passed (balance, snapshots, gapless numbering, closed years, audit chain)
+✔ 13-week cash forecast from 2027-01-04: opening cash 371514.38, week 13 closing 420689.93; no shortfall below the minimum; run VALID and reproducible
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the
@@ -70,6 +71,18 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
 - **Statements.** The P&L, balance sheet and cash flow for 2026 are built from the read model and
   must pass their checks. The cash flow must end at the bank balance. The figures are pinned in
   `backend/tests/devtools/golden/demo_statements_2026.json` (AC-M2-8).
+
+- **Cash forecast.** The forecast includes:
+  - synthetic commitments: rent, payroll, a utilities estimate, a 50,000 annuity loan, an
+    overdraft, a VAT estimate and a manual grant;
+  - the open receivables, dated at their due date plus each customer's observed days late;
+  - the open payables.
+
+  The forecast runs from 4 January 2027 with a minimum cash of 30,000. The run must be valid and
+  must reproduce its output hash. The demo test also recomputes every week's closing from the
+  run's stored inputs with an independent reference calculation. The figures are pinned in
+  `backend/tests/devtools/golden/demo_cash_13w.json`, marked *not yet signed off* until a finance
+  professional reviews them (AC-CW5).
 
 - **Year-end close.** The owner generates the closing entry for 2026, and the reviewer approves and
   posts it. The year is then closed, and the statements show the profit in retained earnings with

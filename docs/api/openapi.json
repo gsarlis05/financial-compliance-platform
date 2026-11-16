@@ -3013,58 +3013,23 @@
             "title": "Category",
             "type": "string"
           },
-          "component": {
-            "title": "Component",
-            "type": "string"
-          },
-          "due": {
-            "format": "date",
-            "title": "Due",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
+          "direction": {
+            "enum": [
+              "IN",
+              "OUT"
+            ],
+            "title": "Direction",
             "type": "string"
           },
           "nature": {
-            "enum": [
-              "COMMITTED",
-              "EXPECTED"
-            ],
-            "title": "Nature",
-            "type": "string"
-          },
-          "scheduled": {
-            "format": "date",
-            "title": "Scheduled",
-            "type": "string"
-          },
-          "series_id": {
-            "format": "uuid",
-            "title": "Series Id",
-            "type": "string"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "version_id": {
-            "format": "uuid",
-            "title": "Version Id",
-            "type": "string"
+            "$ref": "#/components/schemas/Nature"
           }
         },
         "required": [
-          "due",
-          "scheduled",
-          "amount",
-          "nature",
-          "source",
-          "component",
+          "direction",
           "category",
-          "name",
-          "series_id",
-          "version_id"
+          "nature",
+          "amount"
         ],
         "title": "FlowOut",
         "type": "object"
@@ -3087,6 +3052,108 @@
           "date_to"
         ],
         "title": "FlowsQuery",
+        "type": "object"
+      },
+      "ForecastOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "beyond_horizon": {
+            "title": "Beyond Horizon",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "first_shortfall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShortfallOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "opening_accounts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Opening Accounts",
+            "type": "object"
+          },
+          "opening_cash": {
+            "title": "Opening Cash",
+            "type": "string"
+          },
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/WeekOut"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "as_of",
+          "actuals_watermark",
+          "stale",
+          "is_published",
+          "created_at",
+          "output_hash",
+          "opening_cash",
+          "opening_accounts",
+          "overdue",
+          "beyond_horizon",
+          "first_shortfall",
+          "warnings",
+          "weeks"
+        ],
+        "title": "ForecastOut",
         "type": "object"
       },
       "HistoryOut": {
@@ -3862,6 +3929,91 @@
           "line_id"
         ],
         "title": "LinkOut",
+        "type": "object"
+      },
+      "ManualIn": {
+        "properties": {
+          "amount": {
+            "description": "Receipts positive, payments negative",
+            "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "CUSTOMERS",
+              "SUPPLIERS",
+              "PAYROLL",
+              "RENT",
+              "TAX",
+              "FINANCING",
+              "CAPEX",
+              "GRANT",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "amount",
+          "category",
+          "reason"
+        ],
+        "title": "ManualIn",
+        "type": "object"
+      },
+      "ManualOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nature": {
+            "const": "EXPECTED",
+            "default": "EXPECTED",
+            "title": "Nature",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "amount",
+          "category",
+          "reason"
+        ],
+        "title": "ManualOut",
         "type": "object"
       },
       "MappingIn": {
@@ -5114,6 +5266,25 @@
         "title": "RunDetailOut",
         "type": "object"
       },
+      "RunIn": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to today",
+            "title": "As Of"
+          }
+        },
+        "title": "RunIn",
+        "type": "object"
+      },
       "RunOut": {
         "properties": {
           "actuals_watermark": {
@@ -5255,6 +5426,42 @@
         "title": "RunsQuery",
         "type": "object"
       },
+      "SettingsIO": {
+        "properties": {
+          "minimum_cash": {
+            "default": "0.00",
+            "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Minimum Cash",
+            "type": "string"
+          },
+          "payables_policy": {
+            "default": "DUE_DATE",
+            "enum": [
+              "DUE_DATE",
+              "WEEKDAY"
+            ],
+            "title": "Payables Policy",
+            "type": "string"
+          },
+          "payables_weekday": {
+            "default": 4,
+            "description": "0 Monday … 6 Sunday",
+            "maximum": 6,
+            "minimum": 0,
+            "title": "Payables Weekday",
+            "type": "integer"
+          },
+          "unreconciled_warning_days": {
+            "default": 7,
+            "maximum": 365,
+            "minimum": 0,
+            "title": "Unreconciled Warning Days",
+            "type": "integer"
+          }
+        },
+        "title": "SettingsIO",
+        "type": "object"
+      },
       "SettingsIn": {
         "properties": {
           "approval_policy": {
@@ -5302,6 +5509,25 @@
           "approval_threshold"
         ],
         "title": "SettingsOut",
+        "type": "object"
+      },
+      "ShortfallOut": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "balance"
+        ],
+        "title": "ShortfallOut",
         "type": "object"
       },
       "StatementOut": {
@@ -6112,6 +6338,103 @@
           "drifts"
         ],
         "title": "VerifyOut",
+        "type": "object"
+      },
+      "WeekOut": {
+        "properties": {
+          "closing": {
+            "title": "Closing",
+            "type": "string"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowOut"
+            },
+            "title": "Flows",
+            "type": "array"
+          },
+          "headroom": {
+            "title": "Headroom",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "inflows": {
+            "title": "Inflows",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "liquidity": {
+            "title": "Liquidity",
+            "type": "string"
+          },
+          "minimum": {
+            "title": "Minimum",
+            "type": "string"
+          },
+          "nature": {
+            "$ref": "#/components/schemas/Nature",
+            "description": "Totals mix natures, so they are FORECAST"
+          },
+          "net": {
+            "title": "Net",
+            "type": "string"
+          },
+          "opening": {
+            "title": "Opening",
+            "type": "string"
+          },
+          "opening_nature": {
+            "$ref": "#/components/schemas/Nature"
+          },
+          "outflows": {
+            "title": "Outflows",
+            "type": "string"
+          },
+          "shortfall": {
+            "title": "Shortfall",
+            "type": "boolean"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "undrawn_facilities": {
+            "title": "Undrawn Facilities",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "label",
+          "start",
+          "end",
+          "opening",
+          "opening_nature",
+          "inflows",
+          "outflows",
+          "net",
+          "closing",
+          "minimum",
+          "headroom",
+          "undrawn_facilities",
+          "liquidity",
+          "shortfall",
+          "nature",
+          "flows"
+        ],
+        "title": "WeekOut",
         "type": "object"
       },
       "WorkspaceIn": {
@@ -8480,6 +8803,426 @@
         "summary": "Explain Result",
         "tags": [
           "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecast-settings": {
+      "get": {
+        "operationId": "fcp_modules_cashflow_api_get_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsIO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "cashflow"
+        ]
+      },
+      "put": {
+        "operationId": "fcp_modules_cashflow_api_put_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsIO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts": {
+      "post": {
+        "description": "Run the 13-week forecast now (a new, reproducible calculation run).",
+        "operationId": "fcp_modules_cashflow_api_create_forecast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Forecast",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/latest": {
+      "get": {
+        "operationId": "fcp_modules_cashflow_api_latest_forecast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Latest Forecast",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/{run_id}": {
+      "get": {
+        "operationId": "fcp_modules_cashflow_api_get_forecast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Forecast",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-items": {
+      "get": {
+        "operationId": "fcp_modules_cashflow_api_list_manual",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManualOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Manual",
+        "tags": [
+          "cashflow"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_cashflow_api_add_manual",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Manual",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-items/{item_id}": {
+      "delete": {
+        "operationId": "fcp_modules_cashflow_api_remove_manual",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Manual",
+        "tags": [
+          "cashflow"
         ]
       }
     },

@@ -29,7 +29,10 @@ from .calc import (
     formula_value,
     mark_stale,
 )
+from .calc import get_run as get_calc_run
+from .calc import list_runs as list_calc_runs
 from .calc import register as register_engine
+from .calc import results as calc_results
 from .expr import (
     EvaluationError,
     ExpressionError,
@@ -68,12 +71,15 @@ __all__ = [
     "TaxonomyLine",
     "Value",
     "blend",
+    "calc_results",
     "compile_expression",
     "completeness",
     "current_mapping",
     "evaluate",
     "execute",
     "formula_value",
+    "get_calc_run",
+    "list_calc_runs",
     "mark_stale",
     "register_engine",
     "router",

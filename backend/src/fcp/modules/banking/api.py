@@ -4,6 +4,7 @@ Bank accounts, statement imports (CAMT.053 and CSV), matching to ledger lines an
 Routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
@@ -14,13 +15,35 @@ from ninja import Field, File, Form, Query, Router, Schema, Status
 from ninja.files import UploadedFile
 
 from fcp.core.api.permissions import requires
-from fcp.modules.tenancy.api import workspace_ctx
+from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
 from . import services
 from .models import BankAccount, Reconciliation, StatementImport, StatementLine
 from .parsers import DATE_FORMATS, ENCODINGS, MAX_BYTES
 
-__all__: list[str] = ["router"]
+__all__: list[str] = ["BankAccountStatus", "reconciliation_status", "router"]
+
+
+@dataclass(frozen=True)
+class BankAccountStatus:
+    """A bank account's ledger account and the date it was last reconciled (for forecasts)."""
+
+    name: str
+    ledger_account_id: UUID
+    last_reconciled: date | None
+
+
+def reconciliation_status(ctx: WorkspaceContext, entity_id: UUID) -> list[BankAccountStatus]:
+    """Active bank accounts with their last reconciliation date (requires ``banking.read``)."""
+    result = []
+    for account in services.list_accounts(ctx, entity_id):
+        if account.status != BankAccount.Status.ACTIVE:
+            continue
+        last = services.last_reconciliation(account)
+        result.append(BankAccountStatus(account.name, account.ledger_account_id,
+                                        last.as_of if last else None))  # fmt: skip
+    return result
+
 
 router = Router(tags=["banking"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

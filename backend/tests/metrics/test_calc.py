@@ -539,4 +539,4 @@ def test_reproduce_reports_tampered_inputs_or_values(
 
 def test_run_references_are_limited(cb: dict[str, Any]) -> None:
     with pytest.raises(ValidationFailedError, match="too large"):
-        run(cb, notes="x" * 10_001)
+        run(cb, notes="x" * (calc.MAX_REFS_CHARS + 1))
