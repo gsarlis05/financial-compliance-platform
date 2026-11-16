@@ -56,6 +56,7 @@ def test_clean_ledger_passes(books: dict[str, Any], posted: dict[str, Any]) -> N
         "balances_match_lines",
         "numbers_are_gapless",
         "no_untagged_postings_after_lock",
+        "closed_years_have_no_result",
         "audit_chain_verifies",
     }
 
@@ -112,6 +113,17 @@ def test_untagged_posting_after_lock_is_detected(
             [posted["first"]["period_id"]],
         )
     assert failed(books["ws"]["id"]) == {"no_untagged_postings_after_lock"}
+
+
+def test_closed_year_with_a_result_left_is_detected(
+    books: dict[str, Any], posted: dict[str, Any]
+) -> None:
+    set_context(tenant_id=books["ws"]["id"])
+    with connection.cursor() as cursor:  # marked closed without a closing entry
+        cursor.execute(
+            "UPDATE ledger_fiscal_year SET status = 'CLOSED' WHERE id = %s", [books["fy"]["id"]]
+        )
+    assert failed(books["ws"]["id"]) == {"closed_years_have_no_result"}
 
 
 def test_command_checks_every_workspace_and_fails_loudly(

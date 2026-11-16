@@ -15,7 +15,17 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, corrections, dimensions, entries, idempotency, integrity, periods, reports
+from . import (
+    accounts,
+    closing,
+    corrections,
+    dimensions,
+    entries,
+    idempotency,
+    integrity,
+    periods,
+    reports,
+)
 from .models import (
     Account,
     AccountDimensionRule,
@@ -772,6 +782,90 @@ def reverse_entry(
         ctx, entity_id, entry_id, reason=payload.reason, reversal_date=payload.reversal_date
     )
     return Status(201, entry_out(reversal))
+
+
+# --- year-end close (M2-9) ------------------------------------------------------------------------
+
+
+class ClosingLineOut(Schema):
+    account_id: UUID
+    account_code: str
+    account_name: str
+    account_type: str
+    dimension_value_ids: list[UUID]
+    balance: str = Field(description="Net debit balance at the year-end that the close moves")
+
+
+class YearEndCheckOut(Schema):
+    code: str
+    ok: bool
+    details: list[str]
+
+
+class CloseStatusOut(Schema):
+    fiscal_year_id: UUID
+    name: str
+    status: str
+    end_date: date
+    result: str = Field(description="Profit (positive) or loss (negative) still to be closed")
+    lines: list[ClosingLineOut]
+    blockers: list[str]
+    closing_entry_id: UUID | None
+    closing_entry_status: str | None
+    reopen_entry_id: UUID | None
+    checks: list[YearEndCheckOut]
+
+
+@router.get(f"{BASE}/fiscal-years/{{uuid:fiscal_year_id}}/close", response=CloseStatusOut)
+@requires("ledger.period.read")
+def close_status(
+    request: HttpRequest, slug: str, entity_id: UUID, fiscal_year_id: UUID
+) -> CloseStatusOut:
+    """What closing the year would move, what blocks it, and the AC-M2-9 checks once closed."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    st = closing.status(ctx, entity_id, fiscal_year_id)
+    return CloseStatusOut(
+        fiscal_year_id=st.fiscal_year.id, name=st.fiscal_year.name, status=st.fiscal_year.status,
+        end_date=st.fiscal_year.end_date, result=f"{st.result:.2f}",
+        lines=[ClosingLineOut(account_id=ln.account.id, account_code=ln.account.code,
+                              account_name=ln.account.name, account_type=ln.account.type,
+                              dimension_value_ids=list(ln.value_ids),
+                              balance=f"{ln.net_debit:.2f}") for ln in st.lines],
+        blockers=st.blockers,
+        closing_entry_id=st.closing_entry.id if st.closing_entry else None,
+        closing_entry_status=st.closing_entry.status if st.closing_entry else None,
+        reopen_entry_id=st.reopen_entry.id if st.reopen_entry else None,
+        checks=[YearEndCheckOut(code=c.code, ok=c.ok, details=c.details) for c in st.checks],
+    )  # fmt: skip
+
+
+class CloseIn(Schema):
+    retained_earnings_account_id: UUID
+
+
+@router.post(f"{BASE}/fiscal-years/{{uuid:fiscal_year_id}}/close", response={201: EntryOut})
+@requires("ledger.period.lock")
+def close_fiscal_year(
+    request: HttpRequest, slug: str, entity_id: UUID, fiscal_year_id: UUID, payload: CloseIn
+) -> Status[EntryOut]:
+    """Generate the closing entry (submitted). Posting it, after approval, closes the year."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    entry = closing.generate(ctx, entity_id, fiscal_year_id, payload.retained_earnings_account_id)
+    return Status(201, entry_out(entry))
+
+
+class ReopenIn(Schema):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+@router.post(f"{BASE}/fiscal-years/{{uuid:fiscal_year_id}}/reopen", response={201: EntryOut})
+@requires("ledger.period.lock")
+def reopen_fiscal_year(
+    request: HttpRequest, slug: str, entity_id: UUID, fiscal_year_id: UUID, payload: ReopenIn
+) -> Status[EntryOut]:
+    """Reverse the closing entry on its own date (submitted). Posting it re-opens the year."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, entry_out(closing.reopen(ctx, entity_id, fiscal_year_id, payload.reason)))
 
 
 @router.post(f"{BASE}/journal-entries/{{uuid:entry_id}}/adjust", response={201: EntryOut})

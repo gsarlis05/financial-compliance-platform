@@ -80,6 +80,26 @@ def reverse(
         raise AlreadyReversedError(
             "This entry has already been reversed (or a reversal is pending)."
         )
+    if original.entry_type == JournalEntry.EntryType.CLOSING:
+        raise InvalidStateError(
+            "A closing entry is reversed by re-opening its fiscal year (Periods page)."
+        )
+    return create_reversal(
+        ctx, entity_id, original, reason=reason,
+        accounting_date=_reversal_date(original, reversal_date),
+    )  # fmt: skip
+
+
+def create_reversal(
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    original: JournalEntry,
+    *,
+    reason: str,
+    accounting_date: date,
+    use_adjustment_period: bool = False,
+) -> JournalEntry:
+    """A draft mirroring a posted entry (debits and credits swapped, same tags)."""
     mirrored = [
         entries.LineInput(
             line.account_id,
@@ -95,12 +115,13 @@ def reverse(
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
     data = entries.EntryInput(
-        accounting_date=_reversal_date(original, reversal_date),
+        accounting_date=accounting_date,
         description=f"Reversal of entry {original.journal.code}-{original.entry_no}: {reason}"[
             :500
         ],
         lines=mirrored,
         journal_code=original.journal.code,
+        use_adjustment_period=use_adjustment_period,
     )
     try:
         with transaction.atomic():

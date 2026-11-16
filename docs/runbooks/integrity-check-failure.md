@@ -16,6 +16,7 @@ security incident until the cause is known.
 | `balances_match_lines` | a stored account/period balance ≠ the sum of posted lines | a posting code bug; manual edits to `ledger_account_balance` |
 | `numbers_are_gapless` | a journal's entry numbers or the posting sequence have gaps or duplicates | sequence rows edited; a restore of a partial backup |
 | `no_untagged_postings_after_lock` | an entry was posted into a period after it was locked, without an unlock tag | guard trigger disabled or bypassed |
+| `closed_years_have_no_result` | a CLOSED fiscal year still has an income or expense balance at its year-end | a year marked closed outside the close workflow; postings after the close with the guard disabled |
 | `audit_chain_verifies` | an audit event's hash does not match its content or the previous hash | rows changed or deleted outside the application |
 
 ## First 30 minutes

@@ -46,8 +46,8 @@ activity its movement belongs to.
 − Classification is per line, not per transaction. For example, interest paid cannot be moved to
   financing, and a disposal's proceeds and book value appear together in investing. A later
   taxonomy version can add finer lines.
-− Closing entries (M2-9) must be excluded from the P&L of the year they close, or that year's result
-  would show as zero. M2-9 has to handle this.
+− Closing entries (M2-9) are kept apart in the read model (`is_closing`, ADR-0014): the P&L and
+  cash flow leave them out, and the balance sheet includes them.
 ## Alternatives considered
 Direct-method cash flow (needs the cash side of every posting classified; deferred to the cash
 forecast work in Phase 2). Putting cash-flow classes into the taxonomy JSON (better long term, but

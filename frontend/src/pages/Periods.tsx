@@ -1,8 +1,129 @@
 import { type SyntheticEvent, useState } from "react";
-import { useFiscalYears, usePeriodMutations, useUnlocks } from "../api/hooks";
-import type { Period } from "../api/types";
+import { Link } from "react-router";
+import {
+  useAccounts,
+  useCloseStatus,
+  useFiscalYears,
+  usePeriodMutations,
+  useScope,
+  useUnlocks,
+  useYearEndMutations,
+} from "../api/hooks";
+import type { FiscalYear, Period } from "../api/types";
 import { Loading, Page, ProblemMessage, StatusBadge } from "../components/common";
 import { useI18n } from "../i18n/I18n";
+import type { MessageKey } from "../i18n/messages";
+import { formatAmount } from "../money";
+
+/** Year-end close and re-open (M2-9). The status loads when the panel is opened. */
+function YearEnd({ year }: { year: FiscalYear }) {
+  const { t, locale } = useI18n();
+  const { slug, entityId } = useScope();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [chosen, setChosen] = useState("");
+  const status = useCloseStatus(year.id, open);
+  const accounts = useAccounts();
+  const { close, reopen } = useYearEndMutations(year.id);
+  const equity = (accounts.data ?? []).filter((a) => a.type === "EQUITY" && a.is_postable && a.status === "ACTIVE");
+  const fallback = equity.find((a) => a.code === "3200") ?? equity[0];
+  const accountId = chosen || fallback?.id || "";
+  const entryLink = (id: string, label: string) => (
+    <Link to={`/w/${slug}/e/${entityId}/entries/${id}`}>{label}</Link>
+  );
+  const s = status.data;
+  return (
+    <details className="year-end" onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>{t("ye.title")}</summary>
+      <p className="muted">{t("ye.help")}</p>
+      {status.isPending && open ? <Loading /> : null}
+      <ProblemMessage error={status.error ?? close.error ?? reopen.error} />
+      {s ? (
+        <>
+          {s.blockers.length && s.status === "OPEN" ? (
+            <div className="notice warn" role="status">
+              <p>{t("ye.blocked")}</p>
+              <ul>
+                {s.blockers.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {s.closing_entry_id && s.status === "OPEN" ? (
+            <p>
+              {entryLink(s.closing_entry_id, t("ye.entry"))} · {s.closing_entry_status}
+            </p>
+          ) : null}
+          {s.status === "OPEN" && !s.blockers.length ? (
+            <form
+              className="form inline"
+              onSubmit={(e) => {
+                e.preventDefault();
+                close.mutate(accountId);
+              }}
+            >
+              <p>
+                {t("ye.result")}: <strong>{formatAmount(s.result, locale)}</strong>
+              </p>
+              <label>
+                {t("ye.account")}
+                <select value={accountId} onChange={(e) => setChosen(e.target.value)} required>
+                  {equity.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.code} · {locale === "el" && a.name_el ? a.name_el : a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="primary" disabled={close.isPending || !accountId}>
+                {t("ye.generate")}
+              </button>
+            </form>
+          ) : null}
+          {close.data ? <p>{entryLink(close.data.id, t("ye.entry"))}</p> : null}
+          {s.status === "CLOSED" ? (
+            <>
+              <h3>{t("ye.checks")}</h3>
+              <ul>
+                {s.checks.map((c) => (
+                  <li key={c.code}>
+                    {c.ok ? "✓" : "✗"} {t(`ye.check.${c.code}` as MessageKey)}
+                  </li>
+                ))}
+              </ul>
+              {s.reopen_entry_id ? (
+                <p>{entryLink(s.reopen_entry_id, t("ye.reopenEntry"))}</p>
+              ) : (
+                <form
+                  className="inline-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    reopen.mutate(reason, { onSuccess: () => setReason("") });
+                  }}
+                >
+                  <label>
+                    <span className="visually-hidden">{t("ye.reopenReason")}</span>
+                    <input
+                      placeholder={t("ye.reopenReason")}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      minLength={5}
+                      required
+                    />
+                  </label>
+                  <button type="submit" disabled={reopen.isPending}>
+                    {t("ye.reopen")}
+                  </button>
+                </form>
+              )}
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </details>
+  );
+}
 
 function PeriodActions({ period }: { period: Period }) {
   const { t } = useI18n();
@@ -65,6 +186,7 @@ export function PeriodsPage() {
         <section key={year.id} className="panel">
           <h2>
             {year.name} <span className="muted">({year.start_date} – {year.end_date})</span>
+            {year.status === "CLOSED" ? <span className="badge badge-locked">{t("ye.closed")}</span> : null}
           </h2>
           <table>
             <thead>
@@ -97,6 +219,7 @@ export function PeriodsPage() {
               ))}
             </tbody>
           </table>
+          <YearEnd year={year} />
         </section>
       ))}
       {openUnlocks.length ? (

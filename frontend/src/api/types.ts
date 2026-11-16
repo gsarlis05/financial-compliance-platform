@@ -369,3 +369,18 @@ export interface AccountLedger {
   lines: AccountLedgerLine[];
   closing_balance: Amount;
 }
+
+export interface CloseStatus {
+  fiscal_year_id: string;
+  name: string;
+  status: "OPEN" | "CLOSED";
+  end_date: string;
+  result: Amount;
+  lines: { account_id: string; account_code: string; account_name: string; account_type: string;
+           dimension_value_ids: string[]; balance: Amount }[];
+  blockers: string[];
+  closing_entry_id: string | null;
+  closing_entry_status: EntryStatus | null;
+  reopen_entry_id: string | null;
+  checks: { code: string; ok: boolean; details: string[] }[];
+}

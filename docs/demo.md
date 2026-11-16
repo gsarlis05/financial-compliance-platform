@@ -28,7 +28,8 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ 43 accounts mapped to the financial taxonomy; mapping complete for statements
 ✔ actuals read model up to posting 98 matches the ledger
 ✔ statements for 2026: balance sheet balances at 700545.98; profit 89973.47 = movement in equity; cash flow ends at the bank balance 371514.38
-✔ integrity checks passed (balance, snapshots, gapless numbering, audit chain)
+✔ year 2026 closed by the reviewed closing entry: profit 89973.47 moved to retained earnings; income and expense accounts are zero and the 2027 opening balances equal the closing balance sheet
+✔ integrity checks passed (balance, snapshots, gapless numbering, closed years, audit chain)
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the
@@ -61,6 +62,10 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
 - **Statements.** The P&L, balance sheet and cash flow for 2026 are built from the read model and
   must pass their checks. The cash flow must end at the bank balance. The figures are pinned in
   `backend/tests/devtools/golden/demo_statements_2026.json` (AC-M2-8).
+
+- **Year-end close.** The owner generates the closing entry for 2026, and the reviewer approves and
+  posts it. The year is then closed, and the statements show the profit in retained earnings with
+  the P&L unchanged.
 
 ## Demo data simplifications
 Monthly summaries instead of one entry per invoice (document-level posting arrives with

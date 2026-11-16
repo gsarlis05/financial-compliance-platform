@@ -5,6 +5,7 @@ import type {
   Account,
   AccountLedger,
   Ageing,
+  CloseStatus,
   Counterparty,
   CounterpartyKind,
   Dimension,
@@ -369,4 +370,38 @@ export function useGeneralLedger(accountId: string, dateFrom: string, dateTo: st
       }),
     enabled: !!accountId,
   });
+}
+
+export function useCloseStatus(fiscalYearId: string, enabled: boolean) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["close-status", entityId, fiscalYearId],
+    queryFn: () => api<CloseStatus>(`${base}/fiscal-years/${fiscalYearId}/close`),
+    enabled,
+  });
+}
+
+export function useYearEndMutations(fiscalYearId: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: ["close-status", entityId, fiscalYearId] });
+    void client.invalidateQueries({ queryKey: ["fiscal-years", entityId] });
+    void client.invalidateQueries({ queryKey: ["entries", entityId] });
+  };
+  return {
+    close: useMutation({
+      mutationFn: (accountId: string) =>
+        api<JournalEntry>(`${base}/fiscal-years/${fiscalYearId}/close`, {
+          method: "POST",
+          body: { retained_earnings_account_id: accountId },
+        }),
+      onSuccess: refresh,
+    }),
+    reopen: useMutation({
+      mutationFn: (reason: string) =>
+        api<JournalEntry>(`${base}/fiscal-years/${fiscalYearId}/reopen`, { method: "POST", body: { reason } }),
+      onSuccess: refresh,
+    }),
+  };
 }

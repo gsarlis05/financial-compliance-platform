@@ -823,6 +823,162 @@
         "title": "CheckOut",
         "type": "object"
       },
+      "CloseIn": {
+        "properties": {
+          "retained_earnings_account_id": {
+            "format": "uuid",
+            "title": "Retained Earnings Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retained_earnings_account_id"
+        ],
+        "title": "CloseIn",
+        "type": "object"
+      },
+      "CloseStatusOut": {
+        "properties": {
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/YearEndCheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "closing_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Entry Id"
+          },
+          "closing_entry_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Entry Status"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "fiscal_year_id": {
+            "format": "uuid",
+            "title": "Fiscal Year Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ClosingLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reopen_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reopen Entry Id"
+          },
+          "result": {
+            "description": "Profit (positive) or loss (negative) still to be closed",
+            "title": "Result",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fiscal_year_id",
+          "name",
+          "status",
+          "end_date",
+          "result",
+          "lines",
+          "blockers",
+          "closing_entry_id",
+          "closing_entry_status",
+          "reopen_entry_id",
+          "checks"
+        ],
+        "title": "CloseStatusOut",
+        "type": "object"
+      },
+      "ClosingLineOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_type": {
+            "title": "Account Type",
+            "type": "string"
+          },
+          "balance": {
+            "description": "Net debit balance at the year-end that the close moves",
+            "title": "Balance",
+            "type": "string"
+          },
+          "dimension_value_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Dimension Value Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "account_name",
+          "account_type",
+          "dimension_value_ids",
+          "balance"
+        ],
+        "title": "ClosingLineOut",
+        "type": "object"
+      },
       "CompletenessOut": {
         "properties": {
           "as_of": {
@@ -2853,6 +3009,21 @@
         "title": "RejectIn",
         "type": "object"
       },
+      "ReopenIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReopenIn",
+        "type": "object"
+      },
       "ReverseIn": {
         "properties": {
           "reason": {
@@ -3758,6 +3929,32 @@
           "kind"
         ],
         "title": "WorkspaceOut",
+        "type": "object"
+      },
+      "YearEndCheckOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "ok",
+          "details"
+        ],
+        "title": "YearEndCheckOut",
         "type": "object"
       }
     },
@@ -5855,6 +6052,198 @@
           }
         ],
         "summary": "Create Fiscal Year",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fiscal-years/{fiscal_year_id}/close": {
+      "get": {
+        "description": "What closing the year would move, what blocks it, and the AC-M2-9 checks once closed.",
+        "operationId": "fcp_modules_ledger_api_close_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloseStatusOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Close Status",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "post": {
+        "description": "Generate the closing entry (submitted). Posting it, after approval, closes the year.",
+        "operationId": "fcp_modules_ledger_api_close_fiscal_year",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Close Fiscal Year",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fiscal-years/{fiscal_year_id}/reopen": {
+      "post": {
+        "description": "Reverse the closing entry on its own date (submitted). Posting it re-opens the year.",
+        "operationId": "fcp_modules_ledger_api_reopen_fiscal_year",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reopen Fiscal Year",
         "tags": [
           "ledger"
         ]

@@ -66,6 +66,28 @@ adjustment period for year-end entries. Each period is:
 | Soft-closed | only finance managers/owners can post | accountant (and back to open) |
 | Locked | nothing can be posted | finance manager or owner; reopening needs an unlock |
 
+### Year-end close
+At the bottom of each fiscal year on **Periods**, open **Year-end close**.
+- The panel shows the result still to close and anything that blocks the close: an earlier year
+  that is still open, entries dated in the year that are not posted, or a closing entry already
+  waiting.
+- Choose the retained-earnings account (3200 by default) and select **Generate closing entry**. The
+  system creates an entry that brings every income and expense account to zero (per dimension
+  value too) and puts the result in retained earnings. It is submitted for approval like any other
+  entry, and nobody can edit it.
+- Posting it **closes the year**: nothing more can be posted into it. If balances changed after the
+  closing entry was generated, posting is refused; void it and generate it again.
+- A closed year shows its checks: income and expense accounts are zero at the year-end, and next
+  year's opening balances equal the closing balance sheet. Balances carry forward automatically;
+  no opening entry is needed.
+- To change a closed year (for example an audit adjustment), choose **Re-open the year** with a
+  reason. This creates a reversal of the closing entry for approval. Once it is posted, the year is
+  open again; post the adjustment and close again. Closing and re-opening need the *lock periods*
+  permission (owners and finance managers).
+
+The profit and loss statement of a closed year still shows its result; the balance sheet shows it in
+retained earnings.
+
 ## 6. Journal entries
 **New entry** opens the entry form. Choose the date, a description and at least two lines. The
 totals update as you type. **Save and submit** stays disabled until debits equal credits and every
