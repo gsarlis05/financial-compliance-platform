@@ -20,7 +20,7 @@ from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
 from . import assumptions, engine, exports, loans, outlook, rolling, runs
-from .assumptions import NewLoanRow, SetInfo, derive_set, set_info
+from .assumptions import NewLoanRow, SetInfo, derive_set, observed_days, set_info
 from .debt import LoanTerms
 from .drivers import DRIVERS, OPEX_LINES, REVENUE_LINES
 from .engine import EngineInput, ExtraCapex, Projection
@@ -41,6 +41,7 @@ __all__ = [
     "SetInfo",
     "derive_set",
     "load_input",
+    "observed_days",
     "pin",
     "project",
     "projected_plan",
