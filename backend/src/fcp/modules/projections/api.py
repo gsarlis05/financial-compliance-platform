@@ -7,7 +7,7 @@ amounts in money, percentages as e.g. ``35`` for 35%, days and months as numbers
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from django.http import HttpRequest, HttpResponse
@@ -19,7 +19,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
-from . import assumptions, engine, exports, outlook, rolling, runs
+from . import assumptions, engine, exports, loans, outlook, rolling, runs
 from .drivers import DRIVERS
 from .layout import with_totals
 from .models import AssumptionSet
@@ -167,17 +167,96 @@ def revise_set(request: HttpRequest, slug: str, entity_id: UUID,
     return Status(201, _set_out(assumptions.revise(ctx, entity_id, set_id)))
 
 
+class LoanIn(Schema):
+    code: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$")
+    name: str = Field(min_length=1, max_length=120)
+    kind: Literal["EXISTING", "NEW"]
+    structure: Literal["ANNUITY", "EQUAL_PRINCIPAL", "BULLET"]
+    term_months: int = Field(ge=1, le=600, description="Repayment months, interest-only included")
+    annual_rate: str = Field(pattern=r"^\d{1,3}(\.\d{1,4})?$", description="% a year")
+    opening_balance: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$",
+                                 description="Existing loan: owed at the cut-over")  # fmt: skip
+    amount: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$",
+                        description="New loan: the amount drawn")  # fmt: skip
+    drawdown_month: date | None = Field(default=None, description="New loan: drawn at its end")
+    interest_only_months: int = Field(default=0, ge=0, le=599)
+    note: str = Field(default="", max_length=500)
+
+
+class LoanOut(Schema):
+    code: str
+    name: str
+    kind: str
+    structure: str
+    term_months: int
+    annual_rate: str
+    opening_balance: str
+    amount: str
+    drawdown_month: date | None
+    interest_only_months: int
+    from_register: bool
+    note: str
+
+
+def _loan_out(loan: Any) -> LoanOut:
+    return LoanOut(code=loan.code, name=loan.name, kind=loan.kind, structure=loan.structure,
+                   term_months=loan.term_months, annual_rate=f"{loan.annual_rate.normalize():f}",
+                   opening_balance=f"{loan.opening_balance:.2f}", amount=f"{loan.amount:.2f}",
+                   drawdown_month=loan.drawdown_month,
+                   interest_only_months=loan.interest_only_months,
+                   from_register=loan.register_series_id is not None, note=loan.note)  # fmt: skip
+
+
+@router.get(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans", response=list[LoanOut])
+@requires("planning.read")
+def list_loans(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID) -> list[LoanOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_loan_out(x) for x in loans.loans(ctx, entity_id, set_id)]
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans", response={201: LoanOut})
+@requires("planning.run")
+def add_loan(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+             payload: LoanIn) -> Status[LoanOut]:  # fmt: skip
+    """A loan of a draft set; its rate path, early repayments and extra drawdowns are rows of
+    the grid (``loan_rate``, ``loan_prepayment``, ``loan_drawdown``)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = loans.add_loan(ctx, entity_id, set_id, loans.NewLoan(**payload.model_dump()))
+    return Status(201, _loan_out(made))
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans/from-register",
+             response={201: list[LoanOut]})  # fmt: skip
+@requires("planning.run")
+def add_loans_from_register(request: HttpRequest, slug: str, entity_id: UUID,
+                            set_id: UUID) -> Status[list[LoanOut]]:  # fmt: skip
+    """The debt register's drawn loans with their balances at the set's cut-over."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, [_loan_out(x) for x in loans.add_from_register(ctx, entity_id, set_id)])
+
+
+@router.delete(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans/{{code}}", response={204: None})
+@requires("planning.run")
+def remove_loan(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+                code: str) -> Status[None]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    loans.remove_loan(ctx, entity_id, set_id, code)
+    return Status(204, None)
+
+
 class DriverOut(Schema):
     key: str
     unit: str
     lines: list[str]
+    per_loan: bool = Field(description="One row per loan of the set (the loan's code as line)")
 
 
 @router.get(f"{BASE}/assumption-drivers", response=list[DriverOut])
 @requires("planning.read")
 def list_drivers(request: HttpRequest, slug: str, entity_id: UUID) -> list[DriverOut]:
     workspace_ctx(request, slug, entity_id)
-    return [DriverOut(key=d.key, unit=d.unit, lines=list(d.lines)) for d in DRIVERS.values()]
+    return [DriverOut(key=d.key, unit=d.unit, lines=list(d.lines), per_loan=d.per_loan)
+            for d in DRIVERS.values()]  # fmt: skip
 
 
 # --- projections (M6-3) ---------------------------------------------------------------------------

@@ -275,3 +275,57 @@ export function useOutlook(day: string) {
     enabled: !!day,
   });
 }
+
+// Loans of an assumption set (M6F-4).
+export type LoanStructure = "ANNUITY" | "EQUAL_PRINCIPAL" | "BULLET";
+
+export interface LoanInput {
+  code: string;
+  name: string;
+  kind: "EXISTING" | "NEW";
+  structure: LoanStructure;
+  term_months: number;
+  annual_rate: string;
+  opening_balance: string;
+  amount: string;
+  drawdown_month: string | null;
+  interest_only_months: number;
+}
+
+export interface Loan extends LoanInput {
+  from_register: boolean;
+  note: string;
+}
+
+export function useLoans(setId: string | null) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["assumptions", entityId, setId, "loans"],
+    queryFn: () => api<Loan[]>(`${base}/assumption-sets/${setId}/loans`),
+    enabled: !!setId,
+  });
+}
+
+export function useLoanMutations(setId: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({ queryKey: ["assumptions", entityId] });
+  const url = `${base}/assumption-sets/${setId}/loans`;
+  return {
+    add: useMutation({
+      mutationFn: (body: LoanInput) => api<Loan>(url, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    fromRegister: useMutation({
+      mutationFn: () =>
+        api<Loan[]>(`${url}/from-register`, { method: "POST", body: {} }),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (code: string) =>
+        api<null>(`${url}/${encodeURIComponent(code)}`, { method: "DELETE" }),
+      onSuccess: refresh,
+    }),
+  };
+}

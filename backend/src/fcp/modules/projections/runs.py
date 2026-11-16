@@ -14,7 +14,7 @@ opening always balances when the books do.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
@@ -38,10 +38,12 @@ from fcp.modules.reporting.api import fiscal_year_start, opening_net
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from . import engine
-from .assumptions import READ, RUN, approved_values, horizon
+from .assumptions import READ, RUN, approved_loans, approved_values, horizon
+from .debt import LoanTerms, project_loan
 from .models import AssumptionSet
 
 KIND = "PROJECTION"
+ZERO_AMOUNT = Decimal("0.00")
 RETAINED = "BS.EQUITY.RETAINED"
 
 
@@ -120,9 +122,65 @@ class Loaded:
     inp: engine.EngineInput
 
 
+def _series(drivers: Drivers, key: str, code: str) -> dict[date, Decimal]:
+    return dict(drivers.get((key, code), {}))
+
+
+def loan_terms(made: AssumptionSet, drivers: Drivers, months: list[date]) -> tuple[LoanTerms, ...]:
+    """The set's loans as engine terms for ``months``. A run starting after the set's first month
+    (a rolling forecast) rolls each loan forward through the months in between first."""
+    set_months = horizon(made.cutover, made.months)
+    before = [m for m in set_months if months and m < months[0]]
+    out = []
+    for loan in approved_loans(made):
+        terms = LoanTerms(
+            code=loan.code, structure=loan.structure, term_months=loan.term_months,
+            annual_rate=loan.annual_rate, opening=loan.opening_balance, amount=loan.amount,
+            drawdown_month=loan.drawdown_month,
+            interest_only_months=loan.interest_only_months,
+            rate_path=_series(drivers, "loan_rate", loan.code),
+            prepayments=_series(drivers, "loan_prepayment", loan.code),
+            drawdowns=_series(drivers, "loan_drawdown", loan.code),
+        )  # fmt: skip
+        rolled = _rolled_forward(terms, before) if before else terms
+        if rolled is not None:
+            out.append(rolled)
+    return tuple(out)
+
+
+def _rolled_forward(terms: LoanTerms, before: list[date]) -> LoanTerms | None:
+    """The loan as it stands after ``before`` (months already past), as an existing loan."""
+    rows = project_loan(terms, before)
+    balance = rows[-1].closing
+    if terms.drawdown_month is not None and terms.drawdown_month > before[-1]:
+        return terms  # not drawn yet
+    start = add_months(terms.drawdown_month, 1) if terms.drawdown_month else before[0]
+    elapsed = max((add_months(before[-1], 1).year - start.year) * 12
+                  + add_months(before[-1], 1).month - start.month, 0)  # fmt: skip
+    left = terms.term_months - elapsed
+    if balance <= 0 or left < 1:
+        return None
+    return replace(terms, opening=balance, amount=ZERO_AMOUNT, drawdown_month=None,
+                   term_months=left,
+                   interest_only_months=max(terms.interest_only_months - elapsed, 0),
+                   annual_rate=rows[-1].rate)  # fmt: skip
+
+
+def check_loans(opening: dict[str, Decimal], loans: tuple[LoanTerms, ...]) -> None:
+    """Existing loans cannot add up to more than the debt in the books at the cut-over."""
+    books = opening.get("BS.DEBT.CURRENT", Decimal(0)) + opening.get("BS.DEBT.NONCURRENT",
+                                                                      Decimal(0))  # fmt: skip
+    loans_total = sum((t.opening for t in loans if t.drawdown_month is None), Decimal(0))
+    if loans_total > books:
+        message = (f"The set's existing loans ({loans_total:.2f}) are more than the debt in the "
+                   f"books at the cut-over ({books:.2f}). Check the balances, or the mapping of "
+                   "the loan accounts.")  # fmt: skip
+        raise ValidationFailedError(message, field_errors={"loans": [message]})
+
+
 class ProjectionEngine:
     kind = KIND
-    version = "1"
+    version = "2"  # M6F-4: loans
 
     def load(self, ctx: WorkspaceContext, inputs: RunInputs) -> Loaded:
         refs = inputs.refs
@@ -142,9 +200,11 @@ class ProjectionEngine:
                                    for m, v in refs["register_depreciation"].items()},
             fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
             currency=refs.get("currency", "EUR"),  # runs made before M6F-1 are in EUR
+            loans=loan_terms(made, drivers, months),
         ))  # fmt: skip
 
     def compute(self, inputs: RunInputs, data: Loaded) -> Output:
+        check_loans(data.inp.opening, data.inp.loans)
         return engine.output(data.inp)[1]
 
 
@@ -176,7 +236,9 @@ def run_projection(  # noqa: PLR0913 (keyword options for rolling forecasts)
     as_of = date.fromisoformat(refs["cutover"])
     # Refuse an unmappable opening before recording a run (the run's own read is pinned).
     _, net = opening_net(ctx, entity, before=as_of + timedelta(days=1))
-    opening_balance_sheet(net, refs["mapping"])
+    start = opening_balance_sheet(net, refs["mapping"])
+    _, drivers = approved_values(ctx, entity, made.id)
+    check_loans(start, loan_terms(made, drivers, [date.fromisoformat(m) for m in refs["months"]]))
     return execute(ctx, entity, KIND, as_of=as_of, refs=refs, trigger=trigger,
                    supersedes=supersedes)  # fmt: skip
 

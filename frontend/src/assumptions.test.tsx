@@ -69,6 +69,25 @@ describe("Assumption sets (M6-2)", () => {
         }
         if (url.endsWith("/assumption-sets/s1"))
           return Promise.resolve(respond(grid));
+        if (url.endsWith("/loans"))
+          return Promise.resolve(
+            respond([
+              {
+                code: "BANK-1",
+                name: "Bank loan (Demo)",
+                kind: "EXISTING",
+                structure: "ANNUITY",
+                term_months: 48,
+                annual_rate: "5.5",
+                opening_balance: "40000.00",
+                amount: "0.00",
+                drawdown_month: null,
+                interest_only_months: 0,
+                from_register: true,
+                note: "From the debt register (term loan, fixed rate).",
+              },
+            ]),
+          );
         return Promise.resolve(respond([set]));
       }),
     );
@@ -94,6 +113,9 @@ describe("Assumption sets (M6-2)", () => {
     expect(
       screen.getByText(/Every value is a forecast assumption/),
     ).toBeInTheDocument();
+    const loans = await screen.findByRole("table", { name: "Loans" });
+    expect(loans).toHaveTextContent("40,000.00");
+    expect(loans).toHaveTextContent("Annuity (level payments)");
     const jan = within(table).getByLabelText("Revenue: sales of goods 2027-01");
     expect(jan).toHaveValue("1320");
     expect(jan.closest("td")).toHaveAttribute(

@@ -126,6 +126,7 @@ const INVARIANTS = [
   "opening_equals_previous_closing",
   "roll_forwards_tie",
   "aggregation_consistent",
+  "debt_reconciles",
 ];
 
 export function columnLabel(

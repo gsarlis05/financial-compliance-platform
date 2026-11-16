@@ -22,6 +22,21 @@ Open **Cash & planning → Assumptions**.
 3. **Approve.** An approved set never changes. To change it, select **Revise as a new version**:
    you get a draft copy, and when you approve it the earlier version is marked superseded.
 
+## Loans
+Open a set and use **Loans** to project each loan on its own:
+- **Add the loans of the debt register** brings every drawn loan of the register with what is
+  still owed at the cut-over, its rate and how it is repaid.
+- Or add a loan yourself: an **existing** loan (what is owed at the cut-over) or a **new** one
+  (the amount and the month it is drawn), with its rate, repayment (level payments, equal
+  principal, or all at the end), the repayment months and any interest-only months.
+
+Each loan then has three rows in the grid: its **rate** for each month (change it for a variable
+rate), **early repayments** and **extra drawdowns**. Interest is worked out on what is owed at the
+start of each month; repayments and drawdowns happen at the month end. An early repayment lowers
+the later payments and keeps the end date. The part of each loan due within 12 months is shown as
+short-term debt. Debt in your books that these loans do not cover is projected with the
+borrowing, repayment and interest-rate rows.
+
 ## Running a projection
 With an approved set, open **Cash & planning → Projections**, choose the set and select **Run**. It starts
 from your actual balance sheet at the cut-over, read from the posted books, and works out each
@@ -31,7 +46,8 @@ statement, then the credit facility to keep the minimum cash.
 
 Every run checks that the three statements agree: the balance sheet balances, the cash on it equals
 the cash flow statement, retained earnings move only by profit and dividends, each month starts
-where the last ended, and quarters and years add up. A run that fails a check is marked
+where the last ended, quarters and years add up, and each loan, the interest and the debt lines
+reconcile. A run that fails a check is marked
 **invalid**, says which check failed in which month, and cannot be published. Lines the
 assumptions do not cover (intangibles, investments, other receivables and payables) stay at their
 opening balance. If an account with a balance is not mapped to a statement line, map it first.
@@ -39,7 +55,7 @@ opening balance. If an account with a balance is not mapped to a statement line,
 ### Reading a projection
 - **Natures.** Every column says **Actual** (the opening balance sheet, from your books) or
   **Forecast**, in words as well as by its border style. Show it by month, quarter or year.
-- **Checks.** The six checks are listed with **holds** or **fails**; a failed check names the month
+- **Checks.** The seven checks are listed with **holds** or **fails**; a failed check names the month
   where it failed, and such a projection cannot be published.
 - **Explain a line.** Select any figure to see where it comes from: the assumption and how it is
   used, the fixed-asset register, your books, or which other lines it is worked out from.

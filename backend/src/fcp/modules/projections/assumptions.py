@@ -31,7 +31,7 @@ from fcp.modules.reporting.api import actuals_monthly, opening_net
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from .drivers import DEFAULTS, DRIVERS, OPEX_LINES, REVENUE_LINES, Unit
-from .models import AssumptionSet, AssumptionValue
+from .models import AssumptionLoan, AssumptionSet, AssumptionValue
 
 READ, RUN, PUBLISH = "planning.read", "planning.run", "planning.publish"
 CENT, PLACES = Decimal("0.01"), Decimal("0.0001")
@@ -295,8 +295,10 @@ def grid(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> Grid:
     months = horizon(made.cutover, made.months)
     index = {m: i for i, m in enumerate(months)}
     found: dict[tuple[str, str], tuple[list[Decimal], list[str]]] = {}
+    codes = list(AssumptionLoan.objects.filter(assumption_set=made).order_by("code")
+                 .values_list("code", flat=True))  # fmt: skip
     for key, driver in DRIVERS.items():
-        for line in driver.lines:
+        for line in codes if driver.per_loan else driver.lines:
             found[(key, line)] = ([Decimal(0)] * len(months), [Source.DEFAULT] * len(months))
     for v in AssumptionValue.objects.filter(assumption_set=made):
         row = found.get((v.driver, v.line))
@@ -325,7 +327,9 @@ def set_values(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, changes: li
         driver = DRIVERS.get(change.driver)
         where = f"changes[{n}]"
         cell = " ".join(p for p in (change.driver, change.line) if p) + f", {change.month:%m/%Y}"
-        if driver is None or change.line not in driver.lines:
+        lines = loan_codes(made) if driver is not None and driver.per_loan else (
+            driver.lines if driver is not None else ())  # fmt: skip
+        if driver is None or change.line not in lines:
             raise _invalid(where, f"{cell}: unknown driver or line.")
         if month_start(change.month) not in months:
             raise _invalid(where, f"{cell}: the month is outside the set's horizon.")
@@ -399,8 +403,23 @@ def revise(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> AssumptionSe
                         month=v.month, value=v.value, source=v.source)
         for v in AssumptionValue.objects.filter(assumption_set=made)
     )  # fmt: skip
+    AssumptionLoan.objects.bulk_create(
+        AssumptionLoan(tenant=ctx.tenant, assumption_set=draft, **{
+            f.name: getattr(loan, f.name) for f in AssumptionLoan._meta.concrete_fields
+            if f.name not in ("id", "tenant", "assumption_set", "created_at")})
+        for loan in AssumptionLoan.objects.filter(assumption_set=made)
+    )  # fmt: skip
     _audit(ctx, "revised", draft, from_version=made.version)
     return draft
+
+
+def loan_codes(made: AssumptionSet) -> set[str]:
+    return set(AssumptionLoan.objects.filter(assumption_set=made).values_list("code", flat=True))
+
+
+def approved_loans(made: AssumptionSet) -> list[AssumptionLoan]:
+    """An approved set's loans, for the projection engine (M6F-4)."""
+    return list(AssumptionLoan.objects.filter(assumption_set=made).order_by("code"))
 
 
 def approved_values(

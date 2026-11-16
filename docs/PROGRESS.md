@@ -96,7 +96,8 @@ until validated and signed by a qualified professional; brief
 | M6F-1 Currency foundation: ISO 4217, transaction/functional/reporting currencies, FX rates; multi-currency disabled (issue #80) | `claude/m6f-1-currency-foundation` | #155 | Open |
 | M6F-2 Tax rule sets: sourced, versioned, per jurisdiction; Cyprus seeded pending verification (issue #147) | `claude/m6f-2-tax-rules` | #156 | Open |
 | M6F-3 Depreciation from available for use (IAS 16); separate tax capital allowances; capex commencement and method in projections (issue #148) | `claude/m6f-3-depreciation-allowances` | #157 | Open |
-| M6F-4 Debt instruments in projections (issue #149) | — | — | Next |
+| M6F-4 Loans in projections: structures, rate paths, early repayment, drawdowns, register loans, debt reconciliation (issue #149) | `claude/m6f-4-debt` | #158 | Open |
+| M6F-5 Corporate tax in projections (issue #150) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
