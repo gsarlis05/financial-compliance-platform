@@ -1,0 +1,219 @@
+month,check,holds
+2027-01,C1 assets = liabilities + equity,yes
+2027-01,C2 cash flow closing cash = balance sheet cash,yes
+2027-01,C3 retained earnings roll forward,yes
+2027-01,C4 fixed assets roll forward,yes
+2027-01,C5 debt roll forward,yes
+2027-01,C6 working capital movements,yes
+2027-01,C7 income tax roll forward,yes
+2027-01,C8 each loan rolls forward,yes
+2027-01,C9 net income = profit before tax - tax,yes
+2027-02,C1 assets = liabilities + equity,yes
+2027-02,C2 cash flow closing cash = balance sheet cash,yes
+2027-02,C3 retained earnings roll forward,yes
+2027-02,C4 fixed assets roll forward,yes
+2027-02,C5 debt roll forward,yes
+2027-02,C6 working capital movements,yes
+2027-02,C7 income tax roll forward,yes
+2027-02,C8 each loan rolls forward,yes
+2027-02,C9 net income = profit before tax - tax,yes
+2027-03,C1 assets = liabilities + equity,yes
+2027-03,C2 cash flow closing cash = balance sheet cash,yes
+2027-03,C3 retained earnings roll forward,yes
+2027-03,C4 fixed assets roll forward,yes
+2027-03,C5 debt roll forward,yes
+2027-03,C6 working capital movements,yes
+2027-03,C7 income tax roll forward,yes
+2027-03,C8 each loan rolls forward,yes
+2027-03,C9 net income = profit before tax - tax,yes
+2027-04,C1 assets = liabilities + equity,yes
+2027-04,C2 cash flow closing cash = balance sheet cash,yes
+2027-04,C3 retained earnings roll forward,yes
+2027-04,C4 fixed assets roll forward,yes
+2027-04,C5 debt roll forward,yes
+2027-04,C6 working capital movements,yes
+2027-04,C7 income tax roll forward,yes
+2027-04,C8 each loan rolls forward,yes
+2027-04,C9 net income = profit before tax - tax,yes
+2027-05,C1 assets = liabilities + equity,yes
+2027-05,C2 cash flow closing cash = balance sheet cash,yes
+2027-05,C3 retained earnings roll forward,yes
+2027-05,C4 fixed assets roll forward,yes
+2027-05,C5 debt roll forward,yes
+2027-05,C6 working capital movements,yes
+2027-05,C7 income tax roll forward,yes
+2027-05,C8 each loan rolls forward,yes
+2027-05,C9 net income = profit before tax - tax,yes
+2027-06,C1 assets = liabilities + equity,yes
+2027-06,C2 cash flow closing cash = balance sheet cash,yes
+2027-06,C3 retained earnings roll forward,yes
+2027-06,C4 fixed assets roll forward,yes
+2027-06,C5 debt roll forward,yes
+2027-06,C6 working capital movements,yes
+2027-06,C7 income tax roll forward,yes
+2027-06,C8 each loan rolls forward,yes
+2027-06,C9 net income = profit before tax - tax,yes
+2027-07,C1 assets = liabilities + equity,yes
+2027-07,C2 cash flow closing cash = balance sheet cash,yes
+2027-07,C3 retained earnings roll forward,yes
+2027-07,C4 fixed assets roll forward,yes
+2027-07,C5 debt roll forward,yes
+2027-07,C6 working capital movements,yes
+2027-07,C7 income tax roll forward,yes
+2027-07,C8 each loan rolls forward,yes
+2027-07,C9 net income = profit before tax - tax,yes
+2027-08,C1 assets = liabilities + equity,yes
+2027-08,C2 cash flow closing cash = balance sheet cash,yes
+2027-08,C3 retained earnings roll forward,yes
+2027-08,C4 fixed assets roll forward,yes
+2027-08,C5 debt roll forward,yes
+2027-08,C6 working capital movements,yes
+2027-08,C7 income tax roll forward,yes
+2027-08,C8 each loan rolls forward,yes
+2027-08,C9 net income = profit before tax - tax,yes
+2027-09,C1 assets = liabilities + equity,yes
+2027-09,C2 cash flow closing cash = balance sheet cash,yes
+2027-09,C3 retained earnings roll forward,yes
+2027-09,C4 fixed assets roll forward,yes
+2027-09,C5 debt roll forward,yes
+2027-09,C6 working capital movements,yes
+2027-09,C7 income tax roll forward,yes
+2027-09,C8 each loan rolls forward,yes
+2027-09,C9 net income = profit before tax - tax,yes
+2027-10,C1 assets = liabilities + equity,yes
+2027-10,C2 cash flow closing cash = balance sheet cash,yes
+2027-10,C3 retained earnings roll forward,yes
+2027-10,C4 fixed assets roll forward,yes
+2027-10,C5 debt roll forward,yes
+2027-10,C6 working capital movements,yes
+2027-10,C7 income tax roll forward,yes
+2027-10,C8 each loan rolls forward,yes
+2027-10,C9 net income = profit before tax - tax,yes
+2027-11,C1 assets = liabilities + equity,yes
+2027-11,C2 cash flow closing cash = balance sheet cash,yes
+2027-11,C3 retained earnings roll forward,yes
+2027-11,C4 fixed assets roll forward,yes
+2027-11,C5 debt roll forward,yes
+2027-11,C6 working capital movements,yes
+2027-11,C7 income tax roll forward,yes
+2027-11,C8 each loan rolls forward,yes
+2027-11,C9 net income = profit before tax - tax,yes
+2027-12,C1 assets = liabilities + equity,yes
+2027-12,C2 cash flow closing cash = balance sheet cash,yes
+2027-12,C3 retained earnings roll forward,yes
+2027-12,C4 fixed assets roll forward,yes
+2027-12,C5 debt roll forward,yes
+2027-12,C6 working capital movements,yes
+2027-12,C7 income tax roll forward,yes
+2027-12,C8 each loan rolls forward,yes
+2027-12,C9 net income = profit before tax - tax,yes
+2027-12,C10 tax losses roll forward,yes
+2028-01,C1 assets = liabilities + equity,yes
+2028-01,C2 cash flow closing cash = balance sheet cash,yes
+2028-01,C3 retained earnings roll forward,yes
+2028-01,C4 fixed assets roll forward,yes
+2028-01,C5 debt roll forward,yes
+2028-01,C6 working capital movements,yes
+2028-01,C7 income tax roll forward,yes
+2028-01,C8 each loan rolls forward,yes
+2028-01,C9 net income = profit before tax - tax,yes
+2028-02,C1 assets = liabilities + equity,yes
+2028-02,C2 cash flow closing cash = balance sheet cash,yes
+2028-02,C3 retained earnings roll forward,yes
+2028-02,C4 fixed assets roll forward,yes
+2028-02,C5 debt roll forward,yes
+2028-02,C6 working capital movements,yes
+2028-02,C7 income tax roll forward,yes
+2028-02,C8 each loan rolls forward,yes
+2028-02,C9 net income = profit before tax - tax,yes
+2028-03,C1 assets = liabilities + equity,yes
+2028-03,C2 cash flow closing cash = balance sheet cash,yes
+2028-03,C3 retained earnings roll forward,yes
+2028-03,C4 fixed assets roll forward,yes
+2028-03,C5 debt roll forward,yes
+2028-03,C6 working capital movements,yes
+2028-03,C7 income tax roll forward,yes
+2028-03,C8 each loan rolls forward,yes
+2028-03,C9 net income = profit before tax - tax,yes
+2028-04,C1 assets = liabilities + equity,yes
+2028-04,C2 cash flow closing cash = balance sheet cash,yes
+2028-04,C3 retained earnings roll forward,yes
+2028-04,C4 fixed assets roll forward,yes
+2028-04,C5 debt roll forward,yes
+2028-04,C6 working capital movements,yes
+2028-04,C7 income tax roll forward,yes
+2028-04,C8 each loan rolls forward,yes
+2028-04,C9 net income = profit before tax - tax,yes
+2028-05,C1 assets = liabilities + equity,yes
+2028-05,C2 cash flow closing cash = balance sheet cash,yes
+2028-05,C3 retained earnings roll forward,yes
+2028-05,C4 fixed assets roll forward,yes
+2028-05,C5 debt roll forward,yes
+2028-05,C6 working capital movements,yes
+2028-05,C7 income tax roll forward,yes
+2028-05,C8 each loan rolls forward,yes
+2028-05,C9 net income = profit before tax - tax,yes
+2028-06,C1 assets = liabilities + equity,yes
+2028-06,C2 cash flow closing cash = balance sheet cash,yes
+2028-06,C3 retained earnings roll forward,yes
+2028-06,C4 fixed assets roll forward,yes
+2028-06,C5 debt roll forward,yes
+2028-06,C6 working capital movements,yes
+2028-06,C7 income tax roll forward,yes
+2028-06,C8 each loan rolls forward,yes
+2028-06,C9 net income = profit before tax - tax,yes
+2028-07,C1 assets = liabilities + equity,yes
+2028-07,C2 cash flow closing cash = balance sheet cash,yes
+2028-07,C3 retained earnings roll forward,yes
+2028-07,C4 fixed assets roll forward,yes
+2028-07,C5 debt roll forward,yes
+2028-07,C6 working capital movements,yes
+2028-07,C7 income tax roll forward,yes
+2028-07,C8 each loan rolls forward,yes
+2028-07,C9 net income = profit before tax - tax,yes
+2028-08,C1 assets = liabilities + equity,yes
+2028-08,C2 cash flow closing cash = balance sheet cash,yes
+2028-08,C3 retained earnings roll forward,yes
+2028-08,C4 fixed assets roll forward,yes
+2028-08,C5 debt roll forward,yes
+2028-08,C6 working capital movements,yes
+2028-08,C7 income tax roll forward,yes
+2028-08,C8 each loan rolls forward,yes
+2028-08,C9 net income = profit before tax - tax,yes
+2028-09,C1 assets = liabilities + equity,yes
+2028-09,C2 cash flow closing cash = balance sheet cash,yes
+2028-09,C3 retained earnings roll forward,yes
+2028-09,C4 fixed assets roll forward,yes
+2028-09,C5 debt roll forward,yes
+2028-09,C6 working capital movements,yes
+2028-09,C7 income tax roll forward,yes
+2028-09,C8 each loan rolls forward,yes
+2028-09,C9 net income = profit before tax - tax,yes
+2028-10,C1 assets = liabilities + equity,yes
+2028-10,C2 cash flow closing cash = balance sheet cash,yes
+2028-10,C3 retained earnings roll forward,yes
+2028-10,C4 fixed assets roll forward,yes
+2028-10,C5 debt roll forward,yes
+2028-10,C6 working capital movements,yes
+2028-10,C7 income tax roll forward,yes
+2028-10,C8 each loan rolls forward,yes
+2028-10,C9 net income = profit before tax - tax,yes
+2028-11,C1 assets = liabilities + equity,yes
+2028-11,C2 cash flow closing cash = balance sheet cash,yes
+2028-11,C3 retained earnings roll forward,yes
+2028-11,C4 fixed assets roll forward,yes
+2028-11,C5 debt roll forward,yes
+2028-11,C6 working capital movements,yes
+2028-11,C7 income tax roll forward,yes
+2028-11,C8 each loan rolls forward,yes
+2028-11,C9 net income = profit before tax - tax,yes
+2028-12,C1 assets = liabilities + equity,yes
+2028-12,C2 cash flow closing cash = balance sheet cash,yes
+2028-12,C3 retained earnings roll forward,yes
+2028-12,C4 fixed assets roll forward,yes
+2028-12,C5 debt roll forward,yes
+2028-12,C6 working capital movements,yes
+2028-12,C7 income tax roll forward,yes
+2028-12,C8 each loan rolls forward,yes
+2028-12,C9 net income = profit before tax - tax,yes
+2028-12,C10 tax losses roll forward,yes

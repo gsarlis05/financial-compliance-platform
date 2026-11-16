@@ -3,7 +3,8 @@
 Order of calculation per month (doc 10 §4.1):
 1. Income statement to EBIT: revenue per line; cost of sales from the gross margin on sales and
    services; operating costs per line; depreciation of the registered assets and of new capital
-   expenditure (straight-line over its life, from the month after it is spent).
+   expenditure (straight-line over its life, a full month from ``capex_start`` months after it is
+   spent; by default the month after).
 2. Interest on the **opening** debt and credit facility of the month (no circularity).
 3. Corporate income tax (M6F-5, ``tax.py``): current tax on taxable profit year to date under the
    tax rule set of the year, with losses carried forward; deferred tax on temporary differences;
@@ -23,8 +24,9 @@ Order of calculation per month (doc 10 §4.1):
 Rounding (doc 10 §2.4): each statement line is rounded to cents once per month; totals, cash and
 retained earnings are sums of rounded lines, so the statements tie to the cent with no plug.
 
-Every run checks the six invariants of doc 10 §4.2; the framework marks a run that fails one
-INVALID, and an invalid run cannot be published.
+Every run checks eight invariants: the six of doc 10 §4.2, debt (M6F-4) and tax (M6F-5); the
+framework marks a run that fails one INVALID, and an invalid run cannot be published. The
+validation package (docs/validation) compares the engine with an independent model.
 """
 
 import calendar
