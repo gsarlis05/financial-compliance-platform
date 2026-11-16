@@ -12,7 +12,7 @@ from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from .models import Account
+from .models import Account, JournalLine
 
 TEMPLATES = ("cy_business", "personal")
 
@@ -26,6 +26,7 @@ class AccountInput:
     parent_code: str | None = None
     is_postable: bool = True
     currency: str = ""
+    control_type: str = ""
 
 
 def _audit(ctx: WorkspaceContext, account: Account, action: str, changes: dict[str, Any]) -> None:
@@ -53,9 +54,31 @@ def get_account(ctx: WorkspaceContext, entity_id: UUID, account_id: UUID) -> Acc
     return account
 
 
+_CONTROL_TYPES = {
+    Account.Control.RECEIVABLE: Account.Type.ASSET,
+    Account.Control.PAYABLE: Account.Type.LIABILITY,
+}
+
+
+def _validate_control(control_type: str, account_type: str, is_postable: bool) -> None:
+    if not control_type:
+        return
+    if control_type not in _CONTROL_TYPES:
+        raise ValidationFailedError(
+            "Control type must be RECEIVABLE or PAYABLE.",
+            field_errors={"control_type": ["invalid"]},
+        )
+    if _CONTROL_TYPES[Account.Control(control_type)] != account_type or not is_postable:
+        raise ValidationFailedError(
+            "Receivables control accounts are postable assets; payables are postable liabilities.",
+            field_errors={"control_type": ["does not fit the account type"]},
+        )
+
+
 def _validate(data: AccountInput) -> None:
     if data.type not in Account.Type.values:
         raise ValidationFailedError("Unknown account type.", field_errors={"type": ["invalid"]})
+    _validate_control(data.control_type, data.type, data.is_postable)
     code = data.code.strip().upper()
     if not code or len(code) > 20 or not all(c.isalnum() or c in ".-" for c in code):
         raise ValidationFailedError(
@@ -99,16 +122,18 @@ def create_account(ctx: WorkspaceContext, entity_id: UUID, data: AccountInput) -
         parent=parent,
         is_postable=data.is_postable,
         currency=data.currency.upper(),
+        control_type=data.control_type,
         created_by=ctx.user,
     )
     _audit(ctx, account, "ledger.account.created",
            {"code": code, "name": account.name, "type": data.type,
-            "parent_code": data.parent_code, "is_postable": data.is_postable})  # fmt: skip
+            "parent_code": data.parent_code, "is_postable": data.is_postable,
+            "control_type": data.control_type})  # fmt: skip
     return account
 
 
 @transaction.atomic
-def update_account(
+def update_account(  # noqa: PLR0913 - keyword-only optional fields
     ctx: WorkspaceContext,
     entity_id: UUID,
     account_id: UUID,
@@ -116,18 +141,30 @@ def update_account(
     name: str | None = None,
     name_el: str | None = None,
     status: str | None = None,
+    control_type: str | None = None,
 ) -> Account:
-    """Names and status can change; code, type and hierarchy cannot (they carry history)."""
+    """Names, status and (until the first posting) the control type can change; code, type and
+    hierarchy cannot (they carry history)."""
     get_entity(ctx, entity_id, "ledger.account.manage")
     account = get_account(ctx, entity_id, account_id)
-    before = {"name": account.name, "name_el": account.name_el, "status": account.status}
+    before = {"name": account.name, "name_el": account.name_el, "status": account.status,
+              "control_type": account.control_type}  # fmt: skip
     if status is not None and status not in Account.Status.values:
         raise ValidationFailedError("Unknown status.", field_errors={"status": ["invalid"]})
+    if control_type is not None and control_type != account.control_type:
+        _validate_control(control_type, account.type, account.is_postable)
+        if JournalLine.objects.filter(account=account, entry__status="POSTED").exists():
+            raise ConflictError(
+                "The control type cannot change once the account has postings; "
+                "open a new control account instead."
+            )
+        account.control_type = control_type
     account.name = name.strip() if name is not None else account.name
     account.name_el = name_el.strip() if name_el is not None else account.name_el
     account.status = status or account.status
-    account.save(update_fields=["name", "name_el", "status"])
-    after = {"name": account.name, "name_el": account.name_el, "status": account.status}
+    account.save(update_fields=["name", "name_el", "status", "control_type"])
+    after = {"name": account.name, "name_el": account.name_el, "status": account.status,
+             "control_type": account.control_type}  # fmt: skip
     if after != before:
         _audit(ctx, account, "ledger.account.updated", {"before": before, "after": after})
     return account
@@ -162,6 +199,7 @@ def apply_template(ctx: WorkspaceContext, entity_id: UUID, key: str) -> list[Acc
                     type=row["type"],
                     parent_code=row.get("parent"),
                     is_postable=row.get("postable", True),
+                    control_type=row.get("control", ""),
                 ),
             )
         )

@@ -37,7 +37,8 @@ in order.
 | M2-0 Cloud packaging (images, prod settings, readiness) + cloud-readiness review | `claude/m2-0-cloud-packaging` | #20 | Open |
 | M2-1 Dimensions | `claude/m2-1-dimensions` | #21 | Open |
 | M0-8 Work tracking process (issue #31) | `claude/process-tracker` | #22 | Open |
-| M2-2 Counterparties + open items (issue #47) | — | — | Next |
+| M2-2 Counterparties + open items (issue #47) | `claude/m2-2-open-items` | #96 | Open |
+| M2-3 VAT codes (issue #48) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

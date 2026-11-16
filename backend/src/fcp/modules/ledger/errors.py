@@ -84,3 +84,13 @@ class DimensionError(ValidationFailedError):
 class DimensionRequiredError(ValidationFailedError):
     code = "ledger.line.dimension_required"
     title = "A required dimension is missing"
+
+
+class CounterpartyRequiredError(ValidationFailedError):
+    code = "ledger.line.counterparty_required"
+    title = "A counterparty is required on control-account lines"
+
+
+class CounterpartyInvalidError(ValidationFailedError):
+    code = "ledger.line.counterparty_invalid"
+    title = "Invalid counterparty on a journal line"

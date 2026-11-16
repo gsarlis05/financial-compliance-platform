@@ -29,6 +29,10 @@ PERMISSIONS: dict[str, str] = {
     "ledger.entry.create": "Create, edit and submit draft entries (including reversal drafts)",
     "ledger.entry.approve": "Approve or reject submitted entries",
     "ledger.entry.post": "Post approved entries to the ledger",
+    # registers: customers, suppliers and open items (M2-2)
+    "registers.counterparty.read": "See customers, suppliers and their open items",
+    "registers.counterparty.manage": "Create and edit customers and suppliers",
+    "registers.allocation.manage": "Match payments to invoices (allocate and unallocate)",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -42,6 +46,7 @@ _READ = frozenset(
         "ledger.account.read",
         "ledger.period.read",
         "ledger.entry.read",
+        "registers.counterparty.read",
         "reports.read",
     }
 )
@@ -50,6 +55,8 @@ _PREPARE = _READ | {
     "ledger.period.manage",
     "ledger.entry.create",
     "ledger.period.unlock_request",
+    "registers.counterparty.manage",
+    "registers.allocation.manage",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}

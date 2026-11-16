@@ -42,6 +42,7 @@ export interface Account {
   is_postable: boolean;
   status: "ACTIVE" | "INACTIVE";
   currency: string;
+  control_type: "" | "RECEIVABLE" | "PAYABLE";
 }
 
 export type PeriodStatus = "OPEN" | "SOFT_CLOSED" | "LOCKED";
@@ -82,6 +83,10 @@ export interface EntryLine {
   credit: Amount;
   memo: string;
   dimensions: LineDimension[];
+  counterparty_id: string | null;
+  counterparty_code: string | null;
+  reference: string;
+  due_date: string | null;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
@@ -141,6 +146,8 @@ export interface EntryInput {
     credit: Amount;
     memo: string;
     dimension_value_ids: string[];
+    counterparty_id?: string | null;
+    reference?: string;
   }[];
 }
 
@@ -182,4 +189,64 @@ export interface IntegrityRun {
   trigger: string;
   created_at: string;
   results: { check: string; ok: boolean; details: string[] }[];
+}
+
+export type CounterpartyKind = "CUSTOMER" | "SUPPLIER" | "BOTH" | "EMPLOYEE" | "TAX_AUTHORITY" | "LENDER";
+
+export interface Counterparty {
+  id: string;
+  code: string;
+  name: string;
+  kind: CounterpartyKind;
+  vat_no: string;
+  email: string;
+  payment_terms_days: number;
+  status: "ACTIVE" | "INACTIVE";
+}
+
+export type Side = "RECEIVABLE" | "PAYABLE";
+
+export interface OpenItem {
+  line_id: string;
+  entry_id: string;
+  entry_ref: string;
+  side: Side;
+  kind: "INVOICE" | "PAYMENT";
+  account_code: string;
+  counterparty_id: string;
+  counterparty_code: string;
+  accounting_date: string;
+  due_date: string;
+  days_overdue: number;
+  reference: string;
+  description: string;
+  amount: Amount;
+  allocated: Amount;
+  open_amount: Amount;
+  status: "OPEN" | "PARTIAL" | "SETTLED";
+  disputed: boolean;
+  note: string;
+}
+
+export const BUCKETS = ["current", "1_30", "31_60", "61_90", "over_90"] as const;
+export type Bucket = (typeof BUCKETS)[number];
+
+export interface AgeingRow {
+  counterparty_id: string;
+  counterparty_code: string;
+  counterparty_name: string;
+  buckets: Record<Bucket, Amount>;
+  unapplied: Amount;
+  total: Amount;
+}
+
+export interface Ageing {
+  as_of: string;
+  side: Side;
+  rows: AgeingRow[];
+  totals: Record<Bucket, Amount>;
+  unapplied: Amount;
+  total: Amount;
+  control_balance: Amount;
+  reconciles: boolean;
 }

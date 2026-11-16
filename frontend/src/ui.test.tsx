@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import axe from "axe-core";
 import type { ReactNode } from "react";
 import { ApiError } from "./api/client";
-import type { Account, Dimension, FiscalYear, JournalEntry } from "./api/types";
+import type { Account, Counterparty, Dimension, FiscalYear, JournalEntry } from "./api/types";
 import { I18nProvider } from "./i18n/I18n";
 import { el, en } from "./i18n/messages";
 import { formatAmount, isAmount, sum } from "./money";
@@ -11,11 +11,11 @@ import { EntryForm, periodFor } from "./pages/EntryForm";
 
 const accounts: Account[] = [
   { id: "a1", code: "1300", name: "Bank", name_el: "Τράπεζα", type: "ASSET", normal_side: "DEBIT",
-    parent_id: null, is_postable: true, status: "ACTIVE", currency: "" },
+    parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "" },
   { id: "a2", code: "4000", name: "Sales revenue", name_el: "Πωλήσεις", type: "INCOME",
-    normal_side: "CREDIT", parent_id: null, is_postable: true, status: "ACTIVE", currency: "" },
+    normal_side: "CREDIT", parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "" },
   { id: "h1", code: "4", name: "Income", name_el: "Έσοδα", type: "INCOME", normal_side: "CREDIT",
-    parent_id: null, is_postable: false, status: "ACTIVE", currency: "" },
+    parent_id: null, is_postable: false, status: "ACTIVE", currency: "", control_type: "" },
 ];
 
 const years: FiscalYear[] = [
@@ -192,11 +192,42 @@ describe("EntryForm dimensions (M2-1)", () => {
       lines: [{
         line_no: 1, account_id: "a1", account_code: "1300", debit: "5.00", credit: "0.00", memo: "",
         dimensions: [{ dimension_id: "d1", dimension_code: "DEPT", value_id: "v2", value_code: "OLD", value_name: "Old" }],
+        counterparty_id: null, counterparty_code: null, reference: "", due_date: null,
       }],
     };
     const { container } = renderForm({ dimensions: dims, initial });
     expect(screen.getByLabelText<HTMLSelectElement>("DEPT 1").value).toBe("v2");
     await noAxeViolations(container);
+  });
+});
+
+const arAccount: Account = {
+  id: "ar", code: "1200", name: "Trade receivables", name_el: "", type: "ASSET", normal_side: "DEBIT",
+  parent_id: null, is_postable: true, status: "ACTIVE", currency: "", control_type: "RECEIVABLE",
+};
+const parties: Counterparty[] = [
+  { id: "c1", code: "C1", name: "Alpha (Demo)", kind: "CUSTOMER", vat_no: "", email: "", payment_terms_days: 30, status: "ACTIVE" },
+  { id: "s1", code: "S1", name: "Beta (Demo)", kind: "SUPPLIER", vat_no: "", email: "", payment_terms_days: 45, status: "ACTIVE" },
+];
+
+describe("EntryForm customers and suppliers (M2-2)", () => {
+  it("asks for a customer on receivables lines only and sends it with the invoice number", async () => {
+    const { onSave, container } = renderForm({ accounts: [...accounts, arAccount], counterparties: parties });
+    fill("Description", "Invoice 17");
+    fill("Account 1", "ar");
+    fill("Debit 1", "119.00");
+    fill("Account 2", "a2");
+    fill("Credit 2", "119.00");
+    expect(screen.queryByLabelText("Customer / supplier 2")).not.toBeInTheDocument();
+    const picker = screen.getByLabelText<HTMLSelectElement>("Customer / supplier 1");
+    expect(Array.from(picker.options).map((o) => o.text)).toEqual(["—", "C1 · Alpha (Demo)"]);
+    fill("Customer / supplier 1", "c1");
+    fill("Invoice no. 1", "INV-17");
+    await noAxeViolations(container);
+    fireEvent.click(screen.getByRole("button", { name: "Save and submit" }));
+    const [body] = onSave.mock.calls[0] as [{ lines: { counterparty_id: string | null; reference: string }[] }];
+    expect(body.lines[0]).toMatchObject({ counterparty_id: "c1", reference: "INV-17" });
+    expect(body.lines[1]?.counterparty_id).toBeNull();
   });
 });
 

@@ -97,13 +97,31 @@ See the [period unlock runbook](../runbooks/period-unlock.md).
 
 CSV exports neutralise cells that spreadsheet programs would run as formulas.
 
-## 9. Integrity checks
+## 9. Customers, suppliers and open invoices
+**Customers & suppliers** holds the register: code, name, kind, VAT number, email and payment terms
+(names, VAT numbers and emails are personal data; they are masked in the audit trail).
+
+The Cyprus template marks **1200 Trade receivables** and **2100 Trade payables** as control
+accounts. Every line on a control account needs a customer or supplier (the entry form shows a
+picker and an invoice-number field on those lines). Those posted lines *are* the open items: an
+invoice on receivables is a debit, a payment or credit note a credit; payables the other way round.
+The due date is the line's due date, or the document date plus the payment terms.
+
+**Receivables & payables** shows, at any date, what is open per customer or supplier in the
+buckets *not yet due*, *1–30*, *31–60*, *61–90* and *over 90 days*, plus unmatched payments. The
+total always equals the control account in the trial balance; the page says so, and warns if not.
+Open a customer to see its items and **Match payments automatically** (same invoice number first,
+then the oldest invoices). Matches can also be made or removed one by one through the API, and an
+invoice can be flagged as disputed (automatic matching skips it). A reversed invoice becomes a credit
+note that cancels it. CSV export is available.
+
+## 10. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on the **Integrity**
 tab (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 10. Try it with demo data
+## 11. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).

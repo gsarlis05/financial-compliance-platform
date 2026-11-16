@@ -1,5 +1,5 @@
 import { type SyntheticEvent, useState } from "react";
-import type { Account, Dimension, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
+import type { Account, Counterparty, Dimension, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
@@ -12,10 +12,21 @@ interface LineState {
   memo: string;
   /** dimension id -> value id ("" = none) */
   dims: Record<string, string>;
+  counterparty_id: string;
+  reference: string;
 }
 
 let nextKey = 1;
-const emptyLine = (): LineState => ({ key: nextKey++, account_id: "", debit: "", credit: "", memo: "", dims: {} });
+const emptyLine = (): LineState => ({
+  key: nextKey++,
+  account_id: "",
+  debit: "",
+  credit: "",
+  memo: "",
+  dims: {},
+  counterparty_id: "",
+  reference: "",
+});
 
 export function periodFor(years: FiscalYear[], date: string, adjustment: boolean): Period | undefined {
   for (const year of years) {
@@ -32,6 +43,7 @@ export function periodFor(years: FiscalYear[], date: string, adjustment: boolean
 interface Props {
   accounts: Account[];
   dimensions?: Dimension[];
+  counterparties?: Counterparty[];
   fiscalYears: FiscalYear[];
   initial?: JournalEntry | undefined;
   saving: boolean;
@@ -39,7 +51,16 @@ interface Props {
   onSave: (body: EntryInput, submit: boolean) => void;
 }
 
-export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, saving, error, onSave }: Props) {
+export function EntryForm({
+  accounts,
+  dimensions = [],
+  counterparties = [],
+  fiscalYears,
+  initial,
+  saving,
+  error,
+  onSave,
+}: Props) {
   const { t, locale } = useI18n();
   const [date, setDate] = useState(initial?.accounting_date ?? new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -52,6 +73,8 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
       credit: l.credit === "0.00" ? "" : l.credit,
       memo: l.memo,
       dims: Object.fromEntries(l.dimensions.map((d) => [d.dimension_id, d.value_id])),
+      counterparty_id: l.counterparty_id ?? "",
+      reference: l.reference,
     })) ?? [emptyLine(), emptyLine()],
   );
   // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
@@ -59,6 +82,15 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
   const shownDims = dimensions.filter((d) => d.status === "ACTIVE" || usedDims.has(d.id));
 
   const postable = accounts.filter((a) => a.is_postable && a.status === "ACTIVE");
+  const controlOf = new Map(accounts.map((a) => [a.id, a.control_type]));
+  const hasControl = accounts.some((a) => a.control_type !== "");
+  const partiesFor = (control: string, current: string) =>
+    counterparties.filter(
+      (c) =>
+        c.id === current ||
+        (c.status === "ACTIVE" &&
+          (control === "RECEIVABLE" ? c.kind !== "SUPPLIER" : control === "PAYABLE" ? c.kind !== "CUSTOMER" : true)),
+    );
   const totalDebit = sum(lines.map((l) => l.debit));
   const totalCredit = sum(lines.map((l) => l.credit));
   const difference = totalDebit.minus(totalCredit).abs();
@@ -80,6 +112,8 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
         credit: normaliseAmount(l.credit),
         memo: l.memo,
         dimension_value_ids: Object.values(l.dims).filter((v) => v !== ""),
+        counterparty_id: l.counterparty_id || null,
+        reference: l.reference,
       })),
     };
   }
@@ -117,6 +151,7 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
             <th scope="col">{t("je.debit")}</th>
             <th scope="col">{t("je.credit")}</th>
             <th scope="col">{t("je.memo")}</th>
+            {hasControl ? <th scope="col">{t("je.counterparty")}</th> : null}
             {shownDims.map((d) => (
               <th scope="col" key={d.id}>
                 {d.code}
@@ -178,6 +213,37 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
                 />
                 <FieldError error={error} field={`lines.${index}.dimension_value_ids`} />
               </td>
+              {hasControl ? (
+                <td>
+                  {controlOf.get(line.account_id) ? (
+                    <>
+                      <select
+                        className="dimension-picker"
+                        aria-label={`${t("je.counterparty")} ${index + 1}`}
+                        value={line.counterparty_id}
+                        onChange={(e) => update(line.key, { counterparty_id: e.target.value })}
+                        required
+                      >
+                        <option value="">—</option>
+                        {partiesFor(controlOf.get(line.account_id) ?? "", line.counterparty_id).map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.code} · {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="dimension-picker"
+                        aria-label={`${t("je.reference")} ${index + 1}`}
+                        placeholder={t("je.reference")}
+                        value={line.reference}
+                        maxLength={50}
+                        onChange={(e) => update(line.key, { reference: e.target.value })}
+                      />
+                      <FieldError error={error} field={`lines.${index}.counterparty_id`} />
+                    </>
+                  ) : null}
+                </td>
+              ) : null}
               {shownDims.map((d) => (
                 <td key={d.id}>
                   <select
@@ -220,7 +286,7 @@ export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, sav
             <td className="amount" data-testid="total-credit">
               {formatAmount(totalCredit, locale)}
             </td>
-            <td colSpan={2 + shownDims.length} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
+            <td colSpan={2 + shownDims.length + (hasControl ? 1 : 0)} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
               {balanced ? t("je.balanced") : `${t("je.difference")}: ${formatAmount(difference, locale)}`}
             </td>
           </tr>

@@ -6,7 +6,9 @@ import { Loading, ProblemMessage } from "./components/common";
 import { Layout } from "./components/Layout";
 import { I18nProvider, useI18n } from "./i18n/I18n";
 import { AccountsPage } from "./pages/Accounts";
+import { CounterpartiesPage } from "./pages/Counterparties";
 import { DimensionsPage } from "./pages/Dimensions";
+import { ReceivablesPage } from "./pages/Receivables";
 import { ApprovalsPage, EntriesPage, EntryDetailPage, NewEntryPage } from "./pages/Entries";
 import { PeriodsPage } from "./pages/Periods";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
@@ -24,6 +26,8 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/approvals", element: <ApprovalsPage /> },
       { path: "w/:slug/e/:entityId/accounts", element: <AccountsPage /> },
       { path: "w/:slug/e/:entityId/dimensions", element: <DimensionsPage /> },
+      { path: "w/:slug/e/:entityId/counterparties", element: <CounterpartiesPage /> },
+      { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
       { path: "w/:slug/e/:entityId/trial-balance", element: <TrialBalancePage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },

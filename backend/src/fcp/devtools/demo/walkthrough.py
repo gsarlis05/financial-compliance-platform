@@ -143,11 +143,24 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
     )
     step(f"chart of accounts applied ({len(accounts)} accounts) and FY{year} created")
 
-    def lines(rows: list[tuple[str, Decimal, Decimal]]) -> list[dict[str, str]]:
-        return [
-            {"account_id": by_code[code], "debit": f"{dr:.2f}", "credit": f"{cr:.2f}"}
-            for code, dr, cr in rows
-        ]
+    parties: dict[str, str] = {}
+    for cp in books.counterparties:
+        made = accountant.call("POST", f"{base}/counterparties", {
+            "code": cp.code, "name": cp.name, "kind": cp.kind,
+            "payment_terms_days": cp.payment_terms_days}, 201)  # fmt: skip
+        parties[cp.code] = made["id"]
+    step(f"{len(parties)} customers and suppliers registered")
+
+    def lines(rows: list[tuple[str, Decimal, Decimal]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for key, dr, cr in rows:
+            code, _, party = key.partition("@")  # "1200@C008": control line of customer C008
+            line: dict[str, Any] = {"account_id": by_code[code], "debit": f"{dr:.2f}",
+                                    "credit": f"{cr:.2f}"}  # fmt: skip
+            if party:
+                line["counterparty_id"] = parties[party]
+            result.append(line)
+        return result
 
     def draft(accounting_date: date, description: str, rows: list[Any]) -> dict[str, Any]:
         body = {
@@ -198,7 +211,11 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
         status_path = f"{base}/periods/{period['id']}/status"
         accountant.call("POST", status_path, {"status": "SOFT_CLOSED"})
         owner.call("POST", status_path, {"status": "LOCKED"})
-    late_invoice = [("1200", Decimal("10.00"), Decimal(0)), ("4000", Decimal(0), Decimal("10.00"))]
+    first_customer = next(c.code for c in books.counterparties if c.kind == "CUSTOMER")
+    late_invoice = [
+        (f"1200@{first_customer}", Decimal("10.00"), Decimal(0)),
+        ("4000", Decimal(0), Decimal("10.00")),
+    ]
     blocked = draft(date(year, 1, 15), "Late January invoice (Demo) - refused", late_invoice)
     accountant.call("POST", f"{base}/journal-entries/{blocked['id']}/submit")
     reviewer.call("POST", f"{base}/journal-entries/{blocked['id']}/approve")
@@ -222,6 +239,19 @@ def run(  # noqa: PLR0915 - a linear, narrated script reads best as one function
         )
     step(f"trial balance at {december}: {tb['total_debit']} = {tb['total_credit']}; "
          f"bank {bank_row['balance']} matches the synthetic statement")  # fmt: skip
+
+    matched = 0
+    for party_id in parties.values():
+        created = accountant.call(
+            "POST", f"{base}/counterparties/{party_id}/auto-allocate",
+            {"as_of": december.isoformat()})  # fmt: skip
+        matched += len(created)
+    receivable = reviewer.call("GET", f"{base}/reports/ageing?as_of={december}&side=RECEIVABLE")
+    payable = reviewer.call("GET", f"{base}/reports/ageing?as_of={december}&side=PAYABLE")
+    if not (receivable["reconciles"] and payable["reconciles"]):
+        raise DemoStepError("Ageing does not reconcile to the control accounts")
+    step(f"{matched} payments matched to invoices; receivables {receivable['total']} and "
+         f"payables {payable['total']} reconcile to the ledger")  # fmt: skip
 
     check = owner.call("POST", f"/api/w/{slug}/integrity-checks", None, 201)
     if check["status"] != "PASSED":

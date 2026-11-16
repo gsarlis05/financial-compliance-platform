@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import {
   type EntryAction,
   useAccounts,
+  useCounterparties,
   useDimensions,
   useEntries,
   useEntry,
@@ -93,6 +94,7 @@ export function NewEntryPage() {
   const { t } = useI18n();
   const accounts = useAccounts();
   const dimensions = useDimensions();
+  const counterparties = useCounterparties();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -120,6 +122,7 @@ export function NewEntryPage() {
       <EntryForm
         accounts={accounts.data ?? []}
         dimensions={dimensions.data ?? []}
+        counterparties={counterparties.data ?? []}
         fiscalYears={years.data ?? []}
         saving={save.isPending || act.isPending}
         error={save.error}
@@ -202,6 +205,7 @@ export function EntryDetailPage() {
   const me = useMe();
   const accounts = useAccounts();
   const dimensions = useDimensions();
+  const counterparties = useCounterparties();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -251,6 +255,7 @@ export function EntryDetailPage() {
         <EntryForm
           accounts={accounts.data ?? []}
           dimensions={dimensions.data ?? []}
+          counterparties={counterparties.data ?? []}
           fiscalYears={years.data ?? []}
           initial={e}
           saving={save.isPending}
@@ -294,6 +299,12 @@ export function EntryDetailPage() {
                   <td className="amount">{l.credit === "0.00" ? "" : formatAmount(l.credit, locale)}</td>
                   <td>
                     {l.memo}
+                    {l.counterparty_code ? (
+                      <span className="tag">
+                        {l.counterparty_code}
+                        {l.reference ? ` · ${l.reference}` : ""}
+                      </span>
+                    ) : null}
                     {l.dimensions.length ? (
                       <span className="tags">
                         {l.dimensions.map((d) => (

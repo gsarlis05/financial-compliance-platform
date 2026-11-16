@@ -3,6 +3,9 @@ import { useParams } from "react-router";
 import { api, newIdempotencyKey } from "./client";
 import type {
   Account,
+  Ageing,
+  Counterparty,
+  CounterpartyKind,
   Dimension,
   DimensionKind,
   DimensionValue,
@@ -12,8 +15,10 @@ import type {
   JournalEntry,
   LegalEntity,
   Me,
+  OpenItem,
   PeriodStatus,
   PeriodUnlock,
+  Side,
   TrialBalance,
   Workspace,
 } from "./types";
@@ -216,4 +221,73 @@ export function useIntegrity(slug: string) {
     onSuccess: () => client.invalidateQueries({ queryKey: ["integrity", slug] }),
   });
   return { runs, run };
+}
+
+export function useCounterparties() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["counterparties", entityId],
+    queryFn: () => api<Counterparty[]>(`${base}/counterparties`),
+  });
+}
+
+export function useCounterpartyMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  return {
+    create: useMutation({
+      mutationFn: (body: {
+        code: string;
+        name: string;
+        kind: CounterpartyKind;
+        vat_no: string;
+        email: string;
+        payment_terms_days: number;
+      }) => api<Counterparty>(`${base}/counterparties`, { method: "POST", body }),
+      onSuccess: () => client.invalidateQueries({ queryKey: ["counterparties", entityId] }),
+    }),
+  };
+}
+
+export function useAgeing(asOf: string, side: Side) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["ageing", entityId, asOf, side],
+    queryFn: () => api<Ageing>(`${base}/reports/ageing`, { query: { as_of: asOf, side } }),
+    enabled: !!asOf,
+  });
+}
+
+export function useOpenItems(asOf: string, counterpartyId: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["open-items", entityId, asOf, counterpartyId],
+    queryFn: () =>
+      api<OpenItem[]>(`${base}/open-items`, { query: { as_of: asOf, counterparty_id: counterpartyId } }),
+    enabled: !!asOf && !!counterpartyId,
+  });
+}
+
+export function useAllocationMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: ["open-items", entityId] });
+    void client.invalidateQueries({ queryKey: ["ageing", entityId] });
+  };
+  return {
+    autoAllocate: useMutation({
+      mutationFn: ({ counterpartyId, asOf }: { counterpartyId: string; asOf: string }) =>
+        api<unknown[]>(`${base}/counterparties/${counterpartyId}/auto-allocate`, {
+          method: "POST",
+          body: { as_of: asOf },
+        }),
+      onSuccess: refresh,
+    }),
+    flag: useMutation({
+      mutationFn: ({ lineId, disputed, note }: { lineId: string; disputed: boolean; note: string }) =>
+        api<unknown>(`${base}/open-items/${lineId}/flag`, { method: "PUT", body: { disputed, note } }),
+      onSuccess: refresh,
+    }),
+  };
 }
