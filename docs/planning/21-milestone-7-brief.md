@@ -1,7 +1,8 @@
 # 21 — Milestone 7 Implementation Brief: scenarios, sensitivity, working capital, advanced KPIs
 
-Status: **DRAFT FOR OWNER APPROVAL.** No M7 code is written until the product owner approves this
-brief (owner instruction of 2026-11-16).
+Status: **APPROVED, IN PROGRESS.** The product owner's instruction of 2026-11-16 was that no M7
+code be written before approval. They answered the brief with "Continue as you think it's better",
+so the defaults in §3 and the proposed answers in §7 are taken. Each can be changed at any time.
 
 Backlog: [08 §Phase 3](08-implementation-backlog.md) (M7). Specification:
 [10](10-cfo-fpa-specification.md) §3.6, §5.1, §6.2 item 9, §8 and §10.1 (approved 2026-11-03).
@@ -76,18 +77,18 @@ choice (owner, 2026-11-10: "continue with what is easier for now for best coding
 | Personal workspaces | Scenarios on personal projections (salary change, new loan, large purchase; doc 10 §11) are **not** in M7. They can follow in M8 or later. |
 
 ## 4. Order and approach
-Issues are created when this brief is approved, one per item.
+One issue per item, in milestone M7 under epic #82.
 
-| # | Item | Size | Approach |
-|---|---|---|---|
-| 1 | M7-1 Scenario model and overrides | M | `scenarios` module: scenario and override tables (FORCE RLS, composite tenant keys, draft-only edits by trigger, never deleted), the eight typed overrides with validation, lifecycle, API, audit. |
-| 2 | M7-2 Scenario runs and comparison | L | Overrides are applied to a copy of the base inputs in their stated order. The M6 engine runs unchanged (eight invariants). The result is labelled `HYPOTHETICAL`, with lineage by override ID. Comparison with the base; "what changed and why"; save as a run; promote to a draft assumption set. Property test: **a scenario with no overrides equals its base**, hash for hash (doc 12 §1). |
-| 3 | M7-3 Sensitivity and tornado | M | Deterministic re-runs in memory with cache by input hash, quotas and a time limit (T34); one-variable and tornado endpoints; performance test (doc 01: scenario re-run < 3 s). |
-| 4 | M7-4 Working-capital forecasting | S | A view over projection and scenario runs, the "N days worth" calculation through the engine, and observed vs projected days. |
-| 5 | M7-5 Goals against scenarios | S | Goal evaluation with a named scenario (`GOAL_EVAL` v3); side-by-side view. |
-| 6 | M7-6 Advanced KPIs | M | CORE@1.1 definitions with worked examples; LTM EBITDA and scheduled principal from the registers or loans; KPIs on projected and scenario months. |
-| 7 | M7-7 Scenario and sensitivity screens | L | Screens, charts with the hypothetical encoding, Excel export, live checks at desktop and phone width. |
-| 8 | M7 report | — | Evidence for each acceptance criterion, and owner items. |
+| # | Item | Issue | Size | Approach |
+|---|---|---|---|---|
+| 1 | M7-1 Scenario model and overrides | #176 | M | `scenarios` module: scenario and override tables (FORCE RLS, composite tenant keys, draft-only edits by trigger, never deleted), the eight typed overrides with validation, lifecycle, API, audit. |
+| 2 | M7-2 Scenario runs and comparison | #177 | L | Overrides are applied to a copy of the base inputs in their stated order. The M6 engine runs unchanged (eight invariants). The result is labelled `HYPOTHETICAL`, with lineage by override ID. Comparison with the base; "what changed and why"; save as a run; promote to a draft assumption set. Property test: **a scenario with no overrides equals its base**, hash for hash (doc 12 §1). |
+| 3 | M7-3 Sensitivity and tornado | #178 | M | Deterministic re-runs in memory with cache by input hash, quotas and a time limit (T34); one-variable and tornado endpoints; performance test (doc 01: scenario re-run < 3 s). |
+| 4 | M7-4 Working-capital forecasting | #179 | S | A view over projection and scenario runs, the "N days worth" calculation through the engine, and observed vs projected days. |
+| 5 | M7-5 Goals against scenarios | #180 | S | Goal evaluation with a named scenario (`GOAL_EVAL` v3); side-by-side view. |
+| 6 | M7-6 Advanced KPIs | #181 | M | CORE@1.1 definitions with worked examples; LTM EBITDA and scheduled principal from the registers or loans; KPIs on projected and scenario months. |
+| 7 | M7-7 Scenario and sensitivity screens | #182 | L | Screens, charts with the hypothetical encoding, Excel export, live checks at desktop and phone width. |
+| 8 | M7 report (with M7-7) | #182 | — | Evidence for each acceptance criterion, and owner items. |
 
 Every item follows the established patterns:
 - tenant-owned models with FORCE row-level security and composite keys;
@@ -143,10 +144,10 @@ Every item follows the established patterns:
 | Results taken as professional advice | Projections, scenarios and sensitivities carry the existing notice that the engine is pending professional review; nothing is called validated |
 | Scope (two L items) | One PR per issue in the order above; each PR stands alone |
 
-## 7. Decisions needed from you before or during M7
-| # | Question | Proposed default if you prefer not to decide now |
+## 7. Decisions (taken as proposed on 2026-11-16; change any of them at any time)
+| # | Question | Taken for now |
 |---|---|---|
-| 1 | Approve this brief and its defaults (§3) | — (M7 coding waits for this) |
+| 1 | Approve this brief and its defaults (§3) | Approved: "Continue as you think it's better" |
 | 2 | New-hire employer costs: should the platform hold **verified** Cyprus social-insurance and related contribution rates as versioned data (like the tax rules, verified by a professional, #93/#154), or should the user enter the employer cost % per override with a source? | The user enters it; nothing is built in |
 | 3 | Scenario base: approved assumption sets only (proposed), or also budget versions and 13-week forecasts as separate bases? | Approved assumption sets only |
 | 4 | Personal-workspace scenarios (salary change, new loan, large purchase) in M7 or later? | Later (M8 or after) |
