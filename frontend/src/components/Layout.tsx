@@ -178,7 +178,10 @@ function MainNav({ base }: { base: string }) {
   const { pathname } = useLocation();
   const { slug = "" } = useParams();
   // The client portfolio exists for firm workspaces only (doc 11 §5); the server enforces it.
-  const firm = useWorkspace(slug).data?.kind === "FIRM";
+  const kind = useWorkspace(slug).data?.kind;
+  const firm = kind === "FIRM";
+  // Personal workspaces get plain-words screens instead of journals and customers (doc 11 §5).
+  const personal = kind === "PERSONAL";
   // The open group belongs to the page it was opened on, so navigating closes it.
   const [opened, setOpened] = useState<{ label: string; path: string } | null>(
     null,
@@ -187,7 +190,14 @@ function MainNav({ base }: { base: string }) {
   const setOpen = (label: string | null) =>
     setOpened(label ? { label, path: pathname } : null);
   const nav = useRef<HTMLElement>(null);
-  const groups: NavGroupSpec[] = [
+  const money: NavGroupSpec = {
+    label: "nav.group.money",
+    links: [
+      [`${base}/personal`, "nav.myOverview"],
+      [`${base}/personal/transactions`, "nav.myTransactions"],
+    ],
+  };
+  const all: NavGroupSpec[] = [
     {
       label: "nav.group.bookkeeping",
       links: [
@@ -240,6 +250,13 @@ function MainNav({ base }: { base: string }) {
       links: [[`${base}/integrity`, "nav.integrity"]],
     },
   ];
+  const hidden = new Set<string>([
+    "nav.group.bookkeeping",
+    "nav.group.parties",
+  ]);
+  const groups = personal
+    ? [money, ...all.filter((g) => !hidden.has(g.label))]
+    : all;
   useEffect(() => {
     if (open === null) {
       return;

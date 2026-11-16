@@ -37,6 +37,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ 6 sample goals for 2027 set with frozen 2026 baselines and evaluated: Revenue 500k ON_TRACK; EBITDA margin 20% ON_TRACK; Cash at least 100k ON_TRACK; DSO 30 days OFF_TRACK; Net profit +15% ON_TRACK; Opex -10% ON_TRACK
 ✔ 1 in-app alert(s) raised by the evaluations: Goal DSO 30 days is off track
 ✔ CFO dashboard for 2026 year to date: kpis ok, cash ok, budget empty, top_variances empty, goals ok, alerts ok; 6 KPI cards
+✔ personal workspace (separate books): net worth 187884.35 on 2026-01-31, including a home valuation (estimate)
 ✔ client portfolio refused in a business workspace (firms only): This is not available in a business workspace.
 ✔ shared with you@example.com as finance_manager
 ```

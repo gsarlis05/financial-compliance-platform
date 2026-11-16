@@ -913,6 +913,25 @@
         "title": "AsOf",
         "type": "object"
       },
+      "AsOfQuery": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: today",
+            "title": "As Of"
+          }
+        },
+        "title": "AsOfQuery",
+        "type": "object"
+      },
       "AuditEventOut": {
         "properties": {
           "action": {
@@ -2497,6 +2516,30 @@
         ],
         "title": "Category",
         "type": "string"
+      },
+      "CategoryTotalOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "name",
+          "amount"
+        ],
+        "title": "CategoryTotalOut",
+        "type": "object"
       },
       "ChainStatusOut": {
         "properties": {
@@ -7689,6 +7732,90 @@
         "title": "Nature",
         "type": "string"
       },
+      "NetWorthOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalAccountOut"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "includes_valuations": {
+            "description": "Some lines are valuations (EXPECTED)",
+            "title": "Includes Valuations",
+            "type": "boolean"
+          },
+          "liabilities": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalAccountOut"
+            },
+            "title": "Liabilities",
+            "type": "array"
+          },
+          "net_worth": {
+            "title": "Net Worth",
+            "type": "string"
+          },
+          "total_assets": {
+            "title": "Total Assets",
+            "type": "string"
+          },
+          "total_liabilities": {
+            "title": "Total Liabilities",
+            "type": "string"
+          },
+          "trend": {
+            "description": "Month ends over the last 12 months",
+            "items": {
+              "$ref": "#/components/schemas/NetWorthPointOut"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "assets",
+          "liabilities",
+          "total_assets",
+          "total_liabilities",
+          "net_worth",
+          "includes_valuations",
+          "trend"
+        ],
+        "title": "NetWorthOut",
+        "type": "object"
+      },
+      "NetWorthPointOut": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "includes_valuations": {
+            "title": "Includes Valuations",
+            "type": "boolean"
+          },
+          "net_worth": {
+            "title": "Net Worth",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "net_worth",
+          "includes_valuations"
+        ],
+        "title": "NetWorthPointOut",
+        "type": "object"
+      },
       "ObligationIn": {
         "properties": {
           "adjust": {
@@ -8233,6 +8360,26 @@
         "title": "PeriodOut",
         "type": "object"
       },
+      "PeriodQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "PeriodQuery",
+        "type": "object"
+      },
       "PeriodReviewIn": {
         "properties": {
           "month": {
@@ -8293,6 +8440,415 @@
           "status"
         ],
         "title": "PeriodStatusIn",
+        "type": "object"
+      },
+      "PersonalAccountIn": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "ASSET",
+              "LIABILITY",
+              "INCOME",
+              "EXPENSE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "PersonalAccountIn",
+        "type": "object"
+      },
+      "PersonalAccountOut": {
+        "properties": {
+          "amount": {
+            "description": "The valuation if there is one, otherwise the balance",
+            "title": "Amount",
+            "type": "string"
+          },
+          "balance": {
+            "description": "From the ledger, in the account's natural direction",
+            "title": "Balance",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "description": "ACTUAL, or EXPECTED for a valuation",
+            "title": "Nature",
+            "type": "string"
+          },
+          "type": {
+            "description": "ASSET, LIABILITY (money accounts), INCOME or EXPENSE",
+            "title": "Type",
+            "type": "string"
+          },
+          "valuation_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Date"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "type",
+          "balance",
+          "amount",
+          "nature",
+          "valuation_date"
+        ],
+        "title": "PersonalAccountOut",
+        "type": "object"
+      },
+      "PersonalOpeningIn": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "description": "What it held (or owed) on that date",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "date",
+          "amount"
+        ],
+        "title": "PersonalOpeningIn",
+        "type": "object"
+      },
+      "PersonalSetupOut": {
+        "properties": {
+          "created": {
+            "description": "True when the personal accounts were set up just now",
+            "title": "Created",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "created"
+        ],
+        "title": "PersonalSetupOut",
+        "type": "object"
+      },
+      "PersonalTransactionIn": {
+        "properties": {
+          "account_id": {
+            "description": "The money account it leaves, or arrives in if received",
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "SPENT",
+              "RECEIVED",
+              "MOVED"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "to_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Account Id"
+          }
+        },
+        "required": [
+          "kind",
+          "date",
+          "amount",
+          "description",
+          "account_id"
+        ],
+        "title": "PersonalTransactionIn",
+        "type": "object"
+      },
+      "PersonalTransactionOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "SPENT, RECEIVED, MOVED, OPENING, UNDO or OTHER",
+            "title": "Kind",
+            "type": "string"
+          },
+          "other_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category, or the account money moved to",
+            "title": "Other Id"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "undone": {
+            "description": "A later reversal undid it",
+            "title": "Undone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entry_id",
+          "ref",
+          "date",
+          "description",
+          "kind",
+          "amount",
+          "account_id",
+          "other_id",
+          "undone"
+        ],
+        "title": "PersonalTransactionOut",
+        "type": "object"
+      },
+      "PersonalTransactionsQuery": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "PersonalTransactionsQuery",
+        "type": "object"
+      },
+      "PersonalUndoIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "PersonalUndoIn",
+        "type": "object"
+      },
+      "PersonalValuationIn": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "date",
+          "value"
+        ],
+        "title": "PersonalValuationIn",
+        "type": "object"
+      },
+      "PersonalValuationOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nature": {
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "date",
+          "value",
+          "nature",
+          "note",
+          "created_at",
+          "superseded_at"
+        ],
+        "title": "PersonalValuationOut",
         "type": "object"
       },
       "PersonalValueOut": {
@@ -9231,6 +9787,58 @@
           "balance"
         ],
         "title": "ShortfallOut",
+        "type": "object"
+      },
+      "SpendingOut": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "income": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotalOut"
+            },
+            "title": "Income",
+            "type": "array"
+          },
+          "left_over": {
+            "description": "Income minus spending",
+            "title": "Left Over",
+            "type": "string"
+          },
+          "spending": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotalOut"
+            },
+            "title": "Spending",
+            "type": "array"
+          },
+          "total_income": {
+            "title": "Total Income",
+            "type": "string"
+          },
+          "total_spending": {
+            "title": "Total Spending",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "income",
+          "spending",
+          "total_income",
+          "total_spending",
+          "left_over"
+        ],
+        "title": "SpendingOut",
         "type": "object"
       },
       "StatementLineOut": {
@@ -20961,6 +21569,701 @@
         "summary": "Request Unlock",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/accounts": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_list_accounts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default: today",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: today",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalAccountOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Accounts",
+        "tags": [
+          "personal"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_personal_api_add_account",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalAccountOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Account",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/accounts/{account_id}/valuations": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_list_valuations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalValuationOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Valuations",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/net-worth": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_net_worth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default: today",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: today",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetWorthOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Net Worth",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/opening-balances": {
+      "post": {
+        "operationId": "fcp_modules_personal_api_opening_balance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalOpeningIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalTransactionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Opening Balance",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/setup": {
+      "post": {
+        "description": "Set up the personal accounts and open this year (safe to repeat).",
+        "operationId": "fcp_modules_personal_api_setup",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalSetupOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Setup",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/spending": {
+      "get": {
+        "operationId": "fcp_modules_personal_api_spending",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendingOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Spending",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/transactions": {
+      "get": {
+        "description": "Newest first, at most 500.",
+        "operationId": "fcp_modules_personal_api_list_transactions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalTransactionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Transactions",
+        "tags": [
+          "personal"
+        ]
+      },
+      "post": {
+        "description": "Record what you spent, received or moved: a balanced entry, posted at once.",
+        "operationId": "fcp_modules_personal_api_record",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalTransactionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalTransactionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Record",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/transactions/{entry_id}/undo": {
+      "post": {
+        "description": "Undo with a reversal dated today; the original stays in the history, marked undone.",
+        "operationId": "fcp_modules_personal_api_undo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalUndoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalTransactionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Undo",
+        "tags": [
+          "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/personal/valuations": {
+      "post": {
+        "description": "What an asset is worth at a date (nature EXPECTED); never posted to the books.",
+        "operationId": "fcp_modules_personal_api_set_valuation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalValuationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalValuationOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Valuation",
+        "tags": [
+          "personal"
         ]
       }
     },

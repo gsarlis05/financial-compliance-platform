@@ -13,7 +13,9 @@ in order.
 awaits review** (see `docs/milestone-2-report.md`; go-ahead 2026-11-03: "continue developing
 according to our existing roadmap"). **Milestone 3 is complete and awaits review** (see `docs/milestone-3-report.md`; owner: "Continue",
 2026-11-04; brief `docs/planning/16-milestone-3-brief.md`). **Milestone 4 is complete and awaits review** (see `docs/milestone-4-report.md`; owner: "Let continue",
-2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). Cloud-readiness review:
+2026-11-04; brief `docs/planning/17-milestone-4-brief.md`). **Milestone 5 is in progress** (owner,
+2026-11-10: "continue with what is easier for now for best coding"; brief
+`docs/planning/18-milestone-5-brief.md`). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -71,6 +73,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M4-8 CFO dashboard: widgets, presets and comparisons, layouts, nature contract (issue #72) | `claude/m4-8-dashboard` | #127 | Open, CI green |
 | M4-9 Firm portfolio of accessible client entities (issue #73) | `claude/m4-9-portfolio` | #128 | Open |
 | M4 report (`docs/milestone-4-report.md`) | `claude/m4-9-portfolio` | #128 | Open, with M4-9 |
+| M5-1 Personal workspace: setup, simplified transactions, valuations, net worth, spending (issue #74) | `claude/m5-1-personal` | #129 | Open |
+| M5-2 Personal budgets, goals, 12-month projection (issue #75) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
