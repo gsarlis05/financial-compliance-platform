@@ -448,6 +448,33 @@ def _rolling(owner: "DemoClient", base: str, set_id: str) -> dict[str, Any]:
     return got
 
 
+def _scenario(owner: "DemoClient", base: str, set_id: str, year: int) -> dict[str, Any]:
+    """A scenario on the approved assumptions (M7): revenue 15% lower from July of the first
+    projected year and every rate 2 points higher, shared, compared with its base, and a tornado
+    of the lowest month-end cash. Hypothetical: nothing in the plan or the books changes."""
+    made = owner.call("POST", f"{base}/scenarios", {
+        "name": "Slower second half (Demo)", "base_set_id": set_id,
+        "description": "Orders slow from July; rates rise"}, 201)  # fmt: skip
+    url = f"{base}/scenarios/{made['id']}"
+    owner.call("POST", f"{url}/overrides", {
+        "type": "PCT_CHANGE", "rationale": "Orders slow from July",
+        "params": {"driver": "revenue", "percent": "-15", "start_month": f"{year + 1}-07"}},
+        201)  # fmt: skip
+    owner.call("POST", f"{url}/overrides", {
+        "type": "RATE_CHANGE", "rationale": "Rates rise",
+        "params": {"target": "ALL", "points": "2"}}, 201)  # fmt: skip
+    owner.call("POST", f"{url}/share", {})
+    compared = owner.call("GET", f"{url}/comparison?granularity=YEAR")
+    if not compared["valid"]:
+        raise DemoStepError(f"The scenario fails its checks: {compared['failures']}")
+    total = compared["effects"][-1]["changes"]
+    tornado = owner.call("POST", f"{base}/sensitivity/tornado", {
+        "scenario_id": made["id"], "output": "MIN_CASH", "drivers": [],
+        "percent": "10"})  # fmt: skip
+    return {"id": made["id"], "revenue": total["PL.REVENUE"], "cash": total["BS.CASH"],
+            "nature": compared["nature"], "top": tornado["bars"][0]["label"]}  # fmt: skip
+
+
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
     """The full export of the workspace, checked against its own manifest; and the two-step
     deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
@@ -837,6 +864,11 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     rolled = _rolling(owner, base, plan["id"])
     step(f"rolling forecast: the next {rolled['horizon']} months from the approved assumptions, "
          f"{rolled['latest']['status']}, current; re-run hourly when the books move")  # fmt: skip
+    what_if = _scenario(owner, base, plan["id"], year)
+    step(f"scenario 'Slower second half' on the approved assumptions, shared and compared: "
+         f"{what_if['nature'].lower()}, all checks hold; revenue {what_if['revenue']}, closing "
+         f"cash {what_if['cash']} against the base; tornado: {what_if['top']} moves the lowest "
+         "cash most")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "

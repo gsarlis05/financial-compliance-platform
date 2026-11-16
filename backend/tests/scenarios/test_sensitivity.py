@@ -66,6 +66,7 @@ def test_outputs_and_refusals() -> None:
         (lambda: sens.steps_of(D(1), D(1), 3), "must be above low"),
         (lambda: sens.steps_of(D(0), D(1), 12), "from 2 to 11"),
         (lambda: sens.shock(inp, "magic"), "choose one of"),
+        (lambda: sens.run(inp, "MAGIC", None), "output: choose one of"),
         (lambda: sens.run(inp, "EBITDA", 2030), "a year of the horizon (2027)"),
         (lambda: sens.one_variable(inp, "revenue", [D(1)], unit="DAYS", output="MIN_CASH",
                                    year=None), "days apply to DSO, DIO and DPO only"),

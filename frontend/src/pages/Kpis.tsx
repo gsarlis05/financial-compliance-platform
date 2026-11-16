@@ -48,7 +48,10 @@ export function period(
   return { date_from: `${first}-01`, date_to: lastDay(month) };
 }
 
-export function formatKpi(v: KpiValue, locale: string): string {
+export function formatKpi(
+  v: Pick<KpiValue, "value" | "display">,
+  locale: string,
+): string {
   if (v.value === null) return "";
   const n = new Decimal(v.value);
   // Ratios are stored unrounded and rounded only here, for display (doc 10 §2.4).
@@ -183,18 +186,7 @@ function PersonalKpis({ runId }: { runId: string }) {
           <li key={v.key} className="kpi-card">
             <h3>{v.name}</h3>
             <p className="kpi-value">
-              {v.value === null
-                ? t("kpi.nm")
-                : formatKpi(
-                    {
-                      ...v,
-                      result_id: "",
-                      category: "",
-                      convention: "",
-                      name_el: "",
-                    },
-                    locale,
-                  )}
+              {v.value === null ? t("kpi.nm") : formatKpi(v, locale)}
             </p>
             {v.value === null ? <p className="muted">{v.nm_reason}</p> : null}
             <p className="muted">

@@ -11,16 +11,19 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from django.http import HttpRequest
-from ninja import Field, Router, Schema, Status
+from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
+from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
+from fcp.modules.audit_log.api import record as audit
 from fcp.modules.kpi.api import DEFAULT_LIBRARY
 from fcp.modules.projections.api import SetInfo
-from fcp.modules.tenancy.api import workspace_ctx
+from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
 from . import (
+    exports,
     goal_outlooks,
     projected_kpis,
     sensitivity,
@@ -358,6 +361,35 @@ def compare_scenario(request: HttpRequest, slug: str, entity_id: UUID, scenario_
         liquidity={k: _liquidity_out(v) for k, v in c.liquidity.items()},
         valid=c.valid, failures=c.failures, notes=c.notes,
     )  # fmt: skip
+
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+class ScenarioExportQuery(Schema):
+    granularity: Literal["MONTH", "QUARTER", "YEAR"] = "MONTH"
+    lang: Literal["en", "el"] = "en"
+
+
+@router.get(f"{BASE}/{{uuid:scenario_id}}/comparison/export")
+@requires("reports.export")
+def export_comparison(request: HttpRequest, slug: str, entity_id: UUID, scenario_id: UUID,
+                      query: Query[ScenarioExportQuery]) -> HttpResponse:  # fmt: skip
+    """The comparison as XLSX: base, scenario and difference per period, a nature row above the
+    figures and the change by override; audited."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    entity = get_entity(ctx, entity_id, "reports.export")
+    c = scenario_runs.compare(ctx, entity_id, scenario_id, query.granularity)
+    content = exports.to_xlsx(c, entity.legal_name, query.granularity, query.lang,
+                              generated=timezone.now())  # fmt: skip
+    filename = f"scenario-comparison-{query.granularity.lower()}.xlsx"
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="reports.exported",
+          subject_type="report", subject_id="scenario_comparison", entity_id=entity_id,
+          changes={"format": "xlsx", "filename": filename, "scenario_id": str(scenario_id),
+                   "watermark": c.watermark})  # fmt: skip
+    response = HttpResponse(content, content_type=XLSX)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 def _run_out(r: Any) -> ScenarioRunOut:
