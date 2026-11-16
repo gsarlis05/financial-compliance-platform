@@ -21,7 +21,7 @@ Types and their parameters:
 - ``CAPEX``: an investment. ``amount``, ``month``, ``useful_life_months``, ``funding`` (CASH, or
   LOAN with ``term_months``, ``annual_rate`` and ``structure``).
 - ``ONE_OFF``: a one-off payment. ``amount``, ``month``, ``treatment``: EXPENSE (on an opex
-  ``line``) or LIABILITY_SETTLEMENT (of a ``liability``: trade, other or tax payables).
+  ``line``) or LIABILITY_SETTLEMENT (of a ``liability``: other or tax payables).
 - ``RATE_CHANGE``: interest rates up or down. ``target`` (ALL, FACILITY, OTHER_DEBT, or LOANS
   with ``loans``), ``points`` (percentage points), ``from_month``.
 
@@ -46,7 +46,8 @@ MAX_OVERRIDES = 50
 CENT = Decimal("0.01")
 MAX_AMOUNT = Decimal("1e12")
 STRUCTURES = ("ANNUITY", "EQUAL_PRINCIPAL", "BULLET")
-LIABILITIES = ("BS.AP", "BS.OTHER_PAY", "BS.TAX_PAY")
+# Held liabilities a one-off payment can settle (trade payables follow DPO, so they are not held).
+LIABILITIES = ("BS.OTHER_PAY", "BS.TAX_PAY")
 CODE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,19}$")
 MONTH = re.compile(r"^\d{4}-\d{2}(-01)?$")
 

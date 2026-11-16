@@ -114,6 +114,7 @@ until validated and signed by a qualified professional; brief
 | Owner items: professional review of the validation package (U1), Cyprus tax rules verification (#154) | — | — | Waiting for the owner |
 | **Milestone 7** (epic #82) | | | |
 | M7-1 Scenario model and typed overrides (eight types, lifecycle, isolation), with the M7 brief (`docs/planning/21-milestone-7-brief.md`, approved 2026-11-16) (issue #176) | `claude/m7-1-scenarios` | #183 | Open |
+| M7-2 Scenario runs: comparison with the base, lineage by override, what changed and why, saved runs (never published), promotion to a draft set (issue #177) | `claude/m7-2-scenario-runs` | #184 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

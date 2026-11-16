@@ -36,7 +36,7 @@ READ, RUN, PUBLISH = "planning.read", "planning.run", "planning.publish"
 Status = Scenario.Status
 
 
-def _audit(ctx: WorkspaceContext, action: str, s: Scenario, **changes: object) -> None:
+def audit_scenario(ctx: WorkspaceContext, action: str, s: Scenario, **changes: object) -> None:
     audit(
         tenant_id=ctx.tenant.id,
         actor_user_id=ctx.user.id,
@@ -119,7 +119,7 @@ def create(ctx: WorkspaceContext, entity_id: UUID, *, name: str, base_set_id: UU
     made = Scenario.objects.create(tenant=ctx.tenant, legal_entity_id=entity, name=name.strip(),
                                    base_set_id=base_set_id, description=description.strip(),
                                    created_by=ctx.user)  # fmt: skip
-    _audit(ctx, "created", made, base_set_id=str(base_set_id))
+    audit_scenario(ctx, "created", made, base_set_id=str(base_set_id))
     return made
 
 
@@ -129,7 +129,7 @@ def rename(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID, *, name: s
     s = _draft(ctx, entity_id, scenario_id)
     s.name, s.description = name.strip(), description.strip()
     s.save(update_fields=["name", "description"])
-    _audit(ctx, "renamed", s, description=s.description)
+    audit_scenario(ctx, "renamed", s, description=s.description)
     return s
 
 
@@ -150,7 +150,7 @@ def add_override(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID, *, k
     made = ScenarioOverride.objects.create(tenant=ctx.tenant, scenario=s, seq=last + 1,
                                            type=kind, params=cleaned,
                                            rationale=rationale.strip())  # fmt: skip
-    _audit(ctx, "override_added", s, override_id=str(made.id), type=kind, params=cleaned)
+    audit_scenario(ctx, "override_added", s, override_id=str(made.id), type=kind, params=cleaned)
     return made
 
 
@@ -180,7 +180,7 @@ def change_override(  # noqa: PLR0913 (keyword-only details of the override)
         rationale.strip(),
     )
     o.save(update_fields=["type", "params", "rationale"])
-    _audit(ctx, "override_changed", s, override_id=str(o.id), type=kind, params=o.params)
+    audit_scenario(ctx, "override_changed", s, override_id=str(o.id), type=kind, params=o.params)
     return o
 
 
@@ -192,7 +192,7 @@ def remove_override(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID,
     removed = {"override_id": str(o.id), "type": o.type, "params": o.params}
     o.delete()
     _resequence(s, [x.id for x in overrides(s)])
-    _audit(ctx, "override_removed", s, **removed)
+    audit_scenario(ctx, "override_removed", s, **removed)
 
 
 def _resequence(s: Scenario, order: list[UUID]) -> None:
@@ -213,7 +213,7 @@ def reorder(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID,
         message = "List every override of the scenario once, in the new order."
         raise ValidationFailedError(message, field_errors={"order": [message]})
     _resequence(s, order)
-    _audit(ctx, "reordered", s, order=[str(x) for x in order])
+    audit_scenario(ctx, "reordered", s, order=[str(x) for x in order])
     return overrides(s)
 
 
@@ -222,7 +222,7 @@ def share(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID) -> Scenario
     s = _draft(ctx, entity_id, scenario_id)
     s.status, s.shared_at = Status.SHARED, timezone.now()
     s.save(update_fields=["status", "shared_at"])
-    _audit(ctx, "shared", s, overrides=ScenarioOverride.objects.filter(scenario=s).count())
+    audit_scenario(ctx, "shared", s, overrides=ScenarioOverride.objects.filter(scenario=s).count())
     return s
 
 
@@ -237,7 +237,7 @@ def archive(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID) -> Scenar
                                     "plans, can archive it.")  # fmt: skip
     locked.status, locked.archived_at = Status.ARCHIVED, timezone.now()
     locked.save(update_fields=["status", "archived_at"])
-    _audit(ctx, "archived", locked)
+    audit_scenario(ctx, "archived", locked)
     return locked
 
 
@@ -263,5 +263,5 @@ def copy(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID, *, name: str
             raise ValidationFailedError(message, field_errors={"base_set_id": [message]}) from None
         ScenarioOverride.objects.create(tenant=ctx.tenant, scenario=made, seq=o.seq, type=o.type,
                                         params=params, rationale=o.rationale)  # fmt: skip
-    _audit(ctx, "copied", made, copied_from=str(source.id), base_set_id=str(base_id))
+    audit_scenario(ctx, "copied", made, copied_from=str(source.id), base_set_id=str(base_id))
     return made

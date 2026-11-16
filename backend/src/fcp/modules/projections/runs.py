@@ -274,31 +274,36 @@ def check_loans(opening: dict[str, Decimal], loans: tuple[LoanTerms, ...]) -> No
         raise ValidationFailedError(message, field_errors={"loans": [message]})
 
 
+def load_input(ctx: WorkspaceContext, entity_id: UUID, refs: dict[str, Any],
+               watermark: int | None) -> engine.EngineInput:  # fmt: skip
+    """The engine input of a projection from its pinned inputs and the ledger at ``watermark``
+    (also the starting point of a scenario, M7-2)."""
+    cutover = date.fromisoformat(refs["cutover"])
+    _, net = opening_net(ctx, entity_id, before=cutover + timedelta(days=1), watermark=watermark)
+    made, drivers = approved_values(ctx, entity_id, UUID(refs["assumption_set_id"]))
+    months = [date.fromisoformat(m) for m in refs["months"]]
+    return engine.EngineInput(
+        set_id=str(made.id),
+        cutover=cutover,
+        months=months,
+        opening=opening_balance_sheet(net, refs["mapping"]),
+        drivers=same_month_of_the_set(drivers, months),
+        register_depreciation={date.fromisoformat(m): Decimal(v)
+                               for m, v in refs["register_depreciation"].items()},
+        fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
+        currency=refs.get("currency", "EUR"),  # runs made before M6F-1 are in EUR
+        loans=loan_terms(made, drivers, months),
+        tax=tax_inputs(refs["tax"]) if "tax" in refs else None,
+    )  # fmt: skip
+
+
 class ProjectionEngine:
     kind = KIND
     version = "3"  # M6F-4: loans; M6F-5: corporate tax
 
     def load(self, ctx: WorkspaceContext, inputs: RunInputs) -> Loaded:
-        refs = inputs.refs
-        cutover = date.fromisoformat(refs["cutover"])
-        _, net = opening_net(ctx, inputs.legal_entity_id, before=cutover + timedelta(days=1),
-                             watermark=inputs.actuals_watermark)  # fmt: skip
-        made, drivers = approved_values(ctx, inputs.legal_entity_id,
-                                        UUID(refs["assumption_set_id"]))  # fmt: skip
-        months = [date.fromisoformat(m) for m in refs["months"]]
-        return Loaded(engine.EngineInput(
-            set_id=str(made.id),
-            cutover=cutover,
-            months=months,
-            opening=opening_balance_sheet(net, refs["mapping"]),
-            drivers=same_month_of_the_set(drivers, months),
-            register_depreciation={date.fromisoformat(m): Decimal(v)
-                                   for m, v in refs["register_depreciation"].items()},
-            fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
-            currency=refs.get("currency", "EUR"),  # runs made before M6F-1 are in EUR
-            loans=loan_terms(made, drivers, months),
-            tax=tax_inputs(refs["tax"]) if "tax" in refs else None,
-        ))  # fmt: skip
+        return Loaded(load_input(ctx, inputs.legal_entity_id, dict(inputs.refs),
+                                 inputs.actuals_watermark))  # fmt: skip
 
     def compute(self, inputs: RunInputs, data: Loaded) -> Output:
         check_loans(data.inp.opening, data.inp.loans)
@@ -322,22 +327,32 @@ def run_projection(  # noqa: PLR0913 (keyword options for rolling forecasts)
     """Project the three statements from an approved assumption set (a new run every time). A
     rolling forecast (M6-4) chooses its own cut-over and horizon."""
     entity = get_entity(ctx, entity_id, RUN).id
+    refs = pin(ctx, entity, set_id, cutover=cutover, months=months)
+    if rolling is not None:
+        refs["rolling_forecast_id"] = str(rolling)
+    as_of = date.fromisoformat(refs["cutover"])
+    return execute(ctx, entity, KIND, as_of=as_of, refs=refs, trigger=trigger,
+                   supersedes=supersedes)  # fmt: skip
+
+
+def pin(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, *, cutover: date | None = None,
+        months: int | None = None) -> dict[str, Any]:  # fmt: skip
+    """The pinned inputs of a projection from an approved (or superseded) set, after refusing an
+    opening the projection cannot map or loans the books cannot hold (also a scenario's base)."""
+    entity = get_entity(ctx, entity_id, RUN).id
     made = AssumptionSet.objects.filter(legal_entity_id=entity, id=set_id).first()
     if made is None:
         raise NotFoundError("Assumption set not found.")
     if made.status == AssumptionSet.Status.DRAFT:
         raise ConflictError("Approve the assumption set before projecting with it.")
     refs = _pinned(ctx, entity, made, cutover, months)
-    if rolling is not None:
-        refs["rolling_forecast_id"] = str(rolling)
     as_of = date.fromisoformat(refs["cutover"])
     # Refuse an unmappable opening before recording a run (the run's own read is pinned).
     _, net = opening_net(ctx, entity, before=as_of + timedelta(days=1))
     start = opening_balance_sheet(net, refs["mapping"])
     _, drivers = approved_values(ctx, entity, made.id)
     check_loans(start, loan_terms(made, drivers, [date.fromisoformat(m) for m in refs["months"]]))
-    return execute(ctx, entity, KIND, as_of=as_of, refs=refs, trigger=trigger,
-                   supersedes=supersedes)  # fmt: skip
+    return refs
 
 
 def projections(ctx: WorkspaceContext, entity_id: UUID) -> list[CalcRun]:

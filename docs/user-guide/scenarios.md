@@ -5,8 +5,7 @@ Assumptions) and changes some of its assumptions, so you can compare the result 
 Every figure a scenario produces is **hypothetical**. A scenario never changes the assumptions it is
 based on, a budget, a forecast or the books.
 
-Scenario results, comparisons and screens follow in the next releases (M7-2 and M7-7). This page
-describes how scenarios are set up.
+The screens follow in a later release (M7-7); everything below is available through the API.
 
 ## Starting a scenario
 Choose an approved assumption set of the entity as the **base** and give the scenario a name. It
@@ -22,7 +21,7 @@ order listed, which you can change.
 | New loan | €200,000 over 5 years at 6% | a code, the amount, the month it is drawn, months, the yearly rate, annuity, equal principal or bullet, interest-only months |
 | New hire | 2 people from March at €2,100 | role, department, how many, gross monthly salary, employer cost % **and where it comes from**, first and last month |
 | Investment | €150,000 of equipment in May | amount, month, useful life in months, paid in cash or with a loan (its terms) |
-| One-off payment | Unexpected tax payment of €40,000 | amount, month, and whether it is an expense (which cost line) or settles a liability (trade, other or tax payables) |
+| One-off payment | Unexpected tax payment of €40,000 | amount, month, and whether it is an expense (which cost line) or settles part of a liability (other payables, or VAT and other taxes payable) |
 | Rate change | Interest +2 percentage points from June | all debt, the credit facility, other debt, or named loans; the points; from which month |
 
 Every month must lie inside the base's horizon. If something is wrong, the message names the field
@@ -32,6 +31,35 @@ to 12/2027)."
 **Employer costs of a new hire:** the platform holds no social-insurance or other contribution
 rate, because none has been verified by a professional. Enter the employer cost % yourself and say
 where it comes from (for example your payroll adviser). The source is kept with the scenario.
+
+## Results: the comparison with the base
+**Compare** runs the scenario now on the current books and shows it next to its base, by month,
+quarter or year: the income statement, balance sheet and cash flow statement, with the difference
+on every line. Every scenario figure is labelled **hypothetical**; the opening balance sheet is the
+actual one.
+
+- **What changed and why:** for each change, its effect on revenue, EBITDA, net income and net cash
+  flow over the horizon, and on cash and debt at its end. The effects add up exactly to the total.
+  Every changed figure also lists the changes that moved it.
+- **Liquidity:** lowest cash and its month, the first month cash would be negative, months below
+  the minimum cash, the peak use of the credit facility and the debt at the end, for the base and
+  the scenario.
+- **Checks:** the scenario's statements pass the same eight checks as any projection (the balance
+  sheet balances, cash ties, and so on). If one fails, it says where.
+- The projection engine is still **pending professional review**, and so are its scenarios.
+
+Changes apply in their order, each to the result of the ones before. A one-off payment can settle
+at most the liability's balance at the cut-over. Moving a line by whole months drops what moves past
+the end of the window, and the comparison says how much.
+
+**Save** records the scenario's run, so it can be reproduced later; a saved scenario run is never
+published as an official forecast.
+
+## Turning a scenario into a plan
+**Create an assumption-set draft** copies the base with the changes written into its values and
+loans. The draft then goes through the normal review and approval. Two kinds of change cannot be
+held by an assumption set, and are refused with their names: a payment that settles a liability,
+and an investment in a month that already has capital expenditure with another useful life.
 
 ## Sharing, copying and archiving
 - **Share** makes the scenario visible to everyone who can read plans for the entity. A shared
@@ -47,6 +75,8 @@ where it comes from (for example your payroll adviser). The source is kept with 
 |---|---|---|---|
 | See shared and archived scenarios | ✔ | ✔ | ✔ |
 | Create, change, share and copy your scenarios | | ✔ | ✔ |
+| Compare, save a run, create a draft set from a scenario | | ✔ | ✔ |
+| See saved scenario runs | ✔ | ✔ | ✔ |
 | Archive someone else's scenario | | | ✔ |
 
 Every change is recorded in the audit trail.
