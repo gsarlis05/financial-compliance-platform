@@ -22,6 +22,7 @@ GLOBAL_TABLES: dict[str, str] = {
 APPEND_ONLY_TABLES: set[str] = {
     "audit_log_event",
     "banking_reconciliation",
+    "budgeting_event",
     "documents_document",
     "metrics_calc_result",
     "metrics_calc_lineage",

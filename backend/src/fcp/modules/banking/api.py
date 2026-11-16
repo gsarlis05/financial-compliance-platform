@@ -221,7 +221,7 @@ def statement_imports(
     return [_import_out(i) for i in services.list_imports(ctx, entity_id, account_id)]
 
 
-class LineOut(Schema):
+class StatementLineOut(Schema):
     id: UUID
     booking_date: date
     value_date: date | None
@@ -235,8 +235,8 @@ class LineOut(Schema):
     note: str
 
 
-def _line_out(ln: StatementLine) -> LineOut:
-    return LineOut(
+def _line_out(ln: StatementLine) -> StatementLineOut:
+    return StatementLineOut(
         id=ln.id,
         booking_date=ln.booking_date,
         value_date=ln.value_date,
@@ -255,11 +255,11 @@ class LinesQuery(Schema):
     status: Literal["UNMATCHED", "MATCHED", "IGNORED"] | None = None
 
 
-@router.get(f"{BASE}/bank-accounts/{{uuid:account_id}}/lines", response=list[LineOut])
+@router.get(f"{BASE}/bank-accounts/{{uuid:account_id}}/lines", response=list[StatementLineOut])
 @requires("banking.read")
 def statement_lines(
     request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID, q: Query[LinesQuery]
-) -> list[LineOut]:
+) -> list[StatementLineOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [
         _line_out(ln) for ln in services.list_lines(ctx, entity_id, account_id, status=q.status)
@@ -314,18 +314,20 @@ class MatchIn(Schema):
     journal_line_id: UUID
 
 
-@router.post(f"{LINE}/match", response=LineOut)
+@router.post(f"{LINE}/match", response=StatementLineOut)
 @requires("banking.statement.manage")
 def match_line(
     request: HttpRequest, slug: str, entity_id: UUID, line_id: UUID, payload: MatchIn
-) -> LineOut:
+) -> StatementLineOut:
     ctx = workspace_ctx(request, slug, entity_id)
     return _line_out(services.match(ctx, entity_id, line_id, payload.journal_line_id))
 
 
-@router.post(f"{LINE}/unmatch", response=LineOut)
+@router.post(f"{LINE}/unmatch", response=StatementLineOut)
 @requires("banking.statement.manage")
-def unmatch_line(request: HttpRequest, slug: str, entity_id: UUID, line_id: UUID) -> LineOut:
+def unmatch_line(
+    request: HttpRequest, slug: str, entity_id: UUID, line_id: UUID
+) -> StatementLineOut:
     ctx = workspace_ctx(request, slug, entity_id)
     return _line_out(services.unmatch(ctx, entity_id, line_id))
 
@@ -334,11 +336,11 @@ class IgnoreIn(Schema):
     note: str = Field(min_length=1, max_length=500)
 
 
-@router.post(f"{LINE}/ignore", response=LineOut)
+@router.post(f"{LINE}/ignore", response=StatementLineOut)
 @requires("banking.statement.manage")
 def ignore_line(
     request: HttpRequest, slug: str, entity_id: UUID, line_id: UUID, payload: IgnoreIn
-) -> LineOut:
+) -> StatementLineOut:
     ctx = workspace_ctx(request, slug, entity_id)
     return _line_out(services.ignore(ctx, entity_id, line_id, payload.note))
 

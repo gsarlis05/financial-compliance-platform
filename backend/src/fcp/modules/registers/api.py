@@ -462,7 +462,7 @@ class FlowsQuery(Schema):
     date_to: date
 
 
-class FlowOut(Schema):
+class CommitmentFlowOut(Schema):
     due: date
     scheduled: date
     amount: str
@@ -615,13 +615,13 @@ def debt_schedule(request: HttpRequest, slug: str, entity_id: UUID,
             for r in commitments.schedule(ctx, entity_id, series_id)]  # fmt: skip
 
 
-@router.get(f"{BASE}/commitment-flows", response=list[FlowOut])
+@router.get(f"{BASE}/commitment-flows", response=list[CommitmentFlowOut])
 @requires("registers.commitment.read")
 def commitment_flows(request: HttpRequest, slug: str, entity_id: UUID,
-                     q: Query[FlowsQuery]) -> list[FlowOut]:  # fmt: skip
+                     q: Query[FlowsQuery]) -> list[CommitmentFlowOut]:  # fmt: skip
     """The dated flows of all current obligations and loans in a period (inflows positive)."""
     ctx = workspace_ctx(request, slug, entity_id)
-    return [FlowOut(due=f.due, scheduled=f.scheduled, amount=f"{f.amount:.2f}",
+    return [CommitmentFlowOut(due=f.due, scheduled=f.scheduled, amount=f"{f.amount:.2f}",
                     nature=f.nature, source=f.source, component=f.component,  # type: ignore[arg-type]
                     category=f.category, name=f.name, series_id=f.series_id,
                     version_id=f.version_id)

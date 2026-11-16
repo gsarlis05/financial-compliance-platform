@@ -55,6 +55,7 @@ __all__ = [
     "account_balance",
     "account_list",
     "create_entry_draft",
+    "dimension_list",
     "fiscal_year_list",
     "posted_lines",
     "router",
@@ -120,6 +121,7 @@ def create_entry_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> J
 # Read functions for other modules (the reporting gateway, M2-6 onwards).
 account_list = accounts.list_accounts
 fiscal_year_list = periods.list_fiscal_years
+dimension_list = dimensions.list_dimensions
 TrialBalanceRow = reports.TrialBalanceRow
 
 

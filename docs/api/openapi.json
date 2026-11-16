@@ -1025,6 +1025,794 @@
         "title": "BehaviourQuery",
         "type": "object"
       },
+      "BudgetCommentIn": {
+        "properties": {
+          "comment": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Comment",
+            "type": "string"
+          }
+        },
+        "title": "BudgetCommentIn",
+        "type": "object"
+      },
+      "BudgetEventOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "actor_name": {
+            "title": "Actor Name",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version_number",
+          "seq",
+          "action",
+          "actor_id",
+          "actor_name",
+          "comment",
+          "at"
+        ],
+        "title": "BudgetEventOut",
+        "type": "object"
+      },
+      "BudgetIn": {
+        "properties": {
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
+          },
+          "fiscal_year_id": {
+            "format": "uuid",
+            "title": "Fiscal Year Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "ANNUAL",
+            "enum": [
+              "ANNUAL",
+              "DEPARTMENTAL",
+              "PROJECT"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "fiscal_year_id"
+        ],
+        "title": "BudgetIn",
+        "type": "object"
+      },
+      "BudgetLineIn": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "amounts": {
+            "additionalProperties": {
+              "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+              "type": "string"
+            },
+            "description": "Month (first day) → amount; missing months are 0",
+            "propertyNames": {
+              "format": "date"
+            },
+            "title": "Amounts",
+            "type": "object"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
+          },
+          "method": {
+            "default": "MANUAL",
+            "enum": [
+              "MANUAL",
+              "EVEN",
+              "SEASONAL",
+              "PROFILE",
+              "DRIVER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          },
+          "taxonomy_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Code"
+          }
+        },
+        "title": "BudgetLineIn",
+        "type": "object"
+      },
+      "BudgetLineOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "amounts": {
+            "description": "One per month of the fiscal year, in order",
+            "items": {
+              "type": "string"
+            },
+            "title": "Amounts",
+            "type": "array"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HIGHER_BETTER or LOWER_BETTER (taxonomy lines)",
+            "title": "Direction"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "method_params": {
+            "additionalProperties": true,
+            "title": "Method Params",
+            "type": "object"
+          },
+          "nature": {
+            "const": "BUDGET",
+            "default": "BUDGET",
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "quarters": {
+            "description": "Sums of the months, by fiscal quarter",
+            "items": {
+              "type": "string"
+            },
+            "title": "Quarters",
+            "type": "array"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "taxonomy_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Code"
+          },
+          "taxonomy_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Name"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "taxonomy_code",
+          "taxonomy_name",
+          "direction",
+          "account_id",
+          "dimension_value_id",
+          "method",
+          "method_params",
+          "note",
+          "amounts",
+          "quarters",
+          "total"
+        ],
+        "title": "BudgetLineOut",
+        "type": "object"
+      },
+      "BudgetLinesIn": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetLineIn"
+            },
+            "maxItems": 5000,
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "BudgetLinesIn",
+        "type": "object"
+      },
+      "BudgetOut": {
+        "properties": {
+          "current_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved or locked version in force",
+            "title": "Current Version Id"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
+          },
+          "fiscal_year_end": {
+            "format": "date",
+            "title": "Fiscal Year End",
+            "type": "string"
+          },
+          "fiscal_year_id": {
+            "format": "uuid",
+            "title": "Fiscal Year Id",
+            "type": "string"
+          },
+          "fiscal_year_start": {
+            "format": "date",
+            "title": "Fiscal Year Start",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft or submitted version, if any",
+            "title": "Open Version Id"
+          },
+          "original_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first version ever approved",
+            "title": "Original Version Id"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "fiscal_year_id",
+          "fiscal_year_start",
+          "fiscal_year_end",
+          "dimension_value_id",
+          "original_version_id",
+          "current_version_id",
+          "open_version_id",
+          "versions"
+        ],
+        "title": "BudgetOut",
+        "type": "object"
+      },
+      "BudgetReasonIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "BudgetReasonIn",
+        "type": "object"
+      },
+      "BudgetSettingsIO": {
+        "properties": {
+          "sod_required": {
+            "description": "The submitter of a version cannot approve it",
+            "title": "Sod Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sod_required"
+        ],
+        "title": "BudgetSettingsIO",
+        "type": "object"
+      },
+      "BudgetVersionDetailOut": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Id"
+          },
+          "budget_id": {
+            "format": "uuid",
+            "title": "Budget Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "month_totals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Month Totals",
+            "type": "array"
+          },
+          "months": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "sod_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sod Applied"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By Id"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "reason",
+          "supersedes_id",
+          "content_hash",
+          "created_by_id",
+          "submitted_by_id",
+          "submitted_at",
+          "approved_by_id",
+          "approved_at",
+          "sod_applied",
+          "locked_at",
+          "superseded_at",
+          "budget_id",
+          "months",
+          "lines",
+          "month_totals",
+          "total"
+        ],
+        "title": "BudgetVersionDetailOut",
+        "type": "object"
+      },
+      "BudgetVersionOut": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Id"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "sod_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sod Applied"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "submitted_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By Id"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "reason",
+          "supersedes_id",
+          "content_hash",
+          "created_by_id",
+          "submitted_by_id",
+          "submitted_at",
+          "approved_by_id",
+          "approved_at",
+          "sod_applied",
+          "locked_at",
+          "superseded_at"
+        ],
+        "title": "BudgetVersionOut",
+        "type": "object"
+      },
+      "BudgetsQuery": {
+        "properties": {
+          "fiscal_year_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year Id"
+          }
+        },
+        "title": "BudgetsQuery",
+        "type": "object"
+      },
       "CandidateOut": {
         "properties": {
           "accounting_date": {
@@ -1310,6 +2098,72 @@
           "balance"
         ],
         "title": "ClosingLineOut",
+        "type": "object"
+      },
+      "CommitmentFlowOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "enum": [
+              "COMMITTED",
+              "EXPECTED"
+            ],
+            "title": "Nature",
+            "type": "string"
+          },
+          "scheduled": {
+            "format": "date",
+            "title": "Scheduled",
+            "type": "string"
+          },
+          "series_id": {
+            "format": "uuid",
+            "title": "Series Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "due",
+          "scheduled",
+          "amount",
+          "nature",
+          "source",
+          "component",
+          "category",
+          "name",
+          "series_id",
+          "version_id"
+        ],
+        "title": "CommitmentFlowOut",
         "type": "object"
       },
       "ComparisonOut": {
@@ -3148,7 +4002,27 @@
         "title": "FlagOut",
         "type": "object"
       },
-      "FlowOut": {
+      "FlowsQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "FlowsQuery",
+        "type": "object"
+      },
+      "ForecastFlowOut": {
         "properties": {
           "amount": {
             "title": "Amount",
@@ -3176,27 +4050,89 @@
           "nature",
           "amount"
         ],
-        "title": "FlowOut",
+        "title": "ForecastFlowOut",
         "type": "object"
       },
-      "FlowsQuery": {
+      "ForecastHistoryOut": {
         "properties": {
-          "date_from": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of": {
             "format": "date",
-            "title": "Date From",
+            "title": "As Of",
             "type": "string"
           },
-          "date_to": {
-            "format": "date",
-            "title": "Date To",
+          "closing_week_13": {
+            "title": "Closing Week 13",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "first_shortfall": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Shortfall"
+          },
+          "opening_cash": {
+            "title": "Opening Cash",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "trigger": {
+            "title": "Trigger",
             "type": "string"
           }
         },
         "required": [
-          "date_from",
-          "date_to"
+          "run_id",
+          "as_of",
+          "created_at",
+          "status",
+          "stale",
+          "trigger",
+          "supersedes_id",
+          "actuals_watermark",
+          "opening_cash",
+          "closing_week_13",
+          "first_shortfall"
         ],
-        "title": "FlowsQuery",
+        "title": "ForecastHistoryOut",
         "type": "object"
       },
       "ForecastOut": {
@@ -3307,88 +4243,6 @@
           "weeks"
         ],
         "title": "ForecastOut",
-        "type": "object"
-      },
-      "HistoryOut": {
-        "properties": {
-          "actuals_watermark": {
-            "title": "Actuals Watermark",
-            "type": "integer"
-          },
-          "as_of": {
-            "format": "date",
-            "title": "As Of",
-            "type": "string"
-          },
-          "closing_week_13": {
-            "title": "Closing Week 13",
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "first_shortfall": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "First Shortfall"
-          },
-          "opening_cash": {
-            "title": "Opening Cash",
-            "type": "string"
-          },
-          "run_id": {
-            "format": "uuid",
-            "title": "Run Id",
-            "type": "string"
-          },
-          "stale": {
-            "title": "Stale",
-            "type": "boolean"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "supersedes_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supersedes Id"
-          },
-          "trigger": {
-            "title": "Trigger",
-            "type": "string"
-          }
-        },
-        "required": [
-          "run_id",
-          "as_of",
-          "created_at",
-          "status",
-          "stale",
-          "trigger",
-          "supersedes_id",
-          "actuals_watermark",
-          "opening_cash",
-          "closing_week_13",
-          "first_shortfall"
-        ],
-        "title": "HistoryOut",
         "type": "object"
       },
       "HistoryQuery": {
@@ -3964,51 +4818,114 @@
       },
       "LineOut": {
         "properties": {
-          "account_types": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "counterparty_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Code"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "string"
+          },
+          "dimensions": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/LineDimensionOut"
             },
-            "title": "Account Types",
+            "title": "Dimensions",
             "type": "array"
           },
-          "code": {
-            "title": "Code",
-            "type": "string"
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
           },
-          "direction": {
-            "title": "Direction",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "name_el": {
-            "title": "Name El",
-            "type": "string"
-          },
-          "order": {
-            "title": "Order",
+          "line_no": {
+            "title": "Line No",
             "type": "integer"
           },
-          "section": {
-            "title": "Section",
+          "memo": {
+            "title": "Memo",
             "type": "string"
           },
-          "statement": {
-            "title": "Statement",
+          "reference": {
+            "title": "Reference",
             "type": "string"
+          },
+          "vat_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Code"
+          },
+          "vat_code_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Code Id"
           }
         },
         "required": [
-          "code",
-          "name",
-          "name_el",
-          "statement",
-          "section",
-          "account_types",
-          "direction",
-          "order"
+          "line_no",
+          "account_id",
+          "account_code",
+          "debit",
+          "credit",
+          "memo",
+          "dimensions",
+          "counterparty_id",
+          "counterparty_code",
+          "reference",
+          "due_date",
+          "vat_code_id",
+          "vat_code"
         ],
         "title": "LineOut",
         "type": "object"
@@ -4224,6 +5141,44 @@
           "reason"
         ],
         "title": "ManualOut",
+        "type": "object"
+      },
+      "MappingHistoryOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "line_code": {
+            "title": "Line Code",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          }
+        },
+        "required": [
+          "line_code",
+          "created_at",
+          "superseded_at",
+          "created_by_id"
+        ],
+        "title": "MappingHistoryOut",
         "type": "object"
       },
       "MappingIn": {
@@ -5808,6 +6763,87 @@
         "title": "ShortfallOut",
         "type": "object"
       },
+      "StatementLineOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "bank_ref": {
+            "title": "Bank Ref",
+            "type": "string"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "counterparty_name": {
+            "title": "Counterparty Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched_line_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Line Id"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "value_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Date"
+          }
+        },
+        "required": [
+          "id",
+          "booking_date",
+          "value_date",
+          "amount",
+          "description",
+          "counterparty_name",
+          "reference",
+          "bank_ref",
+          "status",
+          "matched_line_id",
+          "note"
+        ],
+        "title": "StatementLineOut",
+        "type": "object"
+      },
       "StatementOut": {
         "properties": {
           "checks": {
@@ -6168,6 +7204,57 @@
           "created_at"
         ],
         "title": "TaxPaymentOut",
+        "type": "object"
+      },
+      "TaxonomyLineOut": {
+        "properties": {
+          "account_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Account Types",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "name_el",
+          "statement",
+          "section",
+          "account_types",
+          "direction",
+          "order"
+        ],
+        "title": "TaxonomyLineOut",
         "type": "object"
       },
       "TemplateIn": {
@@ -6631,7 +7718,7 @@
           },
           "flows": {
             "items": {
-              "$ref": "#/components/schemas/FlowOut"
+              "$ref": "#/components/schemas/ForecastFlowOut"
             },
             "title": "Flows",
             "type": "array"
@@ -7708,7 +8795,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/HistoryOut"
+                    "$ref": "#/components/schemas/MappingHistoryOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -8764,7 +9851,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/LineOut"
+                    "$ref": "#/components/schemas/StatementLineOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -8911,6 +9998,857 @@
         "summary": "Reconciliations",
         "tags": [
           "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-settings": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_get_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetSettingsIO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "budgeting"
+        ]
+      },
+      "put": {
+        "operationId": "fcp_modules_budgeting_api_put_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetSettingsIO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetSettingsIO"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_get_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Version",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/approve": {
+      "post": {
+        "operationId": "fcp_modules_budgeting_api_approve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetCommentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/lines": {
+      "put": {
+        "description": "Replace every line of a draft version.",
+        "operationId": "fcp_modules_budgeting_api_save_lines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetLinesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Save Lines",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/lock": {
+      "post": {
+        "operationId": "fcp_modules_budgeting_api_lock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Lock",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/reason": {
+      "put": {
+        "operationId": "fcp_modules_budgeting_api_set_reason",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Reason",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/return": {
+      "post": {
+        "operationId": "fcp_modules_budgeting_api_return_to_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetCommentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Return To Draft",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/revise": {
+      "post": {
+        "description": "Start a revision of the current version (a new draft with its lines and a reason).",
+        "operationId": "fcp_modules_budgeting_api_revise",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionDetailOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revise",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/submit": {
+      "post": {
+        "operationId": "fcp_modules_budgeting_api_submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetVersionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Submit",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budgets": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_list_budgets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fiscal Year Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Budgets",
+        "tags": [
+          "budgeting"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_budgeting_api_create_budget",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Budget",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budgets/{budget_id}": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_get_budget",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Budget",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budgets/{budget_id}/events": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_budget_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetEventOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Budget Events",
+        "tags": [
+          "budgeting"
         ]
       }
     },
@@ -9516,7 +11454,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/HistoryOut"
+                    "$ref": "#/components/schemas/ForecastHistoryOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -9968,7 +11906,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/FlowOut"
+                    "$ref": "#/components/schemas/CommitmentFlowOut"
                   },
                   "title": "Response",
                   "type": "array"
@@ -14091,7 +16029,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LineOut"
+                  "$ref": "#/components/schemas/StatementLineOut"
                 }
               }
             },
@@ -14158,7 +16096,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LineOut"
+                  "$ref": "#/components/schemas/StatementLineOut"
                 }
               }
             },
@@ -14277,7 +16215,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LineOut"
+                  "$ref": "#/components/schemas/StatementLineOut"
                 }
               }
             },
@@ -14803,7 +16741,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/LineOut"
+                    "$ref": "#/components/schemas/TaxonomyLineOut"
                   },
                   "title": "Response",
                   "type": "array"

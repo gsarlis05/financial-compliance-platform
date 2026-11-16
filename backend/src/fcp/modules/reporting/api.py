@@ -16,7 +16,12 @@ from ninja import Query, Router, Schema, Status
 from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.ledger.api import account_list, fiscal_year_list, trial_balance_rows
+from fcp.modules.ledger.api import (
+    account_list,
+    dimension_list,
+    fiscal_year_list,
+    trial_balance_rows,
+)
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
 from . import actuals
@@ -26,7 +31,9 @@ __all__ = [
     "AccountActivity",
     "AccountRef",
     "Actuals",
+    "DimensionValueRef",
     "Fact",
+    "FiscalYearRef",
     "WatermarkError",
     "account_activity",
     "accounts",
@@ -34,7 +41,9 @@ __all__ = [
     "balances_before",
     "cash_daily",
     "current_watermark",
+    "dimension_values",
     "fiscal_year_start",
+    "fiscal_years",
     "opening_net",
     "posted_since",
     "router",
@@ -76,6 +85,43 @@ def accounts(ctx: WorkspaceContext, entity_id: UUID) -> list[AccountRef]:
     return [
         AccountRef(a.id, a.code, a.name, a.name_el, a.type, a.normal_side, a.is_postable, a.status)
         for a in account_list(ctx, entity_id)
+    ]
+
+
+@dataclass(frozen=True)
+class FiscalYearRef:
+    id: UUID
+    name: str
+    start_date: date
+    end_date: date
+    status: str
+
+
+def fiscal_years(ctx: WorkspaceContext, entity_id: UUID) -> list[FiscalYearRef]:
+    """The entity's fiscal years, earliest first (requires ``ledger.period.read``)."""
+    return [
+        FiscalYearRef(y.id, y.name, y.start_date, y.end_date, y.status)
+        for y in fiscal_year_list(ctx, entity_id)
+    ]
+
+
+@dataclass(frozen=True)
+class DimensionValueRef:
+    id: UUID
+    dimension_id: UUID
+    dimension_code: str
+    dimension_kind: str
+    code: str
+    name: str
+    status: str
+
+
+def dimension_values(ctx: WorkspaceContext, entity_id: UUID) -> list[DimensionValueRef]:
+    """Every value of every dimension of the entity (requires ``ledger.account.read``)."""
+    return [
+        DimensionValueRef(v.id, d.id, d.code, d.kind, v.code, v.name, v.status)
+        for d in dimension_list(ctx, entity_id)
+        for v in sorted(d.values.all(), key=lambda v: v.code)
     ]
 
 

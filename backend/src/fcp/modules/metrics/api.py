@@ -47,7 +47,7 @@ from .hashing import canonical_decimal
 from .hashing import digest as canonical_digest
 from .models import CalcResult, CalcRun, TaxonomyLine
 from .nature import ActualSeries, BlendedSeries, Nature, NatureMixError, PlanSeries, Point, blend
-from .services import Completeness, completeness, current_mapping
+from .services import Completeness, completeness, current_mapping, taxonomy_lines
 from .taxonomy import DEFAULT_TAXONOMY
 
 __all__ = [
@@ -87,13 +87,14 @@ __all__ = [
     "mark_stale",
     "register_engine",
     "router",
+    "taxonomy_lines",
 ]  # fmt: skip
 
 router = Router(tags=["metrics"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
 
 
-class LineOut(Schema):
+class TaxonomyLineOut(Schema):
     code: str
     name: str
     name_el: str
@@ -104,16 +105,16 @@ class LineOut(Schema):
     order: int
 
 
-def _line_out(line: TaxonomyLine) -> LineOut:
-    return LineOut(code=line.code, name=line.name, name_el=line.name_el,
+def _line_out(line: TaxonomyLine) -> TaxonomyLineOut:
+    return TaxonomyLineOut(code=line.code, name=line.name, name_el=line.name_el,
                    statement=line.statement, section=line.section,
                    account_types=line.account_types.split(","), direction=line.direction,
                    order=line.order)  # fmt: skip
 
 
-@router.get(f"{BASE}/taxonomy", response=list[LineOut])
+@router.get(f"{BASE}/taxonomy", response=list[TaxonomyLineOut])
 @requires("ledger.account.read")
-def taxonomy(request: HttpRequest, slug: str, entity_id: UUID) -> list[LineOut]:
+def taxonomy(request: HttpRequest, slug: str, entity_id: UUID) -> list[TaxonomyLineOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [_line_out(ln) for ln in services.taxonomy_lines(ctx, entity_id)]
 
@@ -210,21 +211,21 @@ def apply_defaults(
     return DefaultsOut(mapped=services.apply_defaults(ctx, entity_id, payload.template))
 
 
-class HistoryOut(Schema):
+class MappingHistoryOut(Schema):
     line_code: str
     created_at: datetime
     superseded_at: datetime | None
     created_by_id: UUID
 
 
-@router.get(f"{BASE}/account-mapping/{{uuid:account_id}}/history", response=list[HistoryOut])
+@router.get(f"{BASE}/account-mapping/{{uuid:account_id}}/history", response=list[MappingHistoryOut])
 @requires("ledger.account.read")
 def mapping_history(
     request: HttpRequest, slug: str, entity_id: UUID, account_id: UUID
-) -> list[HistoryOut]:
+) -> list[MappingHistoryOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [
-        HistoryOut(
+        MappingHistoryOut(
             line_code=r.line.code,
             created_at=r.created_at,
             superseded_at=r.superseded_at,
