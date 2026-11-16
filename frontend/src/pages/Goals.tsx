@@ -760,7 +760,13 @@ export function GoalsPage() {
         </div>
       ) : null}
       {goal ? <Detail key={goal.id} goal={goal} /> : null}
-      {goal ? <GoalScenarios key={`s${goal.id}`} goalId={goal.id} /> : null}
+      {goal ? (
+        <GoalScenarios
+          key={`s${goal.id}`}
+          goalId={goal.id}
+          format={(v) => formatValue(v, goal.unit, goal.display, locale)}
+        />
+      ) : null}
     </Page>
   );
 }

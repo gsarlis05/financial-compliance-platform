@@ -280,9 +280,7 @@ describe("Scenarios (M7-7)", () => {
       `${API}/scenarios/sc1/comparison/export?granularity=YEAR&lang=en`,
     );
     fireEvent.click(screen.getByRole("button", { name: "Save this run" }));
-    await waitFor(() =>
-      expect(sent[1]?.url).toBe(`${API}/scenarios/sc1/runs`),
-    );
+    await waitFor(() => expect(sent[1]?.url).toBe(`${API}/scenarios/sc1/runs`));
     expect(await screen.findByText(/Saved: VALID/)).toBeInTheDocument();
     await accessible(container);
   });
@@ -482,7 +480,7 @@ describe("Goals against scenarios (M7-7)", () => {
     const { container } = mount(
       "/w/ws/e/e1/goals",
       "/w/:slug/e/:entityId/goals",
-      <GoalScenarios goalId="g1" />,
+      <GoalScenarios goalId="g1" format={(v) => (v ? `€${v}` : "")} />,
     );
     // Drafts are private: only shared scenarios are offered.
     const box = await screen.findByRole("checkbox", { name: "Price rise" });
@@ -499,7 +497,7 @@ describe("Goals against scenarios (M7-7)", () => {
     ).toBeInTheDocument();
     const row = within(table).getByRole("row", { name: /Price rise/ });
     expect(row).toHaveTextContent("Hypothetical");
-    expect(row).toHaveTextContent("-1000.00");
+    expect(row).toHaveTextContent("€-1000.00"); // in the goal's own format
     await accessible(container);
   });
 });

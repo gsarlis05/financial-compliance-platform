@@ -1,6 +1,7 @@
 // Working capital (M7-7 for M7-4): receivables, stock and payables by month, the days that drive
 // them and the cash conversion cycle, next to the days seen over the last 12 months; and what N
 // days are worth, worked out by running the projection again.
+import Decimal from "decimal.js";
 import { type SyntheticEvent, useState } from "react";
 import { useDaysWorth, useWorkingCapital } from "../api/scenarios";
 import { Loading, Page, ProblemMessage } from "../components/common";
@@ -15,12 +16,13 @@ export function WorkingCapitalPage() {
   const wc = useWorkingCapital(choice ? baseOf(choice) : null);
   const worth = useDaysWorth();
   const [driver, setDriver] = useState<"dso" | "dio" | "dpo">("dso");
-  const [days, setDays] = useState("-10");
+  const [shift, setShift] = useState("-10");
   const v = wc.data;
   const amount = (x: string) => formatAmount(x, locale);
+  const days = (x: string) => new Decimal(x).toFixed(1);
   const submit = (e: SyntheticEvent) => {
     e.preventDefault();
-    worth.mutate({ ...baseOf(choice), driver, days: Number(days) });
+    worth.mutate({ ...baseOf(choice), driver, days: Number(shift) });
   };
   return (
     <Page title={t("nav.workingCapital")}>
@@ -76,10 +78,10 @@ export function WorkingCapitalPage() {
                     <td className="amount">{amount(m.net)}</td>
                     <td className="amount">{amount(m.change)}</td>
                     <td className="amount">{amount(m.cash_effect)}</td>
-                    <td>{m.dso}</td>
-                    <td>{m.dio}</td>
-                    <td>{m.dpo}</td>
-                    <td>{m.ccc}</td>
+                    <td className="num">{days(m.dso)}</td>
+                    <td className="num">{days(m.dio)}</td>
+                    <td className="num">{days(m.dpo)}</td>
+                    <td className="num">{days(m.ccc)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -108,8 +110,8 @@ export function WorkingCapitalPage() {
               {t("se.days")}
               <input
                 inputMode="numeric"
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
               />
             </label>
             <button type="submit" disabled={worth.isPending}>

@@ -23,6 +23,7 @@ import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
+import { formatKpi } from "./Kpis";
 import { OPEX, REVENUE } from "./Projections";
 
 type Field = {
@@ -254,6 +255,7 @@ function OverrideForm({ detail }: { detail: ScenarioDetail }) {
 
 function describe(params: Params): string {
   return Object.entries(params)
+    .filter(([, v]) => !(Array.isArray(v) && v.length === 0))
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
     .join(" · ");
 }
@@ -528,39 +530,39 @@ function ComparisonPanel({ detail }: { detail: ScenarioDetail }) {
                 </tr>
               </thead>
               <tbody>
-                {c.rows
-                  .filter((r) => SHOWN.includes(r.key))
-                  .flatMap((r) => [
-                    <tr key={`${r.key}b`}>
-                      <th scope="row" rowSpan={3}>
-                        {t(`pj.k.${r.key}` as MessageKey)}
-                      </th>
-                      <td>{t("sc.legendBase")}</td>
-                      {r.base.map((v, i) => (
-                        <td key={i} className="amount">
-                          {amount(v)}
-                        </td>
-                      ))}
-                    </tr>,
-                    <tr key={`${r.key}s`}>
-                      <td>
-                        {c.scenario.name} ({t("nature.HYPOTHETICAL")})
+                {SHOWN.flatMap((key) =>
+                  c.rows.filter((r) => r.key === key),
+                ).flatMap((r) => [
+                  <tr key={`${r.key}b`}>
+                    <th scope="row" rowSpan={3}>
+                      {t(`pj.k.${r.key}` as MessageKey)}
+                    </th>
+                    <td>{t("sc.legendBase")}</td>
+                    {r.base.map((v, i) => (
+                      <td key={i} className="amount">
+                        {amount(v)}
                       </td>
-                      {r.scenario.map((v, i) => (
-                        <td key={i} className="amount">
-                          {amount(v)}
-                        </td>
-                      ))}
-                    </tr>,
-                    <tr key={`${r.key}d`} className="subtotal">
-                      <td>{t("sc.difference")}</td>
-                      {r.difference.map((v, i) => (
-                        <td key={i} className="amount">
-                          {amount(v)}
-                        </td>
-                      ))}
-                    </tr>,
-                  ])}
+                    ))}
+                  </tr>,
+                  <tr key={`${r.key}s`}>
+                    <td>
+                      {c.scenario.name} ({t("nature.HYPOTHETICAL")})
+                    </td>
+                    {r.scenario.map((v, i) => (
+                      <td key={i} className="amount">
+                        {amount(v)}
+                      </td>
+                    ))}
+                  </tr>,
+                  <tr key={`${r.key}d`} className="subtotal">
+                    <td>{t("sc.difference")}</td>
+                    {r.difference.map((v, i) => (
+                      <td key={i} className="amount">
+                        {amount(v)}
+                      </td>
+                    ))}
+                  </tr>,
+                ])}
               </tbody>
             </table>
           </div>
@@ -665,8 +667,15 @@ function ComparisonPanel({ detail }: { detail: ScenarioDetail }) {
                     {kpis.data.kpis.map((k) => (
                       <tr key={k.key}>
                         <th scope="row">{k.name}</th>
-                        <td>{k.base_value ?? "–"}</td>
-                        <td>{k.value ?? k.nm_reason}</td>
+                        <td className="num">
+                          {formatKpi(
+                            { value: k.base_value, display: k.display },
+                            locale,
+                          ) || "–"}
+                        </td>
+                        <td className="num">
+                          {formatKpi(k, locale) || k.nm_reason}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

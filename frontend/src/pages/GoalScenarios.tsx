@@ -9,7 +9,13 @@ import type { MessageKey } from "../i18n/messages";
 
 const MAX = 3;
 
-export function GoalScenarios({ goalId }: { goalId: string }) {
+export function GoalScenarios({
+  goalId,
+  format,
+}: {
+  goalId: string;
+  format: (value: string | null) => string;
+}) {
   const { t } = useI18n();
   const shared = (useScenarios().data ?? []).filter(
     (s) => s.status === "SHARED",
@@ -72,8 +78,8 @@ export function GoalScenarios({ goalId }: { goalId: string }) {
                   </th>
                   {o.applicable ? (
                     <>
-                      <td className="num">{o.projected ?? "–"}</td>
-                      <td className="num">{o.gap ?? "–"}</td>
+                      <td className="num">{format(o.projected) || "–"}</td>
+                      <td className="num">{format(o.gap) || "–"}</td>
                       <td>{t(`goal.status.${o.status}` as MessageKey)}</td>
                       <td>{o.note}</td>
                     </>

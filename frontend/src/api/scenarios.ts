@@ -2,6 +2,7 @@
 // Every figure these return is HYPOTHETICAL (a scenario) or FORECAST (an approved set).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
+import type { KpiDisplay } from "./kpi";
 import { useScope } from "./hooks";
 
 export type OverrideType =
@@ -374,7 +375,7 @@ export interface ProjectedKpis {
   kpis: {
     key: string;
     name: string;
-    display: string;
+    display: KpiDisplay;
     value: string | null;
     nm_reason: string;
     base_value: string | null;
