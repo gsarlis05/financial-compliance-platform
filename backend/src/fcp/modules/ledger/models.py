@@ -390,3 +390,20 @@ class PeriodUnlock(TenantOwned):
                 name="ledger_unlock_second_approver_distinct",
             ),
         ]
+
+
+class IntegrityCheckRun(TenantOwned):
+    """Result of one integrity check of a workspace (doc 05 §7, AC-C10)."""
+
+    class Status(models.TextChoices):
+        PASSED = "PASSED"
+        FAILED = "FAILED"
+
+    status = models.CharField(max_length=8, choices=Status.choices)
+    results = models.JSONField()
+    trigger = models.CharField(max_length=16, default="SCHEDULE")
+    finished_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "ledger_integrity_check_run"
+        indexes = [models.Index(fields=["tenant", "-created_at"])]

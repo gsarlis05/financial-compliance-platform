@@ -15,8 +15,16 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import accounts, corrections, entries, idempotency, periods, reports
-from .models import Account, FiscalYear, JournalEntry, LedgerSettings, Period, PeriodUnlock
+from . import accounts, corrections, entries, idempotency, integrity, periods, reports
+from .models import (
+    Account,
+    FiscalYear,
+    IntegrityCheckRun,
+    JournalEntry,
+    LedgerSettings,
+    Period,
+    PeriodUnlock,
+)
 
 __all__ = ["Account", "FiscalYear", "JournalEntry", "Period", "router"]
 
@@ -713,3 +721,29 @@ def general_ledger_csv(
         f"general-ledger-{gl.account.code}-{gl.date_to.isoformat()}.csv",
         "general_ledger",
     )
+
+
+# --- integrity checks (M1-11) --------------------------------------------------------------------
+
+
+class IntegrityCheckOut(Schema):
+    id: UUID
+    status: str
+    trigger: str
+    created_at: datetime
+    finished_at: datetime
+    results: list[dict[str, Any]]
+
+
+@router.get("/w/{slug}/integrity-checks", response=list[IntegrityCheckOut])
+@requires("admin.integrity.read")
+def list_integrity_checks(request: HttpRequest, slug: str) -> list[IntegrityCheckRun]:
+    ctx = workspace_ctx(request, slug)
+    return list(IntegrityCheckRun.objects.filter(tenant=ctx.tenant).order_by("-created_at")[:30])
+
+
+@router.post("/w/{slug}/integrity-checks", response={201: IntegrityCheckOut})
+@requires("admin.integrity.read")
+def run_integrity_check(request: HttpRequest, slug: str) -> Status[IntegrityCheckRun]:
+    ctx = workspace_ctx(request, slug)
+    return Status(201, integrity.run_checks(ctx.tenant.id, trigger="ON_DEMAND"))
