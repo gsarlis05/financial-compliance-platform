@@ -6,6 +6,7 @@ import {
   useDebts,
   useHolidays,
   useObligations,
+  useTaxPayments,
 } from "../api/hooks";
 import type {
   Adjustment,
@@ -18,6 +19,9 @@ import type {
   ObligationCategory,
   ObligationInput,
   Repayment,
+  TaxKind,
+  TaxPayment,
+  TaxPaymentInput,
 } from "../api/types";
 import {
   FieldError,
@@ -860,6 +864,237 @@ function DebtSection() {
   );
 }
 
+const TAX_KINDS: TaxKind[] = [
+  "VAT",
+  "CORPORATE_TAX",
+  "SPECIAL_DEFENCE",
+  "SOCIAL_INSURANCE",
+  "PAYE",
+  "OTHER",
+];
+const EMPTY_TAX: TaxPaymentInput = {
+  kind: "VAT",
+  period_label: "",
+  due_date: "",
+  amount: "",
+  nature: "EXPECTED",
+  reference: "",
+  paid_on: null,
+  note: "",
+};
+
+const taxInput = (p: TaxPayment): TaxPaymentInput => ({
+  kind: p.kind,
+  period_label: p.period_label,
+  due_date: p.due_date,
+  amount: p.amount,
+  nature: p.nature,
+  reference: p.reference,
+  paid_on: p.paid_on,
+  note: p.note,
+});
+
+function TaxSection() {
+  const { t, locale } = useI18n();
+  const list = useTaxPayments();
+  const { saveTaxPayment, retire } = useCommitmentMutations();
+  const [form, setForm] = useState<TaxPaymentInput>(EMPTY_TAX);
+  const [editing, setEditing] = useState<string | null>(null);
+  const set = (changes: Partial<TaxPaymentInput>) =>
+    setForm({ ...form, ...changes });
+
+  function submit(event: SyntheticEvent) {
+    event.preventDefault();
+    saveTaxPayment.mutate(
+      { seriesId: editing, body: form },
+      {
+        onSuccess: () => {
+          setForm(EMPTY_TAX);
+          setEditing(null);
+        },
+      },
+    );
+  }
+
+  return (
+    <section aria-labelledby="tax-heading">
+      <h2 id="tax-heading">{t("cm.taxes")}</h2>
+      <p className="muted">{t("cm.taxesHelp")}</p>
+      {list.isPending ? <Loading /> : null}
+      <ProblemMessage error={list.error ?? retire.error} />
+      {list.data?.length === 0 ? <p>{t("cm.noTaxes")}</p> : null}
+      {list.data?.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{t("cm.taxKind")}</th>
+                <th scope="col">{t("cm.period")}</th>
+                <th scope="col">{t("cm.dueDate")}</th>
+                <th scope="col" className="amount">
+                  {t("cm.amount")}
+                </th>
+                <th scope="col">{t("cm.nature")}</th>
+                <th scope="col">{t("cm.paidOn")}</th>
+                <th scope="col">
+                  <span className="visually-hidden">{t("cm.actions")}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.data.map((p) => (
+                <tr key={p.id} className={p.paid_on ? "muted" : ""}>
+                  <td>{t(`cm.tax.${p.kind}`)}</td>
+                  <td>{p.period_label}</td>
+                  <td>{p.due_date}</td>
+                  <td className="amount">
+                    {formatAmount(`-${p.amount}`, locale)}
+                  </td>
+                  <td>
+                    <NatureBadge nature={p.nature} />
+                  </td>
+                  <td>{p.paid_on ?? "—"}</td>
+                  <td>
+                    <div className="row-actions table-actions">
+                      {p.paid_on ? null : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            saveTaxPayment.mutate({
+                              seriesId: p.series_id,
+                              body: { ...taxInput(p), paid_on: today() },
+                            })
+                          }
+                        >
+                          {t("cm.markPaid")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm(taxInput(p));
+                          setEditing(p.series_id);
+                        }}
+                      >
+                        {t("cm.change")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          retire.mutate({
+                            kind: "tax-payments",
+                            seriesId: p.series_id,
+                          })
+                        }
+                      >
+                        {t("cm.retire")}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      <form className="panel form inline" onSubmit={submit}>
+        <h3>{editing ? t("cm.changeTax") : t("cm.addTax")}</h3>
+        <label>
+          {t("cm.taxKind")}
+          <select
+            value={form.kind}
+            onChange={(e) => set({ kind: e.target.value as TaxKind })}
+          >
+            {TAX_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {t(`cm.tax.${k}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("cm.period")}
+          <input
+            value={form.period_label}
+            onChange={(e) => set({ period_label: e.target.value })}
+            placeholder="2026-Q3"
+            required
+            maxLength={40}
+          />
+        </label>
+        <label>
+          {t("cm.dueDate")}
+          <input
+            type="date"
+            value={form.due_date}
+            onChange={(e) => set({ due_date: e.target.value })}
+            required
+          />
+        </label>
+        <label>
+          {t("cm.amount")}
+          <input
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => set({ amount: e.target.value })}
+            required
+          />
+          <FieldError error={saveTaxPayment.error} field="amount" />
+        </label>
+        <label>
+          {t("cm.natureField")}
+          <select
+            value={form.nature}
+            onChange={(e) =>
+              set({ nature: e.target.value as TaxPaymentInput["nature"] })
+            }
+          >
+            <option value="EXPECTED">{t("nature.EXPECTED")}</option>
+            <option value="COMMITTED">{t("nature.COMMITTED")}</option>
+          </select>
+        </label>
+        <label>
+          {t("cm.reference")}
+          <input
+            value={form.reference}
+            onChange={(e) => set({ reference: e.target.value })}
+            maxLength={100}
+          />
+        </label>
+        <label>
+          {t("cm.paidOn")}
+          <input
+            type="date"
+            value={form.paid_on ?? ""}
+            onChange={(e) => set({ paid_on: e.target.value || null })}
+          />
+        </label>
+        <ProblemMessage error={saveTaxPayment.error} />
+        <div className="actions">
+          <button
+            type="submit"
+            className="primary"
+            disabled={saveTaxPayment.isPending}
+          >
+            {editing ? t("cm.saveVersion") : t("cm.addTax")}
+          </button>
+          {editing ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setForm(EMPTY_TAX);
+              }}
+            >
+              {t("cm.cancel")}
+            </button>
+          ) : null}
+        </div>
+      </form>
+    </section>
+  );
+}
+
 function HolidaysSection() {
   const { t } = useI18n();
   const list = useHolidays();
@@ -977,6 +1212,7 @@ export function CommitmentsPage() {
     <Page title={t("cm.title")}>
       <ObligationsSection />
       <DebtSection />
+      <TaxSection />
       <HolidaysSection />
       <UpcomingSection />
     </Page>

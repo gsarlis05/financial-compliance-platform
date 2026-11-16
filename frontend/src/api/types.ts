@@ -602,10 +602,39 @@ export interface CommitmentFlow {
   scheduled: string;
   amount: string;
   nature: CommitmentNature;
-  source: "OBLIGATION" | "DEBT";
+  source: "OBLIGATION" | "DEBT" | "TAX";
   component: "PAYMENT" | "PRINCIPAL" | "INTEREST";
   category: string;
   name: string;
   series_id: string;
   version_id: string;
+}
+
+// --- tax payment calendar (M3-5) ------------------------------------------------------------------
+
+export type TaxKind =
+  | "VAT"
+  | "CORPORATE_TAX"
+  | "SPECIAL_DEFENCE"
+  | "SOCIAL_INSURANCE"
+  | "PAYE"
+  | "OTHER";
+
+export interface TaxPaymentInput {
+  kind: TaxKind;
+  period_label: string;
+  due_date: string;
+  amount: string;
+  nature: CommitmentNature;
+  reference: string;
+  paid_on: string | null;
+  note: string;
+}
+
+export interface TaxPayment extends TaxPaymentInput {
+  id: string;
+  series_id: string;
+  version: number;
+  superseded_at: string | null;
+  created_at: string;
 }

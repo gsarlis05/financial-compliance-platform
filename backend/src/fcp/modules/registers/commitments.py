@@ -1,4 +1,4 @@
-"""Recurring obligations, loans and holidays, and the dated flows they produce (M3-4).
+"""Recurring obligations, loans, tax payments and holidays, and their dated flows (M3-4, M3-5).
 
 Versions: creating gives version 1 of a new series. A change supersedes the current version and
 adds the next one, and retiring supersedes it without a successor, so history is kept and a
@@ -24,7 +24,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.calendar.api import Adjust, BusinessDays
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from .models import Counterparty, DebtInstrument, EntityHoliday, RecurringObligation
+from .models import Counterparty, DebtInstrument, EntityHoliday, RecurringObligation, TaxPayment
 from .schedules import (
     DayCount,
     Frequency,
@@ -201,7 +201,7 @@ def _validate_debt(entity_id: UUID, data: DebtInput) -> None:  # noqa: PLR0912 (
 # --- versions -------------------------------------------------------------------------------------
 
 
-def _current[V: (RecurringObligation, DebtInstrument)](
+def _current[V: (RecurringObligation, DebtInstrument, TaxPayment)](
     model: type[V], entity_id: UUID, series_id: UUID, *, lock: bool = False
 ) -> V:
     qs = model.objects.filter(
@@ -217,7 +217,7 @@ def _values(data: object) -> dict[str, Any]:
     return {f.name: getattr(data, f.name) for f in fields(data)}  # type: ignore[arg-type]
 
 
-def _save_version[V: (RecurringObligation, DebtInstrument)](
+def _save_version[V: (RecurringObligation, DebtInstrument, TaxPayment)](
     ctx: WorkspaceContext,
     model: type[V],
     entity_id: UUID,
@@ -287,8 +287,52 @@ def save_debt(
     return debt
 
 
+@dataclass(frozen=True)
+class TaxInput:
+    kind: str
+    period_label: str
+    due_date: date
+    amount: Decimal
+    nature: str
+    reference: str = ""
+    paid_on: date | None = None
+    note: str = ""
+
+
+def _validate_tax(data: TaxInput) -> None:
+    if data.kind not in TaxPayment.Kind.values:
+        raise _invalid("kind", "Unknown tax kind.")
+    if data.nature not in TaxPayment.Nature.values:
+        raise _invalid("nature", "Committed (assessed or returned) or expected (estimated).")
+    if data.amount <= 0 or data.amount != data.amount.quantize(Decimal("0.01")):
+        raise _invalid("amount", "The amount is positive, in cents.")
+    if not data.period_label.strip():
+        raise _invalid("period_label", "Name the period, e.g. 2026-Q3.")
+
+
 @transaction.atomic
-def retire[V: (RecurringObligation, DebtInstrument)](
+def save_tax_payment(
+    ctx: WorkspaceContext, entity_id: UUID, data: TaxInput, series_id: UUID | None = None
+) -> TaxPayment:
+    """Create or change a tax payment (a change, including marking it paid, adds a version)."""
+    entity = get_entity(ctx, entity_id, MANAGE)
+    _validate_tax(data)
+    values = _values(data)
+    values["period_label"] = data.period_label.strip()
+    payment = _save_version(ctx, TaxPayment, entity.id, values, series_id)
+    _audit(
+        ctx,
+        entity.id,
+        "tax_payment",
+        payment.series_id,
+        "registers.tax_payment.saved",
+        {"version": payment.version, **_log_values(values)},
+    )
+    return payment
+
+
+@transaction.atomic
+def retire[V: (RecurringObligation, DebtInstrument, TaxPayment)](
     ctx: WorkspaceContext, entity_id: UUID, model: type[V], series_id: UUID
 ) -> V:
     entity = get_entity(ctx, entity_id, MANAGE)
@@ -306,18 +350,19 @@ def retire[V: (RecurringObligation, DebtInstrument)](
     return current
 
 
-def current_versions[V: (RecurringObligation, DebtInstrument)](
+def current_versions[V: (RecurringObligation, DebtInstrument, TaxPayment)](
     ctx: WorkspaceContext, entity_id: UUID, model: type[V]
 ) -> list[V]:
     entity = get_entity(ctx, entity_id, READ)
+    first = "due_date" if model is TaxPayment else "name"
     return list(
         model.objects.filter(legal_entity=entity, superseded_at__isnull=True).order_by(
-            "name", "series_id"
+            first, "series_id"
         )
     )
 
 
-def history[V: (RecurringObligation, DebtInstrument)](
+def history[V: (RecurringObligation, DebtInstrument, TaxPayment)](
     ctx: WorkspaceContext, entity_id: UUID, model: type[V], series_id: UUID
 ) -> list[V]:
     entity = get_entity(ctx, entity_id, READ)
@@ -397,9 +442,9 @@ class CommitmentFlow:
     scheduled: date
     amount: Decimal
     nature: str  # COMMITTED | EXPECTED
-    source: str  # OBLIGATION | DEBT
+    source: str  # OBLIGATION | DEBT | TAX
     component: str  # PAYMENT | PRINCIPAL | INTEREST
-    category: str  # obligation category, or the debt kind
+    category: str  # obligation category, debt kind or tax kind
     name: str
     series_id: UUID
     version_id: UUID  # the exact version (for lineage and pinning)
@@ -470,6 +515,22 @@ def flows(
                             d.id,
                         )
                     )
+    for t in current_versions(ctx, entity_id, TaxPayment):
+        if t.paid_on is None and date_from <= t.due_date <= date_to:
+            found.append(
+                CommitmentFlow(
+                    t.due_date,
+                    t.due_date,
+                    -t.amount,
+                    t.nature,
+                    "TAX",
+                    "PAYMENT",
+                    t.kind,
+                    f"{t.kind} {t.period_label}",
+                    t.series_id,
+                    t.id,
+                )
+            )
     return sorted(found, key=lambda f: (f.due, f.source, f.name, f.component, str(f.version_id)))
 
 
