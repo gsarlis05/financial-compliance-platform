@@ -16,6 +16,60 @@
         "title": "AcceptIn",
         "type": "object"
       },
+      "AccountAmountOut": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for a computed part (e.g. depreciation)",
+            "title": "Account Id"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "comparative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative"
+          },
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "code",
+          "name",
+          "name_el",
+          "current",
+          "comparative"
+        ],
+        "title": "AccountAmountOut",
+        "type": "object"
+      },
       "AccountIn": {
         "properties": {
           "code": {
@@ -732,6 +786,41 @@
           "reason"
         ],
         "title": "ChainStatusOut",
+        "type": "object"
+      },
+      "CheckOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "column": {
+            "enum": [
+              "current",
+              "comparative"
+            ],
+            "title": "Column",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "column",
+          "ok",
+          "values"
+        ],
+        "title": "CheckOut",
         "type": "object"
       },
       "CompletenessOut": {
@@ -1667,6 +1756,54 @@
           "lines"
         ],
         "title": "EntryOut",
+        "type": "object"
+      },
+      "ExportQuery": {
+        "properties": {
+          "comparative": {
+            "default": "prior_year",
+            "enum": [
+              "prior_year",
+              "none"
+            ],
+            "title": "Comparative",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "csv",
+              "xlsx",
+              "pdf"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "lang": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Lang",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "format"
+        ],
+        "title": "ExportQuery",
         "type": "object"
       },
       "FactOut": {
@@ -2814,6 +2951,72 @@
         "title": "RoleOut",
         "type": "object"
       },
+      "RowOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountAmountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "comparative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "line",
+              "subtotal",
+              "total"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "name",
+          "name_el",
+          "current",
+          "comparative",
+          "accounts"
+        ],
+        "title": "RowOut",
+        "type": "object"
+      },
       "Rule": {
         "enum": [
           "REQUIRED",
@@ -2869,6 +3072,159 @@
           "approval_threshold"
         ],
         "title": "SettingsOut",
+        "type": "object"
+      },
+      "StatementOut": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "PL",
+              "BS",
+              "CF"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "name_el",
+          "rows",
+          "checks"
+        ],
+        "title": "StatementOut",
+        "type": "object"
+      },
+      "StatementsOut": {
+        "properties": {
+          "balance_sheet": {
+            "$ref": "#/components/schemas/StatementOut"
+          },
+          "cash_flow": {
+            "$ref": "#/components/schemas/StatementOut"
+          },
+          "comparative_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative From"
+          },
+          "comparative_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative To"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "ok": {
+            "description": "Every check passed (a failure is a defect and is logged)",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "profit_and_loss": {
+            "$ref": "#/components/schemas/StatementOut"
+          },
+          "taxonomy": {
+            "title": "Taxonomy",
+            "type": "string"
+          },
+          "watermark": {
+            "description": "The statements include every posting up to this number",
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entity_name",
+          "taxonomy",
+          "watermark",
+          "date_from",
+          "date_to",
+          "comparative_from",
+          "comparative_to",
+          "ok",
+          "profit_and_loss",
+          "balance_sheet",
+          "cash_flow"
+        ],
+        "title": "StatementsOut",
+        "type": "object"
+      },
+      "StatementsQuery": {
+        "properties": {
+          "comparative": {
+            "default": "prior_year",
+            "enum": [
+              "prior_year",
+              "none"
+            ],
+            "title": "Comparative",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "StatementsQuery",
         "type": "object"
       },
       "Status": {
@@ -7217,6 +7573,191 @@
         "summary": "Trial Balance Csv",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statements": {
+      "get": {
+        "description": "P&L, balance sheet and indirect cash flow for a period, with prior-year comparatives.\nBlocked (409 ``metrics.statements.mapping_incomplete``) while an account with a balance is\nunmapped; the problem's field errors list those accounts by code.",
+        "operationId": "fcp_modules_metrics_api_financial_statements",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "comparative",
+            "required": false,
+            "schema": {
+              "default": "prior_year",
+              "enum": [
+                "prior_year",
+                "none"
+              ],
+              "title": "Comparative",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Financial Statements",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/statements/export": {
+      "get": {
+        "description": "The three statements as CSV, XLSX (one sheet each) or PDF (one page each); audited.",
+        "operationId": "fcp_modules_metrics_api_export_statements",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "comparative",
+            "required": false,
+            "schema": {
+              "default": "prior_year",
+              "enum": [
+                "prior_year",
+                "none"
+              ],
+              "title": "Comparative",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "enum": [
+                "en",
+                "el"
+              ],
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Statements",
+        "tags": [
+          "metrics"
         ]
       }
     },

@@ -8,7 +8,9 @@ dependencies = [
     "django>=5.2,<5.3",
     "django-ninja>=1.7,<2",
     "gunicorn>=23,<24",
+    "openpyxl>=3.1,<4",
     "psycopg[binary]>=3.2,<4",
+    "reportlab>=4.2,<5",
     "requests>=2.34,<3",
     "structlog>=25,<27",
 ]
@@ -119,6 +121,8 @@ dev = [
     "pytest-django>=4.14.0",
     "responses>=0.26,<1",
     "ruff>=0.17.3",
+    "types-openpyxl>=3.1.5.20261017",
+    "types-reportlab>=5.0.0.20261008",
     "types-requests>=2.33.0.20261030",
 ]
 

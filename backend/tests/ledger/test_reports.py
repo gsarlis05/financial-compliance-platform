@@ -16,6 +16,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from fcp.core.db.rls import set_context
+from fcp.core.export import safe_text
 from fcp.modules.audit_log.models import AuditEvent
 from fcp.modules.ledger import accounts, entries, periods, reports
 from fcp.modules.ledger.models import AccountBalance
@@ -278,8 +279,8 @@ def test_csv_exports_neutralise_formula_injection(books: dict[str, Any], reviewe
 
 @pytest.mark.parametrize("value", ["=1+1", "+1", "-1", "@SUM(A1)", "\tx", "\rx"])
 def test_safe_text_escapes_formula_prefixes(value: str) -> None:
-    assert reports.safe_text(value) == "'" + value
-    assert reports.safe_text("Normal text") == "Normal text"
+    assert safe_text(value) == "'" + value
+    assert safe_text("Normal text") == "Normal text"
 
 
 @pytest.mark.django_db

@@ -139,17 +139,43 @@ On **Statement mapping**, *Apply default mapping* maps the whole Cyprus business
 liabilities and equity to the balance sheet, income and expenses to the profit and loss.
 
 At any date, the page says whether the mapping is **complete**. An account with a balance but no
-mapping blocks the statements (M2-8) until it is mapped; *9999 Suspense* is deliberately unmapped, so
+mapping blocks the statements (section 12) until it is mapped; *9999 Suspense* is deliberately unmapped, so
 statements stay blocked while it holds a balance. Every change keeps the previous version (history
 per account) and is recorded in the audit trail.
 
-## 12. Integrity checks
+## 12. Financial statements
+**Statements** shows the *profit and loss*, *balance sheet* and *cash flow statement* for the
+period you choose (the balance sheet is at the end date). It also shows the same period one year
+earlier unless you untick *Compare with the prior year*. These are **management statements**
+built from the statement mapping, not statutory financial statements.
+
+- Income is shown positive and expenses negative. Subtotals run from gross profit to the profit for
+  the period.
+- Until the year is closed, equity shows the *profit (loss) for the year to date* (and any result
+  of earlier years not yet closed) as separate rows.
+- The cash flow statement starts from profit, adds back depreciation, adjusts for changes in
+  working capital, and then shows investing and financing. It ends at the cash balance.
+- Select a line to see its accounts, and an account to see its ledger lines; each entry number
+  opens the entry.
+- Every time, the system checks four things:
+  - the balance sheet balances;
+  - the result equals the movement in equity (apart from capital paid in or distributed);
+  - the cash flow equals the movement in cash;
+  - equity agrees with the accounts.
+
+  If a check ever fails, the page says so; please report it.
+- If an account with a balance is not mapped, the statements are blocked and the page lists the
+  accounts, with a link to **Statement mapping**.
+- **Export** as PDF (one page per statement), XLSX (one sheet each) or CSV, in the language you
+  are using. Exports need the export permission and are recorded in the audit trail.
+
+## 13. Integrity checks
 On a schedule (`make ops-checks` locally; nightly once hosted) and on demand on the **Integrity**
 tab (owners, finance managers, partners and workspace admins), the system
 checks that every posted entry balances, that stored balances equal the entry lines, that numbering
 has no gaps, that locked periods were not changed, and that the audit trail's hash chain is intact.
 A failure is an incident: see the [integrity runbook](../runbooks/integrity-check-failure.md).
 
-## 13. Try it with demo data
+## 14. Try it with demo data
 `make demo SHARE_WITH=<your email>` creates a **Demo Trading** workspace with a year of synthetic,
 monthly-summarised books and gives you access as finance manager. See [the demo script](../demo.md).

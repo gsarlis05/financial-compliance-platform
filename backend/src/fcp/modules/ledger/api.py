@@ -38,6 +38,7 @@ __all__ = [
     "Period",
     "TrialBalanceRow",
     "account_list",
+    "fiscal_year_list",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
@@ -45,6 +46,7 @@ __all__ = [
 
 # Read functions for other modules (the reporting gateway, M2-6 onwards).
 account_list = accounts.list_accounts
+fiscal_year_list = periods.list_fiscal_years
 TrialBalanceRow = reports.TrialBalanceRow
 
 

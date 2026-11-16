@@ -14,8 +14,9 @@ from django.http import HttpRequest
 from ninja import Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.core.errors import ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.ledger.api import account_list, trial_balance_rows
+from fcp.modules.ledger.api import account_list, fiscal_year_list, trial_balance_rows
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
 from . import actuals
@@ -29,7 +30,9 @@ __all__ = [
     "account_activity",
     "accounts",
     "actuals_monthly",
+    "balances_before",
     "cash_daily",
+    "fiscal_year_start",
     "opening_net",
     "router",
 ]
@@ -106,6 +109,42 @@ def opening_net(ctx: WorkspaceContext, entity_id: UUID, *,
     """Net debit balance per account from everything dated before ``before``."""
     entity = get_entity(ctx, entity_id, "reports.read")
     return actuals.net_before(entity.id, ctx.tenant.id, before=before)
+
+
+def balances_before(
+    ctx: WorkspaceContext, entity_id: UUID, cutoffs: list[date]
+) -> tuple[int, dict[date, dict[UUID, Decimal]]]:
+    """Net debit balance per account from everything dated before each cut-off (one query)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.net_before_many(entity.id, ctx.tenant.id, cutoffs=cutoffs)
+
+
+def _shift_years(day: date, years: int) -> date:
+    try:
+        return day.replace(year=day.year + years)
+    except ValueError:  # 29 February
+        return day.replace(year=day.year + years, day=28)
+
+
+def fiscal_year_start(ctx: WorkspaceContext, entity_id: UUID, day: date) -> date:
+    """First day of the fiscal year containing ``day``. Outside the fiscal years created so far,
+    the nearest one is extended by whole years (statements may compare with a year never set up)."""
+    years = fiscal_year_list(ctx, entity_id)
+    if not years:
+        raise ValidationFailedError(
+            "Create a fiscal year before producing statements.",
+            field_errors={"date_to": ["no fiscal year"]},
+        )
+    for year in years:
+        if year.start_date <= day <= year.end_date:
+            return year.start_date
+    anchor = years[0].start_date if day < years[0].start_date else years[-1].start_date
+    start = anchor
+    while start > day:
+        start = _shift_years(start, -1)
+    while _shift_years(start, 1) <= day:
+        start = _shift_years(start, 1)
+    return start
 
 
 class MonthlyQuery(Schema):
