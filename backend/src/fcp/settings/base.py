@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "fcp.modules.dashboards",
     "fcp.modules.personal",
     "fcp.modules.assets",
+    "fcp.modules.projections",
 ]
 
 AUTH_USER_MODEL = "identity.User"

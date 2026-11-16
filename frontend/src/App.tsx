@@ -20,6 +20,7 @@ import { PortfolioPage } from "./pages/Portfolio";
 import { EngagementsPage } from "./pages/Engagements";
 import { WorkspaceDataPage } from "./pages/WorkspaceData";
 import { FixedAssetsPage } from "./pages/FixedAssets";
+import { AssumptionsPage } from "./pages/Assumptions";
 import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
 import { CashForecastPage } from "./pages/CashForecast";
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
         path: "w/:slug/e/:entityId/fixed-assets",
         element: <FixedAssetsPage />,
       },
+      { path: "w/:slug/e/:entityId/assumptions", element: <AssumptionsPage /> },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
       {
         path: "w/:slug/e/:entityId/custom-kpis",

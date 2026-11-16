@@ -1201,6 +1201,144 @@
         "title": "AssetsAsOfQuery",
         "type": "object"
       },
+      "AssumptionSetIn": {
+        "properties": {
+          "cutover": {
+            "description": "The last day of the last actual month",
+            "format": "date",
+            "title": "Cutover",
+            "type": "string"
+          },
+          "months": {
+            "default": 24,
+            "enum": [
+              12,
+              24,
+              36
+            ],
+            "title": "Months",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "revenue_growth": {
+            "default": "0",
+            "description": "% a year (actuals start)",
+            "pattern": "^-?\\d{1,4}(\\.\\d{1,4})?$",
+            "title": "Revenue Growth",
+            "type": "string"
+          },
+          "start_from": {
+            "default": "ACTUALS",
+            "enum": [
+              "ACTUALS",
+              "BUDGET",
+              "EMPTY"
+            ],
+            "title": "Start From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "cutover"
+        ],
+        "title": "AssumptionSetIn",
+        "type": "object"
+      },
+      "AssumptionSetOut": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "cutover": {
+            "format": "date",
+            "title": "Cutover",
+            "type": "string"
+          },
+          "family_id": {
+            "format": "uuid",
+            "title": "Family Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "months": {
+            "title": "Months",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "start_from": {
+            "title": "Start From",
+            "type": "string"
+          },
+          "status": {
+            "description": "DRAFT, APPROVED or SUPERSEDED",
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "family_id",
+          "version",
+          "name",
+          "cutover",
+          "months",
+          "start_from",
+          "note",
+          "status",
+          "supersedes_id",
+          "created_at",
+          "approved_at"
+        ],
+        "title": "AssumptionSetOut",
+        "type": "object"
+      },
       "AuditEventOut": {
         "properties": {
           "action": {
@@ -2843,6 +2981,56 @@
           "reason"
         ],
         "title": "ChainStatusOut",
+        "type": "object"
+      },
+      "ChangeIn": {
+        "properties": {
+          "driver": {
+            "maxLength": 20,
+            "title": "Driver",
+            "type": "string"
+          },
+          "line": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Line",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?\\d{1,13}(\\.\\d{1,6})?$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driver",
+          "month",
+          "value"
+        ],
+        "title": "ChangeIn",
+        "type": "object"
+      },
+      "ChangesIn": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeIn"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "ChangesIn",
         "type": "object"
       },
       "CheckOut": {
@@ -5002,6 +5190,32 @@
         "title": "DriftOut",
         "type": "object"
       },
+      "DriverOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "unit",
+          "lines"
+        ],
+        "title": "DriverOut",
+        "type": "object"
+      },
       "EngagementIn": {
         "properties": {
           "firm_slug": {
@@ -6899,6 +7113,83 @@
           }
         },
         "title": "GoalsQuery",
+        "type": "object"
+      },
+      "GridOut": {
+        "properties": {
+          "assumption_set": {
+            "$ref": "#/components/schemas/AssumptionSetOut"
+          },
+          "months": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "nature": {
+            "default": "FORECAST",
+            "description": "Every value is a forecast assumption",
+            "title": "Nature",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GridRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assumption_set",
+          "months",
+          "rows"
+        ],
+        "title": "GridOut",
+        "type": "object"
+      },
+      "GridRowOut": {
+        "properties": {
+          "driver": {
+            "title": "Driver",
+            "type": "string"
+          },
+          "line": {
+            "description": "Taxonomy line, or empty for a single row",
+            "title": "Line",
+            "type": "string"
+          },
+          "sources": {
+            "description": "ACTUALS, BUDGET, DEFAULT or MANUAL per month",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "unit": {
+            "description": "AMOUNT, PERCENT, DAYS or MONTHS",
+            "title": "Unit",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "driver",
+          "line",
+          "unit",
+          "values",
+          "sources"
+        ],
+        "title": "GridRowOut",
         "type": "object"
       },
       "HistoryQuery": {
@@ -10325,6 +10616,21 @@
           "reason"
         ],
         "title": "RejectIn",
+        "type": "object"
+      },
+      "RenameIn": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RenameIn",
         "type": "object"
       },
       "ReopenIn": {
@@ -14946,6 +15252,470 @@
         "summary": "Delete Allocation",
         "tags": [
           "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-drivers": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_list_drivers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DriverOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Drivers",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_list_sets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssumptionSetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Sets",
+        "tags": [
+          "projections"
+        ]
+      },
+      "post": {
+        "description": "Start a draft set from last year's actuals, the approved budget, or empty.",
+        "operationId": "fcp_modules_projections_api_create_set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssumptionSetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssumptionSetOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}": {
+      "get": {
+        "operationId": "fcp_modules_projections_api_get_set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GridOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Set",
+        "tags": [
+          "projections"
+        ]
+      },
+      "patch": {
+        "operationId": "fcp_modules_projections_api_rename_set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssumptionSetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Rename Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/approve": {
+      "post": {
+        "description": "Approve a draft: it never changes again; the family's earlier approved version is\nsuperseded.",
+        "operationId": "fcp_modules_projections_api_approve_set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssumptionSetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Approve Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/revise": {
+      "post": {
+        "description": "A new draft version with the same values.",
+        "operationId": "fcp_modules_projections_api_revise_set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssumptionSetOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revise Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/values": {
+      "put": {
+        "description": "Change values of a draft set (each becomes MANUAL).",
+        "operationId": "fcp_modules_projections_api_set_values",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GridOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Values",
+        "tags": [
+          "projections"
         ]
       }
     },
