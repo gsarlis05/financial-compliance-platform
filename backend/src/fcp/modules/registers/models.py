@@ -36,6 +36,11 @@ class Counterparty(TenantOwned):
     vat_no = models.CharField(max_length=30, blank=True)
     email = models.EmailField(max_length=320, blank=True)
     payment_terms_days = models.PositiveSmallIntegerField(default=30)
+    days_late_override = models.SmallIntegerField(
+        null=True, blank=True,
+        help_text="Days late to assume when forecasting this customer's receipts (M3-6); "
+        "overrides the observed average",
+    )  # fmt: skip
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
@@ -44,6 +49,11 @@ class Counterparty(TenantOwned):
     class Meta:
         db_table = "registers_counterparty"
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(days_late_override__isnull=True)
+                | models.Q(days_late_override__gte=-60, days_late_override__lte=365),
+                name="registers_counterparty_days_late_range",
+            ),
             models.UniqueConstraint(
                 fields=["legal_entity", "code"], name="registers_counterparty_code_unique"
             ),

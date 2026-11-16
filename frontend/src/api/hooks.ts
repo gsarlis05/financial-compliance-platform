@@ -47,6 +47,7 @@ import type {
   Instalment,
   Obligation,
   ObligationInput,
+  PaymentBehaviour,
   TaxPayment,
   TaxPaymentInput,
 } from "./types";
@@ -905,4 +906,33 @@ export function useCommitmentMutations() {
       onSuccess: refresh,
     }),
   };
+}
+
+// --- payment behaviour (M3-6) -----------------------------------------------------------------
+
+export function usePaymentBehaviour(asOf: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["payment-behaviour", entityId, asOf],
+    queryFn: () =>
+      api<PaymentBehaviour[]>(`${base}/payment-behaviour?as_of=${asOf}`),
+  });
+}
+
+export function useSetDaysLateOverride() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, days }: { id: string; days: number | null }) =>
+      api<Counterparty>(`${base}/counterparties/${id}`, {
+        method: "PATCH",
+        body: { days_late_override: days },
+      }),
+    onSuccess: () =>
+      Promise.all(
+        ["payment-behaviour", "counterparties"].map((key) =>
+          client.invalidateQueries({ queryKey: [key, entityId] }),
+        ),
+      ),
+  });
 }

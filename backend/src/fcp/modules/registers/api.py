@@ -19,18 +19,31 @@ from fcp.core.export import safe_text
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import commitments, services
+from . import behaviour, commitments, services
 from .commitments import CommitmentFlow
 from .models import Allocation, Counterparty, DebtInstrument, RecurringObligation, TaxPayment
 
-__all__ = ["CommitmentFlow", "Counterparty", "DebtInstrument", "OpenItem", "business_days",
-           "commitment_flows_between", "facilities", "open_items", "router"]  # fmt: skip
+__all__ = [
+    "Behaviour",
+    "CommitmentFlow",
+    "Counterparty",
+    "DebtInstrument",
+    "OpenItem",
+    "business_days",
+    "commitment_flows_between",
+    "facilities",
+    "open_items",
+    "payment_behaviour",
+    "router",
+]
 
 OpenItem = services.OpenItem
 open_items = services.open_items
 commitment_flows_between = commitments.flows
 facilities = commitments.facilities
 business_days = commitments.business_days
+Behaviour = behaviour.Behaviour
+payment_behaviour = behaviour.payment_behaviour
 
 router = Router(tags=["registers"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
@@ -49,6 +62,7 @@ class CounterpartyIn(Schema):
 
 class CounterpartyPatch(Schema):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    days_late_override: int | None = Field(default=None, ge=-60, le=365)
     vat_no: str | None = Field(default=None, max_length=30)
     email: str | None = Field(default=None, max_length=320)
     payment_terms_days: int | None = Field(default=None, ge=0, le=365)
@@ -64,6 +78,7 @@ class CounterpartyOut(Schema):
     email: str
     payment_terms_days: int
     status: str
+    days_late_override: int | None
 
 
 class CounterpartyFilter(Schema):
@@ -734,3 +749,35 @@ def tax_payment_history(
 ) -> list[TaxPaymentOut]:
     ctx = workspace_ctx(request, slug, entity_id)
     return [_tax_out(t) for t in commitments.history(ctx, entity_id, TaxPayment, series_id)]
+
+
+# --- payment behaviour (M3-6) ---------------------------------------------------------------------
+
+
+class BehaviourQuery(Schema):
+    as_of: date
+
+
+class BehaviourOut(Schema):
+    counterparty_id: UUID
+    counterparty_code: str
+    observed_days_late: int | None
+    sample: int
+    override: int | None
+    days_late: int = Field(description="Used by the forecast: override, else observed, else 0")
+    note: str
+
+
+@router.get(f"{BASE}/payment-behaviour", response=list[BehaviourOut])
+@requires("registers.counterparty.read")
+def get_payment_behaviour(
+    request: HttpRequest, slug: str, entity_id: UUID, q: Query[BehaviourQuery]
+) -> list[BehaviourOut]:
+    """How late each customer pays, from invoices settled in the 12 months before ``as_of``."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [
+        BehaviourOut(counterparty_id=b.counterparty_id, counterparty_code=b.counterparty_code,
+                     observed_days_late=b.observed_days_late, sample=b.sample,
+                     override=b.override, days_late=b.days_late, note=b.note)
+        for b in behaviour.payment_behaviour(ctx, entity_id, q.as_of)
+    ]  # fmt: skip

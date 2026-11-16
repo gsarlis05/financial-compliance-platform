@@ -108,7 +108,8 @@ def create_counterparty(
     return counterparty
 
 
-_EDITABLE = ("name", "vat_no", "email", "payment_terms_days", "status")
+_EDITABLE = ("name", "vat_no", "email", "payment_terms_days", "status", "days_late_override")
+_NULLABLE = frozenset({"days_late_override"})
 
 
 @transaction.atomic
@@ -122,7 +123,7 @@ def update_counterparty(
         raise ValidationFailedError("Unknown status.", field_errors={"status": ["invalid"]})
     before = {k: getattr(counterparty, k) for k in _EDITABLE}
     for key in _EDITABLE:
-        if key in changes and changes[key] is not None:
+        if key in changes and (changes[key] is not None or key in _NULLABLE):
             value = changes[key]
             if isinstance(value, str):
                 value = value.strip()
