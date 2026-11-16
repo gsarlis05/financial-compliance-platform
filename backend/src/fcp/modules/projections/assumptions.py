@@ -477,3 +477,27 @@ def approved_values(
     for v in AssumptionValue.objects.filter(assumption_set=made):
         found[(v.driver, v.line)][v.month] = v.value
     return made, found
+
+
+@dataclass(frozen=True)
+class SetInfo:
+    """What another module may know about an assumption set (M7-1: a scenario's base)."""
+
+    id: UUID
+    legal_entity_id: UUID
+    family_id: UUID
+    name: str
+    version: int
+    status: str
+    cutover: date
+    months: list[date]  # the first day of each month of the horizon
+    loan_codes: frozenset[str]
+
+
+def set_info(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> SetInfo:
+    made = _set(ctx, entity_id, set_id, READ)
+    return SetInfo(
+        id=made.id, legal_entity_id=made.legal_entity_id, family_id=made.family_id,
+        name=made.name, version=made.version, status=made.status, cutover=made.cutover,
+        months=horizon(made.cutover, made.months), loan_codes=frozenset(loan_codes(made)),
+    )  # fmt: skip
