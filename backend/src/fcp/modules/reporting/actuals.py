@@ -116,39 +116,108 @@ class Actuals:
     facts: list[Fact] = field(default_factory=list)
 
 
-def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date) -> Actuals:
-    """Operating actuals per month: year-end closing entries are left out."""
-    watermark = refresh(tenant_id)
+class WatermarkError(ValueError):
+    """A pinned read asked for a watermark the read model has not reached (or a negative one)."""
+
+
+Later = list[tuple[UUID, date, bool, Decimal, Decimal]]
+_LATER_TEMPLATE = """
+SELECT l.account_id, e.accounting_date, {closing}, sum(l.debit), sum(l.credit)
+  FROM ledger_journal_line l JOIN ledger_journal_entry e ON e.id = l.entry_id
+ WHERE e.tenant_id = %s AND e.legal_entity_id = %s AND e.status = 'POSTED'
+   AND e.posting_seq > %s AND e.posting_seq <= %s
+ GROUP BY 1, 2, 3
+"""
+_LATER = _LATER_TEMPLATE.format(closing=_IS_CLOSING)
+Totals = dict[tuple[UUID, date], list[Decimal]]
+
+
+def _pinned(entity_id: UUID, tenant_id: UUID, watermark: int | None) -> tuple[int, Later]:
+    """The watermark to read at and the postings made after it, which a pinned read subtracts.
+
+    Posted entries are immutable and their ``posting_seq`` only grows, so "the facts as of
+    watermark W" are exactly the current facts minus the lines of entries posted after W (doc 10
+    §2.3: a calculation run re-reads the same actuals later)."""
+    latest = refresh(tenant_id)
+    if watermark is None or watermark == latest:
+        return latest, []
+    if watermark < 0 or watermark > latest:
+        raise WatermarkError(f"watermark {watermark} is outside 0..{latest}")
+    with connection.cursor() as cursor:
+        cursor.execute(_LATER, [tenant_id, entity_id, watermark, latest])
+        return watermark, list(cursor.fetchall())
+
+
+def _subtract(facts: Totals,
+              later: Iterable[tuple[UUID, date, Decimal, Decimal]]) -> None:  # fmt: skip
+    """Remove later postings from facts; a fact that only existed because of them disappears."""
+    for account_id, period, debit, credit in later:
+        key = (account_id, period)
+        if key not in facts:
+            continue
+        totals = facts[key]
+        totals[0] -= debit
+        totals[1] -= credit
+        if not totals[0] and not totals[1]:
+            del facts[key]
+
+
+def _facts(rows: Iterable[tuple[UUID, date, Decimal, Decimal]]) -> Totals:
+    return {(a, p): [d, c] for a, p, d, c in rows}
+
+
+def _as_facts(facts: Totals) -> list[Fact]:
+    ordered = sorted(facts.items(), key=lambda kv: (kv[0][1], str(kv[0][0])))
+    return [Fact(a, p, d, c) for (a, p), (d, c) in ordered]
+
+
+def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date,
+            watermark: int | None = None) -> Actuals:  # fmt: skip
+    """Operating actuals per month: year-end closing entries are left out. With ``watermark``, the
+    facts as they were at that watermark."""
+    pinned, later = _pinned(entity_id, tenant_id, watermark)
+    first, last = date_from.replace(day=1), date_to.replace(day=1)
     rows = FactMonthly.objects.filter(
-        legal_entity_id=entity_id,
-        is_closing=False,
-        month__gte=date_from.replace(day=1),
-        month__lte=date_to.replace(day=1),
-    ).order_by("month", "account_id")
-    return Actuals(watermark, [Fact(r.account_id, r.month, r.debit_total, r.credit_total)
-                               for r in rows])  # fmt: skip
+        legal_entity_id=entity_id, is_closing=False, month__gte=first, month__lte=last
+    )
+    facts = _facts((r.account_id, r.month, r.debit_total, r.credit_total) for r in rows)
+    _subtract(facts, ((a, d.replace(day=1), dr, cr) for a, d, closing, dr, cr in later
+                      if not closing))  # fmt: skip
+    return Actuals(pinned, _as_facts(facts))
 
 
 def daily(entity_id: UUID, tenant_id: UUID, *, account_ids: list[UUID], date_from: date,
-          date_to: date) -> Actuals:  # fmt: skip
-    watermark = refresh(tenant_id)
+          date_to: date, watermark: int | None = None) -> Actuals:  # fmt: skip
+    pinned, later = _pinned(entity_id, tenant_id, watermark)
     rows = FactDaily.objects.filter(
         legal_entity_id=entity_id, account_id__in=account_ids, day__gte=date_from,
         day__lte=date_to, is_closing=False,
-    ).order_by("day", "account_id")  # fmt: skip
-    return Actuals(watermark, [Fact(r.account_id, r.day, r.debit_total, r.credit_total)
-                               for r in rows])  # fmt: skip
+    )  # fmt: skip
+    facts = _facts((r.account_id, r.day, r.debit_total, r.credit_total) for r in rows)
+    _subtract(facts, ((a, d, dr, cr) for a, d, closing, dr, cr in later if not closing))
+    return Actuals(pinned, _as_facts(facts))
 
 
 def net_before(
-    entity_id: UUID, tenant_id: UUID, *, before: date
+    entity_id: UUID, tenant_id: UUID, *, before: date, watermark: int | None = None
 ) -> tuple[int, dict[UUID, Decimal]]:
     """Net debit balance per account from all postings dated before ``before`` (openings)."""
-    watermark = refresh(tenant_id)
+    pinned, later = _pinned(entity_id, tenant_id, watermark)
+    rows: dict[tuple[UUID, date, bool], list[Decimal]] = {
+        (r.account_id, r.day, r.is_closing): [r.debit_total, r.credit_total]
+        for r in FactDaily.objects.filter(legal_entity_id=entity_id, day__lt=before)
+    }
+    for account_id, day, closing, debit, credit in later:
+        key = (account_id, day, closing)
+        if key in rows:
+            rows[key][0] -= debit
+            rows[key][1] -= credit
+            if not rows[key][0] and not rows[key][1]:
+                del rows[key]
     totals: dict[UUID, Decimal] = defaultdict(lambda: ZERO)
-    for r in FactDaily.objects.filter(legal_entity_id=entity_id, day__lt=before):
-        totals[r.account_id] += r.debit_total - r.credit_total
-    return watermark, dict(totals)
+    for (account_id, _, _), (debit, credit) in rows.items():
+        totals[account_id] += debit - credit
+    return pinned, dict(totals)
 
 
 Balances = dict[date, dict[UUID, Decimal]]

@@ -42,6 +42,10 @@ PERMISSIONS: dict[str, str] = {
     "documents.read": "See and download documents",
     "documents.upload": "Upload documents",
     "documents.link": "Attach documents to entries and open items",
+    # planning: calculation runs (M3-2), forecasts and what-ifs (M3)
+    "planning.read": "See forecasts, calculation runs and how each number was computed",
+    "planning.run": "Run forecasts and calculations, and check that a run reproduces",
+    "planning.publish": "Publish a calculation run (it then never changes)",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -59,6 +63,7 @@ _READ = frozenset(
         "reports.read",
         "banking.read",
         "documents.read",
+        "planning.read",
     }
 )
 _PREPARE = _READ | {
@@ -73,6 +78,7 @@ _PREPARE = _READ | {
     "banking.reconcile",
     "documents.upload",
     "documents.link",
+    "planning.run",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}
@@ -86,6 +92,7 @@ _SIGN_OFF = (
         "ledger.settings.manage",
         "audit.read",
         "admin.integrity.read",
+        "planning.publish",
     }
 )
 

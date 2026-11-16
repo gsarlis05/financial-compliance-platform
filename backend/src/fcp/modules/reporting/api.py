@@ -20,18 +20,20 @@ from fcp.modules.ledger.api import account_list, fiscal_year_list, trial_balance
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
 from . import actuals
-from .actuals import Actuals, Drift, Fact
+from .actuals import Actuals, Drift, Fact, WatermarkError
 
 __all__ = [
     "AccountActivity",
     "AccountRef",
     "Actuals",
     "Fact",
+    "WatermarkError",
     "account_activity",
     "accounts",
     "actuals_monthly",
     "balances_before",
     "cash_daily",
+    "current_watermark",
     "fiscal_year_start",
     "opening_net",
     "router",
@@ -89,26 +91,37 @@ def account_activity(
 # --- reporting.actuals (M2-7) ---------------------------------------------------------------------
 
 
+# With ``watermark``, these return the actuals exactly as they were at that ledger watermark
+# (``WatermarkError`` if it was never reached): calculation runs pin it to be reproducible.
+
+
+def current_watermark(ctx: WorkspaceContext, entity_id: UUID) -> int:
+    """The highest posting sequence included in the actuals now (refreshing them first)."""
+    get_entity(ctx, entity_id, "reports.read")
+    return actuals.refresh(ctx.tenant.id)
+
+
 def actuals_monthly(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,
-                    date_to: date) -> Actuals:  # fmt: skip
+                    date_to: date, watermark: int | None = None) -> Actuals:  # fmt: skip
     """Monthly debit/credit totals per account, with the watermark they include."""
     entity = get_entity(ctx, entity_id, "reports.read")
-    return actuals.monthly(entity.id, ctx.tenant.id, date_from=date_from, date_to=date_to)
+    return actuals.monthly(entity.id, ctx.tenant.id, date_from=date_from, date_to=date_to,
+                           watermark=watermark)  # fmt: skip
 
 
-def cash_daily(ctx: WorkspaceContext, entity_id: UUID, *, account_ids: list[UUID],
-               date_from: date, date_to: date) -> Actuals:  # fmt: skip
+def cash_daily(ctx: WorkspaceContext, entity_id: UUID, *, account_ids: list[UUID], date_from: date,
+               date_to: date, watermark: int | None = None) -> Actuals:  # fmt: skip
     """Daily movements of the given (cash) accounts, with the watermark they include."""
     entity = get_entity(ctx, entity_id, "reports.read")
     return actuals.daily(entity.id, ctx.tenant.id, account_ids=account_ids,
-                         date_from=date_from, date_to=date_to)  # fmt: skip
+                         date_from=date_from, date_to=date_to, watermark=watermark)  # fmt: skip
 
 
-def opening_net(ctx: WorkspaceContext, entity_id: UUID, *,
-                before: date) -> tuple[int, dict[UUID, Decimal]]:  # fmt: skip
+def opening_net(ctx: WorkspaceContext, entity_id: UUID, *, before: date,
+                watermark: int | None = None) -> tuple[int, dict[UUID, Decimal]]:  # fmt: skip
     """Net debit balance per account from everything dated before ``before``."""
     entity = get_entity(ctx, entity_id, "reports.read")
-    return actuals.net_before(entity.id, ctx.tenant.id, before=before)
+    return actuals.net_before(entity.id, ctx.tenant.id, before=before, watermark=watermark)
 
 
 def balances_before(

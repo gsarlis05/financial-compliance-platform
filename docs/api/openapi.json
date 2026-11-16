@@ -2287,6 +2287,26 @@
         "title": "EntryOut",
         "type": "object"
       },
+      "ExplainOut": {
+        "properties": {
+          "lineage": {
+            "items": {
+              "$ref": "#/components/schemas/LineageOut"
+            },
+            "title": "Lineage",
+            "type": "array"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ResultOut"
+          }
+        },
+        "required": [
+          "result",
+          "lineage"
+        ],
+        "title": "ExplainOut",
+        "type": "object"
+      },
       "ExportQuery": {
         "properties": {
           "comparative": {
@@ -3045,6 +3065,41 @@
         "title": "LineOut",
         "type": "object"
       },
+      "LineageOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "input_kind": {
+            "title": "Input Kind",
+            "type": "string"
+          },
+          "input_ref": {
+            "title": "Input Ref",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "input_kind",
+          "input_ref",
+          "amount",
+          "note"
+        ],
+        "title": "LineageOut",
+        "type": "object"
+      },
       "LinesQuery": {
         "properties": {
           "status": {
@@ -3394,6 +3449,19 @@
         "title": "MonthlyQuery",
         "type": "object"
       },
+      "Nature": {
+        "enum": [
+          "ACTUAL",
+          "COMMITTED",
+          "EXPECTED",
+          "HYPOTHETICAL",
+          "BUDGET",
+          "FORECAST",
+          "TARGET"
+        ],
+        "title": "Nature",
+        "type": "string"
+      },
       "OpenItemOut": {
         "properties": {
           "account_code": {
@@ -3702,6 +3770,116 @@
         "title": "ReopenIn",
         "type": "object"
       },
+      "ReproductionOut": {
+        "properties": {
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "recomputed_hash": {
+            "title": "Recomputed Hash",
+            "type": "string"
+          },
+          "reproduced": {
+            "title": "Reproduced",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stored_intact": {
+            "title": "Stored Intact",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "reproduced",
+          "stored_intact",
+          "output_hash",
+          "recomputed_hash",
+          "reason"
+        ],
+        "title": "ReproductionOut",
+        "type": "object"
+      },
+      "ResultOut": {
+        "properties": {
+          "dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "granularity": {
+            "title": "Granularity",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nature": {
+            "$ref": "#/components/schemas/Nature",
+            "description": "Every value has a nature (doc 10 P2)"
+          },
+          "nm_reason": {
+            "title": "Nm Reason",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "series_key": {
+            "title": "Series Key",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "series_key",
+          "dimensions",
+          "period_start",
+          "period_end",
+          "granularity",
+          "nature",
+          "value",
+          "unit",
+          "nm_reason"
+        ],
+        "title": "ResultOut",
+        "type": "object"
+      },
       "ReverseIn": {
         "properties": {
           "reason": {
@@ -3873,6 +4051,271 @@
         ],
         "title": "Rule",
         "type": "string"
+      },
+      "RunDetailOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of_date": {
+            "format": "date",
+            "title": "As Of Date",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "input_refs": {
+            "additionalProperties": true,
+            "title": "Input Refs",
+            "type": "object"
+          },
+          "invariant_results": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Invariant Results",
+            "type": "object"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ResultOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "engine_version",
+          "status",
+          "as_of_date",
+          "actuals_watermark",
+          "input_refs",
+          "input_hash",
+          "output_hash",
+          "invariant_results",
+          "error",
+          "stale",
+          "is_published",
+          "trigger",
+          "supersedes_id",
+          "created_at",
+          "finished_at",
+          "results"
+        ],
+        "title": "RunDetailOut",
+        "type": "object"
+      },
+      "RunOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of_date": {
+            "format": "date",
+            "title": "As Of Date",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "input_refs": {
+            "additionalProperties": true,
+            "title": "Input Refs",
+            "type": "object"
+          },
+          "invariant_results": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Invariant Results",
+            "type": "object"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "output_hash": {
+            "title": "Output Hash",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "engine_version",
+          "status",
+          "as_of_date",
+          "actuals_watermark",
+          "input_refs",
+          "input_hash",
+          "output_hash",
+          "invariant_results",
+          "error",
+          "stale",
+          "is_published",
+          "trigger",
+          "supersedes_id",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "RunsQuery": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 200,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "RunsQuery",
+        "type": "object"
       },
       "SettingsIn": {
         "properties": {
@@ -6623,6 +7066,326 @@
         "summary": "Reconciliations",
         "tags": [
           "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/calc-runs": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_calc_runs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 30,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Calc Runs",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/calc-runs/{run_id}": {
+      "get": {
+        "operationId": "fcp_modules_metrics_api_calc_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Calc Run",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/calc-runs/{run_id}/publish": {
+      "post": {
+        "operationId": "fcp_modules_metrics_api_publish_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Publish Run",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/calc-runs/{run_id}/reproduce": {
+      "post": {
+        "description": "Compute the run again from its stored inputs and compare the output hash (AC-CF3).",
+        "operationId": "fcp_modules_metrics_api_reproduce_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReproductionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reproduce Run",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/calc-runs/{run_id}/results/{result_id}/explain": {
+      "get": {
+        "description": "What a value was computed from: actuals, open items, assumptions, ... (AC-CF4).",
+        "operationId": "fcp_modules_metrics_api_explain_result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Result Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Explain Result",
+        "tags": [
+          "metrics"
         ]
       }
     },

@@ -1,11 +1,12 @@
-"""Public interface of the ``metrics`` module and its HTTP routes (M2-6: taxonomy and mapping).
+"""Public interface of the ``metrics`` module and its HTTP routes (M2-6: taxonomy and mapping;
+M2-8: statements; M3-2: natures, series and calculation runs).
 
 Routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from django.http import HttpRequest, HttpResponse
@@ -16,13 +17,21 @@ from fcp.core.api.permissions import requires
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
-from . import exports, services, statements
-from .models import TaxonomyLine
+from . import calc, exports, services, statements
+from .calc import Engine, Output, Reproduction, RunInputs, Source, Value, execute, mark_stale
+from .calc import register as register_engine
+from .hashing import canonical_decimal
+from .models import CalcResult, CalcRun, TaxonomyLine
+from .nature import ActualSeries, BlendedSeries, Nature, NatureMixError, PlanSeries, Point, blend
 from .services import Completeness, completeness, current_mapping
 from .taxonomy import DEFAULT_TAXONOMY
 
-__all__ = ["DEFAULT_TAXONOMY", "Completeness", "TaxonomyLine", "completeness", "current_mapping",
-           "router"]  # fmt: skip
+__all__ = [
+    "DEFAULT_TAXONOMY", "ActualSeries", "BlendedSeries", "CalcRun", "Completeness", "Engine",
+    "Nature", "NatureMixError", "Output", "PlanSeries", "Point", "Reproduction", "RunInputs",
+    "Source", "TaxonomyLine", "Value", "blend", "completeness", "current_mapping", "execute",
+    "mark_stale", "register_engine", "router",
+]  # fmt: skip
 
 router = Router(tags=["metrics"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
@@ -342,3 +351,135 @@ def export_statements(
     response = HttpResponse(content, content_type=_CONTENT_TYPES[q.format])
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# --- calculation runs (M3-2) ----------------------------------------------------------------------
+
+
+def _amount(value: Decimal | None) -> str | None:
+    """Exact, as computed (values are not rounded here; displays round them)."""
+    return None if value is None else canonical_decimal(value)
+
+
+class RunOut(Schema):
+    id: UUID
+    kind: str
+    engine_version: str
+    status: str
+    as_of_date: date
+    actuals_watermark: int
+    input_refs: dict[str, Any]
+    input_hash: str
+    output_hash: str
+    invariant_results: dict[str, bool]
+    error: str
+    stale: bool
+    is_published: bool
+    trigger: str
+    supersedes_id: UUID | None
+    created_at: datetime
+    finished_at: datetime | None
+
+
+class ResultOut(Schema):
+    id: UUID
+    series_key: str
+    dimensions: list[str]
+    period_start: date
+    period_end: date
+    granularity: str
+    nature: Nature = Field(description="Every value has a nature (doc 10 P2)")
+    value: str | None
+    unit: str
+    nm_reason: str
+
+
+class RunDetailOut(RunOut):
+    results: list[ResultOut]
+
+
+class LineageOut(Schema):
+    input_kind: str
+    input_ref: str
+    amount: str | None
+    note: str
+
+
+class ExplainOut(Schema):
+    result: ResultOut
+    lineage: list[LineageOut]
+
+
+class ReproductionOut(Schema):
+    run_id: UUID
+    reproduced: bool
+    stored_intact: bool
+    output_hash: str
+    recomputed_hash: str
+    reason: str
+
+
+def _run_out(run: CalcRun) -> dict[str, Any]:
+    return {f: getattr(run, f) for f in RunOut.model_fields}
+
+
+def _result_out(r: CalcResult) -> ResultOut:
+    return ResultOut(id=r.id, series_key=r.series_key, dimensions=r.dimensions,
+                     period_start=r.period_start, period_end=r.period_end,
+                     granularity=r.granularity, nature=Nature(r.nature), value=_amount(r.value),
+                     unit=r.unit, nm_reason=r.nm_reason)  # fmt: skip
+
+
+class RunsQuery(Schema):
+    kind: str | None = Field(None, max_length=30)
+    limit: int = Field(50, ge=1, le=200)
+
+
+@router.get(f"{BASE}/calc-runs", response=list[RunOut])
+@requires("planning.read")
+def calc_runs(request: HttpRequest, slug: str, entity_id: UUID,
+              q: Query[RunsQuery]) -> list[RunOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [RunOut(**_run_out(r)) for r in calc.list_runs(ctx, entity_id, q.kind, q.limit)]
+
+
+@router.get(f"{BASE}/calc-runs/{{uuid:run_id}}", response=RunDetailOut)
+@requires("planning.read")
+def calc_run(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID) -> RunDetailOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    run = calc.get_run(ctx, entity_id, run_id)
+    return RunDetailOut(**_run_out(run), results=[_result_out(r) for r in calc.results(run)])
+
+
+@router.get(f"{BASE}/calc-runs/{{uuid:run_id}}/results/{{uuid:result_id}}/explain",
+            response=ExplainOut)  # fmt: skip
+@requires("planning.read")
+def explain_result(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
+                   result_id: UUID) -> ExplainOut:  # fmt: skip
+    """What a value was computed from: actuals, open items, assumptions, ... (AC-CF4)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    result, lineage = calc.explain(ctx, entity_id, run_id, result_id)
+    return ExplainOut(result=_result_out(result), lineage=[
+        LineageOut(input_kind=x.input_kind, input_ref=x.input_ref, amount=_amount(x.amount),
+                   note=x.note)
+        for x in lineage
+    ])  # fmt: skip
+
+
+@router.post(f"{BASE}/calc-runs/{{uuid:run_id}}/reproduce", response=ReproductionOut)
+@requires("planning.run")
+def reproduce_run(request: HttpRequest, slug: str, entity_id: UUID,
+                  run_id: UUID) -> ReproductionOut:  # fmt: skip
+    """Compute the run again from its stored inputs and compare the output hash (AC-CF3)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    r = calc.reproduce(ctx, entity_id, run_id)
+    return ReproductionOut(run_id=r.run_id, reproduced=r.reproduced, stored_intact=r.stored_intact,
+                           output_hash=r.output_hash, recomputed_hash=r.recomputed_hash,
+                           reason=r.reason)  # fmt: skip
+
+
+@router.post(f"{BASE}/calc-runs/{{uuid:run_id}}/publish", response=RunOut)
+@requires("planning.publish")
+def publish_run(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID) -> RunOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return RunOut(**_run_out(calc.publish(ctx, entity_id, run_id)))
