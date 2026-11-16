@@ -9,6 +9,8 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
+from django.db.models import Q, Sum
+from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
 
@@ -38,12 +40,14 @@ from .models import (
     JournalEntry,
     JournalLine,
     LedgerSettings,
+    LineDimension,
     Period,
     PeriodUnlock,
 )
 
 __all__ = [
     "Account",
+    "DimensionTotal",
     "EntryInput",
     "FiscalYear",
     "JournalEntry",
@@ -57,10 +61,12 @@ __all__ = [
     "create_entry_draft",
     "dimension_list",
     "fiscal_year_list",
+    "posted_dimension_totals",
     "posted_lines",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
+    "unposted_entries",
 ]
 
 EntryInput = entries.EntryInput
@@ -103,6 +109,70 @@ def posted_lines(
         )
         for ln in rows
     ]  # fmt: skip
+
+
+@dataclass(frozen=True)
+class DimensionTotal:
+    """Posted totals of one account in one month, for lines tagged with one dimension value."""
+
+    account_id: UUID
+    month: date
+    value_id: UUID
+    debit_total: Decimal
+    credit_total: Decimal
+
+
+def _operating(prefix: str = "") -> Q:
+    """Posted entries other than year-end closing entries and reversals of them (M2-9)."""
+    closing = Q(**{f"{prefix}entry_type": "CLOSING"}) | Q(
+        **{f"{prefix}entry_type": "REVERSAL", f"{prefix}reverses_entry__entry_type": "CLOSING"}
+    )
+    return Q(**{f"{prefix}status": JournalEntry.Status.POSTED}) & ~closing
+
+
+def posted_dimension_totals(  # noqa: PLR0913 (keyword-only filters)
+    ctx: Any,
+    entity_id: UUID,
+    *,
+    date_from: date,
+    date_to: date,
+    value_ids: list[UUID],
+    watermark: int | None = None,
+    permission: str = "reports.read",
+) -> list[DimensionTotal]:
+    """Monthly posted totals per account of lines tagged with the given dimension values, closing
+    entries excluded; with ``watermark``, only postings up to it. Requires ``reports.read``, or
+    ``budget.department`` for a department owner (the caller passes only the values they own)."""
+    if permission not in ("reports.read", "budget.department"):
+        raise ValueError(f"unsupported permission {permission!r}")
+    entity = get_entity(ctx, entity_id, permission)
+    rows = LineDimension.objects.filter(
+        _operating("line__entry__"), line__entry__legal_entity_id=entity.id,
+        value_id__in=value_ids, line__entry__accounting_date__gte=date_from,
+        line__entry__accounting_date__lte=date_to,
+    )  # fmt: skip
+    if watermark is not None:
+        rows = rows.filter(line__entry__posting_seq__lte=watermark)
+    grouped = (
+        rows.annotate(month=TruncMonth("line__entry__accounting_date"))
+        .values("line__account_id", "month", "value_id")
+        .annotate(debit=Sum("line__debit"), credit=Sum("line__credit"))
+        .order_by("month", "line__account_id", "value_id")
+    )
+    return [
+        DimensionTotal(r["line__account_id"], r["month"], r["value_id"], r["debit"], r["credit"])
+        for r in grouped
+    ]
+
+
+def unposted_entries(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> int:
+    """Entries dated in the range that are not posted yet (draft, submitted or approved)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return JournalEntry.objects.filter(
+        legal_entity_id=entity.id, accounting_date__gte=date_from, accounting_date__lte=date_to,
+        status__in=[JournalEntry.Status.DRAFT, JournalEntry.Status.SUBMITTED,
+                    JournalEntry.Status.APPROVED],
+    ).count()  # fmt: skip
 
 
 def account_balance(ctx: Any, entity_id: UUID, account_id: UUID, *, as_of: date) -> Decimal:

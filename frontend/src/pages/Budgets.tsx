@@ -11,6 +11,11 @@ import {
   useBudgetMembers,
   useBudgetOwners,
   useExportUrl,
+  useVariance,
+  useVarianceMutations,
+  type VarianceComparison,
+  type VarianceRow,
+  type VarianceView,
   useBudgetMutations,
   useBudgetSettings,
   useBudgets,
@@ -808,6 +813,251 @@ function Trail({ budgetId }: { budgetId: string }) {
   );
 }
 
+const VIEWS: VarianceView[] = ["MONTH", "QTD", "YTD", "FULL_YEAR"];
+const COMPARISONS: VarianceComparison[] = [
+  "ACTUAL_VS_BUDGET",
+  "ACTUAL_VS_PRIOR_YEAR",
+  "CURRENT_VS_ORIGINAL",
+];
+
+function ExplainForm({
+  row,
+  onSave,
+  pending,
+}: {
+  row: VarianceRow;
+  onSave: (comment: string) => void;
+  pending: boolean;
+}) {
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+  return (
+    <form
+      className="inline-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(text);
+      }}
+    >
+      <label>
+        <span className="visually-hidden">
+          {t("va.explanationFor")} {row.taxonomy_code ?? row.account_id}
+        </span>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={1000}
+          placeholder={row.explanation ? t("va.change") : t("va.why")}
+          required
+        />
+      </label>
+      <button type="submit" disabled={pending || !text.trim()}>
+        {t("va.save")}
+      </button>
+    </form>
+  );
+}
+
+function VariancePanel({ detail }: { detail: BudgetVersionDetail }) {
+  const { t, locale } = useI18n();
+  const names = useNames();
+  const today = new Date().toISOString().slice(0, 8) + "01";
+  const fallback = detail.months.includes(today)
+    ? today
+    : (detail.months.at(-1) ?? "");
+  const [month, setMonth] = useState(fallback);
+  const [view, setView] = useState<VarianceView>("MONTH");
+  const [comparison, setComparison] =
+    useState<VarianceComparison>("ACTUAL_VS_BUDGET");
+  const result = useVariance(detail.id, month, view, comparison);
+  const { explain, review } = useVarianceMutations();
+  const current = detail.status === "APPROVED" || detail.status === "LOCKED";
+  const data = result.data;
+  const missing = data
+    ? data.rows.filter((r) => r.requires_explanation && !r.explanation)
+    : [];
+  const label = (r: VarianceRow) =>
+    names.subject(r) +
+    (r.dimension_value_id ? ` · ${names.value(r.dimension_value_id)}` : "");
+  return (
+    <section aria-labelledby="bu-variance">
+      <h3 id="bu-variance">{t("va.title")}</h3>
+      <p className="muted">{t("va.help")}</p>
+      <div className="form inline">
+        <label>
+          {t("va.month")}
+          <select value={month} onChange={(e) => setMonth(e.target.value)}>
+            {detail.months.map((m) => (
+              <option key={m} value={m}>
+                {m.slice(0, 7)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("va.view")}
+          <select
+            value={view}
+            onChange={(e) => setView(e.target.value as VarianceView)}
+          >
+            {VIEWS.map((v) => (
+              <option key={v} value={v}>
+                {t(`va.view.${v}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("va.comparison")}
+          <select
+            value={comparison}
+            onChange={(e) =>
+              setComparison(e.target.value as VarianceComparison)
+            }
+          >
+            {COMPARISONS.map((c) => (
+              <option key={c} value={c}>
+                {t(`va.cmp.${c}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {result.isPending ? <Loading /> : null}
+      <ProblemMessage error={result.error ?? explain.error ?? review.error} />
+      {data ? (
+        <>
+          <p className="muted">
+            {t("va.basis")} {data.actuals_watermark}
+            {data.cutover
+              ? ` · ${t("va.blended")} ${data.cutover.slice(0, 7)}`
+              : ""}{" "}
+            · {t("va.threshold")}{" "}
+            {formatAmount(data.explain_above_amount, locale)} /{" "}
+            {data.explain_above_percent}%
+          </p>
+          {data.unposted_entries ? (
+            <p className="notice warn" role="status">
+              {t("va.unposted")}: {data.unposted_entries}
+            </p>
+          ) : null}
+          <div className="table-scroll">
+            <table className="grid">
+              <caption>
+                {t(`va.cmp.${data.comparison}`)} · {t(`va.view.${data.view}`)}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t("bu.line")}</th>
+                  <th scope="col" className="num">
+                    {t(`va.subject.${data.comparison}`)}
+                  </th>
+                  <th scope="col" className="num">
+                    {t(`va.compared.${data.comparison}`)}
+                  </th>
+                  <th scope="col" className="num">
+                    {t("va.variance")}
+                  </th>
+                  <th scope="col" className="num">
+                    %
+                  </th>
+                  <th scope="col">{t("va.effect")}</th>
+                  <th scope="col">{t("va.explanation")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.rows.map((r) => (
+                  <tr
+                    key={`${r.line_id ?? "orig"}-${r.taxonomy_code ?? r.account_id ?? ""}`}
+                  >
+                    <th scope="row">{label(r)}</th>
+                    <td className="num">
+                      {formatAmount(r.subject, locale)}{" "}
+                      <span className="muted">
+                        ({t(`nature.${r.subject_nature}`)})
+                      </span>
+                    </td>
+                    <td className="num">
+                      {formatAmount(r.comparison, locale)}{" "}
+                      <span className="muted">
+                        ({t(`nature.${r.comparison_nature}`)})
+                      </span>
+                    </td>
+                    <td className="num">{formatAmount(r.variance, locale)}</td>
+                    <td className="num">{r.percent ?? t("va.nm")}</td>
+                    <td>
+                      {r.favourable === null
+                        ? "—"
+                        : r.favourable
+                          ? t("va.favourable")
+                          : t("va.unfavourable")}
+                    </td>
+                    <td>
+                      {r.explanation ? (
+                        <p>
+                          “{r.explanation.comment}” ·{" "}
+                          {r.explanation.author_name}
+                        </p>
+                      ) : r.requires_explanation ? (
+                        <strong>{t("va.needed")}</strong>
+                      ) : null}
+                      {current &&
+                      r.line_id &&
+                      (r.requires_explanation || r.explanation) ? (
+                        <ExplainForm
+                          key={`${month}-${view}-${comparison}-${r.line_id}`}
+                          row={r}
+                          pending={explain.isPending}
+                          onSave={(comment) => {
+                            if (!r.line_id) return;
+                            explain.mutate({
+                              versionId: detail.id,
+                              body: {
+                                line_id: r.line_id,
+                                month,
+                                view,
+                                comparison,
+                                comment,
+                              },
+                            });
+                          }}
+                        />
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {current ? (
+            data.review ? (
+              <p role="status">
+                {t("va.reviewed")} {data.review.completed_by_name} ·{" "}
+                {data.review.at.slice(0, 10)}
+              </p>
+            ) : (
+              <p>
+                <button
+                  type="button"
+                  disabled={review.isPending}
+                  onClick={() => review.mutate({ versionId: detail.id, month })}
+                >
+                  {t("va.complete")} {month.slice(0, 7)}
+                </button>{" "}
+                {missing.length ? (
+                  <span className="muted">
+                    {t("va.missing")}: {missing.length}
+                  </span>
+                ) : null}
+              </p>
+            )
+          ) : null}
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 function OwnersPanel({ budget }: { budget: Budget }) {
   const { t } = useI18n();
   const owners = useBudgetOwners(budget.id);
@@ -944,13 +1194,17 @@ function BudgetDetail({ budget }: { budget: Budget }) {
             </p>
           ) : null}
           {detail.data.status === "DRAFT" ? (
-            <LineEditor key={detail.data.id} detail={detail.data} />
+            <LineEditor key={`editor-${detail.data.id}`} detail={detail.data} />
           ) : (
             <LineTable detail={detail.data} />
           )}
           {detail.data.status === "DRAFT" ? null : (
             <ExportLink versionId={detail.data.id} />
           )}
+          <VariancePanel
+            key={`variance-${detail.data.id}`}
+            detail={detail.data}
+          />
           <VersionActions detail={detail.data} />
         </>
       ) : null}
@@ -1045,19 +1299,20 @@ function SodSetting() {
   const { t } = useI18n();
   const settings = useBudgetSettings();
   const { saveSettings } = useBudgetMutations();
+  // Shown at once when clicked; reverts if the server refuses the change.
+  const [pending, setPending] = useState<boolean | null>(null);
   if (!settings.data) return null;
   return (
     <div className="form inline">
       <label className="checkbox">
         <input
           type="checkbox"
-          checked={
-            saveSettings.isPending
-              ? saveSettings.variables
-              : settings.data.sod_required
-          }
-          disabled={saveSettings.isPending}
-          onChange={(e) => saveSettings.mutate(e.target.checked)}
+          checked={pending ?? settings.data.sod_required}
+          onChange={(e) => {
+            const value = e.target.checked;
+            setPending(value);
+            saveSettings.mutate(value, { onSettled: () => setPending(null) });
+          }}
         />{" "}
         {t("bu.sod")}
       </label>

@@ -149,6 +149,42 @@ describe("Budgets (M4-1)", () => {
               draft_hash: "h1",
             }),
           );
+        if (url.includes("/variance?"))
+          return Promise.resolve(
+            respond({
+              version_id: "v1",
+              month: "2026-12-01",
+              view: "MONTH",
+              comparison: "ACTUAL_VS_BUDGET",
+              window: ["2026-12-01"],
+              cutover: null,
+              actuals_watermark: 42,
+              unposted_entries: 2,
+              explain_above_amount: "1000.00",
+              explain_above_percent: "10.00",
+              rows: [
+                {
+                  line_id: "l1",
+                  taxonomy_code: "REV.SALES",
+                  account_id: null,
+                  dimension_value_id: null,
+                  direction: "HIGHER_BETTER",
+                  subject: "1200.00",
+                  subject_nature: "ACTUAL",
+                  comparison: "100.00",
+                  comparison_nature: "BUDGET",
+                  variance: "1100.00",
+                  percent: "1100.00",
+                  favourable: true,
+                  requires_explanation: true,
+                  explanation: null,
+                },
+              ],
+              review: null,
+            }),
+          );
+        if (url.endsWith("/explanations"))
+          return Promise.resolve(respond({}, 201));
         if (url.endsWith("/budgets/b1/owners"))
           return Promise.resolve(respond({ code: "permission_denied" }, 403));
         if (url.endsWith("/budget-versions/v2/lines"))
@@ -297,6 +333,30 @@ describe("Budgets (M4-1)", () => {
     ).toBeDisabled();
     expect(await screen.findByText(/approved · Mo Manager/)).toHaveTextContent(
       "“Fine”",
+    );
+
+    // Variance of the approved version: nature labels, direction-aware effect, explanation.
+    const variance = await screen.findByRole("table", {
+      name: /Actual vs budget/,
+    });
+    const sales = within(variance).getByRole("row", { name: /REV.SALES/ });
+    expect(sales).toHaveTextContent("1,200.00 (Actual)");
+    expect(sales).toHaveTextContent("100.00 (Budget)");
+    expect(sales).toHaveTextContent("Favourable");
+    expect(sales).toHaveTextContent("Explanation needed");
+    expect(screen.getByText(/not yet posted/)).toHaveTextContent("2");
+    fireEvent.change(within(sales).getByLabelText(/Explanation for/), {
+      target: { value: "New customer" },
+    });
+    fireEvent.click(within(sales).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.url.endsWith("/explanations"))?.body).toEqual({
+        line_id: "l1",
+        month: screen.getByLabelText<HTMLSelectElement>("Month").value,
+        view: "MONTH",
+        comparison: "ACTUAL_VS_BUDGET",
+        comment: "New customer",
+      }),
     );
 
     const results = await axe.run(container, {

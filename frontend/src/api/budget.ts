@@ -307,3 +307,121 @@ export function useBudgetMutations() {
     }),
   };
 }
+
+export type VarianceView = "MONTH" | "QTD" | "YTD" | "FULL_YEAR";
+export type VarianceComparison =
+  | "ACTUAL_VS_BUDGET"
+  | "ACTUAL_VS_PRIOR_YEAR"
+  | "CURRENT_VS_ORIGINAL";
+
+export interface VarianceExplanation {
+  line_id: string;
+  month: string;
+  view: string;
+  comparison: string;
+  comment: string;
+  seq: number;
+  author_name: string;
+  at: string;
+}
+
+export interface VarianceRow {
+  line_id: string | null;
+  taxonomy_code: string | null;
+  account_id: string | null;
+  dimension_value_id: string | null;
+  direction: string;
+  subject: string;
+  subject_nature: "ACTUAL" | "BLENDED" | "BUDGET";
+  comparison: string;
+  comparison_nature: "ACTUAL" | "BUDGET";
+  variance: string;
+  percent: string | null;
+  favourable: boolean | null;
+  requires_explanation: boolean;
+  explanation: VarianceExplanation | null;
+}
+
+export interface VarianceResult {
+  version_id: string;
+  month: string;
+  view: VarianceView;
+  comparison: VarianceComparison;
+  window: string[];
+  cutover: string | null;
+  actuals_watermark: number;
+  unposted_entries: number | null;
+  explain_above_amount: string;
+  explain_above_percent: string;
+  rows: VarianceRow[];
+  review: {
+    month: string;
+    actuals_watermark: number;
+    completed_by_name: string;
+    at: string;
+  } | null;
+}
+
+export function useVariance(
+  versionId: string,
+  month: string,
+  view: VarianceView,
+  comparison: VarianceComparison,
+) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["budget-variance", entityId, versionId, month, view, comparison],
+    queryFn: () =>
+      api<VarianceResult>(`${base}/budget-versions/${versionId}/variance`, {
+        query: { month, view, comparison },
+      }),
+    enabled: !!month,
+    retry: false,
+  });
+}
+
+export function useVarianceMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({ queryKey: ["budget-variance", entityId] });
+  return {
+    explain: useMutation({
+      mutationFn: ({
+        versionId,
+        body,
+      }: {
+        versionId: string;
+        body: {
+          line_id: string;
+          month: string;
+          view: VarianceView;
+          comparison: VarianceComparison;
+          comment: string;
+        };
+      }) =>
+        api<VarianceExplanation>(
+          `${base}/budget-versions/${versionId}/explanations`,
+          {
+            method: "POST",
+            body,
+          },
+        ),
+      onSuccess: refresh,
+    }),
+    review: useMutation({
+      mutationFn: ({
+        versionId,
+        month,
+      }: {
+        versionId: string;
+        month: string;
+      }) =>
+        api(`${base}/budget-versions/${versionId}/reviews`, {
+          method: "POST",
+          body: { month },
+        }),
+      onSuccess: refresh,
+    }),
+  };
+}

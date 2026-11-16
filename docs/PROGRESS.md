@@ -63,7 +63,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M3-11 Milestone 3 report (issue #118) | `claude/m3-11-report` | #119 | Open |
 | M4-1 Budgets: versions, lifecycle, SoD, revisions (issue #65) + M4 brief | `claude/m4-1-budgets` | #120 | Open |
 | M4-2 Budget grid, phasing, Excel import/export, department owners (issue #66) | `claude/m4-2-budget-grid` | #121 | Open |
-| M4-3 Variance and explanations (issue #67) | — | — | Next |
+| M4-3 Variance, explanations, monthly review (issue #67) | `claude/m4-3-variance` | #122 | Open |
+| M4-4 KPI library (issue #68) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

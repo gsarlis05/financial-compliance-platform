@@ -23,6 +23,8 @@ APPEND_ONLY_TABLES: set[str] = {
     "audit_log_event",
     "banking_reconciliation",
     "budgeting_event",
+    "budgeting_explanation",
+    "budgeting_review",
     "documents_document",
     "metrics_calc_result",
     "metrics_calc_lineage",
