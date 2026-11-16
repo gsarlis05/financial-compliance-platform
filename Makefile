@@ -3,12 +3,14 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check e2e-login e2e-ui ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check e2e-login e2e-ui demo openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
 	@echo "make run-backend   Django dev server on http://localhost:8000"
 	@echo "make run-frontend  Vite dev server on http://localhost:5173"
+	@echo "make demo          load the Demo Trading workspace via the API (SHARE_WITH=email to see it in the UI)"
+	@echo "make openapi       regenerate docs/api/openapi.json"
 	@echo "make synthetic     generate synthetic business + household datasets into var/"
 	@echo "make test | lint | security | prove-gates"
 	@echo "make dev-down      stop services (data kept); make dev-reset deletes local data"
@@ -86,6 +88,16 @@ e2e-login:
 # Browser smoke test of the web UI (needs make services, run-backend and run-frontend; resets nothing).
 e2e-ui:
 	node scripts/e2e/ui-smoke.js
+
+# AC-G5 demo: a new "Demo Trading" workspace with one synthetic year (local dev only).
+demo:
+	cd backend && uv run python -m fcp.devtools.demo $(if $(SHARE_WITH),--share-with $(SHARE_WITH),)
+
+openapi:
+	cd backend && uv run python -m fcp.openapi ../docs/api/openapi.json
+
+openapi-check:
+	cd backend && uv run python -m fcp.openapi --check ../docs/api/openapi.json
 
 # Nightly operational checks (audit chains and ledger integrity for every workspace).
 ops-checks:

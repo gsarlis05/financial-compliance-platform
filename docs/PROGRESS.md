@@ -6,6 +6,9 @@ in order.
 
 ## Status (updated 2026-11-03)
 
+**Milestone 1 is complete** (see `docs/milestone-1-report.md`). Next: your review of PRs #1–#19,
+then your go-ahead for Milestone 2.
+
 | Item | Branch | PR | State |
 |---|---|---|---|
 | Planning set v2 + decisions | `claude/initial-planning-docs` | #1 | Open, awaiting review |
@@ -26,7 +29,7 @@ in order.
 | M1-10 Balances, TB, GL, export | `claude/m1-10-reports` | #16 | Open |
 | M1-11 Integrity job | `claude/m1-11-integrity` | #17 | Open |
 | M1-12 UI | `claude/m1-12-ui` | #18 | Open |
-| M1-13 Docs, sample data | `claude/m1-13-docs` | — | Next |
+| M1-13 Docs, sample data, demo | `claude/m1-13-docs` | #19 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

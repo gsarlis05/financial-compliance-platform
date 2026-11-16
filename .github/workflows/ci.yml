@@ -64,6 +64,8 @@ jobs:
         run: uv run python -m tools.fcp_lint.no_float
       - name: Migrations are up to date with the models
         run: DJANGO_SETTINGS_MODULE=fcp.settings.test uv run python manage.py makemigrations --check --dry-run
+      - name: Published OpenAPI document is up to date (AC-G3)
+        run: DJANGO_SETTINGS_MODULE=fcp.settings.test uv run python -m fcp.openapi --check ../docs/api/openapi.json
       - name: Tests with coverage gate
         run: uv run pytest --cov --cov-report=term --cov-report=xml
       - name: Money library requires 100% branch coverage (AC-M0-7)
