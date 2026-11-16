@@ -9213,6 +9213,34 @@
         "title": "MeOut",
         "type": "object"
       },
+      "MeasureOut": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The month of the lowest cash or first shortfall",
+            "title": "Month"
+          },
+          "value": {
+            "description": "Money, or a number of months for FIRST_SHORTFALL",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "month"
+        ],
+        "title": "MeasureOut",
+        "type": "object"
+      },
       "MemberOut": {
         "properties": {
           "display_name": {
@@ -9851,6 +9879,102 @@
           "created_at"
         ],
         "title": "ObligationOut",
+        "type": "object"
+      },
+      "OneVariableIn": {
+        "properties": {
+          "base_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An approved assumption set",
+            "title": "Base Set Id"
+          },
+          "driver": {
+            "description": "e.g. revenue, opex:OPEX.RENT, dso",
+            "maxLength": 40,
+            "title": "Driver",
+            "type": "string"
+          },
+          "high": {
+            "pattern": "^-?\\d{1,4}(\\.\\d{1,4})?$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "description": "% or days",
+            "pattern": "^-?\\d{1,4}(\\.\\d{1,4})?$",
+            "title": "Low",
+            "type": "string"
+          },
+          "output": {
+            "default": "MIN_CASH",
+            "enum": [
+              "MIN_CASH",
+              "CLOSING_CASH",
+              "FIRST_SHORTFALL",
+              "EBITDA",
+              "NET_INCOME"
+            ],
+            "title": "Output",
+            "type": "string"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or a shared scenario",
+            "title": "Scenario Id"
+          },
+          "steps": {
+            "default": 5,
+            "maximum": 11,
+            "minimum": 2,
+            "title": "Steps",
+            "type": "integer"
+          },
+          "unit": {
+            "default": "PERCENT",
+            "enum": [
+              "PERCENT",
+              "DAYS"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "maximum": 2100,
+                "minimum": 2000,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "EBITDA and NET_INCOME: a year of the horizon",
+            "title": "Year"
+          }
+        },
+        "required": [
+          "driver",
+          "low",
+          "high"
+        ],
+        "title": "OneVariableIn",
         "type": "object"
       },
       "OpenItemOut": {
@@ -13351,6 +13475,111 @@
         "title": "ScheduleRowOut",
         "type": "object"
       },
+      "SensitivityOut": {
+        "properties": {
+          "bars": {
+            "description": "Ranked by swing, largest first",
+            "items": {
+              "$ref": "#/components/schemas/TornadoBarOut"
+            },
+            "title": "Bars",
+            "type": "array"
+          },
+          "base": {
+            "$ref": "#/components/schemas/MeasureOut"
+          },
+          "base_label": {
+            "title": "Base Label",
+            "type": "string"
+          },
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "engine_status": {
+            "default": "PENDING_PROFESSIONAL_REVIEW",
+            "title": "Engine Status",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "nature": {
+            "default": "HYPOTHETICAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "output": {
+            "title": "Output",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SensitivityPointOut"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "integer"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "kind",
+          "output",
+          "year",
+          "base_label",
+          "base",
+          "points",
+          "bars",
+          "input_hash",
+          "watermark",
+          "cached"
+        ],
+        "title": "SensitivityOut",
+        "type": "object"
+      },
+      "SensitivityPointOut": {
+        "properties": {
+          "change": {
+            "description": "Against the base",
+            "title": "Change",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/MeasureOut"
+          },
+          "shock": {
+            "description": "% or days",
+            "title": "Shock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shock",
+          "result",
+          "change"
+        ],
+        "title": "SensitivityPointOut",
+        "type": "object"
+      },
       "SettingsIO": {
         "properties": {
           "minimum_cash": {
@@ -14228,6 +14457,111 @@
           "template"
         ],
         "title": "TemplateIn",
+        "type": "object"
+      },
+      "TornadoBarOut": {
+        "properties": {
+          "driver": {
+            "title": "Driver",
+            "type": "string"
+          },
+          "high": {
+            "$ref": "#/components/schemas/MeasureOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "low": {
+            "$ref": "#/components/schemas/MeasureOut"
+          },
+          "swing": {
+            "title": "Swing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driver",
+          "label",
+          "low",
+          "high",
+          "swing"
+        ],
+        "title": "TornadoBarOut",
+        "type": "object"
+      },
+      "TornadoIn": {
+        "properties": {
+          "base_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An approved assumption set",
+            "title": "Base Set Id"
+          },
+          "drivers": {
+            "description": "Empty: every driver the base uses",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 25,
+            "title": "Drivers",
+            "type": "array"
+          },
+          "output": {
+            "default": "MIN_CASH",
+            "enum": [
+              "MIN_CASH",
+              "CLOSING_CASH",
+              "FIRST_SHORTFALL",
+              "EBITDA",
+              "NET_INCOME"
+            ],
+            "title": "Output",
+            "type": "string"
+          },
+          "percent": {
+            "default": "10",
+            "description": "The shock, down and up",
+            "pattern": "^\\d{1,3}(\\.\\d{1,4})?$",
+            "title": "Percent",
+            "type": "string"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or a shared scenario",
+            "title": "Scenario Id"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "maximum": 2100,
+                "minimum": 2000,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "EBITDA and NET_INCOME: a year of the horizon",
+            "title": "Year"
+          }
+        },
+        "title": "TornadoIn",
         "type": "object"
       },
       "TrialBalanceOut": {
@@ -30823,6 +31157,122 @@
           }
         ],
         "summary": "Share Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/sensitivity/one-variable": {
+      "post": {
+        "description": "One driver over a range (up to 11 steps): the output at each step. Not stored.",
+        "operationId": "fcp_modules_scenarios_api_sensitivity_one_variable",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OneVariableIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensitivityOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Sensitivity One Variable",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/sensitivity/tornado": {
+      "post": {
+        "description": "Each driver shocked down and up on its own, ranked by the swing of the output.",
+        "operationId": "fcp_modules_scenarios_api_sensitivity_tornado",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TornadoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensitivityOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Sensitivity Tornado",
         "tags": [
           "scenarios"
         ]
