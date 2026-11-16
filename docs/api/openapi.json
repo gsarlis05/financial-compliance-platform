@@ -5036,6 +5036,221 @@
         "title": "Kind",
         "type": "string"
       },
+      "KpiDefinitionOut": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "convention": {
+            "title": "Convention",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "example": {
+            "title": "Example",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "id": {
+            "description": "Library version and key, e.g. CORE@1.0:DSO",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "nm_note": {
+            "title": "Nm Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "name_el",
+          "category",
+          "formula",
+          "display",
+          "direction",
+          "convention",
+          "nm_note",
+          "example"
+        ],
+        "title": "KpiDefinitionOut",
+        "type": "object"
+      },
+      "KpiSetOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "library": {
+            "title": "Library",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stale": {
+            "description": "Entries were posted after this set was calculated",
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unmapped_accounts": {
+            "description": "Accounts with activity but no taxonomy line",
+            "title": "Unmapped Accounts",
+            "type": "integer"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/KpiValueOut"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "stale",
+          "library",
+          "date_from",
+          "date_to",
+          "actuals_watermark",
+          "created_at",
+          "unmapped_accounts",
+          "values"
+        ],
+        "title": "KpiSetOut",
+        "type": "object"
+      },
+      "KpiValueOut": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "convention": {
+            "title": "Convention",
+            "type": "string"
+          },
+          "definition_id": {
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "nature": {
+            "const": "ACTUAL",
+            "default": "ACTUAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "nm_reason": {
+            "title": "Nm Reason",
+            "type": "string"
+          },
+          "result_id": {
+            "description": "For calc-runs/{run}/results/{result}/explain",
+            "format": "uuid",
+            "title": "Result Id",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unrounded (up to 20 places); None if not meaningful",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "result_id",
+          "definition_id",
+          "key",
+          "name",
+          "name_el",
+          "category",
+          "display",
+          "direction",
+          "convention",
+          "value",
+          "unit",
+          "nm_reason"
+        ],
+        "title": "KpiValueOut",
+        "type": "object"
+      },
       "LedgerLineOut": {
         "properties": {
           "accounting_date": {
@@ -6360,6 +6575,28 @@
           "type"
         ],
         "title": "OverrideIn",
+        "type": "object"
+      },
+      "PeriodIn": {
+        "properties": {
+          "date_from": {
+            "description": "First day of a month",
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "description": "Last day of a month; at most 12 months",
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "PeriodIn",
         "type": "object"
       },
       "PeriodOut": {
@@ -16068,6 +16305,186 @@
         "summary": "Void Entry",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/kpi-definitions": {
+      "get": {
+        "operationId": "fcp_modules_kpi_api_list_definitions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KpiDefinitionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Definitions",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/kpi-sets": {
+      "post": {
+        "description": "Compute the core KPIs for a period, as a stored and reproducible calculation run.",
+        "operationId": "fcp_modules_kpi_api_run_kpis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpiSetOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Run Kpis",
+        "tags": [
+          "kpi"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/kpi-sets/latest": {
+      "get": {
+        "operationId": "fcp_modules_kpi_api_latest_kpis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "First day of a month",
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "description": "First day of a month",
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day of a month; at most 12 months",
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "description": "Last day of a month; at most 12 months",
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpiSetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Latest Kpis",
+        "tags": [
+          "kpi"
         ]
       }
     },

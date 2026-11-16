@@ -16,6 +16,7 @@ GLOBAL_TABLES: dict[str, str] = {
     "ledger_vat_code": "Reference data: VAT code catalogue per jurisdiction (no tenant data)",
     "metrics_taxonomy_version": "Reference data: financial taxonomy versions (no tenant data)",
     "metrics_taxonomy_line": "Reference data: financial taxonomy lines (no tenant data)",
+    "kpi_definition": "Reference data: KPI library definitions (no tenant data)",
 }
 
 # Tables the runtime role may only INSERT into and SELECT from (no UPDATE or DELETE).
@@ -38,4 +39,5 @@ READ_ONLY_TABLES: set[str] = {
     "ledger_vat_code",
     "metrics_taxonomy_version",
     "metrics_taxonomy_line",
+    "kpi_definition",
 }

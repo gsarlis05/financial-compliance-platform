@@ -35,6 +35,7 @@ from .calc import list_runs as list_calc_runs
 from .calc import register as register_engine
 from .calc import results as calc_results
 from .expr import (
+    KEY,
     EvaluationError,
     ExpressionError,
     Function,
@@ -42,6 +43,7 @@ from .expr import (
     Param,
     compile_expression,
     evaluate,
+    scalar,
 )
 from .hashing import canonical_decimal
 from .hashing import digest as canonical_digest
@@ -52,6 +54,7 @@ from .taxonomy import DEFAULT_TAXONOMY
 
 __all__ = [
     "DEFAULT_TAXONOMY",
+    "KEY",
     "ActualSeries",
     "BlendedSeries",
     "CalcRun",
@@ -87,6 +90,7 @@ __all__ = [
     "mark_stale",
     "register_engine",
     "router",
+    "scalar",
     "taxonomy_lines",
 ]  # fmt: skip
 
