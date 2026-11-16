@@ -14,7 +14,13 @@ debit minus credit, credit-normal ones the other way round):
   ``EQUITY`` and ``BS.EQUITY`` include the result of years not yet closed;
 - ``avg_balance(key)``: the mean of opening and closing;
 - ``days()``: calendar days in the period; ``annual_factor()``: 365 ÷ days;
-- ``burn_3m()``: the average monthly decrease of cash over the 3 months to the period end.
+- ``burn_3m()``: the average monthly decrease of cash over the 3 months to the period end;
+- ``count_metric(key)`` / ``amount_metric(key)``: an operational metric entered by hand (M4-5):
+  the period's last month for point metrics (headcount), the sum of its months for flow metrics
+  (units sold). Their values are snapshotted into the run's inputs, and every KPI that uses one
+  is marked NON_LEDGER (AC-KP5).
+
+Approved workspace KPIs (M4-5) are snapshotted into the run's inputs too, with their version.
 
 Every value is ACTUAL. Its lineage names the definition version, each reference call, and the
 accounts that contributed (AC-KP3: drill-down from a KPI to accounts, and from there to entries).
@@ -33,6 +39,7 @@ from fcp.modules.metrics.api import (
     KEY,
     Function,
     Nature,
+    NotMeaningful,
     Output,
     Param,
     RunInputs,
@@ -98,6 +105,8 @@ class _Context:
         self.cut = cutoffs(self.start, self.end)
         self.months = period_months(self.start, self.end)
         self.sources: dict[str, Decimal] = defaultdict(Decimal)
+        self.operational: dict[str, dict[str, Any]] = refs.get("operational", {})
+        self.non_ledger = False
 
     def _natural(self, account_id: str, net_debit: Decimal) -> Decimal:
         return -net_debit if self.accounts[account_id].credit_normal else net_debit
@@ -156,6 +165,26 @@ class _Context:
         earlier = self._balance("BS.CASH", "three_months")
         return (earlier - self.balance("BS.CASH")) / 3
 
+    def _metric(self, key: str, unit: str) -> Decimal | NotMeaningful:
+        metric = self.operational.get(key)
+        if metric is None or metric["unit"] != unit:
+            return NotMeaningful(f"No {unit} metric {key}")
+        self.non_ledger = True
+        months = self.months[-1:] if metric["aggregation"] == "LAST" else self.months
+        found = [metric["values"].get(m.isoformat()) for m in months]
+        if any(v is None for v in found):
+            return NotMeaningful(f"{key} has no value for every month of the period")
+        total = sum((Decimal(v) for v in found), ZERO)
+        for m, v in zip(months, found, strict=True):
+            self.sources[f"operational:{key}:{m.isoformat()}"] += Decimal(v)
+        return total
+
+    def count_metric(self, key: str) -> Decimal | NotMeaningful:
+        return self._metric(key, "count")
+
+    def amount_metric(self, key: str) -> Decimal | NotMeaningful:
+        return self._metric(key, "EUR")
+
     def functions(self) -> list[Function]:
         def keyed(name: str, impl: Callable[[str], Decimal]) -> Function:
             return Function(name, (Param("key", KEY),), scalar("EUR"), impl)
@@ -169,6 +198,8 @@ class _Context:
             Function("days", (), scalar("days"), self.days),
             Function("annual_factor", (), scalar("ratio"), self.annual_factor),
             Function("burn_3m", (), scalar("EUR"), self.burn_3m),
+            Function("count_metric", (Param("key", KEY),), scalar("count"), self.count_metric),
+            Function("amount_metric", (Param("key", KEY),), scalar("EUR"), self.amount_metric),
         ]
 
 
@@ -197,6 +228,9 @@ class KpiSetEngine:
         definitions = [
             {"id": d.id, "key": d.key, "formula": d.formula, "nm_reason": d.nm_reason}
             for d in KpiDefinition.objects.filter(library=refs["library"]).order_by("order")
+        ] + [
+            {"id": c["id"], "key": c["key"], "formula": c["formula"], "nm_reason": ""}
+            for c in refs.get("custom", [])
         ]
         facts = actuals_monthly(
             ctx,
@@ -235,8 +269,14 @@ class KpiSetEngine:
                 period_end=end,
                 granularity="POINT",
                 lineage=tuple(
-                    Source("ACTUAL", ref, amount.quantize(PLACES)) for ref, amount in sources
+                    Source(
+                        "MANUAL" if ref.startswith("operational:") else "ACTUAL",
+                        ref,
+                        amount.quantize(PLACES),
+                    )
+                    for ref, amount in sources
                 ),
+                dimensions=("NON_LEDGER",) if context.non_ledger else (),
             )
             if value.value is not None:
                 value = replace(value, value=value.value.quantize(PLACES))

@@ -7,6 +7,7 @@ import {
   type KpiValue,
   useKpiDefinitions,
   useLatestKpis,
+  usePersonalKpis,
   useRunKpis,
 } from "../api/kpi";
 import { Loading, Page, ProblemMessage } from "../components/common";
@@ -169,6 +170,44 @@ function Explain({ kpis, value }: { kpis: KpiSet; value: KpiValue }) {
   );
 }
 
+function PersonalKpis({ runId }: { runId: string }) {
+  const { t, locale } = useI18n();
+  const personal = usePersonalKpis(runId);
+  if (!personal.data?.length) return null;
+  return (
+    <section aria-labelledby="kpi-personal">
+      <h2 id="kpi-personal">{t("kpi.personal")}</h2>
+      <p className="muted">{t("kpi.personalHelp")}</p>
+      <ul className="kpi-cards">
+        {personal.data.map((v) => (
+          <li key={v.key} className="kpi-card">
+            <h3>{v.name}</h3>
+            <p className="kpi-value">
+              {v.value === null
+                ? t("kpi.nm")
+                : formatKpi(
+                    {
+                      ...v,
+                      result_id: "",
+                      category: "",
+                      convention: "",
+                      name_el: "",
+                    },
+                    locale,
+                  )}
+            </p>
+            {v.value === null ? <p className="muted">{v.nm_reason}</p> : null}
+            <p className="muted">
+              {t("nature.ACTUAL")} · {t("ck.scope.PERSONAL")}
+            </p>
+            {v.non_ledger ? <p className="non-ledger">{t("ck.nonLedger")}</p> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** KPIs (M4-4): the core library for a whole-month period, each value explained. */
 export function KpisPage() {
   const { t, locale } = useI18n();
@@ -272,6 +311,9 @@ export function KpisPage() {
                           ? t("kpi.higher")
                           : t("kpi.lower")}
                       </p>
+                      {v.non_ledger ? (
+                        <p className="non-ledger">{t("ck.nonLedger")}</p>
+                      ) : null}
                       <button
                         type="button"
                         aria-pressed={chosen === v.key}
@@ -285,6 +327,7 @@ export function KpisPage() {
               </ul>
             </section>
           ))}
+          <PersonalKpis runId={kpis.run_id} />
           {selected ? (
             <Explain key={selected.key} kpis={kpis} value={selected} />
           ) : null}

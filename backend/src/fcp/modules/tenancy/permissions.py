@@ -57,6 +57,10 @@ PERMISSIONS: dict[str, str] = {
         "Open budgets: with budget.read and budget.edit everything, otherwise only the "
         "departments you are named owner of"
     ),
+    # KPIs (M4-5)
+    "kpi.definition.manage": "Propose workspace KPIs and new versions of them",
+    "kpi.definition.approve": "Approve or reject workspace KPIs proposed by someone else",
+    "kpi.operational.manage": "Enter operational metrics such as headcount or customers",
     # reporting and evidence
     "reports.read": "See trial balance and general ledger",
     "reports.export": "Export reports",
@@ -95,6 +99,8 @@ _PREPARE = _READ | {
     "documents.link",
     "planning.run",
     "budget.edit",
+    "kpi.definition.manage",
+    "kpi.operational.manage",
     "reports.export",
 }
 _REVIEW = _READ | {"ledger.entry.approve", "ledger.entry.post", "reports.export"}
@@ -111,6 +117,7 @@ _SIGN_OFF = (
         "planning.publish",
         "budget.approve",
         "budget.settings.manage",
+        "kpi.definition.approve",
     }
 )
 

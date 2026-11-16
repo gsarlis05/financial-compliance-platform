@@ -35,6 +35,7 @@ const value = (key: string, display: string, v: string | null, nm = "") => ({
   value: v,
   unit: "ratio",
   nm_reason: nm,
+  non_ledger: key === "CASH_RUNWAY",
 });
 const set = {
   run_id: "run1",
@@ -103,6 +104,23 @@ describe("KPIs (M4-4)", () => {
               { status: 404, code: "not_found", detail: "No KPI set" },
               404,
             ),
+          );
+        if (url.endsWith("/kpi-sets/run1/personal"))
+          return Promise.resolve(
+            respond([
+              {
+                key: "MARKUP",
+                definition_id: "PERSONAL:MARKUP@1",
+                name: "My mark-up",
+                display: "ratio",
+                direction: "HIGHER_BETTER",
+                nature: "ACTUAL",
+                value: "1.6666",
+                unit: "ratio",
+                nm_reason: "",
+                non_ledger: false,
+              },
+            ]),
           );
         if (url.endsWith("/kpi-sets"))
           return Promise.resolve(respond(set, 201));
@@ -195,6 +213,12 @@ describe("KPIs (M4-4)", () => {
     expect(runway).toHaveTextContent("Not meaningful");
     expect(runway).toHaveTextContent("Not burning cash");
     expect(screen.getByText(/no taxonomy line/)).toHaveTextContent("1");
+    expect(runway).toHaveTextContent("Includes data not from the ledger");
+    const personal = await screen.findByRole("region", {
+      name: "Your personal KPIs",
+    });
+    expect(personal).toHaveTextContent("My mark-up");
+    expect(personal).toHaveTextContent("1.67");
 
     if (!dso) throw new Error("no DSO card");
     fireEvent.click(

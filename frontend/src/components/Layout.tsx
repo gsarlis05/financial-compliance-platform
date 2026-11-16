@@ -205,6 +205,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/cash-forecast`, "nav.cashForecast"],
         [`${base}/budgets`, "nav.budgets"],
         [`${base}/kpis`, "nav.kpis"],
+        [`${base}/custom-kpis`, "nav.customKpis"],
         [`${base}/commitments`, "nav.commitments"],
       ],
     },
