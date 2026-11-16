@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import {
   type EntryAction,
   useAccounts,
+  useDimensions,
   useEntries,
   useEntry,
   useEntryMutations,
@@ -91,6 +92,7 @@ export function ApprovalsPage() {
 export function NewEntryPage() {
   const { t } = useI18n();
   const accounts = useAccounts();
+  const dimensions = useDimensions();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -117,6 +119,7 @@ export function NewEntryPage() {
     <Page title={t("je.new")}>
       <EntryForm
         accounts={accounts.data ?? []}
+        dimensions={dimensions.data ?? []}
         fiscalYears={years.data ?? []}
         saving={save.isPending || act.isPending}
         error={save.error}
@@ -198,6 +201,7 @@ export function EntryDetailPage() {
   const entry = useEntry(entryId);
   const me = useMe();
   const accounts = useAccounts();
+  const dimensions = useDimensions();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -246,6 +250,7 @@ export function EntryDetailPage() {
       {editing ? (
         <EntryForm
           accounts={accounts.data ?? []}
+          dimensions={dimensions.data ?? []}
           fiscalYears={years.data ?? []}
           initial={e}
           saving={save.isPending}
@@ -287,7 +292,18 @@ export function EntryDetailPage() {
                   </td>
                   <td className="amount">{l.debit === "0.00" ? "" : formatAmount(l.debit, locale)}</td>
                   <td className="amount">{l.credit === "0.00" ? "" : formatAmount(l.credit, locale)}</td>
-                  <td>{l.memo}</td>
+                  <td>
+                    {l.memo}
+                    {l.dimensions.length ? (
+                      <span className="tags">
+                        {l.dimensions.map((d) => (
+                          <span key={d.dimension_id} className="tag" title={d.value_name}>
+                            {d.dimension_code}: {d.value_code}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

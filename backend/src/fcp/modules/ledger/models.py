@@ -407,3 +407,95 @@ class IntegrityCheckRun(TenantOwned):
     class Meta:
         db_table = "ledger_integrity_check_run"
         indexes = [models.Index(fields=["tenant", "-created_at"])]
+
+
+# --- analytical dimensions (M2-1, docs/planning/03 §6) --------------------------------------------
+
+
+class Dimension(TenantOwned):
+    """An analysis axis of one legal entity, e.g. department, project or cost centre."""
+
+    class Kind(models.TextChoices):
+        DEPARTMENT = "DEPARTMENT"
+        PROJECT = "PROJECT"
+        COST_CENTRE = "COST_CENTRE"
+        CUSTOM = "CUSTOM"
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE"
+        INACTIVE = "INACTIVE"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_dimension"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code"], name="ledger_dimension_code_unique"
+            ),
+        ]
+
+
+class DimensionValue(TenantOwned):
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="values")
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=30)
+    name = models.CharField(max_length=200)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children"
+    )
+    status = models.CharField(
+        max_length=16, choices=Dimension.Status.choices, default=Dimension.Status.ACTIVE
+    )
+
+    class Meta:
+        db_table = "ledger_dimension_value"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dimension", "code"], name="ledger_dimension_value_code_unique"
+            ),
+        ]
+
+
+class AccountDimensionRule(TenantOwned):
+    """Per account: a dimension is REQUIRED on every posted line, or BLOCKED. Default: optional."""
+
+    class Rule(models.TextChoices):
+        REQUIRED = "REQUIRED"
+        BLOCKED = "BLOCKED"
+
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="dimension_rules")
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="+")
+    rule = models.CharField(max_length=8, choices=Rule.choices)
+
+    class Meta:
+        db_table = "ledger_account_dimension_rule"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account", "dimension"], name="ledger_account_dimension_rule_unique"
+            ),
+        ]
+
+
+class LineDimension(TenantOwned):
+    """One dimension value tagged on one journal line (at most one value per dimension)."""
+
+    line = models.ForeignKey(JournalLine, on_delete=models.CASCADE, related_name="dimension_tags")
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="+")
+    value = models.ForeignKey(DimensionValue, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        db_table = "ledger_line_dimension"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["line", "dimension"], name="ledger_line_dimension_unique"
+            ),
+        ]
+        indexes = [models.Index(fields=["value", "line"])]

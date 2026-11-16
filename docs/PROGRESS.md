@@ -32,7 +32,8 @@ in order.
 | M1-12 UI | `claude/m1-12-ui` | #18 | Open |
 | M1-13 Docs, sample data, demo | `claude/m1-13-docs` | #19 | Open, CI green |
 | M2-0 Cloud packaging (images, prod settings, readiness) + cloud-readiness review | `claude/m2-0-cloud-packaging` | #20 | Open |
-| M2-1 Dimensions | — | — | Next |
+| M2-1 Dimensions | `claude/m2-1-dimensions` | #21 | Open |
+| M2-2 Counterparties + open items | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

@@ -75,6 +75,7 @@ export function Layout() {
         [`${base}/entries`, "nav.entries"],
         [`${base}/approvals`, "nav.approvals"],
         [`${base}/accounts`, "nav.accounts"],
+        [`${base}/dimensions`, "nav.dimensions"],
         [`${base}/periods`, "nav.periods"],
         [`${base}/trial-balance`, "nav.trialBalance"],
         [`/w/${slug ?? ""}/e/${entityId ?? ""}/integrity`, "nav.integrity"],

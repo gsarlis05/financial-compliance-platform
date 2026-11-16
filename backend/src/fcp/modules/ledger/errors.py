@@ -74,3 +74,13 @@ class PostingRejectedByDatabaseError(ConflictError):
 
     code = "ledger.entry.rejected_by_database"
     title = "Posting rejected by ledger safeguards"
+
+
+class DimensionError(ValidationFailedError):
+    code = "ledger.line.dimension_invalid"
+    title = "Invalid dimension on a journal line"
+
+
+class DimensionRequiredError(ValidationFailedError):
+    code = "ledger.line.dimension_required"
+    title = "A required dimension is missing"

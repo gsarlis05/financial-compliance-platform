@@ -18,7 +18,7 @@ from django.db import connection
 from fcp.core.errors import DomainError, NotFoundError
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from .models import Account, JournalEntry
+from .models import Account, DimensionValue, JournalEntry
 
 log = structlog.get_logger(__name__)
 ZERO = Decimal(0)
@@ -98,8 +98,13 @@ def build_trial_balance(
     return rows
 
 
+_TAGGED = (
+    " AND EXISTS (SELECT 1 FROM ledger_line_dimension t WHERE t.line_id = l.id AND t.value_id = %s)"
+)
+
+
 def _line_sums(
-    entity_id: UUID, as_of: date, date_from: date | None
+    entity_id: UUID, as_of: date, date_from: date | None, dimension_value_id: UUID | None = None
 ) -> dict[UUID, tuple[Decimal, Decimal]]:
     sql = (
         "SELECT l.account_id, coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) "
@@ -110,6 +115,9 @@ def _line_sums(
     if date_from is not None:
         sql += " AND e.accounting_date >= %s"
         params.append(date_from)
+    if dimension_value_id is not None:
+        sql += _TAGGED
+        params.append(dimension_value_id)
     sql += " GROUP BY l.account_id"
     with connection.cursor() as cursor:
         cursor.execute(sql, params)
@@ -123,12 +131,21 @@ def trial_balance(
     as_of: date,
     date_from: date | None = None,
     include_zero: bool = False,
+    dimension_value_id: UUID | None = None,
 ) -> TrialBalance:
-    """Cumulative balances up to ``as_of`` (or activity within ``date_from``..``as_of``)."""
+    """Cumulative balances up to ``as_of`` (or activity within ``date_from``..``as_of``).
+
+    With ``dimension_value_id``, only lines tagged with that value count. Such a partial view need
+    not balance (the other side of an entry is often untagged), so the balance check is skipped.
+    """
     get_entity(ctx, entity_id, "reports.read")
+    if dimension_value_id is not None:
+        _require_value(entity_id, dimension_value_id)
     accounts = Account.objects.filter(legal_entity_id=entity_id, is_postable=True)
     rows = build_trial_balance(
-        accounts, _line_sums(entity_id, as_of, date_from), include_zero=include_zero
+        accounts,
+        _line_sums(entity_id, as_of, date_from, dimension_value_id),
+        include_zero=include_zero,
     )
     posted = JournalEntry.objects.filter(legal_entity_id=entity_id, accounting_date__lte=as_of)
     if date_from is not None:
@@ -148,7 +165,7 @@ def trial_balance(
             status=JournalEntry.Status.POSTED, unlock_request_id__isnull=False
         ).count(),
     )
-    if result.total_debit != result.total_credit:
+    if dimension_value_id is None and result.total_debit != result.total_credit:
         log.error(
             "ledger.trial_balance_unbalanced",
             entity_id=str(entity_id),
@@ -188,11 +205,26 @@ class AccountLedger:
     closing_balance: Decimal
 
 
+def _require_value(entity_id: UUID, value_id: UUID) -> None:
+    if not DimensionValue.objects.filter(legal_entity_id=entity_id, id=value_id).exists():
+        raise NotFoundError("Dimension value not found.")
+
+
 def general_ledger(
-    ctx: WorkspaceContext, entity_id: UUID, account_id: UUID, *, date_from: date, date_to: date
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    account_id: UUID,
+    *,
+    date_from: date,
+    date_to: date,
+    dimension_value_id: UUID | None = None,
 ) -> AccountLedger:
-    """Postings to one account with opening, running and closing balances on its normal side."""
+    """Postings to one account with opening, running and closing balances on its normal side
+    (optionally only the lines tagged with one dimension value)."""
     get_entity(ctx, entity_id, "reports.read")
+    if dimension_value_id is not None:
+        _require_value(entity_id, dimension_value_id)
+    tag = [dimension_value_id, dimension_value_id]  # a NULL value disables the tag filter
     account: Account | None = Account.objects.filter(
         legal_entity_id=entity_id, id=account_id
     ).first()
@@ -203,8 +235,10 @@ def general_ledger(
         cursor.execute(
             "SELECT coalesce(sum(l.debit - l.credit), 0) FROM ledger_journal_line l "
             "JOIN ledger_journal_entry e ON e.id = l.entry_id WHERE l.account_id = %s "
-            "AND e.status = 'POSTED' AND e.accounting_date < %s",
-            [account_id, date_from],
+            "AND e.status = 'POSTED' AND e.accounting_date < %s "
+            "AND (%s::uuid IS NULL OR EXISTS (SELECT 1 FROM ledger_line_dimension t "
+            "WHERE t.line_id = l.id AND t.value_id = %s))",
+            [account_id, date_from, *tag],
         )
         row = cursor.fetchone()
         opening = sign * (row[0] if row else ZERO)
@@ -215,8 +249,10 @@ def general_ledger(
             "JOIN ledger_journal j ON j.id = e.journal_id "
             "WHERE l.account_id = %s AND e.status = 'POSTED' "
             "AND e.accounting_date BETWEEN %s AND %s "
+            "AND (%s::uuid IS NULL OR EXISTS (SELECT 1 FROM ledger_line_dimension t "
+            "WHERE t.line_id = l.id AND t.value_id = %s)) "
             "ORDER BY e.accounting_date, e.posting_seq, l.line_no",
-            [account_id, date_from, date_to],
+            [account_id, date_from, date_to, *tag],
         )
         rows = cursor.fetchall()
     running = opening

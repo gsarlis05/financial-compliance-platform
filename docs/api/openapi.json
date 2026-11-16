@@ -460,6 +460,226 @@
         "title": "ChainStatusOut",
         "type": "object"
       },
+      "DimensionIn": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind"
+        ],
+        "title": "DimensionIn",
+        "type": "object"
+      },
+      "DimensionOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionValueOut"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "status",
+          "values"
+        ],
+        "title": "DimensionOut",
+        "type": "object"
+      },
+      "DimensionPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "DimensionPatch",
+        "type": "object"
+      },
+      "DimensionRuleIO": {
+        "properties": {
+          "dimension_id": {
+            "format": "uuid",
+            "title": "Dimension Id",
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          }
+        },
+        "required": [
+          "dimension_id",
+          "rule"
+        ],
+        "title": "DimensionRuleIO",
+        "type": "object"
+      },
+      "DimensionValueIn": {
+        "properties": {
+          "code": {
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_code": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Code"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "DimensionValueIn",
+        "type": "object"
+      },
+      "DimensionValueOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "parent_id",
+          "status"
+        ],
+        "title": "DimensionValueOut",
+        "type": "object"
+      },
+      "DimensionValuePatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "DimensionValuePatch",
+        "type": "object"
+      },
       "EntityIn": {
         "properties": {
           "entity_type": {
@@ -1060,9 +1280,10 @@
       },
       "Kind": {
         "enum": [
-          "FIRM",
-          "BUSINESS",
-          "PERSONAL"
+          "DEPARTMENT",
+          "PROJECT",
+          "COST_CENTRE",
+          "CUSTOM"
         ],
         "title": "Kind",
         "type": "string"
@@ -1133,6 +1354,18 @@
             "format": "date",
             "title": "Date To",
             "type": "string"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension Value Id"
           }
         },
         "required": [
@@ -1140,6 +1373,41 @@
           "date_to"
         ],
         "title": "LedgerQuery",
+        "type": "object"
+      },
+      "LineDimensionOut": {
+        "properties": {
+          "dimension_code": {
+            "title": "Dimension Code",
+            "type": "string"
+          },
+          "dimension_id": {
+            "format": "uuid",
+            "title": "Dimension Id",
+            "type": "string"
+          },
+          "value_code": {
+            "title": "Value Code",
+            "type": "string"
+          },
+          "value_id": {
+            "format": "uuid",
+            "title": "Value Id",
+            "type": "string"
+          },
+          "value_name": {
+            "title": "Value Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension_id",
+          "dimension_code",
+          "value_id",
+          "value_code",
+          "value_name"
+        ],
+        "title": "LineDimensionOut",
         "type": "object"
       },
       "LineIn": {
@@ -1162,6 +1430,16 @@
             "pattern": "^\\d{1,15}(\\.\\d{1,4})?$",
             "title": "Debit",
             "type": "string"
+          },
+          "dimension_value_ids": {
+            "description": "At most one value per dimension",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Dimension Value Ids",
+            "type": "array"
           },
           "memo": {
             "default": "",
@@ -1195,6 +1473,13 @@
             "title": "Debit",
             "type": "string"
           },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/LineDimensionOut"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
           "line_no": {
             "title": "Line No",
             "type": "integer"
@@ -1210,7 +1495,8 @@
           "account_code",
           "debit",
           "credit",
-          "memo"
+          "memo",
+          "dimensions"
         ],
         "title": "LineOut",
         "type": "object"
@@ -1478,6 +1764,14 @@
         "title": "RoleOut",
         "type": "object"
       },
+      "Rule": {
+        "enum": [
+          "REQUIRED",
+          "BLOCKED"
+        ],
+        "title": "Rule",
+        "type": "string"
+      },
       "SettingsIn": {
         "properties": {
           "approval_policy": {
@@ -1629,6 +1923,19 @@
               }
             ],
             "title": "Date From"
+          },
+          "dimension_value_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only lines tagged with this value (the result need not balance)",
+            "title": "Dimension Value Id"
           },
           "include_zero": {
             "default": false,
@@ -2586,6 +2893,447 @@
           }
         ],
         "summary": "Update Account",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/accounts/{account_id}/dimension-rules": {
+      "get": {
+        "operationId": "fcp_modules_ledger_api_get_dimension_rules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DimensionRuleIO"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Dimension Rules",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "put": {
+        "operationId": "fcp_modules_ledger_api_set_dimension_rules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/DimensionRuleIO"
+                },
+                "title": "Payload",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DimensionRuleIO"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Dimension Rules",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dimension-values/{value_id}": {
+      "patch": {
+        "operationId": "fcp_modules_ledger_api_update_dimension_value",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "value_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Value Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimensionValuePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimensionValueOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Update Dimension Value",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dimensions": {
+      "get": {
+        "operationId": "fcp_modules_ledger_api_list_dimensions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DimensionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Dimensions",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "post": {
+        "operationId": "fcp_modules_ledger_api_create_dimension",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimensionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimensionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Dimension",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dimensions/{dimension_id}": {
+      "patch": {
+        "operationId": "fcp_modules_ledger_api_update_dimension",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dimension_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dimension Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimensionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimensionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Update Dimension",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dimensions/{dimension_id}/values": {
+      "post": {
+        "operationId": "fcp_modules_ledger_api_create_dimension_value",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dimension_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dimension Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimensionValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimensionValueOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Dimension Value",
         "tags": [
           "ledger"
         ]
@@ -3714,6 +4462,23 @@
               "title": "Date To",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "dimension_value_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dimension Value Id"
+            }
           }
         ],
         "responses": {
@@ -3791,6 +4556,23 @@
               "title": "Date To",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "dimension_value_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dimension Value Id"
+            }
           }
         ],
         "responses": {
@@ -3867,6 +4649,25 @@
               "default": false,
               "title": "Include Zero",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Only lines tagged with this value (the result need not balance)",
+            "in": "query",
+            "name": "dimension_value_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only lines tagged with this value (the result need not balance)",
+              "title": "Dimension Value Id"
             }
           }
         ],
@@ -3951,6 +4752,25 @@
               "default": false,
               "title": "Include Zero",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Only lines tagged with this value (the result need not balance)",
+            "in": "query",
+            "name": "dimension_value_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only lines tagged with this value (the result need not balance)",
+              "title": "Dimension Value Id"
             }
           }
         ],

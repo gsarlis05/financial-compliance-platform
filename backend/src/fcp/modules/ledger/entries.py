@@ -22,6 +22,7 @@ from fcp.core.money import Money, MoneyError
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import Tenant, WorkspaceContext, get_entity
 
+from . import dimensions
 from .errors import (
     AccountNotPostableError,
     ApprovalRequiredError,
@@ -43,6 +44,7 @@ from .models import (
     JournalEntry,
     JournalLine,
     LedgerSettings,
+    LineDimension,
     Period,
     PostingCounter,
 )
@@ -59,6 +61,7 @@ class LineInput:
     debit: str = "0"
     credit: str = "0"
     memo: str = ""
+    dimension_value_ids: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -187,7 +190,7 @@ def _amount(value: str, currency: str, field: str) -> Money:
 
 
 def _validated_lines(
-    entity_id: UUID, currency: str, lines: Sequence[LineInput]
+    entity_id: UUID, currency: str, lines: Sequence[LineInput], *, mirror: bool = False
 ) -> list[dict[str, Any]]:
     """Structural checks that apply to drafts too (each line: one side, positive, rounded)."""
     accounts = {
@@ -196,6 +199,9 @@ def _validated_lines(
             legal_entity_id=entity_id, id__in=[ln.account_id for ln in lines]
         )
     }
+    tags = dimensions.resolve_tags(
+        entity_id, [ln.dimension_value_ids for ln in lines], allow_inactive=mirror
+    )
     result = []
     for i, line in enumerate(lines):
         debit = _amount(line.debit, currency, f"lines.{i}.debit")
@@ -223,6 +229,7 @@ def _validated_lines(
                 "debit": debit.amount,
                 "credit": credit.amount,
                 "memo": line.memo.strip(),
+                "tags": tags[i],
             }
         )
     return result
@@ -230,7 +237,7 @@ def _validated_lines(
 
 def _check_complete(entry: JournalEntry) -> None:
     """Posting-level checks: at least two lines and balanced (AC-C1)."""
-    lines = list(entry.lines.all())
+    lines = list(entry.lines.select_related("account").prefetch_related("dimension_tags__value"))
     if len(lines) < 2:
         raise TooFewLinesError("An entry needs at least two lines.")
     debits = sum((ln.debit for ln in lines), Decimal(0))
@@ -246,6 +253,22 @@ def _check_complete(entry: JournalEntry) -> None:
             raise AccountNotPostableError(
                 f"Account {ln.account.code} is a heading or inactive and cannot be posted to."
             )
+    if entry.entry_type != JournalEntry.EntryType.REVERSAL:  # reversals mirror the original
+        dimensions.check_rules(entry.legal_entity_id, lines)
+
+
+def _hash_line(ln: JournalLine) -> list[Any]:
+    row: list[Any] = [
+        ln.line_no,
+        str(ln.account_id),
+        f"{ln.debit:.2f}",
+        f"{ln.credit:.2f}",
+        ln.memo,
+    ]
+    tags = sorted(str(t.value_id) for t in ln.dimension_tags.all())
+    if tags:  # untagged lines hash exactly as before dimensions existed
+        row.append(tags)
+    return row
 
 
 def content_hash(entry: JournalEntry) -> str:
@@ -261,10 +284,7 @@ def content_hash(entry: JournalEntry) -> str:
         "currency": entry.currency,
         "reverses_entry_id": str(entry.reverses_entry_id) if entry.reverses_entry_id else None,
         "related_entry_id": str(entry.related_entry_id) if entry.related_entry_id else None,
-        "lines": [
-            [ln.line_no, str(ln.account_id), f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
-            for ln in sorted(entry.lines.all(), key=lambda x: x.line_no)
-        ],
+        "lines": [_hash_line(ln) for ln in sorted(entry.lines.all(), key=lambda x: x.line_no)],
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
@@ -310,7 +330,7 @@ def list_entries(  # noqa: PLR0913 - keyword-only filters
 ) -> list[JournalEntry]:
     get_entity(ctx, entity_id, "ledger.entry.read")
     queryset = JournalEntry.objects.filter(legal_entity_id=entity_id).prefetch_related(
-        "lines__account"
+        "lines__account", "lines__dimension_tags__value", "lines__dimension_tags__dimension"
     )
     if status:
         queryset = queryset.filter(status=status)
@@ -338,17 +358,35 @@ def _audit(
     )
 
 
+def _tag_codes(line: JournalLine) -> list[str]:
+    return sorted(f"{t.dimension.code}={t.value.code}" for t in line.dimension_tags.all())
+
+
 def _line_snapshot(entry: JournalEntry) -> list[list[str]]:
-    return [
-        [ln.account.code, f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
-        for ln in sorted(entry.lines.all(), key=lambda x: x.line_no)
-    ]
+    snapshot = []
+    for ln in sorted(entry.lines.all(), key=lambda x: x.line_no):
+        row = [ln.account.code, f"{ln.debit:.2f}", f"{ln.credit:.2f}", ln.memo]
+        row += _tag_codes(ln)
+        snapshot.append(row)
+    return snapshot
 
 
 def _write_lines(ctx: WorkspaceContext, entry: JournalEntry, lines: list[dict[str, Any]]) -> None:
     entry.lines.all().delete()
-    JournalLine.objects.bulk_create(
-        [JournalLine(tenant=ctx.tenant, entry=entry, **line) for line in lines]
+    created = JournalLine.objects.bulk_create(
+        [
+            JournalLine(
+                tenant=ctx.tenant, entry=entry, **{k: v for k, v in ln.items() if k != "tags"}
+            )
+            for ln in lines
+        ]
+    )
+    LineDimension.objects.bulk_create(
+        [
+            LineDimension(tenant=ctx.tenant, line=line, dimension=tag.dimension, value=tag.value)
+            for line, ln in zip(created, lines, strict=True)
+            for tag in ln["tags"]
+        ]
     )
 
 
@@ -363,9 +401,12 @@ def create_draft(  # noqa: PLR0913 - keyword-only options
     related_entry: JournalEntry | None = None,
     correction_reason: str = "",
     source: str = JournalEntry.Source.MANUAL,
+    mirror: bool = False,
 ) -> JournalEntry:
+    """``mirror``: a reversal copying a posted entry's lines; its dimension values may have been
+    deactivated since, which must not prevent correcting the books."""
     entity = get_entity(ctx, entity_id, "ledger.entry.create")
-    lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
+    lines = _validated_lines(entity.id, entity.functional_currency, data.lines, mirror=mirror)
     entry = JournalEntry.objects.create(
         tenant=ctx.tenant,
         legal_entity=entity,

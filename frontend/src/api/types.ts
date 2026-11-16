@@ -66,6 +66,14 @@ export interface FiscalYear {
 
 export type EntryStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "POSTED" | "REJECTED" | "VOID";
 
+export interface LineDimension {
+  dimension_id: string;
+  dimension_code: string;
+  value_id: string;
+  value_code: string;
+  value_name: string;
+}
+
 export interface EntryLine {
   line_no: number;
   account_id: string;
@@ -73,6 +81,26 @@ export interface EntryLine {
   debit: Amount;
   credit: Amount;
   memo: string;
+  dimensions: LineDimension[];
+}
+
+export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
+
+export interface DimensionValue {
+  id: string;
+  code: string;
+  name: string;
+  parent_id: string | null;
+  status: "ACTIVE" | "INACTIVE";
+}
+
+export interface Dimension {
+  id: string;
+  code: string;
+  name: string;
+  kind: DimensionKind;
+  status: "ACTIVE" | "INACTIVE";
+  values: DimensionValue[];
 }
 
 export interface JournalEntry {
@@ -107,7 +135,13 @@ export interface EntryInput {
   accounting_date: string;
   description: string;
   use_adjustment_period: boolean;
-  lines: { account_id: string; debit: Amount; credit: Amount; memo: string }[];
+  lines: {
+    account_id: string;
+    debit: Amount;
+    credit: Amount;
+    memo: string;
+    dimension_value_ids: string[];
+  }[];
 }
 
 export interface TrialBalanceRow {

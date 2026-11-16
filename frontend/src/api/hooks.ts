@@ -3,6 +3,9 @@ import { useParams } from "react-router";
 import { api, newIdempotencyKey } from "./client";
 import type {
   Account,
+  Dimension,
+  DimensionKind,
+  DimensionValue,
   EntryInput,
   FiscalYear,
   IntegrityRun,
@@ -162,13 +165,44 @@ export function useEntryMutations() {
   };
 }
 
-export function useTrialBalance(asOf: string) {
+export function useTrialBalance(asOf: string, dimensionValueId = "") {
   const { base, entityId } = useScope();
   return useQuery({
-    queryKey: ["trial-balance", entityId, asOf],
-    queryFn: () => api<TrialBalance>(`${base}/reports/trial-balance`, { query: { as_of: asOf } }),
+    queryKey: ["trial-balance", entityId, asOf, dimensionValueId],
+    queryFn: () =>
+      api<TrialBalance>(`${base}/reports/trial-balance`, {
+        query: { as_of: asOf, ...(dimensionValueId ? { dimension_value_id: dimensionValueId } : {}) },
+      }),
     enabled: !!asOf,
   });
+}
+
+export function useDimensions() {
+  const { base, entityId } = useScope();
+  return useQuery({ queryKey: ["dimensions", entityId], queryFn: () => api<Dimension[]>(`${base}/dimensions`) });
+}
+
+export function useDimensionMutations() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: ["dimensions", entityId] });
+  return {
+    createDimension: useMutation({
+      mutationFn: (body: { code: string; name: string; kind: DimensionKind }) =>
+        api<Dimension>(`${base}/dimensions`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    createValue: useMutation({
+      mutationFn: ({ dimensionId, ...body }: { dimensionId: string; code: string; name: string }) =>
+        api<DimensionValue>(`${base}/dimensions/${dimensionId}/values`, { method: "POST", body }),
+      onSuccess: refresh,
+    }),
+    setValueStatus: useMutation({
+      mutationFn: ({ valueId, status }: { valueId: string; status: "ACTIVE" | "INACTIVE" }) =>
+        api<DimensionValue>(`${base}/dimension-values/${valueId}`, { method: "PATCH", body: { status } }),
+      onSuccess: refresh,
+    }),
+  };
 }
 
 export function useIntegrity(slug: string) {

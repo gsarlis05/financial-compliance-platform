@@ -1,5 +1,5 @@
 import { type SyntheticEvent, useState } from "react";
-import type { Account, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
+import type { Account, Dimension, EntryInput, FiscalYear, JournalEntry, Period } from "../api/types";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
@@ -10,10 +10,12 @@ interface LineState {
   debit: string;
   credit: string;
   memo: string;
+  /** dimension id -> value id ("" = none) */
+  dims: Record<string, string>;
 }
 
 let nextKey = 1;
-const emptyLine = (): LineState => ({ key: nextKey++, account_id: "", debit: "", credit: "", memo: "" });
+const emptyLine = (): LineState => ({ key: nextKey++, account_id: "", debit: "", credit: "", memo: "", dims: {} });
 
 export function periodFor(years: FiscalYear[], date: string, adjustment: boolean): Period | undefined {
   for (const year of years) {
@@ -29,6 +31,7 @@ export function periodFor(years: FiscalYear[], date: string, adjustment: boolean
 
 interface Props {
   accounts: Account[];
+  dimensions?: Dimension[];
   fiscalYears: FiscalYear[];
   initial?: JournalEntry | undefined;
   saving: boolean;
@@ -36,7 +39,7 @@ interface Props {
   onSave: (body: EntryInput, submit: boolean) => void;
 }
 
-export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSave }: Props) {
+export function EntryForm({ accounts, dimensions = [], fiscalYears, initial, saving, error, onSave }: Props) {
   const { t, locale } = useI18n();
   const [date, setDate] = useState(initial?.accounting_date ?? new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -48,8 +51,12 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
       debit: l.debit === "0.00" ? "" : l.debit,
       credit: l.credit === "0.00" ? "" : l.credit,
       memo: l.memo,
+      dims: Object.fromEntries(l.dimensions.map((d) => [d.dimension_id, d.value_id])),
     })) ?? [emptyLine(), emptyLine()],
   );
+  // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
+  const usedDims = new Set(lines.flatMap((l) => Object.keys(l.dims).filter((k) => l.dims[k])));
+  const shownDims = dimensions.filter((d) => d.status === "ACTIVE" || usedDims.has(d.id));
 
   const postable = accounts.filter((a) => a.is_postable && a.status === "ACTIVE");
   const totalDebit = sum(lines.map((l) => l.debit));
@@ -72,6 +79,7 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
         debit: normaliseAmount(l.debit),
         credit: normaliseAmount(l.credit),
         memo: l.memo,
+        dimension_value_ids: Object.values(l.dims).filter((v) => v !== ""),
       })),
     };
   }
@@ -101,6 +109,7 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
       </div>
       {period?.status === "LOCKED" ? <p className="notice warn">{t("per.lockedHelp")}</p> : null}
       {period?.status === "SOFT_CLOSED" ? <p className="notice">{t("per.softClosedHelp")}</p> : null}
+      <div className="table-scroll">
       <table className="lines">
         <thead>
           <tr>
@@ -108,6 +117,11 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
             <th scope="col">{t("je.debit")}</th>
             <th scope="col">{t("je.credit")}</th>
             <th scope="col">{t("je.memo")}</th>
+            {shownDims.map((d) => (
+              <th scope="col" key={d.id}>
+                {d.code}
+              </th>
+            ))}
             <th scope="col">
               <span className="visually-hidden">{t("je.removeLine")}</span>
             </th>
@@ -162,7 +176,27 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
                   maxLength={300}
                   onChange={(e) => update(line.key, { memo: e.target.value })}
                 />
+                <FieldError error={error} field={`lines.${index}.dimension_value_ids`} />
               </td>
+              {shownDims.map((d) => (
+                <td key={d.id}>
+                  <select
+                    className="dimension-picker"
+                    aria-label={`${d.code} ${index + 1}`}
+                    value={line.dims[d.id] ?? ""}
+                    onChange={(e) => update(line.key, { dims: { ...line.dims, [d.id]: e.target.value } })}
+                  >
+                    <option value="">—</option>
+                    {d.values
+                      .filter((v) => v.status === "ACTIVE" || v.id === line.dims[d.id])
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.code} · {v.name}
+                        </option>
+                      ))}
+                  </select>
+                </td>
+              ))}
               <td>
                 <button
                   type="button"
@@ -186,12 +220,13 @@ export function EntryForm({ accounts, fiscalYears, initial, saving, error, onSav
             <td className="amount" data-testid="total-credit">
               {formatAmount(totalCredit, locale)}
             </td>
-            <td colSpan={2} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
+            <td colSpan={2 + shownDims.length} id="entry-balance" aria-live="polite" className={balanced ? "ok" : "warn"}>
               {balanced ? t("je.balanced") : `${t("je.difference")}: ${formatAmount(difference, locale)}`}
             </td>
           </tr>
         </tfoot>
       </table>
+      </div>
       <button type="button" className="link-button" onClick={() => setLines([...lines, emptyLine()])}>
         + {t("je.addLine")}
       </button>

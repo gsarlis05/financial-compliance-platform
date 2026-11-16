@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import axe from "axe-core";
 import type { ReactNode } from "react";
 import { ApiError } from "./api/client";
-import type { Account, FiscalYear, JournalEntry } from "./api/types";
+import type { Account, Dimension, FiscalYear, JournalEntry } from "./api/types";
 import { I18nProvider } from "./i18n/I18n";
 import { el, en } from "./i18n/messages";
 import { formatAmount, isAmount, sum } from "./money";
@@ -157,6 +157,48 @@ const posted: JournalEntry = {
   approved_by_id: "u2", posted_by_id: "u2", rejection_reason: "", unlock_request_id: null,
   content_hash: "x", total_debit: "100.00", total_credit: "100.00", lines: [],
 };
+
+const dims: Dimension[] = [
+  {
+    id: "d1", code: "DEPT", name: "Departments", kind: "DEPARTMENT", status: "ACTIVE",
+    values: [
+      { id: "v1", code: "SALES", name: "Sales", parent_id: null, status: "ACTIVE" },
+      { id: "v2", code: "OLD", name: "Old", parent_id: null, status: "INACTIVE" },
+    ],
+  },
+  { id: "d2", code: "GONE", name: "Retired", kind: "CUSTOM", status: "INACTIVE", values: [] },
+];
+
+describe("EntryForm dimensions (M2-1)", () => {
+  it("offers active values per line and sends the chosen value ids", () => {
+    const { onSave } = renderForm({ dimensions: dims });
+    expect(screen.queryByLabelText("GONE 1")).not.toBeInTheDocument(); // inactive dimension hidden
+    const picker = screen.getByLabelText<HTMLSelectElement>("DEPT 1");
+    expect(Array.from(picker.options).map((o) => o.text)).toEqual(["—", "SALES · Sales"]);
+    fill("Description", "Rent");
+    fill("Account 1", "a1");
+    fill("Debit 1", "10.00");
+    fill("DEPT 1", "v1");
+    fill("Account 2", "a2");
+    fill("Credit 2", "10.00");
+    fireEvent.click(screen.getByRole("button", { name: "Save and submit" }));
+    const [body] = onSave.mock.calls[0] as [{ lines: { dimension_value_ids: string[] }[] }];
+    expect(body.lines.map((l) => l.dimension_value_ids)).toEqual([["v1"], []]);
+  });
+
+  it("keeps an inactive value already used on the entry visible", async () => {
+    const initial: JournalEntry = {
+      ...posted, status: "DRAFT",
+      lines: [{
+        line_no: 1, account_id: "a1", account_code: "1300", debit: "5.00", credit: "0.00", memo: "",
+        dimensions: [{ dimension_id: "d1", dimension_code: "DEPT", value_id: "v2", value_code: "OLD", value_name: "Old" }],
+      }],
+    };
+    const { container } = renderForm({ dimensions: dims, initial });
+    expect(screen.getByLabelText<HTMLSelectElement>("DEPT 1").value).toBe("v2");
+    await noAxeViolations(container);
+  });
+});
 
 describe("EntryActions (AC-F2)", () => {
   it("posted entries are read-only with only a reverse action", async () => {
