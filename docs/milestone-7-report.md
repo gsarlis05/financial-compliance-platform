@@ -90,7 +90,23 @@ sensitivity runs use the existing calculation-run tables. Migrations were applie
   every sheet that the figures are hypothetical.
 
 ## Quality
-QUALITY_PLACEHOLDER
+Measured on 2026-11-16 on the M7-7 branch, on a fresh test database (`make test`, `make lint`,
+`make openapi-check`, `make security`, `make validation`, all passing):
+- Backend: **1,303 tests passed**, **96.24%** line and branch coverage overall; the `scenarios`
+  module **98.43%**. The brief's target of 100% branch coverage on calculation engines is **not
+  met**: `apply.py` is at 96.70% and `sensitivity.py` at 98.70% (a few refusal and edge branches).
+- Frontend: **69 tests**, including axe on all four new screens; ESLint strict, `tsc`, build.
+- Security: Semgrep 0 findings; gitleaks no leaks. Validation package: all six scenarios match
+  the independent model to EUR 0.01.
+- **Live checks** with MFA sign-in on the local stack, at 1280 px and 390 px (no horizontal scroll
+  on any screen), on the demo scenario. They found and fixed:
+  - tornado bars named by internal keys (`OPEX.PAYROLL`) instead of plain words (Payroll);
+  - KPI values on the comparison shown unrounded (`0.11249…`) instead of 11.25%;
+  - goal figures and working-capital days shown unformatted, and an empty loan list in a change's
+    details;
+  - the demo's hand-worked scenario figure: the demo year is seasonal, so the expected revenue
+    change is 323,400.00, not 316,800.00 (the engine was right; the first hand figure assumed
+    even months).
 
 ## Known limitations
 - **The brief placed working capital on the Projections screen and scenarios as a column on Goals.**
