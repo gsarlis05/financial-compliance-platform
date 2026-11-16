@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "fcp.core.db",
     "fcp.modules.identity",
     "fcp.modules.tenancy",
+    "fcp.modules.audit_log",
 ]
 
 AUTH_USER_MODEL = "identity.User"

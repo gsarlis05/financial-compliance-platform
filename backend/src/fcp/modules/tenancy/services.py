@@ -22,6 +22,7 @@ from fcp.core.errors import (
     ValidationFailedError,
 )
 from fcp.core.ids import uuid7
+from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import User
 
 from .entitlements import Feature, Role, allowed_roles, require_feature
@@ -119,11 +120,21 @@ def create_workspace(
         id=tenant_id, slug=_slugify(name), name=name, kind=kind, created_by=user
     )
     membership = Membership.objects.create(tenant=tenant, user=user)
-    RoleAssignment.objects.create(
+    owner_role = RoleAssignment.objects.create(
         tenant=tenant, membership=membership, role_key=Role.OWNER, granted_by=user
     )
+    audit(
+        tenant_id=tenant.id,
+        actor_user_id=user.id,
+        action="tenancy.workspace.created",
+        subject_type="tenant",
+        subject_id=tenant.id,
+        changes={"name": name, "kind": kind},
+    )
+    _audit_role(tenant.id, user.id, owner_role, "tenancy.role.granted")
+    entity: LegalEntity | None = None
     if kind == Tenant.Kind.PERSONAL:
-        LegalEntity.objects.create(
+        entity = LegalEntity.objects.create(
             tenant=tenant,
             legal_name=f"{name} (household)",
             entity_type=LegalEntity.EntityType.HOUSEHOLD,
@@ -135,13 +146,49 @@ def create_workspace(
                 "A business workspace needs its company details.",
                 field_errors={"entity_name": ["required for a business workspace"]},
             )
-        LegalEntity.objects.create(
+        entity = LegalEntity.objects.create(
             tenant=tenant,
             legal_name=entity_name,
             entity_type=entity_type or LegalEntity.EntityType.COMPANY,
             created_by=user,
         )
+    if entity is not None:
+        _audit_entity(tenant.id, user.id, entity)
     return WorkspaceContext(tenant, user, membership, ((Role.OWNER, None),))
+
+
+def _audit_entity(tenant_id: uuid.UUID, user_id: uuid.UUID, entity: LegalEntity) -> None:
+    audit(
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        action="tenancy.entity.created",
+        subject_type="legal_entity",
+        subject_id=entity.id,
+        entity_id=entity.id,
+        changes={
+            "legal_name": entity.legal_name,
+            "entity_type": entity.entity_type,
+            "registration_no": entity.registration_no,
+        },
+    )
+
+
+def _audit_role(
+    tenant_id: uuid.UUID, user_id: uuid.UUID, assignment: RoleAssignment, action: str
+) -> None:
+    audit(
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        action=action,
+        subject_type="role_assignment",
+        subject_id=assignment.id,
+        entity_id=assignment.legal_entity_id,
+        changes={
+            "membership_id": assignment.membership_id,
+            "role_key": assignment.role_key,
+            "legal_entity_id": assignment.legal_entity_id,
+        },
+    )
 
 
 def list_workspaces(user: User) -> list[Tenant]:
@@ -199,13 +246,15 @@ def create_entity(
         raise ValidationFailedError(
             "This entity type is not allowed here.", field_errors={"entity_type": ["invalid"]}
         )
-    return LegalEntity.objects.create(
+    entity = LegalEntity.objects.create(
         tenant=ctx.tenant,
         legal_name=legal_name,
         entity_type=entity_type,
         registration_no=registration_no,
         created_by=ctx.user,
     )
+    _audit_entity(ctx.tenant.id, ctx.user.id, entity)
+    return entity
 
 
 def visible_entities(ctx: WorkspaceContext, permission: str = "tenancy.workspace.read") -> Any:
@@ -270,6 +319,21 @@ def invite_member(
         expires_at=timezone.now() + INVITATION_LIFETIME,
         invited_by=ctx.user,
     )
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action="tenancy.invitation.created",
+        subject_type="invitation",
+        subject_id=invitation.id,
+        entity_id=legal_entity_id,
+        changes={
+            "email": invitation.email,
+            "role_key": role_key,
+            "legal_entity_id": legal_entity_id,
+            "expires_at": invitation.expires_at,
+        },
+        sensitive=["email"],
+    )
     return IssuedInvitation(invitation, token)
 
 
@@ -298,7 +362,7 @@ def accept_invitation(user: User, token: str) -> WorkspaceContext:
     if membership.status != Membership.Status.ACTIVE:
         raise ConflictError("Your membership of this workspace is not active.")
     try:
-        RoleAssignment.objects.get_or_create(
+        assignment, created = RoleAssignment.objects.get_or_create(
             tenant_id=tenant_id,
             membership=membership,
             role_key=invitation.role_key,
@@ -310,6 +374,16 @@ def accept_invitation(user: User, token: str) -> WorkspaceContext:
     invitation.accepted_at = timezone.now()
     invitation.accepted_by = user
     invitation.save(update_fields=["accepted_at", "accepted_by"])
+    audit(
+        tenant_id=tenant_id,
+        actor_user_id=user.id,
+        action="tenancy.invitation.accepted",
+        subject_type="invitation",
+        subject_id=invitation.id,
+        changes={"membership_id": membership.id},
+    )
+    if created:
+        _audit_role(tenant_id, user.id, assignment, "tenancy.role.granted")
     tenant = Tenant.objects.get(id=tenant_id)
     return enter_workspace(user, tenant.slug)
 
@@ -372,6 +446,7 @@ def grant_role(
     )
     if not created:
         raise ConflictError("The member already has this role.")
+    _audit_role(ctx.tenant.id, ctx.user.id, assignment, "tenancy.role.granted")
     return assignment
 
 
@@ -391,4 +466,5 @@ def revoke_role(ctx: WorkspaceContext, assignment_id: uuid.UUID) -> None:
             raise ConflictError("A workspace must keep at least one owner.")
         if Role.OWNER not in ctx.roles:
             raise PermissionDeniedError("Only an owner can remove another owner.")
+    _audit_role(ctx.tenant.id, ctx.user.id, assignment, "tenancy.role.revoked")
     assignment.delete()
