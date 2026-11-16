@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 
 from ..ledger.conftest import books, join
-from .test_scenarios import approved_set
 
 pytestmark = pytest.mark.django_db
 Make = Callable[..., Any]
@@ -19,20 +18,34 @@ def plan(books: dict[str, Any]) -> dict[str, Any]:
     """An approved 12-month set from 31/12/2026: sales 1,000 a month at a 40% margin, rent 300;
     loan TERM-1 of 30,000 drawn in February 2027 (5%, 36 months)."""
     c, base = books["client"], books["base"]
-    made = c.post_json(f"{base}/assumption-sets", {"name": "Plan", "cutover": "2026-12-31",
-                                                   "months": 12, "start_from": "EMPTY"}).json()
+    made = c.post_json(
+        f"{base}/assumption-sets",
+        {"name": "Plan", "cutover": "2026-12-31", "months": 12, "start_from": "EMPTY"},
+    ).json()
     url = f"{base}/assumption-sets/{made['id']}"
     months = [f"2027-{m:02d}-01" for m in range(1, 13)]
-    changes = [{"driver": "revenue", "line": "REV.SALES", "month": m, "value": "1000"}
-               for m in months]
+    changes = [
+        {"driver": "revenue", "line": "REV.SALES", "month": m, "value": "1000"} for m in months
+    ]
     changes += [{"driver": "gross_margin", "month": m, "value": "40"} for m in months]
-    changes += [{"driver": "opex", "line": "OPEX.RENT", "month": m, "value": "300"}
-                for m in months]
+    changes += [{"driver": "opex", "line": "OPEX.RENT", "month": m, "value": "300"} for m in months]
     assert c.put_json(f"{url}/values", {"changes": changes}).status_code == 200
-    assert c.post_json(f"{url}/loans", {
-        "code": "TERM-1", "name": "Term loan", "kind": "NEW", "structure": "ANNUITY",
-        "term_months": 36, "annual_rate": "5", "amount": "30000",
-        "drawdown_month": "2027-02-01"}).status_code == 201
+    assert (
+        c.post_json(
+            f"{url}/loans",
+            {
+                "code": "TERM-1",
+                "name": "Term loan",
+                "kind": "NEW",
+                "structure": "ANNUITY",
+                "term_months": 36,
+                "annual_rate": "5",
+                "amount": "30000",
+                "drawdown_month": "2027-02-01",
+            },
+        ).status_code
+        == 201
+    )
     assert c.post_json(f"{url}/approve", {}).status_code == 200
     books["set_id"] = made["id"]
     books["url"] = f"{base}/scenarios"

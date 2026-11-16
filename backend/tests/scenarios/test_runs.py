@@ -13,7 +13,7 @@ from hypothesis import strategies as st
 
 from fcp.core.errors import ValidationFailedError
 from fcp.modules.metrics.api import Nature
-from fcp.modules.projections.api import EngineInput, LoanTerms, project
+from fcp.modules.projections.api import EngineInput, LoanTerms, Projection, project
 from fcp.modules.scenarios.apply import Item, apply
 from fcp.modules.scenarios.runs import _effects, hypothetical, steps
 
@@ -55,7 +55,7 @@ def item(seq: int, kind: str, **params: Any) -> Item:
     return Item(f"o{seq}", seq, kind, params)
 
 
-def month_value(p: Any, month: int, key: str) -> Decimal:
+def month_value(p: Projection, month: int, key: str) -> Decimal:
     m = p.months[month - 1]
     return {**m.pl, **m.bs, **m.cf}[key]
 
@@ -118,18 +118,25 @@ def test_each_type_by_hand() -> None:
     assert effects[1].changes["PL.REVENUE"] == D("0.00")
     # The settlement is not something an assumption set can hold.
     assert s.applied.inexpressible == [
-        "Override 3 (ONE_OFF): an assumption set cannot settle a liability"]
+        "Override 3 (ONE_OFF): an assumption set cannot settle a liability"
+    ]
 
 
 def test_lineage_names_each_override_and_its_effect() -> None:
-    s = steps(base(), [item(1, "ABS_CHANGE", driver="opex", line="OPEX.RENT", amount="100.00"),
-                       item(2, "ABS_CHANGE", driver="opex", line="OPEX.RENT", amount="50.00")])
+    s = steps(
+        base(),
+        [
+            item(1, "ABS_CHANGE", driver="opex", line="OPEX.RENT", amount="100.00"),
+            item(2, "ABS_CHANGE", driver="opex", line="OPEX.RENT", amount="50.00"),
+        ],
+    )
     out = hypothetical(s)
     rent = next(v for v in out.values if v.series_key == "PL.OPEX.RENT"
                 and v.granularity == "MONTH" and v.period_start == MONTHS[0])  # fmt: skip
     effects = [(x.ref, x.amount) for x in rent.lineage if x.ref.startswith("scenario_override:")]
     assert effects == [("scenario_override:o1", D("100.00")), ("scenario_override:o2", D("50.00"))]
-    assert rent.value == D("1150.00") and rent.nature == Nature.HYPOTHETICAL
+    assert rent.value == D("1150.00")
+    assert rent.nature == Nature.HYPOTHETICAL
 
 
 def test_timing_capex_and_refusals() -> None:
@@ -148,7 +155,8 @@ def test_timing_capex_and_refusals() -> None:
     clash = apply(with_capex, [item(1, "CAPEX", amount="500.00", month="2027-04-01",
                                     useful_life_months=24, funding="LOAN", term_months=12,
                                     annual_rate="4", structure="ANNUITY")])  # fmt: skip
-    assert len(clash.inp.extra_capex) == 1 and clash.inexpressible
+    assert len(clash.inp.extra_capex) == 1
+    assert clash.inexpressible
     assert [x.code for x in clash.new_loans] == ["CAPEX-1"]
     assert all(project(clash.inp)[1].invariants.values())
 
