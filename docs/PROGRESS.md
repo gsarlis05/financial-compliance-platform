@@ -100,7 +100,8 @@ until validated and signed by a qualified professional; brief
 | M6F-5 Corporate tax in projections: current and deferred tax, losses by year, provisional and final payments from the versioned rules; income tax separate from VAT (issue #150) | `claude/m6f-5-tax` | #159 | Open |
 | M6F-6 Rolling forecasts on material changes (15-minute pass, materiality, regular interval); published runs stay the reference; any past projection against actuals (issue #151) | `claude/m6f-6-rolling-material` | #160 | Open |
 | M6F-7 Goals: the published projection as forward reference, the approved budget as a separate benchmark; actual vs budget, actual vs forecast, projected vs goal; goals never change by themselves (issue #152) | `claude/m6f-7-goals-benchmarks` | #161 | Open |
-| M6F-8 Validation package for the 24-month golden model (issue #153) | — | — | Next |
+| M6F-8 Validation package: independent 24-month model, six scenarios (losses, negative cash, early repayments, changing revenues, unexpected expenses), line-by-line comparison at EUR 0.01, reconciliation, discrepancy report, acceptance checklist, reviewer sign-off form; engine stays PENDING_PROFESSIONAL_REVIEW (issue #153) | `claude/m6f-8-validation` | #162 | Open |
+| Owner items: professional review of the validation package (U1), Cyprus tax rules verification (#154) | — | — | Waiting for the owner |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

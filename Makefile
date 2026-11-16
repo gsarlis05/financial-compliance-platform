@@ -3,7 +3,7 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check restore-drill e2e-login e2e-ui demo images container-smoke openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check restore-drill e2e-login e2e-ui demo images container-smoke openapi openapi-check ops-checks validation test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
@@ -116,6 +116,9 @@ container-smoke: images
 
 openapi:
 	cd backend && uv run python -m fcp.openapi ../docs/api/openapi.json
+
+validation: ## Regenerate the projection engine's validation package (docs/validation/results)
+	cd backend && uv run python -m fcp.devtools.validation
 
 openapi-check:
 	cd backend && uv run python -m fcp.openapi --check ../docs/api/openapi.json
