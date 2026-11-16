@@ -5,7 +5,7 @@ Routes are entity-scoped (``/api/w/{slug}/entities/{entity_id}/...``). Values ar
 amounts in money, percentages as e.g. ``35`` for 35%, days and months as numbers.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
@@ -368,6 +368,50 @@ class ProjectionStatementsOut(Schema):
     )
 
 
+class ProjectionVsActualsLineOut(Schema):
+    key: str = Field(description="Income statement line, or BS.CASH (month-end cash)")
+    forecast: list[str | None]
+    actual: list[str]
+    variance: list[str | None] = Field(description="Actual - forecast")
+    forecast_total: str | None = Field(description="Closed months: sum (cash: the last month)")
+    actual_total: str | None
+    variance_total: str | None
+
+
+class ProjectionVsActualsOut(Schema):
+    run_id: UUID
+    as_of: date
+    made_at: datetime
+    is_published: bool
+    months: list[date] = Field(description="The projection's months that have closed")
+    lines: list[ProjectionVsActualsLineOut]
+    note: str
+
+
+def _money(value: Decimal | None) -> str | None:
+    return None if value is None else str(value.quantize(Decimal("0.01")))
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}/actuals", response=ProjectionVsActualsOut)
+@requires("planning.read")
+def projection_vs_actuals(request: HttpRequest, slug: str, entity_id: UUID,
+                          run_id: UUID) -> ProjectionVsActualsOut:  # fmt: skip
+    """Any past projection against the posted books, line by line, for its months that have
+    closed (M6F-6, #151). Also needs ``reports.read`` for the actuals."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = outlook.versus_actuals(ctx, entity_id, run_id)
+    return ProjectionVsActualsOut(
+        run_id=found.run.id, as_of=found.run.as_of_date, made_at=found.run.created_at,
+        is_published=found.run.is_published, months=found.months, note=found.note,
+        lines=[ProjectionVsActualsLineOut(
+            key=line.key, forecast=[_money(v) for v in line.forecast],
+            actual=[str(_money(v)) for v in line.actual],
+            variance=[_money(v) for v in line.variance],
+            forecast_total=_money(line.forecast_total), actual_total=_money(line.actual_total),
+            variance_total=_money(line.variance_total)) for line in found.lines],
+    )  # fmt: skip
+
+
 @router.get(f"{BASE}/projections/{{uuid:run_id}}", response=ProjectionStatementsOut)
 @requires("planning.read")
 def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
@@ -412,6 +456,13 @@ class RollingIn(Schema):
     assumption_set_id: UUID = Field(description="Any version; its family's approved one is used")
     horizon: Literal[12, 24] = 12
     active: bool = True
+    interval_minutes: int = Field(
+        default=60, description="Minutes: 15, 30, 60, 120, 240, 480, 1440"
+    )
+    materiality: str | None = Field(
+        default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$",
+        description="Debits posted since the latest run that re-run it at once; empty: never",
+    )  # fmt: skip
 
 
 class RollingOut(Schema):
@@ -423,6 +474,13 @@ class RollingOut(Schema):
     latest: ProjectionRunOut | None = None
     stale: bool = False
     stale_reasons: list[str] = Field(default_factory=list)
+    material: bool = Field(default=False, description="A material change: re-run at the next pass")
+    posted_since: str = Field(default="0.00", description="Debits posted since the latest run")
+    interval_minutes: int = 60
+    materiality: str | None = None
+    next_regular_run: datetime | None = Field(
+        default=None, description="When a change that is not material is picked up"
+    )
     history: list[ProjectionRunOut] = Field(default_factory=list)
 
 
@@ -440,6 +498,12 @@ def _rolling_out(ctx: WorkspaceContext, entity_id: UUID) -> RollingOut:
         active=found.active, latest=_projection_out(latest) if latest else None,
         stale=fresh.stale if fresh else True,
         stale_reasons=list(fresh.reasons) if fresh else ["not run yet"],
+        material=fresh.material if fresh else True,
+        posted_since=f"{fresh.posted:.2f}" if fresh else "0.00",
+        interval_minutes=found.interval_minutes,
+        materiality=None if found.materiality is None else f"{found.materiality:.2f}",
+        next_regular_run=(latest.created_at + timedelta(minutes=found.interval_minutes)
+                          if latest else None),
         history=[_projection_out(r) for r in done],
     )  # fmt: skip
 
@@ -457,7 +521,12 @@ def get_rolling(request: HttpRequest, slug: str, entity_id: UUID) -> RollingOut:
 def put_rolling(request: HttpRequest, slug: str, entity_id: UUID,
                 payload: RollingIn) -> RollingOut:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
-    rolling.configure(ctx, entity_id, payload.assumption_set_id, payload.horizon, payload.active)
+    cadence = rolling.Cadence(
+        payload.interval_minutes,
+        None if payload.materiality is None else Decimal(payload.materiality),
+    )
+    rolling.configure(ctx, entity_id, payload.assumption_set_id, payload.horizon, payload.active,
+                      cadence)  # fmt: skip
     return _rolling_out(ctx, entity_id)
 
 

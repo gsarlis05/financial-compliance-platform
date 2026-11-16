@@ -98,7 +98,8 @@ until validated and signed by a qualified professional; brief
 | M6F-3 Depreciation from available for use (IAS 16); separate tax capital allowances; capex commencement and method in projections (issue #148) | `claude/m6f-3-depreciation-allowances` | #157 | Open |
 | M6F-4 Loans in projections: structures, rate paths, early repayment, drawdowns, register loans, debt reconciliation (issue #149) | `claude/m6f-4-debt` | #158 | Open |
 | M6F-5 Corporate tax in projections: current and deferred tax, losses by year, provisional and final payments from the versioned rules; income tax separate from VAT (issue #150) | `claude/m6f-5-tax` | #159 | Open |
-| M6F-6 Rolling forecasts on material changes; past forecasts against actuals (issue #151) | — | — | Next |
+| M6F-6 Rolling forecasts on material changes (15-minute pass, materiality, regular interval); published runs stay the reference; any past projection against actuals (issue #151) | `claude/m6f-6-rolling-material` | #160 | Open |
+| M6F-7 Goals: actual, budget, forecast and projection side by side (issue #152) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

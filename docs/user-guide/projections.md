@@ -91,6 +91,10 @@ opening balance. If an account with a balance is not mapped to a statement line,
 - **Chart.** Cash at the end of each period; the balance-sheet table holds the same figures.
 - **Publish.** A valid projection can be published (with planning publish permission). The
   outlook and goals use the latest published projection.
+- **Against actuals.** Any projection, published or not, can be compared with the posted books
+  for its months that have closed: each income statement line and the month-end cash, as
+  forecast, actual, and the difference (actual − forecast), for all closed months together or
+  one month at a time.
 - **Export to Excel.** One sheet per statement, with a row stating the nature of each column and a
   note that the figures are a projection, not actual results.
 
@@ -101,9 +105,18 @@ assumption set and the horizon. The approved version of that set is used; when y
 revision, the forecast moves onto it.
 
 The forecast is marked **out of date** when entries are posted after it was made, when a new month
-has closed, or when another version of the assumptions is approved. It is then re-run within the
-hour (or at once with **Refresh now**); earlier forecasts are kept. Months beyond the assumption set
-repeat the set's value for the same month of the year.
+has closed, or when another version of the assumptions is approved. When it is re-run depends on
+the change:
+- a **material change** (a newly approved version of the assumptions, a closed month, a new
+  horizon, or postings since the last run whose debits add up to at least the **materiality**
+  you set) re-runs it within 15 minutes;
+- other postings re-run it at the **regular interval** you choose (every hour by default; from
+  15 minutes to once a day);
+- **Refresh now** re-runs it at once.
+
+Earlier forecasts are kept and never change. A rolling forecast is never published by itself: the
+**published** projection stays the reference for the outlook and goals until you publish a newer
+one. Months beyond the assumption set repeat the set's value for the same month of the year.
 
 Its runs appear in the projections list marked **rolling forecast**; its state (up to date, or
 out of date and why) is shown with a **Refresh now** button.

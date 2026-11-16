@@ -51,6 +51,7 @@ __all__ = [
     "fiscal_years",
     "opening_net",
     "posted_since",
+    "posted_volume_since",
     "router",
     "unposted_count",
 ]
@@ -196,6 +197,12 @@ def posted_since(ctx: WorkspaceContext, entity_id: UUID, watermark: int) -> bool
     """Whether the entity's actuals changed after ``watermark`` (requires ``reports.read``)."""
     entity = get_entity(ctx, entity_id, "reports.read")
     return actuals.posted_since(entity.id, ctx.tenant.id, watermark)
+
+
+def posted_volume_since(ctx: WorkspaceContext, entity_id: UUID, watermark: int) -> Decimal:
+    """Total debits posted after ``watermark`` (requires ``reports.read``)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.posted_volume_since(entity.id, ctx.tenant.id, watermark)
 
 
 def actuals_monthly(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,

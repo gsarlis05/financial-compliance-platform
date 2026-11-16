@@ -98,6 +98,9 @@ class AssumptionValue(TenantOwned):
         ]
 
 
+INTERVALS = [15, 30, 60, 120, 240, 480, 1440]  # minutes between regular re-runs (M6F-6)
+
+
 class RollingForecast(TenantOwned):
     """A legal entity's rolling forecast setting (M6-4): the next 12 or 24 months, projected from
     the approved version of an assumption-set family, re-run as the books move. Runs are kept as
@@ -107,6 +110,11 @@ class RollingForecast(TenantOwned):
     family_id = models.UUIDField()  # the approved version of this family is used
     horizon = models.PositiveSmallIntegerField()  # 12 or 24 months
     active = models.BooleanField(default=True)
+    # M6F-6 (#151, owner decision D6): postings re-run the forecast at the regular interval; a
+    # material change (an approved assumption version, a closed month, or postings since the
+    # last run of at least ``materiality`` in total debits) at the next 15-minute pass.
+    interval_minutes = models.PositiveSmallIntegerField(default=60)
+    materiality = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )  # the scheduled re-run acts with this user's current permissions
@@ -117,7 +125,15 @@ class RollingForecast(TenantOwned):
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(horizon__in=[12, 24]), name="projections_rolling_horizon"
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(interval_minutes__in=INTERVALS),
+                name="projections_rolling_interval",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(materiality__isnull=True) | models.Q(materiality__gte=0),
+                name="projections_rolling_materiality",
+            ),
         ]
 
 

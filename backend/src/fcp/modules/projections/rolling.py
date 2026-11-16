@@ -8,8 +8,14 @@
   same calendar month (no growth). Each run is kept; a new one supersedes the latest.
 - **Stale** when the books have postings after the latest run's watermark, a new month has
   started, or another version of the family was approved. The stale run is marked, never changed.
-- **Refresh.** ``refresh`` makes a new run when the latest is stale (or there is none); the
-  scheduled ``projections_refresh`` job does this for every active rolling forecast.
+- **Material changes** (M6F-6, #151; owner decision D6): another approved version of the
+  assumptions, a closed month, a changed horizon, or postings since the latest run whose debits
+  total at least the setting's materiality threshold. The scheduled ``projections_refresh`` pass
+  runs every 15 minutes: a stale forecast with a material change is re-run at once; one with only
+  other postings once the regular interval (default hourly) has passed since its latest run.
+  ``Refresh now`` re-runs a stale forecast at any time.
+- **Published reference.** Runs are never published by the job: the published projection stays
+  the reference (outlook, goals) until someone publishes a newer valid run.
 - **Accuracy.** For each of the last 12 closed months: what the rolling forecasts made 1, 3 and 6
   months earlier expected, against the actual, for revenue, EBITDA and closing cash. Error =
   forecast - actual; % error = |error| / |actual|, not meaningful when the actual is 0. Reported,
@@ -18,7 +24,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
@@ -30,12 +36,17 @@ from fcp.core.errors import ConflictError, DomainError, NotFoundError, Validatio
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.metrics.api import CalcRun, calc_results, current_mapping, list_calc_runs
-from fcp.modules.reporting.api import actuals_monthly, opening_net, posted_since
+from fcp.modules.reporting.api import (
+    actuals_monthly,
+    opening_net,
+    posted_since,
+    posted_volume_since,
+)
 from fcp.modules.tenancy.api import Tenant, WorkspaceContext, enter_workspace, get_entity
 
 from .assumptions import READ, RUN
 from .drivers import OPEX_LINES, REVENUE_LINES
-from .models import AssumptionSet, RollingForecast
+from .models import INTERVALS, AssumptionSet, RollingForecast
 from .runs import KIND, run_projection
 
 log = logging.getLogger(__name__)
@@ -62,14 +73,35 @@ def approved_version(entity_id: UUID, family_id: UUID) -> AssumptionSet | None:
                                         status=AssumptionSet.Status.APPROVED).first()  # fmt: skip
 
 
+@dataclass(frozen=True)
+class Cadence:
+    """When the forecast re-runs (M6F-6): the regular interval in minutes, and the total debits
+    posted since the latest run that count as a material change (None: postings never do)."""
+
+    interval_minutes: int = 60
+    materiality: Decimal | None = None
+
+
 @transaction.atomic
 def configure(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, horizon: int,
-              active: bool = True) -> RollingForecast:  # fmt: skip
+              active: bool = True, cadence: Cadence | None = None) -> RollingForecast:  # fmt: skip
     """Set up or change the entity's rolling forecast (any version of a family names it)."""
     entity = get_entity(ctx, entity_id, RUN).id
+    cadence = cadence or Cadence()
     if horizon not in (12, 24):
         raise ValidationFailedError("Choose a horizon of 12 or 24 months.",
                                     field_errors={"horizon": ["12 or 24"]})  # fmt: skip
+    if cadence.interval_minutes not in INTERVALS:
+        raise ValidationFailedError(
+            "Choose how often to re-run: every 15, 30 or 60 minutes, or every 2, 4, 8 or 24 hours.",
+            field_errors={"interval_minutes": [", ".join(str(i) for i in INTERVALS)]})  # fmt: skip
+    threshold = cadence.materiality
+    if threshold is not None and (not threshold.is_finite() or threshold < 0
+                                  or threshold != threshold.quantize(Decimal("0.01"))
+                                  or threshold >= Decimal("1e17")):  # fmt: skip
+        raise ValidationFailedError(
+            "Enter the materiality as an amount of 0 or more in cents, or leave it empty.",
+            field_errors={"materiality": ["an amount such as 5000.00"]})  # fmt: skip
     chosen = AssumptionSet.objects.filter(legal_entity_id=entity, id=set_id).first()
     if chosen is None:
         raise NotFoundError("Assumption set not found.")
@@ -81,13 +113,16 @@ def configure(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, horizon: int
         rolling = RollingForecast(tenant=ctx.tenant, legal_entity_id=entity)
     else:
         before = {"family_id": str(rolling.family_id), "horizon": rolling.horizon,
-                  "active": rolling.active}  # fmt: skip
+                  "active": rolling.active, "interval_minutes": rolling.interval_minutes,
+                  "materiality": _text(rolling.materiality)}  # fmt: skip
     rolling.family_id, rolling.horizon, rolling.active = chosen.family_id, horizon, active
+    rolling.interval_minutes, rolling.materiality = cadence.interval_minutes, threshold
     rolling.updated_by = ctx.user
     rolling.save()
     _audit(ctx, rolling, "projections.rolling.configured", {
         "before": before, "family_id": str(chosen.family_id), "horizon": horizon,
-        "active": active})  # fmt: skip
+        "active": active, "interval_minutes": cadence.interval_minutes,
+        "materiality": _text(threshold)})  # fmt: skip
     return rolling
 
 
@@ -104,32 +139,60 @@ def cutover_for(today: date) -> date:
     return month_end(add_months(month_start(today), -1))
 
 
+def _text(amount: Decimal | None) -> str | None:
+    return None if amount is None else f"{amount:.2f}"
+
+
 @dataclass(frozen=True)
 class Freshness:
     stale: bool
     reasons: tuple[str, ...]
+    material: bool = False  # a change that re-runs at the next pass (M6F-6)
+    posted: Decimal = Decimal("0.00")  # debits posted since the run
 
 
 def freshness(ctx: WorkspaceContext, entity_id: UUID, rolling: RollingForecast, run: CalcRun,
               today: date | None = None) -> Freshness:  # fmt: skip
     today = today or timezone.localdate()
-    reasons = []
+    reasons, material = [], False
+    posted = Decimal("0.00")
     if posted_since(ctx, entity_id, run.actuals_watermark):
-        reasons.append("new postings since the forecast was made")
+        posted = posted_volume_since(ctx, entity_id, run.actuals_watermark)
+        threshold = rolling.materiality
+        if threshold is not None and posted >= threshold:
+            material = True
+            reasons.append(f"postings of {posted:.2f} since the forecast was made, at or above "
+                           f"the materiality of {threshold:.2f}")  # fmt: skip
+        else:
+            reasons.append("new postings since the forecast was made")
     if run.as_of_date < cutover_for(today):
+        material = True
         reasons.append(f"made to {run.as_of_date.isoformat()}; a later month has closed")
     current = approved_version(entity_id, rolling.family_id)
     if current is None or str(current.id) != run.input_refs.get("assumption_set_id"):
+        material = True
         reasons.append("another version of the assumptions was approved")
     if len(run.input_refs.get("months", [])) != rolling.horizon:
+        material = True
         reasons.append("the horizon changed")
-    return Freshness(run.stale or bool(reasons), tuple(reasons))
+    if run.stale and not reasons:
+        material = True  # marked stale by an earlier pass that could not re-run it
+    return Freshness(run.stale or bool(reasons), tuple(reasons), material, posted)
+
+
+def due(rolling: RollingForecast, run: CalcRun, now: datetime) -> bool:
+    """Whether the regular interval has passed since ``run`` was made."""
+    return now - run.created_at >= timedelta(minutes=rolling.interval_minutes)
 
 
 def refresh(ctx: WorkspaceContext, entity_id: UUID, today: date | None = None,
-            trigger: str = CalcRun.Trigger.SCHEDULE) -> CalcRun | None:  # fmt: skip
-    """A new run when the latest is stale or missing; None when it is current or inactive."""
+            trigger: str = CalcRun.Trigger.SCHEDULE,
+            now: datetime | None = None) -> CalcRun | None:  # fmt: skip
+    """A new run when the latest is stale or missing; None when it is current or inactive. A
+    scheduled pass re-runs a stale forecast only on a material change or once the regular
+    interval has passed; on demand (``USER``) any stale forecast is re-run."""
     today = today or timezone.localdate()
+    now = now or timezone.now()
     with transaction.atomic():
         entity = get_entity(ctx, entity_id, RUN).id
         rolling = RollingForecast.objects.select_for_update().filter(legal_entity_id=entity).first()
@@ -137,8 +200,13 @@ def refresh(ctx: WorkspaceContext, entity_id: UUID, today: date | None = None,
             return None
         latest = next((r for r in runs_of(ctx, entity, rolling, 20) if r.status in FINISHED),
                       None)  # fmt: skip
-        if latest is not None and not freshness(ctx, entity, rolling, latest, today).stale:
-            return None
+        if latest is not None:
+            fresh = freshness(ctx, entity, rolling, latest, today)
+            if not fresh.stale:
+                return None
+            if (trigger != CalcRun.Trigger.USER and not fresh.material
+                    and not due(rolling, latest, now)):  # fmt: skip
+                return None  # only other postings: wait for the regular interval
         if latest is not None and not latest.stale:
             type(latest).objects.filter(id=latest.id).update(stale=True)
         current = approved_version(entity, rolling.family_id)
@@ -152,12 +220,13 @@ def refresh(ctx: WorkspaceContext, entity_id: UUID, today: date | None = None,
 @dataclass
 class RefreshReport:
     refreshed: int = 0
-    current: int = 0
+    current: int = 0  # current, or waiting for the regular interval
     skipped: list[str] = field(default_factory=list)
 
 
-def refresh_all(today: date | None = None) -> RefreshReport:
-    """The scheduled job: every active rolling forecast, workspace by workspace."""
+def refresh_all(today: date | None = None, now: datetime | None = None) -> RefreshReport:
+    """The scheduled pass (every 15 minutes): every active rolling forecast, workspace by
+    workspace."""
     report = RefreshReport()
     with connection.cursor() as cursor:
         cursor.execute("SELECT projections_rolling_tenant_ids()")
@@ -172,7 +241,7 @@ def refresh_all(today: date | None = None) -> RefreshReport:
             try:
                 with transaction.atomic():
                     set_context(tenant_id=tenant_id, user_id=user.id)
-                    made = refresh(enter_workspace(user, slug), entity_id, today)
+                    made = refresh(enter_workspace(user, slug), entity_id, today, now=now)
             except DomainError as refused:  # e.g. the user lost access or permission
                 report.skipped.append(f"{tenant_id}/{entity_id}: {refused}")
                 log.warning("projections_refresh skipped %s/%s: %s", tenant_id, entity_id, refused)
