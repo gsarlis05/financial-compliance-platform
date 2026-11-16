@@ -15,6 +15,7 @@ GLOBAL_TABLES: dict[str, str] = {
     "tenancy_tenant": "Workspaces themselves; protected by RLS on id/membership instead",
     "ledger_vat_code": "Reference data: VAT code catalogue per jurisdiction (no tenant data)",
     "core_currency": "Reference data: ISO 4217 currencies the platform supports (no tenant data)",
+    "taxrules_rule_set": "Reference data: tax rule sets per jurisdiction (no tenant data)",
     "metrics_taxonomy_version": "Reference data: financial taxonomy versions (no tenant data)",
     "metrics_taxonomy_line": "Reference data: financial taxonomy lines (no tenant data)",
     "kpi_definition": "Reference data: KPI library definitions (no tenant data)",
@@ -55,6 +56,7 @@ RUNTIME_FUNCTIONS: set[str] = {
 # Reference-data tables the runtime role may only SELECT from (changed by migrations only).
 READ_ONLY_TABLES: set[str] = {
     "core_currency",
+    "taxrules_rule_set",
     "ledger_vat_code",
     "metrics_taxonomy_version",
     "metrics_taxonomy_line",

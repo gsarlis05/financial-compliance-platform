@@ -12101,6 +12101,34 @@
         "title": "ShortfallOut",
         "type": "object"
       },
+      "SourceOut": {
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "publisher": {
+            "title": "Publisher",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "publisher",
+          "title",
+          "url",
+          "note"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
       "SpendingOut": {
         "properties": {
           "date_from": {
@@ -12484,6 +12512,29 @@
         "title": "SuggestionOut",
         "type": "object"
       },
+      "TaxInstalmentOut": {
+        "properties": {
+          "day": {
+            "title": "Day",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "share": {
+            "title": "Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "day",
+          "share"
+        ],
+        "title": "TaxInstalmentOut",
+        "type": "object"
+      },
       "TaxPaymentIn": {
         "properties": {
           "amount": {
@@ -12638,6 +12689,98 @@
           "created_at"
         ],
         "title": "TaxPaymentOut",
+        "type": "object"
+      },
+      "TaxRuleSetOut": {
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "final_payment": {
+            "description": "When the balance is due, after the tax year",
+            "title": "Final Payment",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "loss_carryforward_years": {
+            "description": "For losses arising in these tax years",
+            "title": "Loss Carryforward Years",
+            "type": "integer"
+          },
+          "provisional_instalments": {
+            "items": {
+              "$ref": "#/components/schemas/TaxInstalmentOut"
+            },
+            "title": "Provisional Instalments",
+            "type": "array"
+          },
+          "rate": {
+            "description": "A fraction: 0.15 for 15%",
+            "title": "Rate",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "tax": {
+            "title": "Tax",
+            "type": "string"
+          },
+          "tax_year_start_month": {
+            "title": "Tax Year Start Month",
+            "type": "integer"
+          },
+          "verification_note": {
+            "title": "Verification Note",
+            "type": "string"
+          },
+          "verified": {
+            "description": "False until a qualified tax professional confirms it",
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiction",
+          "tax",
+          "effective_from",
+          "effective_to",
+          "rate",
+          "loss_carryforward_years",
+          "tax_year_start_month",
+          "provisional_instalments",
+          "final_payment",
+          "verified",
+          "verification_note",
+          "sources"
+        ],
+        "title": "TaxRuleSetOut",
         "type": "object"
       },
       "TaxonomyLineOut": {
@@ -28669,6 +28812,58 @@
         "summary": "Retire Tax Payment",
         "tags": [
           "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/tax-rules": {
+      "get": {
+        "description": "Corporate income tax rule sets of the entity's jurisdiction, oldest first.",
+        "operationId": "fcp_modules_taxrules_api_list_tax_rules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaxRuleSetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Tax Rules",
+        "tags": [
+          "taxrules"
         ]
       }
     },
