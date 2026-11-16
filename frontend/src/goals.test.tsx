@@ -86,6 +86,23 @@ const evaluation = {
     f("goal.contribution", "-0.14", { dimensions: ["REV.SALES", "BUDGET"] }),
     f("goal.contribution.residual", "0.0233"),
     f("goal.contribution.total", "0"),
+    f("goal.actual", "0.2", { nature: "ACTUAL" }),
+    f("goal.benchmark", "0.3", {
+      nature: "BUDGET",
+      dimensions: ["BUDGET", "PERIOD"],
+    }),
+    f("goal.benchmark", "0.3", {
+      nature: "BUDGET",
+      dimensions: ["BUDGET", "TO_DATE"],
+    }),
+    f("goal.benchmark", null, {
+      nature: "FORECAST",
+      dimensions: ["FORECAST", "TO_DATE"],
+      nm_reason: "No published projection covers a month of the period to date",
+    }),
+    f("goal.variance", "-0.1", { dimensions: ["ACTUAL_VS_BUDGET"] }),
+    f("goal.variance", "0", { dimensions: ["PROJECTED_VS_BUDGET"] }),
+    f("goal.variance", "-0.05", { dimensions: ["PROJECTED_VS_GOAL"] }),
     f("goal.trend", "0.2", {
       key: "goal.trend",
       nature: "ACTUAL",
@@ -211,6 +228,23 @@ describe("Goals (M4-6)", () => {
     expect(table).toHaveTextContent("REV.SALES");
     expect(table).toHaveTextContent("Residual (interaction between lines)");
 
+    // M6F-7: the likely outcome against the goal and the budget, and the actual against both.
+    const bm = screen.getByRole("table", {
+      name: /Actual, the published projection and the approved budget/,
+    });
+    expect(
+      within(bm).getByRole("row", { name: /Likely outcome against the goal/ }),
+    ).toHaveTextContent("-5.00%");
+    expect(
+      within(bm).getByRole("row", {
+        name: /Actual against the budget, to date/,
+      }),
+    ).toHaveTextContent("-10.00%");
+    expect(
+      within(bm).getByRole("row", {
+        name: /Actual against the published projection/,
+      }),
+    ).toHaveTextContent(/No published projection covers a month/);
     const results = await axe.run(container, {
       rules: { "color-contrast": { enabled: false } },
     });

@@ -28,10 +28,16 @@ the cash forecast), so a stored evaluation never changes:
 5. **Status:** on track when the outcome meets the target (direction-adjusted); at risk when it
    misses by no more than the materiality threshold (a fraction of |target|); off track otherwise.
 6. **Trend:** the metric month by month (to date, then projected), each point with its nature.
-7. **Contribution analysis (AC-GO5):** the outcome against the budget (or, without one, the same
-   months a year earlier). Each taxonomy line's effect is the change when only that line takes
-   its outcome value (one at a time); for a ratio the effects need not add up, and what is left
-   is shown as an explicit residual.
+7. **Benchmarks (M6F-7, #152; owner decision D7):** the approved budget stays a separate
+   benchmark next to the forward reference: the budget for the whole period, and for the months
+   to date; the published projection's forecast for the months to date that it projected, with
+   the actual over the same months; the variances actual - budget to date, actual - forecast
+   over those months, likely outcome - budget for the period and likely outcome - goal.
+   Goals are never changed by an evaluation, a projection or a budget.
+8. **Contribution analysis (AC-GO5):** the outcome against the approved budget for the period
+   (or, without one covering every month, the same months a year earlier). Each taxonomy line's
+   effect is the change when only that line takes its outcome value (one at a time); for a ratio
+   the effects need not add up, and what is left is shown as an explicit residual.
 """
 
 from collections import defaultdict
@@ -142,11 +148,13 @@ def _lineage(sources: dict[str, Decimal]) -> tuple[Source, ...]:
     for ref, amount in sorted(sources.items())[:MAX_SOURCES]:
         if ref.startswith("operational:"):
             kind, note = "MANUAL", ""
-        elif ref.startswith(("account:plan:", "account:proj:", "account:rate:")):
+        elif ref.startswith(("account:plan:", "account:proj:", "account:rate:", "account:bud:",
+                             "account:fcst:")):  # fmt: skip
             kind = "ASSUMPTION"
-            note = {"plan": "budget", "proj": "published projection"}.get(
+            note = {"plan": "budget", "proj": "published projection", "bud": "approved budget",
+                    "fcst": "published projection (months to date)"}.get(
                 ref.split(":")[1], "run rate (3 months)"
-            )
+            )  # fmt: skip
         else:
             kind, note = "ACTUAL", ""
         out.append(Source(kind, ref[:200], _q(amount), note))
@@ -241,6 +249,11 @@ class _Book:
         self.months = period_months(self.goal.start, month_start(self.goal.end))
         self.remaining = [m for m in self.months if m > self.last_actual]
         self.plan_months, self.plan_flows = self._plan()
+        # M6F-7: the approved budget (the benchmark) and the published projection's forecast for
+        # the months to date, pinned separately from the forward reference.
+        self.budget_months, self.budget_flows = self._plan_of(refs.get("budget"), "bud")
+        self.forecast_months, self.forecast_flows = self._plan_of(
+            refs.get("projection_to_date"), "fcst")  # fmt: skip
         self.rate_flows = self._run_rate()
         self.projected_flows: Flows = dict(data.flows)
         for m in self.remaining:
@@ -252,7 +265,12 @@ class _Book:
     # projection inputs -----------------------------------------------------------------------
 
     def _plan(self) -> tuple[set[date], Flows]:
-        plan = self.refs.get("plan")
+        covered, flows = self._plan_of(self.refs.get("plan"), self.plan_prefix)
+        return covered & set(self.remaining), flows
+
+    def _plan_of(self, plan: dict[str, Any] | None, prefix: str) -> tuple[set[date], Flows]:
+        """A budget or projection snapshot as flows of pseudo accounts ``<prefix>:<ref>``, and
+        the months it covers."""
         if not plan:
             return set(), {}
         covered: set[date] = set()
@@ -269,18 +287,18 @@ class _Book:
             kind, _, ref = subject.partition(":")
             if kind == "line" and ref in lines:
                 section, credit = lines[ref]
-                pseudo = f"{self.plan_prefix}:{ref}"
+                pseudo = f"{prefix}:{ref}"
                 self.accounts[pseudo] = Account(ref, section, credit, True)
             elif kind == "account" and ref in self.accounts:
                 real = self.accounts[ref]
-                pseudo, credit = f"{self.plan_prefix}:{ref}", real.credit_normal
+                pseudo, credit = f"{prefix}:{ref}", real.credit_normal
                 self.accounts[pseudo] = real
             else:
                 continue
             for month, amount in per_month.items():
                 natural = Decimal(amount)
                 flows[(pseudo, date.fromisoformat(month))] = -natural if credit else natural
-        return covered & set(self.remaining), flows
+        return covered, flows
 
     def _run_rate(self) -> Flows:
         trailing = [add_months(self.last_actual, -i) for i in range(3)]
@@ -392,7 +410,7 @@ def _ratio(a: Decimal | None, b: Decimal | None) -> Decimal | None:
 
 class GoalEvalEngine:
     kind = EVAL_KIND
-    version = "1"
+    version = "2"  # M6F-7: benchmarks; the contribution analysis uses the approved budget
 
     def load(self, ctx: WorkspaceContext, inputs: RunInputs) -> Data:
         g = inputs.refs["goal"]
@@ -429,6 +447,7 @@ class GoalEvalEngine:
                 note=f"materiality {goal.materiality}"),))  # fmt: skip
         if goal.kind != "BALANCE":
             self._required(book, out, actual, projected)
+            self._benchmarks(book, out, actual, projected)
             self._contribution(book, out, projected)
             self._trend(book, out)
         checks = {
@@ -608,12 +627,76 @@ class GoalEvalEngine:
                 low = middle
         return high, ""
 
+    # benchmarks (M6F-7) --------------------------------------------------------------------------
+
+    def _benchmarks(self, book: _Book, out: _Out, actual: Decimal | None,
+                    projected: Decimal | None) -> None:  # fmt: skip
+        goal = book.goal
+        unit = next(v.unit for v in out.values if v.series_key == "goal.projected")
+        months = set(book.months)
+        to_date = {m for m in book.months if m <= book.last_actual}
+        end_to_date = min(book.cut, goal.end)
+
+        def over(flows: Flows, covered: set[date], wanted: set[date], end: date,
+                 missing: str) -> tuple[Evaluated | None, str]:  # fmt: skip
+            if not wanted:
+                return None, "No month of the period has ended yet"
+            if not wanted <= covered:
+                return None, missing
+            return book.evaluate(goal.start, end, {k: v for k, v in flows.items()
+                                                   if k[1] in wanted}), ""  # fmt: skip
+
+        def value(found: Evaluated | None) -> Decimal | None:
+            return None if found is None else found.value
+
+        no_budget = "No approved budget covers every month"
+        period, nm = over(book.budget_flows, book.budget_months, months, goal.end,
+                          f"{no_budget} of the goal's period")  # fmt: skip
+        out.add("goal.benchmark", Nature.BUDGET, period, unit, nm=nm, dims=("BUDGET", "PERIOD"))
+        budget_to_date, nm_b = over(book.budget_flows, book.budget_months, to_date, end_to_date,
+                                    f"{no_budget} to date")  # fmt: skip
+        out.add("goal.benchmark", Nature.BUDGET, budget_to_date, unit, nm=nm_b,
+                end=end_to_date if to_date else None, dims=("BUDGET", "TO_DATE"))  # fmt: skip
+        # Actual against the published projection over the months to date that it projected
+        # (a projection starts at its cut-over, so it rarely covers the whole period to date).
+        covered = sorted(to_date & book.forecast_months)
+        nm_f = "No published projection covers a month of the period to date" if not covered else ""
+        forecast_to_date = actual_then = None
+        first = last = None
+        if covered:
+            first, last = covered[0], month_end(covered[-1])
+            forecast_to_date = book.evaluate(first, last, {
+                k: v for k, v in book.forecast_flows.items() if k[1] in set(covered)})  # fmt: skip
+            actual_then = book.evaluate(first, last, book.actual.flows)
+        out.add("goal.benchmark", Nature.FORECAST, forecast_to_date, unit, nm=nm_f, start=first,
+                end=last, dims=("FORECAST", "TO_DATE"))  # fmt: skip
+        out.add("goal.benchmark", Nature.ACTUAL, actual_then, unit, nm=nm_f, start=first,
+                end=last, dims=("ACTUAL", "FORECAST_MONTHS"))  # fmt: skip
+        out.add("goal.variance", Nature.ACTUAL, _diff(actual, value(budget_to_date)), unit,
+                nm=nm_b or "The actual value is not meaningful",
+                dims=("ACTUAL_VS_BUDGET",))  # fmt: skip
+        out.add("goal.variance", Nature.ACTUAL,
+                _diff(value(actual_then), value(forecast_to_date)), unit,
+                nm=nm_f or "Not meaningful for these months",
+                start=first, end=last, dims=("ACTUAL_VS_FORECAST",))  # fmt: skip
+        out.add("goal.variance", book.projected_nature, _diff(projected, value(period)), unit,
+                nm=nm or "The likely outcome is not meaningful",
+                dims=("PROJECTED_VS_BUDGET",))  # fmt: skip
+        out.add(
+            "goal.variance",
+            book.projected_nature,
+            _diff(projected, goal.target),
+            unit,
+            nm="The likely outcome is not meaningful",
+            dims=("PROJECTED_VS_GOAL",),
+        )
+
     # contribution analysis --------------------------------------------------------------------
 
     def _comparison(self, book: _Book) -> tuple[str, Flows, Callable[[date], dict[str, Decimal]]]:
         months = set(book.months)
-        if book.plan_flows:
-            flows = {k: v for k, v in book.plan_flows.items() if k[1] in months}
+        if months <= book.budget_months:  # the approved budget for the whole period (M6F-7)
+            flows = {k: v for k, v in book.budget_flows.items() if k[1] in months}
             return "BUDGET", flows, book.balance_at
         flows = {(a, add_months(m, 12)): v for (a, m), v in book.loaded.flows.items()
                  if add_months(m, 12) in months}  # fmt: skip

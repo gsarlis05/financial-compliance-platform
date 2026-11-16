@@ -846,6 +846,18 @@ export const en = {
   "goal.retired": "Retired",
   "goal.evaluate": "Evaluate",
   "goal.asOf": "As of",
+  "goal.bm.caption":
+    "Actual, the published projection and the approved budget (the goal itself never changes)",
+  "goal.bm.comparison": "Comparison",
+  "goal.bm.first": "Value",
+  "goal.bm.second": "Compared with",
+  "goal.bm.difference": "Difference",
+  "goal.bm.projectedVsGoal": "Likely outcome against the goal",
+  "goal.bm.projectedVsBudget":
+    "Likely outcome against the budget for the period",
+  "goal.bm.actualVsBudget": "Actual against the budget, to date",
+  "goal.bm.actualVsForecast":
+    "Actual against the published projection, months it projected",
   "goal.evaluation": "Evaluation as of",
   "goal.outOfDate":
     "Entries were posted after this evaluation: evaluate again.",
@@ -2370,6 +2382,18 @@ export const el: Record<MessageKey, string> = {
   "goal.retired": "Αποσύρθηκε",
   "goal.evaluate": "Αξιολόγηση",
   "goal.asOf": "Με ημερομηνία",
+  "goal.bm.caption":
+    "Πραγματικό, δημοσιευμένη προβολή και εγκεκριμένος προϋπολογισμός (ο στόχος δεν αλλάζει ποτέ)",
+  "goal.bm.comparison": "Σύγκριση",
+  "goal.bm.first": "Τιμή",
+  "goal.bm.second": "Σε σύγκριση με",
+  "goal.bm.difference": "Διαφορά",
+  "goal.bm.projectedVsGoal": "Πιθανή έκβαση έναντι του στόχου",
+  "goal.bm.projectedVsBudget":
+    "Πιθανή έκβαση έναντι του προϋπολογισμού της περιόδου",
+  "goal.bm.actualVsBudget": "Πραγματικό έναντι προϋπολογισμού, μέχρι σήμερα",
+  "goal.bm.actualVsForecast":
+    "Πραγματικό έναντι της δημοσιευμένης προβολής, για τους μήνες που προέβλεψε",
   "goal.evaluation": "Αξιολόγηση στις",
   "goal.outOfDate":
     "Καταχωρίστηκαν εγγραφές μετά από αυτή την αξιολόγηση: αξιολογήστε ξανά.",

@@ -343,10 +343,16 @@ def evaluation_refs(ctx: WorkspaceContext, view: GoalView, as_of: date,
     months = period_months(goal.period_start, month_start(goal.period_end))
     snapshot = kpi_inputs(ctx, entity_id, goal.period_start, goal.period_end)
     plan: dict[str, Any] | None = None
+    benchmark: dict[str, Any] | None = None
+    to_date: dict[str, Any] | None = None
     if goal.metric_kind != BALANCE:  # a published projection first (M6-5), else the budget
         plan = projected_plan(ctx, entity_id, [m for m in months if m > month_start(cut)])
-        if plan is None and (budget := approved_plan(ctx, entity_id, months)) is not None:
-            plan = {"versions": budget.versions, "amounts": budget.amounts}
+        if (budget := approved_plan(ctx, entity_id, months)) is not None:
+            benchmark = {"versions": budget.versions, "amounts": budget.amounts}
+        if plan is None:
+            plan = benchmark
+        # M6F-7: what the published projection expected for the months to date.
+        to_date = projected_plan(ctx, entity_id, [m for m in months if m <= month_start(cut)])
     return {
         "goal": {
             "id": str(goal.id), "version_id": str(v.id), "number": v.number,
@@ -365,6 +371,8 @@ def evaluation_refs(ctx: WorkspaceContext, view: GoalView, as_of: date,
         "operational": snapshot["operational"],
         "lines": _lines(ctx, entity_id),
         "plan": plan,
+        "budget": benchmark,
+        "projection_to_date": to_date,
         "forecast": _forecast(ctx, entity_id) if goal.metric_kind == BALANCE else None,
     }  # fmt: skip
 

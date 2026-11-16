@@ -288,6 +288,102 @@ const REQUIRED: [string, MessageKey][] = [
   ["goal.required.reduction", "goal.req.reduction"],
 ];
 
+function figureOf(
+  ev: GoalEvaluation,
+  key: string,
+  ...dims: string[]
+): GoalFigure | undefined {
+  return ev.figures.find(
+    (f) => f.key === key && dims.every((d, i) => f.dimensions[i] === d),
+  );
+}
+
+const BENCHMARKS: [
+  string,
+  [string, ...string[]],
+  [string, ...string[]],
+  string,
+][] = [
+  [
+    "goal.bm.projectedVsGoal",
+    ["goal.projected"],
+    ["goal.target"],
+    "PROJECTED_VS_GOAL",
+  ],
+  [
+    "goal.bm.projectedVsBudget",
+    ["goal.projected"],
+    ["goal.benchmark", "BUDGET", "PERIOD"],
+    "PROJECTED_VS_BUDGET",
+  ],
+  [
+    "goal.bm.actualVsBudget",
+    ["goal.actual"],
+    ["goal.benchmark", "BUDGET", "TO_DATE"],
+    "ACTUAL_VS_BUDGET",
+  ],
+  [
+    "goal.bm.actualVsForecast",
+    ["goal.benchmark", "ACTUAL", "FORECAST_MONTHS"],
+    ["goal.benchmark", "FORECAST", "TO_DATE"],
+    "ACTUAL_VS_FORECAST",
+  ],
+];
+
+function Benchmarks({
+  ev,
+  show,
+}: {
+  ev: GoalEvaluation;
+  show: (f: GoalFigure | undefined) => string;
+}) {
+  const { t } = useI18n();
+  if (!figureOf(ev, "goal.variance", "PROJECTED_VS_GOAL")) return null;
+  return (
+    <div className="table-scroll">
+      <table>
+        <caption>{t("goal.bm.caption")}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t("goal.bm.comparison")}</th>
+            <th scope="col" className="amount">
+              {t("goal.bm.first")}
+            </th>
+            <th scope="col" className="amount">
+              {t("goal.bm.second")}
+            </th>
+            <th scope="col" className="amount">
+              {t("goal.bm.difference")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {BENCHMARKS.map(([label, a, b, dim]) => {
+            const second = figureOf(ev, ...b);
+            const months =
+              dim === "ACTUAL_VS_FORECAST" && second?.value !== null && second
+                ? ` (${second.period_start.slice(0, 7)} – ${second.period_end.slice(0, 7)})`
+                : "";
+            return (
+              <tr key={dim}>
+                <th scope="row">
+                  {t(label as MessageKey)}
+                  {months}
+                </th>
+                <td className="amount">{show(figureOf(ev, ...a))}</td>
+                <td className="amount">{show(second)}</td>
+                <td className="amount">
+                  {show(figureOf(ev, "goal.variance", dim))}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Evaluation({ goal, ev }: { goal: Goal; ev: GoalEvaluation }) {
   const { t, locale } = useI18n();
   const show = (f: GoalFigure | undefined) =>
@@ -349,6 +445,7 @@ function Evaluation({ goal, ev }: { goal: Goal; ev: GoalEvaluation }) {
           </>
         ) : null}
       </dl>
+      <Benchmarks ev={ev} show={show} />
       <h3>{t("goal.required")}</h3>
       <ul>
         {REQUIRED.map(([key, label]) => {
