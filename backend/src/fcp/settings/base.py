@@ -29,13 +29,21 @@ ALLOWED_HOSTS: list[str] = [h for h in env("DJANGO_ALLOWED_HOSTS", "").split(","
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
+    "django.contrib.sessions",
+    "fcp.modules.identity",
 ]
+
+AUTH_USER_MODEL = "identity.User"
 
 MIDDLEWARE = [
     "fcp.core.http.middleware.CorrelationIdMiddleware",
     "fcp.core.http.middleware.RequestLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "fcp.modules.identity.middleware.AbsoluteSessionTimeoutMiddleware",
     "fcp.core.http.middleware.ProblemDetailsMiddleware",
 ]
 
@@ -70,3 +78,34 @@ X_FRAME_OPTIONS = "DENY"
 # Logging: JSON lines, redacted by an allow-list (fcp.core.logging.redaction).
 LOGGING = build_logging_config(env("LOG_LEVEL", "INFO"))
 configure_structlog()
+
+# --- Sessions and cookies (docs/planning/04 §2) -------------------------------------------------
+# Server-side sessions; the browser only holds an opaque, HttpOnly, Secure, SameSite cookie.
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_NAME = "__Host-fcp_session"
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 30 * 60  # idle timeout; extended by every request
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_ABSOLUTE_TIMEOUT_SECONDS = 12 * 60 * 60
+STEP_UP_MAX_AGE_SECONDS = 5 * 60
+
+# CSRF token cookie is readable by the SPA, which echoes it in the X-CSRFToken header.
+CSRF_COOKIE_NAME = "__Host-fcp_csrftoken"
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = "Strict"
+CSRF_TRUSTED_ORIGINS: list[str] = [o for o in env("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+
+# --- OIDC (identity provider) -----------------------------------------------------------------
+OIDC_ISSUER = env("OIDC_ISSUER", "http://localhost:8080/realms/fcp-dev")
+OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", "fcp-backend")
+OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", "")
+OIDC_REDIRECT_URI = env("OIDC_REDIRECT_URI", "http://localhost:8000/auth/callback")
+OIDC_POST_LOGOUT_REDIRECT_URI = env("OIDC_POST_LOGOUT_REDIRECT_URI", "http://localhost:5173/")
+# Claim values accepted as proof of multi-factor authentication.
+OIDC_MFA_AMR_VALUES = frozenset(env("OIDC_MFA_AMR_VALUES", "otp,mfa,hwk,swk,webauthn").split(","))
+OIDC_MFA_ACR_VALUES = frozenset(v for v in env("OIDC_MFA_ACR_VALUES", "").split(",") if v)
+LOGIN_REDIRECT_URL = env("LOGIN_REDIRECT_URL", "/")
+LOGOUT_REDIRECT_URL = env("LOGOUT_REDIRECT_URL", "/")
