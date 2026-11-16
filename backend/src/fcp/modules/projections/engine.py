@@ -37,6 +37,10 @@ from fcp.modules.metrics.api import Nature, Output, Source, Value
 
 from .drivers import OPEX_LINES, REVENUE_LINES
 
+# The engine is not production-ready until the validation package passes and a qualified
+# independent professional has signed it (owner decision D9, 2026-11-15; brief 20 §5). Changed
+# only when that sign-off is recorded.
+VALIDATION_STATUS = "PENDING_PROFESSIONAL_REVIEW"
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 HUNDRED, TWELVE = Decimal(100), Decimal(12)
