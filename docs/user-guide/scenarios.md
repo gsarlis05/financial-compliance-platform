@@ -72,6 +72,20 @@ the cached answer at once. To protect the service there is a limit on how many a
 and one workspace can run each minute, and on how long one analysis may take; the message says what
 to do if you reach it.
 
+## Working capital
+For an approved assumption set, or a shared scenario, the working-capital view shows month by
+month the customer receivables, stock and supplier payables the projection holds; net working
+capital (receivables + stock − payables), its change, and what that change does to cash; and the
+days that drive them (customer days DSO, stock days DIO, supplier days DPO) with the cash
+conversion cycle (DSO + DIO − DPO). Next to them are the days actually seen over the 12 months to
+the cut-over.
+
+**What are N days worth?** Choose customer, stock or supplier days and a number of days (for
+example customers paying 10 days sooner: −10 customer days). The projection is run again with
+those days changed for every month, and you see the cash released (or tied up) by month, at the
+end, at its lowest point, and the change in working capital. Each balance is rounded to cents on
+its own, so the answer can differ by a cent from a quick hand calculation.
+
 ## Turning a scenario into a plan
 **Create an assumption-set draft** copies the base with the changes written into its values and
 loans. The draft then goes through the normal review and approval. Two kinds of change cannot be
@@ -95,6 +109,7 @@ and an investment in a month that already has capital expenditure with another u
 | Compare, save a run, create a draft set from a scenario | | ✔ | ✔ |
 | See saved scenario runs | ✔ | ✔ | ✔ |
 | Run sensitivity and tornado analyses | | ✔ | ✔ |
+| See the working-capital view and what N days are worth | | ✔ | ✔ |
 | Archive someone else's scenario | | | ✔ |
 
 Every change is recorded in the audit trail.

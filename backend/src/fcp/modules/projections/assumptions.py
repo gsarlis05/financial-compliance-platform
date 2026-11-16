@@ -570,3 +570,11 @@ def derive_set(  # noqa: PLR0913 (keyword-only parts of the new set)
     _audit(ctx, "created", made, start_from="SCENARIO", note=made.note,
            base_set_id=str(base.id))  # fmt: skip
     return made
+
+
+def observed_days(ctx: WorkspaceContext, entity_id: UUID, cutover: date) -> dict[str, Decimal]:
+    """DSO, DIO and DPO observed over the 12 months to the cut-over (M7-4), as a set started from
+    actuals takes them: balances at the cut-over over the year's revenue or cost of sales x 365."""
+    entity = get_entity(ctx, entity_id, READ).id
+    found = observed(history(ctx, entity, cutover))
+    return {k: found[k] for k in ("dso", "dio", "dpo")}

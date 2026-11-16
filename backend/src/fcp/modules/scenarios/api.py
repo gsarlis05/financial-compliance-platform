@@ -19,7 +19,7 @@ from fcp.modules.projections.api import SetInfo
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import runs as scenario_runs
-from . import sensitivity, sensitivity_runs, services
+from . import sensitivity, sensitivity_runs, services, working_capital
 from .models import Scenario, ScenarioOverride
 from .overrides import MAX_OVERRIDES
 
@@ -494,3 +494,93 @@ def sensitivity_tornado(request: HttpRequest, slug: str, entity_id: UUID,
         drivers=payload.drivers, percent=Decimal(payload.percent), output=payload.output,
         year=payload.year,
     ))  # fmt: skip
+
+
+# --- working capital (M7-4) ----------------------------------------------------------------------
+
+WORKING_CAPITAL = "/w/{slug}/entities/{uuid:entity_id}/working-capital"
+
+
+class WorkingCapitalMonthOut(Schema):
+    month: date
+    receivables: str
+    inventory: str
+    payables: str
+    net: str = Field(description="Receivables + inventory - payables")
+    change: str = Field(description="Against the month before (the cut-over for the first)")
+    cash_effect: str = Field(description="Working-capital lines of the cash flow statement")
+    dso: str
+    dio: str
+    dpo: str
+    ccc: str = Field(description="Cash conversion cycle: DSO + DIO - DPO")
+
+
+class WorkingCapitalOut(Schema):
+    base_label: str
+    nature: str = Field(description="FORECAST (assumption set) or HYPOTHETICAL (scenario)")
+    watermark: int
+    cutover: date
+    observed: dict[str, str] = Field(description="DSO, DIO and DPO over the 12 months to the "
+                                     "cut-over")  # fmt: skip
+    observed_ccc: str
+    months: list[WorkingCapitalMonthOut]
+    engine_status: str = sensitivity_runs.ENGINE_STATUS
+
+
+class DaysWorthIn(Schema):
+    base_set_id: UUID | None = None
+    scenario_id: UUID | None = None
+    driver: Literal["dso", "dio", "dpo"]
+    days: int = Field(ge=-365, le=365, description="e.g. -10: customers pay 10 days sooner")
+
+
+class DaysWorthOut(Schema):
+    driver: str
+    days: int
+    closing_cash_change: str = Field(description="At the end of the horizon")
+    lowest_cash_change: str
+    net_working_capital_change: str = Field(description="Negative: cash released")
+    by_month: list[dict[str, str]] = Field(description="The cash difference by month")
+    nature: str = "HYPOTHETICAL"
+    engine_status: str = sensitivity_runs.ENGINE_STATUS
+
+
+def _days(value: Decimal) -> str:
+    return f"{value.normalize():f}"
+
+
+@router.get(WORKING_CAPITAL, response=WorkingCapitalOut)
+@requires("planning.run")
+def working_capital_view(request: HttpRequest, slug: str, entity_id: UUID,
+                         base_set_id: UUID | None = None,
+                         scenario_id: UUID | None = None) -> WorkingCapitalOut:  # fmt: skip
+    """Receivables, stock and payables by month, the days that drive them and the cash
+    conversion cycle, next to the days observed over the last 12 months (computed now)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    v = working_capital.view(ctx, entity_id, set_id=base_set_id, scenario_id=scenario_id)
+    return WorkingCapitalOut(
+        base_label=v.base_label, nature=v.nature, watermark=v.watermark, cutover=v.cutover,
+        observed={k: _days(x) for k, x in v.observed.items()}, observed_ccc=_days(v.observed_ccc),
+        months=[WorkingCapitalMonthOut(
+            month=m.month, receivables=f"{m.receivables:.2f}", inventory=f"{m.inventory:.2f}",
+            payables=f"{m.payables:.2f}", net=f"{m.net:.2f}", change=f"{m.change:.2f}",
+            cash_effect=f"{m.cash_effect:.2f}", dso=_days(m.dso), dio=_days(m.dio),
+            dpo=_days(m.dpo), ccc=_days(m.ccc)) for m in v.months],
+    )  # fmt: skip
+
+
+@router.post(f"{WORKING_CAPITAL}/days-worth", response=DaysWorthOut)
+@requires("planning.run")
+def working_capital_days_worth(request: HttpRequest, slug: str, entity_id: UUID,
+                               payload: DaysWorthIn) -> DaysWorthOut:  # fmt: skip
+    """What N days are worth: the cash released by changing DSO, DIO or DPO by N days."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    d = working_capital.days_worth(ctx, entity_id, set_id=payload.base_set_id,
+                                   scenario_id=payload.scenario_id, driver=payload.driver,
+                                   days=payload.days)  # fmt: skip
+    return DaysWorthOut(
+        driver=d.driver, days=d.days, closing_cash_change=f"{d.closing_cash_change:.2f}",
+        lowest_cash_change=f"{d.lowest_cash_change:.2f}",
+        net_working_capital_change=f"{d.net_working_capital_change:.2f}",
+        by_month=[{"month": m.isoformat(), "cash_change": f"{v:.2f}"} for m, v in d.by_month],
+    )  # fmt: skip
