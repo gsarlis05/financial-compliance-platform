@@ -97,6 +97,40 @@ jobs:
           docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE"
           git /repo --no-banner -c /repo/.gitleaks.toml --redact
 
+  infrastructure:
+    name: Infrastructure as code (fmt, validate, tflint, checkov; never applied)
+    runs-on: ubuntu-24.04
+    env:
+      TF_IMAGE: hashicorp/terraform:1.17.1
+      TFLINT_IMAGE: ghcr.io/terraform-linters/tflint:v0.65.0
+      CHECKOV_IMAGE: bridgecrew/checkov:3.4.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: No apply path exists (AC-M0-6)
+        run: |
+          if grep -rnE '(terraform|tofu)[^#]*[[:space:]](apply|destroy|import)([[:space:]]|$)' \
+              .github scripts Makefile; then
+            echo "A terraform apply/destroy/import path was found; it requires explicit approval."
+            exit 1
+          fi
+      - name: terraform fmt
+        run: docker run --rm -v "$PWD:/repo" "$TF_IMAGE" -chdir=/repo/infra/terraform fmt -check -recursive -diff
+      - name: terraform init (no backend) and validate
+        run: |
+          for env in infra/terraform/envs/*/; do
+            docker run --rm -v "$PWD:/repo" -e TF_IN_AUTOMATION=1 "$TF_IMAGE" \
+              -chdir="/repo/$env" init -backend=false -input=false -lockfile=readonly
+            docker run --rm -v "$PWD:/repo" -e TF_IN_AUTOMATION=1 "$TF_IMAGE" -chdir="/repo/$env" validate
+          done
+      - name: tflint
+        run: >-
+          docker run --rm -v "$PWD/infra/terraform:/data" -w /data "$TFLINT_IMAGE"
+          --recursive --config /data/.tflint.hcl
+      - name: checkov
+        run: >-
+          docker run --rm -v "$PWD/infra/terraform:/tf" "$CHECKOV_IMAGE"
+          -d /tf --framework terraform --quiet --compact --skip-path .terraform
+
   prove-gates:
     name: Prove gates reject violations
     runs-on: ubuntu-24.04
