@@ -4,6 +4,7 @@ Workspace-scoped routes take the workspace from the URL path (``/api/w/{slug}/..
 from the request body (doc 04 §4 L1).
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
 from uuid import UUID
@@ -18,21 +19,40 @@ from fcp.modules.identity.api import User, require_recent_auth
 
 from . import services
 from .entitlements import Feature, Role, has_feature
-from .models import LegalEntity, Tenant
+from .models import LegalEntity, Membership, Tenant
 from .services import WorkspaceContext, enter_workspace, get_entity
 
 __all__ = [
     "Feature",
     "LegalEntity",
+    "MemberRef",
     "Role",
     "Tenant",
     "WorkspaceContext",
+    "active_members",
     "all_tenant_ids",
     "enter_workspace",
     "get_entity",
     "router",
     "workspace_ctx",
 ]
+
+
+@dataclass(frozen=True)
+class MemberRef:
+    user_id: UUID
+    display_name: str
+    email: str
+
+
+def active_members(ctx: WorkspaceContext) -> list[MemberRef]:
+    """Active members of the current workspace, to name them in a module (e.g. budget owners).
+    Callers authorise the use; only names and e-mail addresses are returned."""
+    rows = Membership.objects.filter(tenant=ctx.tenant, status=Membership.Status.ACTIVE)
+    return [
+        MemberRef(m.user.id, m.user.display_name, m.user.email)
+        for m in rows.select_related("user").order_by("user__email")
+    ]
 
 
 def all_tenant_ids() -> list[UUID]:

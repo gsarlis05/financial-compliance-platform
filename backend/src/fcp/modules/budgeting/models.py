@@ -213,3 +213,22 @@ class BudgetEvent(TenantOwned):
         constraints = [
             models.UniqueConstraint(fields=["version", "seq"], name="budgeting_event_seq"),
         ]
+
+
+class BudgetOwner(TenantOwned):
+    """A department's (or project's) budget owner: a user who may see and edit that dimension
+    value's lines in this budget's drafts, even without ``budget.read`` (AC-BU6)."""
+
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="owners")
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    dimension_value_id = models.UUIDField()
+    user = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+    created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        db_table = "budgeting_owner"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["budget", "dimension_value_id", "user"], name="budgeting_owner_unique"
+            ),
+        ]

@@ -1082,6 +1082,124 @@
         "title": "BudgetEventOut",
         "type": "object"
       },
+      "BudgetImportChangeOut": {
+        "properties": {
+          "after": {
+            "title": "After",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ADDED",
+              "REMOVED",
+              "CHANGED"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "string"
+          },
+          "months_changed": {
+            "title": "Months Changed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "line",
+          "kind",
+          "before",
+          "after",
+          "months_changed"
+        ],
+        "title": "BudgetImportChangeOut",
+        "type": "object"
+      },
+      "BudgetImportOut": {
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetImportChangeOut"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "draft_hash": {
+            "description": "Send it back with apply=true to save this preview",
+            "title": "Draft Hash",
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetImportProblemOut"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "applied",
+          "problems",
+          "changes",
+          "unchanged",
+          "draft_hash"
+        ],
+        "title": "BudgetImportOut",
+        "type": "object"
+      },
+      "BudgetImportProblemOut": {
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "column",
+          "message"
+        ],
+        "title": "BudgetImportProblemOut",
+        "type": "object"
+      },
+      "BudgetImportQuery": {
+        "properties": {
+          "apply": {
+            "default": false,
+            "title": "Apply",
+            "type": "boolean"
+          },
+          "expected_hash": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Expected Hash",
+            "type": "string"
+          }
+        },
+        "title": "BudgetImportQuery",
+        "type": "object"
+      },
       "BudgetIn": {
         "properties": {
           "dimension_value_id": {
@@ -1180,6 +1298,17 @@
             "title": "Note",
             "type": "string"
           },
+          "params": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetPhasingParams"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For methods other than MANUAL"
+          },
           "taxonomy_code": {
             "anyOf": [
               {
@@ -1266,6 +1395,12 @@
             "title": "Note",
             "type": "string"
           },
+          "phasing_note": {
+            "default": "",
+            "description": "How the phasing was done, e.g. a fallback",
+            "title": "Phasing Note",
+            "type": "string"
+          },
           "quarters": {
             "description": "Sums of the months, by fiscal quarter",
             "items": {
@@ -1338,6 +1473,25 @@
           "lines"
         ],
         "title": "BudgetLinesIn",
+        "type": "object"
+      },
+      "BudgetMemberOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name"
+        ],
+        "title": "BudgetMemberOut",
         "type": "object"
       },
       "BudgetOut": {
@@ -1443,6 +1597,229 @@
           "versions"
         ],
         "title": "BudgetOut",
+        "type": "object"
+      },
+      "BudgetOwnerIO": {
+        "properties": {
+          "dimension_value_id": {
+            "format": "uuid",
+            "title": "Dimension Value Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension_value_id",
+          "user_id"
+        ],
+        "title": "BudgetOwnerIO",
+        "type": "object"
+      },
+      "BudgetOwnerOut": {
+        "properties": {
+          "dimension_value_id": {
+            "format": "uuid",
+            "title": "Dimension Value Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "user_name": {
+            "title": "User Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension_value_id",
+          "user_id",
+          "user_name"
+        ],
+        "title": "BudgetOwnerOut",
+        "type": "object"
+      },
+      "BudgetOwnersIn": {
+        "properties": {
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetOwnerIO"
+            },
+            "maxItems": 500,
+            "title": "Owners",
+            "type": "array"
+          }
+        },
+        "required": [
+          "owners"
+        ],
+        "title": "BudgetOwnersIn",
+        "type": "object"
+      },
+      "BudgetPhasePreviewIn": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "method": {
+            "enum": [
+              "EVEN",
+              "SEASONAL",
+              "PROFILE",
+              "DRIVER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/BudgetPhasingParams"
+          },
+          "taxonomy_code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Code"
+          }
+        },
+        "required": [
+          "method",
+          "params"
+        ],
+        "title": "BudgetPhasePreviewIn",
+        "type": "object"
+      },
+      "BudgetPhasePreviewOut": {
+        "properties": {
+          "amounts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Amounts",
+            "type": "array"
+          },
+          "months": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "nature": {
+            "const": "BUDGET",
+            "default": "BUDGET",
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "months",
+          "amounts",
+          "total",
+          "note"
+        ],
+        "title": "BudgetPhasePreviewOut",
+        "type": "object"
+      },
+      "BudgetPhasingParams": {
+        "description": "EVEN and SEASONAL: ``annual``. PROFILE: ``annual`` and ``weights`` (one per month).\nDRIVER: ``quantity`` and ``rate`` (one value, or one per month).",
+        "properties": {
+          "annual": {
+            "anyOf": [
+              {
+                "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "pattern": "^-?\\d{1,15}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "pattern": "^-?\\d{1,15}(\\.\\d{1,6})?$",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "pattern": "^-?\\d{1,15}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "pattern": "^-?\\d{1,15}(\\.\\d{1,6})?$",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "^-?\\d{1,15}(\\.\\d{1,6})?$",
+                  "type": "string"
+                },
+                "maxItems": 13,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weights"
+          }
+        },
+        "title": "BudgetPhasingParams",
         "type": "object"
       },
       "BudgetReasonIn": {
@@ -6240,7 +6617,8 @@
           "client_user",
           "finance_manager",
           "household_member",
-          "read_only"
+          "read_only",
+          "budget_holder"
         ],
         "title": "Role",
         "type": "string"
@@ -10001,6 +10379,58 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/budget-members": {
+      "get": {
+        "description": "People who can be named as department owners.",
+        "operationId": "fcp_modules_budgeting_api_budget_members",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetMemberOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Budget Members",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/budget-settings": {
       "get": {
         "operationId": "fcp_modules_budgeting_api_get_settings",
@@ -10227,6 +10657,157 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/export": {
+      "get": {
+        "description": "The version as an .xlsx workbook, which is also the import template.",
+        "operationId": "fcp_modules_budgeting_api_export_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Version",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/import": {
+      "post": {
+        "description": "Check a workbook and preview the changes; with ``apply=true`` and the preview's hash,\nreplace the draft's lines. Nothing is saved while any problem remains.",
+        "operationId": "fcp_modules_budgeting_api_import_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "apply",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Apply",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expected_hash",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 64,
+              "title": "Expected Hash",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetImportOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Version",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/lines": {
       "put": {
         "description": "Replace every line of a draft version.",
@@ -10347,6 +10928,74 @@
           }
         ],
         "summary": "Lock",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budget-versions/{version_id}/phase": {
+      "post": {
+        "description": "What a phasing method gives for one line; nothing is saved.",
+        "operationId": "fcp_modules_budgeting_api_preview_phasing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetPhasePreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPhasePreviewOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Preview Phasing",
         "tags": [
           "budgeting"
         ]
@@ -10847,6 +11496,137 @@
           }
         ],
         "summary": "Budget Events",
+        "tags": [
+          "budgeting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/budgets/{budget_id}/owners": {
+      "get": {
+        "operationId": "fcp_modules_budgeting_api_list_owners",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetOwnerOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Owners",
+        "tags": [
+          "budgeting"
+        ]
+      },
+      "put": {
+        "description": "Name the owner of each department (or project) of a budget.",
+        "operationId": "fcp_modules_budgeting_api_set_owners",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetOwnersIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetOwnerOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Owners",
         "tags": [
           "budgeting"
         ]

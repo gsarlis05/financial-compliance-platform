@@ -33,6 +33,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ year 2026 closed by the reviewed closing entry: profit 89973.47 moved to retained earnings; income and expense accounts are zero and the 2027 opening balances equal the closing balance sheet
 ✔ integrity checks passed (balance, snapshots, gapless numbering, closed years, audit chain)
 ✔ 13-week cash forecast from 2027-01-04: opening cash 371514.38, week 13 closing 420689.93; no shortfall below the minimum; run VALID and reproducible
+✔ budget 2027 prepared by the accountant, approved by the owner: total 738000.00; sales 600000.00 phased like 2026 (Phased like the prior year's actuals.)
 ✔ shared with you@example.com as finance_manager
 ```
 Any failed step stops the script with the API's response, so a run that completes is itself the
@@ -83,6 +84,10 @@ proof. The same walkthrough runs in CI as `tests/devtools/test_demo.py`.
   run's stored inputs with an independent reference calculation. The figures are pinned in
   `backend/tests/devtools/golden/demo_cash_13w.json`, marked *not yet signed off* until a finance
   professional reviews them (AC-CW5).
+
+- **Budget.** The accountant prepares *Budget 2027*: sales of 600,000 phased like the posted
+  2026 sales, rent as quantity × rate (1 × 2,500 a month) and payroll of 108,000 spread evenly. The
+  accountant submits it and the owner approves it, so segregation of duties holds.
 
 - **Year-end close.** The owner generates the closing entry for 2026, and the reviewer approves and
   posts it. The year is then closed, and the statements show the profit in retained earnings with

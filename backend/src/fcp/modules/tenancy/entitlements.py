@@ -26,6 +26,7 @@ class Role(StrEnum):
     FINANCE_MANAGER = "finance_manager"
     HOUSEHOLD_MEMBER = "household_member"
     READ_ONLY = "read_only"
+    BUDGET_HOLDER = "budget_holder"  # sees and edits only the departments they own (M4-2)
 
 
 _FEATURES: dict[str, frozenset[Feature]] = {
@@ -46,6 +47,7 @@ _ROLES: dict[str, frozenset[Role]] = {
             Role.REVIEWER,
             Role.CLIENT_USER,
             Role.READ_ONLY,
+            Role.BUDGET_HOLDER,
         }
     ),
     Tenant.Kind.BUSINESS: frozenset(
@@ -56,6 +58,7 @@ _ROLES: dict[str, frozenset[Role]] = {
             Role.ACCOUNTANT,
             Role.REVIEWER,
             Role.READ_ONLY,
+            Role.BUDGET_HOLDER,
         }
     ),
     Tenant.Kind.PERSONAL: frozenset({Role.OWNER, Role.HOUSEHOLD_MEMBER, Role.READ_ONLY}),

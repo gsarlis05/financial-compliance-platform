@@ -9,40 +9,58 @@ Lifecycle (doc 10 §7): DRAFT → SUBMITTED → APPROVED → LOCKED, and SUPERSE
   transaction, so there is exactly one current budget. The first version ever approved stays
   reportable as the original budget.
 - A revision copies the current version into a new draft, with a reason.
+- Department owners (M4-2, AC-BU6): a user with ``budget.department`` but not ``budget.read``
+  sees only the budgets that name them as an owner, and in them only their departments' lines;
+  they edit only those lines of a draft, and everything else is left untouched.
+- Phasing (M4-2, AC-BU2): a line saved with a method other than MANUAL is phased on the server
+  (see ``phasing``); seasonal phasing reads last year's posted actuals through ``reporting``.
 
 Content is fixed from submission onwards. Submission stores a hash of the lines, and approval
 checks it again, so what was approved is exactly what was submitted.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from django.db import IntegrityError, transaction
 from django.db.models import Max, Prefetch
 from django.utils import timezone
 
-from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
+from fcp.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationFailedError,
+)
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.calendar.api import add_months, month_start
-from fcp.modules.metrics.api import DEFAULT_TAXONOMY, TaxonomyLine, canonical_digest
-from fcp.modules.reporting.api import accounts, dimension_values, fiscal_years
-from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+from fcp.modules.calendar.api import add_months, month_end, month_start
+from fcp.modules.metrics.api import (
+    DEFAULT_TAXONOMY,
+    TaxonomyLine,
+    canonical_digest,
+    current_mapping,
+)
+from fcp.modules.reporting.api import accounts, actuals_monthly, dimension_values, fiscal_years
+from fcp.modules.tenancy.api import MemberRef, WorkspaceContext, active_members, get_entity
 
+from . import excel
 from .models import (
     Budget,
     BudgetAmount,
     BudgetEvent,
     BudgetLine,
+    BudgetOwner,
     BudgetSettings,
     BudgetVersion,
 )
+from .phasing import PhasingError, phase
 
 READ, EDIT, APPROVE = "budget.read", "budget.edit", "budget.approve"
-SETTINGS = "budget.settings.manage"
+SETTINGS, DEPT = "budget.settings.manage", "budget.department"
 MAX_LINES = 5000
 MAX_AMOUNT = Decimal("1e15")
 CENT = Decimal("0.01")
@@ -146,6 +164,46 @@ def set_settings(ctx: WorkspaceContext, entity_id: UUID, *, sod_required: bool) 
     return Settings(sod_required)
 
 
+# --- access ---------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Access:
+    """What the user may see: everything (``owned`` is None) or, for a department owner, the
+    dimension values they own per budget."""
+
+    entity_id: UUID
+    owned: dict[UUID, frozenset[UUID]] | None
+    can_read: bool = True  # sees the whole budget (so a refusal is 403, not 404)
+
+    def dims(self, budget_id: UUID) -> frozenset[UUID] | None:
+        return None if self.owned is None else self.owned.get(budget_id, frozenset())
+
+    def require(self, budget_id: UUID) -> frozenset[UUID] | None:
+        dims = self.dims(budget_id)
+        if dims is not None and not dims:
+            if self.can_read:
+                raise PermissionDeniedError("You do not have permission to do this.")
+            raise NotFoundError("Budget not found.")
+        return dims
+
+
+def _access(ctx: WorkspaceContext, entity_id: UUID, full: str) -> Access:
+    """Full access with ``full`` (``budget.read`` or ``budget.edit``); otherwise department
+    access with ``budget.department``; otherwise the usual 404/403."""
+    if ctx.can(full, entity_id) or not ctx.can(DEPT, entity_id):
+        return Access(get_entity(ctx, entity_id, full).id, None)
+    entity = get_entity(ctx, entity_id, DEPT)
+    owned: dict[UUID, set[UUID]] = defaultdict(set)
+    for budget_id, value_id in BudgetOwner.objects.filter(
+        legal_entity=entity, user_id=ctx.user.id
+    ).values_list("budget_id", "dimension_value_id"):
+        owned[budget_id].add(value_id)
+    return Access(
+        entity.id, {b: frozenset(v) for b, v in owned.items()}, can_read=ctx.can(READ, entity_id)
+    )
+
+
 # --- budgets --------------------------------------------------------------------------------------
 
 
@@ -245,17 +303,20 @@ def create_budget(ctx: WorkspaceContext, entity_id: UUID, data: BudgetInput) -> 
 def list_budgets(
     ctx: WorkspaceContext, entity_id: UUID, fiscal_year_id: UUID | None = None
 ) -> list[BudgetView]:
-    entity = get_entity(ctx, entity_id, READ)
-    budgets = Budget.objects.filter(legal_entity=entity).prefetch_related("versions")
+    access = _access(ctx, entity_id, READ)
+    budgets = Budget.objects.filter(legal_entity_id=access.entity_id).prefetch_related("versions")
+    if access.owned is not None:
+        budgets = budgets.filter(id__in=list(access.owned))
     if fiscal_year_id is not None:
         budgets = budgets.filter(fiscal_year_id=fiscal_year_id)
     return [_view(b) for b in budgets.order_by("-fiscal_year_start", "name")]
 
 
 def get_budget(ctx: WorkspaceContext, entity_id: UUID, budget_id: UUID) -> BudgetView:
-    entity = get_entity(ctx, entity_id, READ)
+    access = _access(ctx, entity_id, READ)
+    access.require(budget_id)
     budget = (
-        Budget.objects.filter(legal_entity=entity, id=budget_id)
+        Budget.objects.filter(legal_entity_id=access.entity_id, id=budget_id)
         .prefetch_related("versions")
         .first()
     )
@@ -290,6 +351,13 @@ class VersionView:
         found = self.amounts.get(line.id, {})
         return [found.get(m, Decimal(0)) for m in self.months]
 
+    def only(self, dims: frozenset[UUID] | None) -> "VersionView":
+        """The view a department owner gets: only their departments' lines."""
+        if dims is None:
+            return self
+        lines = [ln for ln in self.lines if ln.dimension_value_id in dims]
+        return VersionView(self.version, self.budget, self.months, lines, self.amounts)
+
 
 def _version(entity_id: UUID, version_id: UUID, *, lock: bool = False) -> BudgetVersion:
     rows = BudgetVersion.objects.select_related("budget").filter(
@@ -304,9 +372,9 @@ def _version(entity_id: UUID, version_id: UUID, *, lock: bool = False) -> Budget
 
 
 def get_version(ctx: WorkspaceContext, entity_id: UUID, version_id: UUID) -> VersionView:
-    entity = get_entity(ctx, entity_id, READ)
-    version = _version(entity.id, version_id)
-    return _load(version)
+    access = _access(ctx, entity_id, READ)
+    version = _version(access.entity_id, version_id)
+    return _load(version).only(access.require(version.budget_id))
 
 
 def _load(version: BudgetVersion) -> VersionView:
@@ -341,7 +409,11 @@ def _amount(value: Decimal, where: str) -> Decimal:
 
 
 def _validated(  # noqa: PLR0912 (one check per rule)
-    ctx: WorkspaceContext, budget: Budget, months: list[date], lines: list[LineInput]
+    ctx: WorkspaceContext,
+    budget: Budget,
+    months: list[date],
+    lines: list[LineInput],
+    kept: list[BudgetLine] | None = None,
 ) -> list[tuple[LineInput, TaxonomyLine | None, UUID | None]]:
     """Check every line; return it with its taxonomy line and effective dimension value."""
     if len(lines) > MAX_LINES:
@@ -354,7 +426,10 @@ def _validated(  # noqa: PLR0912 (one check per rule)
     }
     values = {v.id: v for v in dimension_values(ctx, budget.legal_entity_id)}
     allowed_months = set(months)
-    seen: set[tuple[str, UUID | None]] = set()
+    seen: set[tuple[str, UUID | None]] = {
+        (k.taxonomy_line.code if k.taxonomy_line else str(k.account_id), k.dimension_value_id)
+        for k in kept or []
+    }
     out = []
     for i, line in enumerate(lines):
         where = f"lines[{i}]"
@@ -412,26 +487,124 @@ def content_hash(view: VersionView) -> str:
     return canonical_digest({"months": view.months, "lines": _content(view)})
 
 
+def _history(
+    ctx: WorkspaceContext, budget: Budget, months: list[date], lines: list[LineInput]
+) -> dict[tuple[str | None, UUID | None], list[Decimal]]:
+    """Last year's posted actuals per month, in each line's natural direction, for seasonal
+    phasing (closing entries excluded). Month ``m`` of the budget takes month ``m - 12``."""
+    wanted = {(ln.taxonomy_code, ln.account_id) for ln in lines if ln.method == "SEASONAL"}
+    if not wanted:
+        return {}
+    if not ctx.can("reports.read", budget.legal_entity_id):
+        raise PhasingError(
+            "Seasonal phasing reads last year's actuals, which needs permission "
+            "to see reports. Ask your budget preparer."
+        )
+    prior = [add_months(m, -12) for m in months]
+    facts = actuals_monthly(
+        ctx, budget.legal_entity_id, date_from=prior[0], date_to=month_end(prior[-1])
+    ).facts
+    credit = {a.id for a in accounts(ctx, budget.legal_entity_id) if a.normal_side == "CREDIT"}
+    mapping = {a: line.code for a, line in current_mapping(budget.legal_entity_id).items()}
+    natural: dict[tuple[UUID, date], Decimal] = defaultdict(Decimal)
+    for f in facts:
+        natural[(f.account_id, f.period)] += -f.net_debit if f.account_id in credit else f.net_debit
+    out = {}
+    for code, account_id in wanted:
+        accts = [account_id] if account_id else [a for a, c in mapping.items() if c == code]
+        out[(code, account_id)] = [
+            sum((natural.get((a, p), Decimal(0)) for a in accts), Decimal(0)) for p in prior
+        ]
+    return out
+
+
+def _phased(
+    ctx: WorkspaceContext, budget: Budget, months: list[date], lines: list[LineInput]
+) -> list[LineInput]:
+    """Compute the months of every line saved with a phasing method; MANUAL lines are kept."""
+    try:
+        history = _history(ctx, budget, months, lines)
+    except PhasingError as exc:
+        raise _invalid("method", str(exc)) from exc
+    out = []
+    for i, line in enumerate(lines):
+        if line.method == BudgetLine.Method.MANUAL:
+            out.append(line)
+            continue
+        try:
+            result = phase(
+                line.method,
+                len(months),
+                line.method_params,
+                history.get((line.taxonomy_code, line.account_id)),
+            )
+        except PhasingError as exc:
+            raise _invalid(f"lines[{i}]", str(exc)) from exc
+        params = {k: v for k, v in line.method_params.items() if k != "note"}
+        if result.note:
+            params["note"] = result.note
+        out.append(
+            replace(
+                line, amounts=dict(zip(months, result.amounts, strict=True)), method_params=params
+            )
+        )
+    return out
+
+
+def preview_phasing(
+    ctx: WorkspaceContext, entity_id: UUID, version_id: UUID, line: LineInput
+) -> tuple[list[date], list[Decimal], str]:
+    """The months a phasing method would give, without saving anything."""
+    access = _access(ctx, entity_id, EDIT)
+    version = _version(access.entity_id, version_id)
+    access.require(version.budget_id)
+    budget = version.budget
+    months = fiscal_months(budget.fiscal_year_start, budget.fiscal_year_end)
+    if line.method not in BudgetLine.Method.values or line.method == BudgetLine.Method.MANUAL:
+        raise _invalid("method", "Choose even, seasonal, profile or driver phasing.")
+    (done,) = _phased(ctx, budget, months, [line])
+    return months, [done.amounts[m] for m in months], str(done.method_params.get("note", ""))
+
+
 @transaction.atomic
 def save_lines(
     ctx: WorkspaceContext, entity_id: UUID, version_id: UUID, lines: list[LineInput]
 ) -> VersionView:
-    """Replace all lines of a draft version (months not given are 0)."""
-    entity = get_entity(ctx, entity_id, EDIT)
-    version = _version(entity.id, version_id, lock=True)
+    """Replace the lines of a draft version (months not given are 0). A department owner
+    replaces only their departments' lines; the other lines stay exactly as they were."""
+    access = _access(ctx, entity_id, EDIT)
+    version = _version(access.entity_id, version_id, lock=True)
+    dims = access.require(version.budget_id)
     _require(version, Status.DRAFT)
     budget = version.budget
     months = fiscal_months(budget.fiscal_year_start, budget.fiscal_year_end)
-    checked = _validated(ctx, budget, months, lines)
-    BudgetAmount.objects.filter(line__version=version).delete()
-    version.lines.all().delete()
-    common = {"tenant_id": ctx.tenant.id, "legal_entity_id": entity.id}
+    kept: list[BudgetLine] = []
+    if dims is not None:
+        if budget.dimension_value_id is not None:
+            lines = [
+                replace(ln, dimension_value_id=ln.dimension_value_id or budget.dimension_value_id)
+                for ln in lines
+            ]
+        for i, line in enumerate(lines):
+            if line.dimension_value_id not in dims:
+                raise _invalid(f"lines[{i}]", "You can only budget for your own departments.")
+        kept = [
+            ln
+            for ln in version.lines.select_related("taxonomy_line")
+            if ln.dimension_value_id not in dims
+        ]
+    checked = _validated(ctx, budget, months, _phased(ctx, budget, months, lines), kept)
+    replaced = version.lines.exclude(id__in=[ln.id for ln in kept])
+    BudgetAmount.objects.filter(line__in=replaced).delete()
+    replaced.delete()
+    first = max((ln.seq for ln in kept), default=0) + 1
+    common = {"tenant_id": ctx.tenant.id, "legal_entity_id": access.entity_id}
     created = BudgetLine.objects.bulk_create(
         [
             BudgetLine(
                 **common,
                 version=version,
-                seq=i + 1,
+                seq=first + i,
                 taxonomy_line=tax_line,
                 account_id=line.account_id,
                 dimension_value_id=dimension,
@@ -452,13 +625,18 @@ def save_lines(
     _event(ctx, version, BudgetEvent.Action.LINES_SAVED, f"{len(created)} lines")
     _audit(
         ctx,
-        entity.id,
+        access.entity_id,
         "budget_version",
         version.id,
         "budgeting.lines.saved",
-        {"budget_id": str(budget.id), "version": version.number, "lines": len(created)},
+        {
+            "budget_id": str(budget.id),
+            "version": version.number,
+            "lines": len(created),
+            "scope": "all" if dims is None else sorted(str(d) for d in dims),
+        },
     )
-    return _load(version)
+    return _load(version).only(dims)
 
 
 @transaction.atomic
@@ -686,3 +864,253 @@ def quarters(months: list[date], amounts: list[Decimal]) -> list[Decimal]:
     for i, value in enumerate(amounts[: len(months)]):
         sums[i // 3] += value
     return [sums[q] for q in range((len(months) + 2) // 3)]
+
+
+# --- department owners (AC-BU6) -------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class OwnerInput:
+    dimension_value_id: UUID
+    user_id: UUID
+
+
+def owners(ctx: WorkspaceContext, entity_id: UUID, budget_id: UUID) -> list[BudgetOwner]:
+    view = get_budget(ctx, entity_id, budget_id)
+    return list(
+        view.budget.owners.select_related("user").order_by("dimension_value_id", "user__email")
+    )
+
+
+def members(ctx: WorkspaceContext, entity_id: UUID) -> list[MemberRef]:
+    """People who can be named as department owners (requires ``budget.edit``)."""
+    get_entity(ctx, entity_id, EDIT)
+    return active_members(ctx)
+
+
+@transaction.atomic
+def set_owners(
+    ctx: WorkspaceContext, entity_id: UUID, budget_id: UUID, rows: list[OwnerInput]
+) -> list[BudgetOwner]:
+    """Replace the department owners of a budget."""
+    entity = get_entity(ctx, entity_id, EDIT)
+    budget = Budget.objects.select_for_update().filter(legal_entity=entity, id=budget_id).first()
+    if budget is None:
+        raise NotFoundError("Budget not found.")
+    if len(rows) > 500:
+        raise _invalid("owners", "At most 500 owners.")
+    values = {v.id for v in dimension_values(ctx, entity.id) if v.status == "ACTIVE"}
+    people = {m.user_id for m in active_members(ctx)}
+    for i, row in enumerate(rows):
+        if (
+            budget.dimension_value_id is not None
+            and row.dimension_value_id != budget.dimension_value_id
+        ):
+            raise _invalid(f"owners[{i}]", "This budget covers one department or project only.")
+        if row.dimension_value_id not in values:
+            raise _invalid(f"owners[{i}]", "Dimension value not found or inactive.")
+        if row.user_id not in people:
+            raise _invalid(f"owners[{i}]", "Choose an active member of this workspace.")
+    unique = sorted({(r.dimension_value_id, r.user_id) for r in rows}, key=str)
+    before = sorted((str(o.dimension_value_id), str(o.user_id)) for o in budget.owners.all())
+    budget.owners.all().delete()
+    BudgetOwner.objects.bulk_create(
+        [
+            BudgetOwner(
+                tenant_id=ctx.tenant.id,
+                legal_entity=entity,
+                budget=budget,
+                dimension_value_id=d,
+                user_id=u,
+                created_by_id=ctx.user.id,
+            )
+            for d, u in unique
+        ]
+    )
+    _audit(
+        ctx,
+        entity.id,
+        "budget",
+        budget.id,
+        "budgeting.owners.changed",
+        {"before": before, "after": [(str(d), str(u)) for d, u in unique]},
+    )
+    return owners(ctx, entity_id, budget_id)
+
+
+# --- Excel export and import (AC-BU3) -------------------------------------------------------------
+
+
+def _dimension_labels(ctx: WorkspaceContext, entity_id: UUID) -> dict[UUID, str]:
+    return {v.id: f"{v.dimension_code}:{v.code}" for v in dimension_values(ctx, entity_id)}
+
+
+def export_version(ctx: WorkspaceContext, entity_id: UUID, version_id: UUID) -> tuple[str, bytes]:
+    """The version as the import template (a department owner gets only their lines)."""
+    view = get_version(ctx, entity_id, version_id)
+    codes = {a.id: a.code for a in accounts(ctx, view.budget.legal_entity_id)}
+    labels = _dimension_labels(ctx, view.budget.legal_entity_id)
+    budget, version = view.budget, view.version
+    lines = [
+        excel.ExportLine(
+            line=ln.taxonomy_line.code if ln.taxonomy_line else "",
+            account=codes.get(ln.account_id, "") if ln.account_id else "",
+            dimension=labels.get(ln.dimension_value_id, "") if ln.dimension_value_id else "",
+            note=ln.note,
+            amounts=view.line_amounts(ln),
+        )
+        for ln in view.lines
+    ]
+    subtitle = (
+        f"Fiscal year {budget.fiscal_year_start.isoformat()} to "
+        f"{budget.fiscal_year_end.isoformat()} · version {version.number} "
+        f"({version.status.lower()}) · nature BUDGET (planned, not actual)"
+    )
+    name = f"budget-{budget.fiscal_year_start.year}-v{version.number}.xlsx"
+    _audit(
+        ctx,
+        budget.legal_entity_id,
+        "budget_version",
+        version.id,
+        "budgeting.exported",
+        {"lines": len(lines)},
+    )
+    return name, excel.export(budget.name, subtitle, view.months, lines)
+
+
+@dataclass(frozen=True)
+class Change:
+    key: str
+    kind: Literal["ADDED", "REMOVED", "CHANGED"]
+    before: Decimal
+    after: Decimal
+    months_changed: int
+
+
+@dataclass(frozen=True)
+class ImportResult:
+    problems: list[excel.Problem]
+    changes: list[Change]
+    unchanged: int
+    draft_hash: str
+    applied: bool
+
+
+def _import_rows(
+    ctx: WorkspaceContext,
+    budget: Budget,
+    rows: list[excel.Row],
+    dims: frozenset[UUID] | None,
+    problems: list[excel.Problem],
+) -> list[LineInput]:
+    """Resolve codes to lines; append a problem per row that cannot be used."""
+    taxonomy = {ln.code for ln in TaxonomyLine.objects.filter(version_id=DEFAULT_TAXONOMY)}
+    by_code = {
+        a.code: a
+        for a in accounts(ctx, budget.legal_entity_id)
+        if a.is_postable and a.status == "ACTIVE"
+    }
+    by_label = {label: vid for vid, label in _dimension_labels(ctx, budget.legal_entity_id).items()}
+    lines: list[LineInput] = []
+    seen: dict[tuple[str, UUID | None], int] = {}
+    for row in rows:
+        dimension = by_label.get(row.dimension) if row.dimension else budget.dimension_value_id
+        problem = None
+        if bool(row.line) == bool(row.account):
+            problem = ("A", "Fill in either Line (a taxonomy code) or Account, not both.")
+        elif row.line and row.line not in taxonomy:
+            problem = ("A", f"Unknown taxonomy line {row.line!r}.")
+        elif row.account and row.account not in by_code:
+            problem = ("B", f"Unknown or non-postable account {row.account!r}.")
+        elif row.dimension and dimension is None:
+            problem = ("C", f"Unknown dimension value {row.dimension!r} (use CODE:VALUE).")
+        elif dims is not None and dimension not in dims:
+            problem = ("C", "You can only budget for your own departments.")
+        account_id = by_code[row.account].id if row.account in by_code else None
+        key = (row.line or str(account_id), dimension)
+        if problem is None and key in seen:
+            problem = ("A", f"Same line as row {seen[key]}; combine them.")
+        if problem is not None:
+            problems.append(excel.Problem(row.row, *problem))
+            continue
+        seen[key] = row.row
+        lines.append(
+            LineInput(
+                taxonomy_code=row.line or None,
+                account_id=account_id,
+                dimension_value_id=dimension,
+                amounts=row.amounts,
+                note=row.note,
+            )
+        )
+    return lines
+
+
+def _diff(view: VersionView, lines: list[LineInput]) -> tuple[list[Change], int]:
+    def label(key: tuple[str, UUID | None]) -> str:
+        return key[0] + (f" · {key[1]}" if key[1] else "")
+
+    zero = Decimal(0)
+    current = {
+        (
+            ln.taxonomy_line.code if ln.taxonomy_line else str(ln.account_id),
+            ln.dimension_value_id,
+        ): view.line_amounts(ln)
+        for ln in view.lines
+    }
+    changes, unchanged = [], 0
+    for line in lines:
+        key = (line.taxonomy_code or str(line.account_id), line.dimension_value_id)
+        new = [line.amounts.get(m, zero) for m in view.months]
+        old = current.pop(key, None)
+        if old is None:
+            changes.append(Change(label(key), "ADDED", zero, sum(new, zero), len(new)))
+        elif old != new:
+            moved = sum(1 for a, b in zip(old, new, strict=True) if a != b)
+            changes.append(Change(label(key), "CHANGED", sum(old, zero), sum(new, zero), moved))
+        else:
+            unchanged += 1
+    changes += [
+        Change(label(k), "REMOVED", sum(old, zero), zero, len(old)) for k, old in current.items()
+    ]
+    return changes, unchanged
+
+
+def import_lines(
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    version_id: UUID,
+    data: bytes,
+    *,
+    apply: bool,
+    expected_hash: str = "",
+) -> ImportResult:
+    """Validate an uploaded workbook and show what it would change (preview), or replace the
+    draft's lines with it (apply). Apply needs the ``draft_hash`` of the preview, so a draft
+    edited in between is never overwritten unseen. A department owner's import covers only
+    their departments."""
+    access = _access(ctx, entity_id, EDIT)
+    view = get_version(ctx, entity_id, version_id)
+    dims = access.require(view.budget.id)
+    _require(view.version, Status.DRAFT)
+    try:
+        rows, problems = excel.parse(data, view.months)
+    except excel.WorkbookError as exc:
+        raise _invalid("file", str(exc)) from exc
+    lines = _import_rows(ctx, view.budget, rows, dims, problems)
+    changes, unchanged = _diff(view, lines)
+    draft_hash = content_hash(view)
+    if not apply or problems:
+        return ImportResult(problems, changes, unchanged, draft_hash, applied=False)
+    if expected_hash != draft_hash:
+        raise LifecycleError("The draft changed after the preview; preview the file again.")
+    saved = save_lines(ctx, entity_id, version_id, lines)
+    _audit(
+        ctx,
+        view.budget.legal_entity_id,
+        "budget_version",
+        view.version.id,
+        "budgeting.imported",
+        {"rows": len(lines), "changes": len(changes)},
+    )
+    return ImportResult([], changes, unchanged, content_hash(saved), applied=True)

@@ -1,11 +1,16 @@
 import Decimal from "decimal.js";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   type Budget,
   type BudgetKind,
   type BudgetVersionDetail,
   type LineIn,
+  type PhasingMethod,
+  type PhasingParams,
   useBudgetEvents,
+  useBudgetMembers,
+  useBudgetOwners,
+  useExportUrl,
   useBudgetMutations,
   useBudgetSettings,
   useBudgets,
@@ -43,6 +48,36 @@ interface Row {
   dimension_value_id: string | null;
   note: string;
   amounts: string[];
+  method: PhasingMethod;
+  annual: string;
+  weights: string;
+  quantity: string;
+  rate: string;
+  phasingNote: string;
+}
+
+const METHODS: PhasingMethod[] = [
+  "MANUAL",
+  "EVEN",
+  "SEASONAL",
+  "PROFILE",
+  "DRIVER",
+];
+
+function params(r: Row): PhasingParams | null {
+  switch (r.method) {
+    case "MANUAL":
+      return null;
+    case "PROFILE":
+      return {
+        annual: r.annual.trim(),
+        weights: r.weights.split(/[\s,;]+/).filter(Boolean),
+      };
+    case "DRIVER":
+      return { quantity: r.quantity.trim(), rate: r.rate.trim() };
+    default:
+      return { annual: r.annual.trim() };
+  }
 }
 
 function useNames() {
@@ -86,10 +121,63 @@ function useNames() {
   }, [taxonomy.data, accounts.data, dimensions.data, locale]);
 }
 
+function PhasingRow({
+  row,
+  span,
+  onChange,
+  onPreview,
+  pending,
+}: {
+  row: Row;
+  span: number;
+  onChange: (patch: Partial<Row>) => void;
+  onPreview: () => void;
+  pending: boolean;
+}) {
+  const { t } = useI18n();
+  const field = (
+    key: "annual" | "weights" | "quantity" | "rate",
+    label: MessageKey,
+  ) => (
+    <label>
+      {t(label)}
+      <input
+        value={row[key]}
+        onChange={(e) => onChange({ [key]: e.target.value })}
+        inputMode={key === "weights" ? "text" : "decimal"}
+        size={key === "weights" ? 30 : 12}
+      />
+    </label>
+  );
+  return (
+    <tr className="phasing-row">
+      <td colSpan={span}>
+        <div className="form inline">
+          {row.method === "DRIVER" ? (
+            <>
+              {field("quantity", "bu.quantity")}
+              {field("rate", "bu.rate")}
+            </>
+          ) : (
+            field("annual", "bu.annual")
+          )}
+          {row.method === "PROFILE" ? field("weights", "bu.weights") : null}
+          <button type="button" onClick={onPreview} disabled={pending}>
+            {t("bu.phase")}
+          </button>
+          {row.phasingNote ? (
+            <span className="muted">{row.phasingNote}</span>
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
   const { t, locale } = useI18n();
   const names = useNames();
-  const { saveLines } = useBudgetMutations();
+  const { saveLines, preview } = useBudgetMutations();
   const [rows, setRows] = useState<Row[]>(() =>
     detail.lines.map((l) => ({
       key: l.id,
@@ -98,14 +186,24 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
       dimension_value_id: l.dimension_value_id,
       note: l.note,
       amounts: [...l.amounts],
+      method: l.method,
+      annual: l.method_params.annual ?? "",
+      weights: (l.method_params.weights ?? []).join(" "),
+      quantity: l.method_params.quantity ?? "",
+      rate: l.method_params.rate ?? "",
+      phasingNote: l.phasing_note,
     })),
   );
   const [subject, setSubject] = useState("");
+  const [dimension, setDimension] = useState("");
   const months = detail.months;
   const blank = () => months.map(() => "0.00");
-  const invalid = rows.some((r) =>
-    r.amounts.some((a) => !SIGNED.test(a.trim())),
+  const invalid = rows.some(
+    (r) =>
+      r.method === "MANUAL" && r.amounts.some((a) => !SIGNED.test(a.trim())),
   );
+  const patch = (i: number, change: Partial<Row>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...change } : r)));
   const set = (i: number, m: number, value: string) =>
     setRows((rs) =>
       rs.map((r, j) =>
@@ -120,15 +218,41 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
     setRows((rs) => [
       ...rs,
       {
-        key: `new-${String(rs.length)}-${subject}`,
+        key: `new-${String(rs.length)}-${subject}-${dimension}`,
         taxonomy_code: kind === "t" ? id : null,
         account_id: kind === "a" ? id : null,
-        dimension_value_id: null,
+        dimension_value_id: dimension || null,
         note: "",
         amounts: blank(),
+        method: "MANUAL",
+        annual: "",
+        weights: "",
+        quantity: "",
+        rate: "",
+        phasingNote: "",
       },
     ]);
     setSubject("");
+  };
+  const runPreview = (i: number) => {
+    const r = rows[i];
+    const body = r ? params(r) : null;
+    if (!r || !body || r.method === "MANUAL") return;
+    preview.mutate(
+      {
+        versionId: detail.id,
+        body: {
+          taxonomy_code: r.taxonomy_code,
+          account_id: r.account_id,
+          method: r.method,
+          params: body,
+        },
+      },
+      {
+        onSuccess: (res) =>
+          patch(i, { amounts: res.amounts, phasingNote: res.note }),
+      },
+    );
   };
   const payload = (): LineIn[] =>
     rows.map((r) => ({
@@ -136,9 +260,14 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
       account_id: r.account_id,
       dimension_value_id: r.dimension_value_id,
       note: r.note,
-      amounts: Object.fromEntries(
-        months.map((m, k) => [m, r.amounts[k]?.trim() ?? "0"]),
-      ),
+      method: r.method,
+      params: params(r),
+      amounts:
+        r.method === "MANUAL"
+          ? Object.fromEntries(
+              months.map((m, k) => [m, r.amounts[k]?.trim() ?? "0"]),
+            )
+          : {},
     }));
   const totals = months.map((_, k) =>
     rows.reduce(
@@ -146,16 +275,19 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
       new Decimal(0),
     ),
   );
+  const span = months.length + 4;
   return (
     <section aria-labelledby="bu-lines">
       <h3 id="bu-lines">{t("bu.lines")}</h3>
       <p className="muted">{t("bu.linesHelp")}</p>
+      <p className="muted">{t("bu.phasingHelp")}</p>
       <div className="table-scroll">
         <table className="grid budget-grid">
           <caption className="visually-hidden">{t("bu.lines")}</caption>
           <thead>
             <tr>
               <th scope="col">{t("bu.line")}</th>
+              <th scope="col">{t("bu.method")}</th>
               {months.map((m) => (
                 <th scope="col" key={m} className="num">
                   {monthLabel(m, locale)}
@@ -177,48 +309,86 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
                 new Decimal(0),
               );
               return (
-                <tr key={r.key}>
-                  <th scope="row">
-                    {label}
-                    {r.dimension_value_id ? (
-                      <span className="muted">
-                        {" "}
-                        · {names.value(r.dimension_value_id)}
-                      </span>
-                    ) : null}
-                  </th>
-                  {months.map((m, k) => (
-                    <td key={m}>
-                      <input
-                        className="num"
-                        inputMode="decimal"
-                        aria-label={`${label} ${monthLabel(m, locale)}`}
-                        aria-invalid={!SIGNED.test((r.amounts[k] ?? "").trim())}
-                        value={r.amounts[k] ?? ""}
-                        onChange={(e) => set(i, k, e.target.value)}
-                        size={9}
-                      />
+                <Fragment key={r.key}>
+                  <tr>
+                    <th scope="row">
+                      {label}
+                      {r.dimension_value_id ? (
+                        <span className="muted">
+                          {" "}
+                          · {names.value(r.dimension_value_id)}
+                        </span>
+                      ) : null}
+                    </th>
+                    <td>
+                      <select
+                        aria-label={`${t("bu.method")} ${label}`}
+                        value={r.method}
+                        onChange={(e) =>
+                          patch(i, {
+                            method: e.target.value as PhasingMethod,
+                            phasingNote: "",
+                          })
+                        }
+                      >
+                        {METHODS.map((m) => (
+                          <option key={m} value={m}>
+                            {t(`bu.method.${m}`)}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-                  ))}
-                  <td className="num">{formatAmount(total, locale)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setRows((rs) => rs.filter((_, j) => j !== i))
-                      }
-                    >
-                      {t("bu.remove")}
-                      <span className="visually-hidden"> {label}</span>
-                    </button>
-                  </td>
-                </tr>
+                    {months.map((m, k) => (
+                      <td key={m}>
+                        {r.method === "MANUAL" ? (
+                          <input
+                            className="num"
+                            inputMode="decimal"
+                            aria-label={`${label} ${monthLabel(m, locale)}`}
+                            aria-invalid={
+                              !SIGNED.test((r.amounts[k] ?? "").trim())
+                            }
+                            value={r.amounts[k] ?? ""}
+                            onChange={(e) => set(i, k, e.target.value)}
+                            size={9}
+                          />
+                        ) : (
+                          <span className="num">
+                            {formatAmount(r.amounts[k] ?? "0", locale)}
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                    <td className="num">{formatAmount(total, locale)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRows((rs) => rs.filter((_, j) => j !== i))
+                        }
+                      >
+                        {t("bu.remove")}
+                        <span className="visually-hidden"> {label}</span>
+                      </button>
+                    </td>
+                  </tr>
+                  {r.method === "MANUAL" ? null : (
+                    <PhasingRow
+                      row={r}
+                      span={span}
+                      onChange={(change) => patch(i, change)}
+                      onPreview={() => runPreview(i)}
+                      pending={preview.isPending}
+                    />
+                  )}
+                </Fragment>
               );
             })}
           </tbody>
           <tfoot>
             <tr>
               <th scope="row">{t("bu.total")}</th>
+              <td />
               {totals.map((v, k) => (
                 <td key={months[k]} className="num">
                   {formatAmount(v, locale)}
@@ -235,6 +405,7 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
           </tfoot>
         </table>
       </div>
+      <ProblemMessage error={preview.error} />
       <div className="form inline">
         <label>
           {t("bu.addLine")}
@@ -258,6 +429,22 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
             </optgroup>
           </select>
         </label>
+        <label>
+          {t("bu.dimension")}
+          <select
+            value={dimension}
+            onChange={(e) => setDimension(e.target.value)}
+          >
+            <option value="">{t("bu.noDimension")}</option>
+            {names.dimensions.flatMap((d) =>
+              d.values.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {d.code}: {v.name}
+                </option>
+              )),
+            )}
+          </select>
+        </label>
         <button type="button" onClick={add} disabled={!subject}>
           {t("bu.add")}
         </button>
@@ -266,7 +453,24 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
           className="primary"
           disabled={invalid || saveLines.isPending}
           onClick={() =>
-            saveLines.mutate({ versionId: detail.id, lines: payload() })
+            saveLines.mutate(
+              { versionId: detail.id, lines: payload() },
+              {
+                onSuccess: (saved) =>
+                  setRows((rs) =>
+                    rs.map((r, i) => {
+                      const line = saved.lines[i];
+                      return line
+                        ? {
+                            ...r,
+                            amounts: [...line.amounts],
+                            phasingNote: line.phasing_note,
+                          }
+                        : r;
+                    }),
+                  ),
+              },
+            )
           }
         >
           {t("bu.saveLines")}
@@ -277,6 +481,116 @@ function LineEditor({ detail }: { detail: BudgetVersionDetail }) {
       </div>
       {invalid ? <p className="error">{t("bu.invalidAmount")}</p> : null}
       <ProblemMessage error={saveLines.error} />
+      <ImportPanel detail={detail} />
+    </section>
+  );
+}
+
+function ImportPanel({ detail }: { detail: BudgetVersionDetail }) {
+  const { t, locale } = useI18n();
+  const { importFile } = useBudgetMutations();
+  const [file, setFile] = useState<File | null>(null);
+  const result = importFile.data;
+  const run = (apply: boolean) => {
+    if (!file) return;
+    importFile.mutate({
+      versionId: detail.id,
+      file,
+      apply,
+      expectedHash: apply && result ? result.draft_hash : "",
+    });
+  };
+  return (
+    <section aria-labelledby="bu-import" className="import-panel">
+      <h3 id="bu-import">{t("bu.import")}</h3>
+      <p className="muted">{t("bu.importHelp")}</p>
+      <ExportLink versionId={detail.id} />
+      <div className="form inline">
+        <label>
+          {t("bu.file")}
+          <input
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              importFile.reset();
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={!file || importFile.isPending}
+          onClick={() => run(false)}
+        >
+          {t("bu.importPreview")}
+        </button>
+        {result && !result.applied && result.problems.length === 0 ? (
+          <button
+            type="button"
+            className="primary"
+            disabled={importFile.isPending}
+            onClick={() => run(true)}
+          >
+            {t("bu.importApply")}
+          </button>
+        ) : null}
+      </div>
+      <ProblemMessage error={importFile.error} />
+      {result?.applied ? <p role="status">{t("bu.imported")}</p> : null}
+      {result && result.problems.length ? (
+        <div className="table-scroll">
+          <table className="grid">
+            <caption>{t("bu.importProblems")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("bu.row")}</th>
+                <th scope="col">{t("bu.column")}</th>
+                <th scope="col">{t("bu.problem")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.problems.map((p) => (
+                <tr key={`${String(p.row)}-${p.column}-${p.message}`}>
+                  <td>{p.row || "—"}</td>
+                  <td>{p.column || "—"}</td>
+                  <td>{p.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {result && !result.problems.length && !result.applied ? (
+        <div className="table-scroll">
+          <table className="grid">
+            <caption>
+              {t("bu.importChanges")} ({t("bu.unchanged")}: {result.unchanged})
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("bu.line")}</th>
+                <th scope="col">{t("bu.change")}</th>
+                <th scope="col" className="num">
+                  {t("bu.before")}
+                </th>
+                <th scope="col" className="num">
+                  {t("bu.after")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.changes.map((c) => (
+                <tr key={`${c.kind}-${c.line}`}>
+                  <td>{c.line}</td>
+                  <td>{t(`bu.change.${c.kind}`)}</td>
+                  <td className="num">{formatAmount(c.before, locale)}</td>
+                  <td className="num">{formatAmount(c.after, locale)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -494,6 +808,98 @@ function Trail({ budgetId }: { budgetId: string }) {
   );
 }
 
+function OwnersPanel({ budget }: { budget: Budget }) {
+  const { t } = useI18n();
+  const owners = useBudgetOwners(budget.id);
+  const members = useBudgetMembers(owners.isSuccess);
+  const names = useNames();
+  const { saveOwners } = useBudgetMutations();
+  const [chosen, setChosen] = useState<Record<string, string> | null>(null);
+  if (!owners.data || !members.data) return null;
+  const current: Record<string, string> =
+    chosen ??
+    Object.fromEntries(
+      owners.data.map((o) => [o.dimension_value_id, o.user_id]),
+    );
+  const values = names.dimensions
+    .filter((d) => d.kind !== "CUSTOM")
+    .flatMap((d) =>
+      d.values.map((v) => ({ id: v.id, label: `${d.code}: ${v.name}` })),
+    )
+    .filter(
+      (v) => !budget.dimension_value_id || v.id === budget.dimension_value_id,
+    );
+  if (!values.length) {
+    return (
+      <section aria-labelledby="bu-owners">
+        <h3 id="bu-owners">{t("bu.owners")}</h3>
+        <p className="muted">{t("bu.noDepartments")}</p>
+      </section>
+    );
+  }
+  return (
+    <section aria-labelledby="bu-owners">
+      <h3 id="bu-owners">{t("bu.owners")}</h3>
+      <p className="muted">{t("bu.ownersHelp")}</p>
+      <div className="form inline">
+        {values.map((v) => (
+          <label key={v.id}>
+            {v.label}
+            <select
+              value={current[v.id] ?? ""}
+              onChange={(e) =>
+                setChosen({ ...current, [v.id]: e.target.value })
+              }
+            >
+              <option value="">{t("bu.noOwner")}</option>
+              {members.data.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+        <button
+          type="button"
+          disabled={saveOwners.isPending}
+          onClick={() =>
+            saveOwners.mutate(
+              {
+                budgetId: budget.id,
+                owners: Object.entries(current)
+                  .filter(([, user]) => user)
+                  .map(([dimension_value_id, user_id]) => ({
+                    dimension_value_id,
+                    user_id,
+                  })),
+              },
+              { onSuccess: () => setChosen(null) },
+            )
+          }
+        >
+          {t("bu.saveOwners")}
+        </button>
+        {saveOwners.isSuccess ? (
+          <span role="status">{t("bu.saved")}</span>
+        ) : null}
+      </div>
+      <ProblemMessage error={saveOwners.error} />
+    </section>
+  );
+}
+
+function ExportLink({ versionId }: { versionId: string }) {
+  const { t } = useI18n();
+  return (
+    <p>
+      <a className="download" href={useExportUrl(versionId)} download>
+        {t("bu.export")}
+      </a>
+    </p>
+  );
+}
+
 function BudgetDetail({ budget }: { budget: Budget }) {
   const { t } = useI18n();
   const [chosen, setChosen] = useState<string | null>(null);
@@ -542,9 +948,13 @@ function BudgetDetail({ budget }: { budget: Budget }) {
           ) : (
             <LineTable detail={detail.data} />
           )}
+          {detail.data.status === "DRAFT" ? null : (
+            <ExportLink versionId={detail.data.id} />
+          )}
           <VersionActions detail={detail.data} />
         </>
       ) : null}
+      <OwnersPanel budget={budget} />
       <Trail budgetId={budget.id} />
     </section>
   );

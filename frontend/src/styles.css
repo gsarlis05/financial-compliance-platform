@@ -206,3 +206,4 @@ button.link { background: none; border: none; padding: 0; color: var(--link, inh
 /* Budget grid (M4-1): compact month inputs; the line name stays readable. */
 .budget-grid input { width: 7.5rem; min-width: 0; }
 .budget-grid tbody th, .budget-grid tfoot th { min-width: 12rem; }
+a.download { text-decoration: underline; font-weight: 600; }
