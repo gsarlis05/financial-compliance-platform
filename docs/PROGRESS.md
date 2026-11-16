@@ -77,7 +77,8 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M5-2 Personal budgets, goals, 12-month projection (issue #75) | `claude/m5-2-personal-plans` | #130 | Open |
 | M5-3 Counterpart hint: opt-in, confirm-only (issue #76) | `claude/m5-3-counterpart-hint` | #131 | Open |
 | M5-4 Engagement grants: scope ∩ firm role, revocation, audit, portfolio (issue #77) | `claude/m5-4-engagements` | #132 | Open |
-| M5-5 Pilot environment IaC, never applied (issue #78) | — | — | Next |
+| M5-5 Pilot environment as code (never applied), monitoring, backup and restore drill (issue #78) | `claude/m5-5-pilot-iac` | #133 | Open |
+| M5-6 Export and deletion (issue #79) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

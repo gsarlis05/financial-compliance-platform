@@ -22,3 +22,8 @@ output "app_subnet_cidrs" {
   description = "CIDR blocks of the application subnets."
   value       = aws_subnet.app[*].cidr_block
 }
+
+output "main_route_table_id" {
+  description = "The VPC's main route table (used by the private subnets; gateway endpoints attach here)."
+  value       = aws_vpc.this.main_route_table_id
+}

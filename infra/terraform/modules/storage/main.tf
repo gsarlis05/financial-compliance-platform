@@ -4,6 +4,9 @@
 
 data "aws_caller_identity" "current" {}
 
+# The regional Elastic Load Balancing account that delivers access logs (M5-5).
+data "aws_elb_service_account" "current" {}
+
 locals {
   documents_bucket = "${var.name_prefix}-documents-${data.aws_caller_identity.current.account_id}"
   logs_bucket      = "${var.name_prefix}-s3-access-logs-${data.aws_caller_identity.current.account_id}"
@@ -82,6 +85,15 @@ data "aws_iam_policy_document" "logs" {
       test     = "StringEquals"
       variable = "aws:SourceAccount"
       values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+  statement {
+    sid       = "LoadBalancerAccessLogsDelivery"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.logs.arn}/alb/*"]
+    principals {
+      type        = "AWS"
+      identifiers = [data.aws_elb_service_account.current.arn]
     }
   }
   statement {

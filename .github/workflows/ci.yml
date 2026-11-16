@@ -179,6 +179,19 @@ jobs:
         run: docker build -t fcp-web:ci frontend/
       - name: Production-like smoke test (TLS database, migration task, read-only, non-root)
         run: scripts/ci/container-smoke.sh fcp-backend:ci fcp-web:ci
+      - name: Software bill of materials (SPDX) for both images
+        run: |
+          mkdir -p sbom
+          for image in fcp-backend fcp-web; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sbom:/out" \
+              anchore/syft:v1.18.1 "docker:$image:ci" -o "spdx-json=/out/$image.spdx.json" -q
+            test -s "sbom/$image.spdx.json"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 90
 
   prove-gates:
     name: Prove gates reject violations
