@@ -1,5 +1,8 @@
 # Progress Tracker
 
+> Work is tracked in **GitHub Milestones and Issues** (one issue per backlog item; process:
+> `docs/PROCESS.md`). This file is the quick summary and the branch map for resuming work.
+
 The single place to see where implementation stands. It is updated with every PR, so nothing
 depends on a chat session. Branches are stacked: each PR targets the previous one and is merged
 in order.
@@ -33,7 +36,8 @@ in order.
 | M1-13 Docs, sample data, demo | `claude/m1-13-docs` | #19 | Open, CI green |
 | M2-0 Cloud packaging (images, prod settings, readiness) + cloud-readiness review | `claude/m2-0-cloud-packaging` | #20 | Open |
 | M2-1 Dimensions | `claude/m2-1-dimensions` | #21 | Open |
-| M2-2 Counterparties + open items | — | — | Next |
+| M0-8 Work tracking process (issue #31) | `claude/process-tracker` | #22 | Open |
+| M2-2 Counterparties + open items (issue #47) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
@@ -41,6 +45,8 @@ in order.
 - Cyprus tax professional for rule verification (before Phase 4)
 
 ## How to resume work in a new session
+Say "Resume the Financial Compliance Platform. Follow CLAUDE.md." The full procedure is in
+`docs/PROCESS.md` §7. In short:
 1. `git fetch origin` and check out the last branch in the table above.
 2. `make dev` (if the user model changed since your last run: `make dev-reset && make dev`).
-3. Continue with the first item whose state is not "Open".
+3. Check `needs:owner` issues and open PRs, then continue with the next issue (PROCESS §3).
