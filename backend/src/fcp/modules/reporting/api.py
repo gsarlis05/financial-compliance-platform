@@ -69,6 +69,7 @@ class AccountRef:
     normal_side: str
     is_postable: bool
     status: str
+    vat_role: str = ""  # INPUT or OUTPUT for VAT accounts (M6F-5: tells VAT from income tax)
 
 
 @dataclass(frozen=True)
@@ -89,7 +90,17 @@ class AccountActivity:
 def accounts(ctx: WorkspaceContext, entity_id: UUID) -> list[AccountRef]:
     """The entity's chart of accounts (requires ``ledger.account.read``)."""
     return [
-        AccountRef(a.id, a.code, a.name, a.name_el, a.type, a.normal_side, a.is_postable, a.status)
+        AccountRef(
+            a.id,
+            a.code,
+            a.name,
+            a.name_el,
+            a.type,
+            a.normal_side,
+            a.is_postable,
+            a.status,
+            a.vat_role,
+        )
         for a in account_list(ctx, entity_id)
     ]
 

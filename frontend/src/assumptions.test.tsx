@@ -31,6 +31,27 @@ const set = {
   supersedes_id: null,
   created_at: "2026-11-12T00:00:00Z",
   approved_at: null,
+  tax_losses_bf: { "2025": "8000.00" },
+  tax_paid_ytd: "0.00",
+  recognise_loss_dta: false,
+};
+const taxRule = {
+  id: "CY:CIT:2026",
+  jurisdiction: "CY",
+  tax: "CIT",
+  effective_from: "2026-01-01",
+  effective_to: null,
+  rate: "0.15",
+  loss_carryforward_years: 7,
+  tax_year_start_month: 1,
+  provisional_instalments: [
+    { month: 7, day: 31, share: "0.5" },
+    { month: 12, day: 31, share: "0.5" },
+  ],
+  final_payment: "1 August of the following year",
+  verified: false,
+  verification_note: "Pending professional verification (#154).",
+  sources: [],
 };
 const months = Array.from({ length: 3 }, (_, i) => `2027-0${i + 1}-01`);
 const grid = {
@@ -65,10 +86,13 @@ describe("Assumption sets (M6-2)", () => {
         const method = init.method ?? "GET";
         if (method !== "GET") {
           sent.push({ url, method, body: JSON.parse(init.body as string) });
+          if (url.endsWith("/tax")) return Promise.resolve(respond(set));
           return Promise.resolve(respond(method === "PUT" ? grid : set));
         }
         if (url.endsWith("/assumption-sets/s1"))
           return Promise.resolve(respond(grid));
+        if (url.endsWith("/tax-rules"))
+          return Promise.resolve(respond([taxRule]));
         if (url.endsWith("/loans"))
           return Promise.resolve(
             respond([
@@ -157,6 +181,39 @@ describe("Assumption sets (M6-2)", () => {
         "/api/w/ws/entities/e1/assumption-sets/s1/approve",
       ),
     );
+    // Corporate tax (M6F-5): the rule set in force is shown as pending verification; the tax
+    // position at the cut-over is saved with the set.
+    const rules = screen.getByRole("table", {
+      name: "Rule sets used by this projection",
+    });
+    expect(rules).toHaveTextContent("CY:CIT:2026");
+    expect(rules).toHaveTextContent("15%");
+    expect(rules).toHaveTextContent("Pending professional verification");
+    expect(screen.getByLabelText("Year of loss 1")).toHaveValue("2025");
+    fireEvent.change(
+      screen.getByLabelText(
+        "Provisional tax already paid for the cut-over's tax year",
+      ),
+      { target: { value: "1200.00" } },
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /deferred tax asset/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save the tax position" }),
+    );
+    await waitFor(() =>
+      expect(sent.find((x) => x.url.endsWith("/tax"))).toEqual({
+        url: "/api/w/ws/entities/e1/assumption-sets/s1/tax",
+        method: "PUT",
+        body: {
+          tax_losses_bf: { "2025": "8000.00" },
+          tax_paid_ytd: "1200.00",
+          recognise_loss_dta: true,
+        },
+      }),
+    );
+    expect(await screen.findByText("Tax position saved.")).toBeInTheDocument();
     const results = await axe.run(container, {
       rules: { "color-contrast": { enabled: false } },
     });

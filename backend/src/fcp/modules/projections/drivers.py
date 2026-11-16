@@ -54,7 +54,9 @@ DRIVERS: dict[str, Driver] = {
         Driver("dso", Unit.DAYS),
         Driver("dio", Unit.DAYS),
         Driver("dpo", Unit.DAYS),
-        Driver("tax_rate", Unit.PERCENT),  # on profit before tax; paid the following year
+        # M6F-5: the tax rate and payment dates come from the tax rule set; this driver adjusts
+        # taxable profit (non-deductible costs positive, non-taxable income negative).
+        Driver("tax_adjustment", Unit.AMOUNT, minimum=None),
         Driver("borrowing", Unit.AMOUNT),
         Driver("repayment", Unit.AMOUNT),
         Driver("interest_rate", Unit.PERCENT),  # a year, on opening debt

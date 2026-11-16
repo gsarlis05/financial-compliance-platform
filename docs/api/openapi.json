@@ -1541,6 +1541,11 @@
             "title": "Note",
             "type": "string"
           },
+          "recognise_loss_dta": {
+            "description": "Deferred tax asset recognised on losses",
+            "title": "Recognise Loss Dta",
+            "type": "boolean"
+          },
           "start_from": {
             "title": "Start From",
             "type": "string"
@@ -1562,6 +1567,19 @@
             ],
             "title": "Supersedes Id"
           },
+          "tax_losses_bf": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Unused tax losses at the start of the first projected tax year, by the year they arose",
+            "title": "Tax Losses Bf",
+            "type": "object"
+          },
+          "tax_paid_ytd": {
+            "description": "Provisional tax paid for the cut-over's tax year",
+            "title": "Tax Paid Ytd",
+            "type": "string"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -1579,7 +1597,10 @@
           "status",
           "supersedes_id",
           "created_at",
-          "approved_at"
+          "approved_at",
+          "tax_losses_bf",
+          "tax_paid_ytd",
+          "recognise_loss_dta"
         ],
         "title": "AssumptionSetOut",
         "type": "object"
@@ -13081,6 +13102,31 @@
         "title": "TaxPaymentOut",
         "type": "object"
       },
+      "TaxPositionIn": {
+        "properties": {
+          "recognise_loss_dta": {
+            "default": false,
+            "title": "Recognise Loss Dta",
+            "type": "boolean"
+          },
+          "tax_losses_bf": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 30,
+            "title": "Tax Losses Bf",
+            "type": "object"
+          },
+          "tax_paid_ytd": {
+            "default": "0",
+            "pattern": "^\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Tax Paid Ytd",
+            "type": "string"
+          }
+        },
+        "title": "TaxPositionIn",
+        "type": "object"
+      },
       "TaxRuleSetOut": {
         "properties": {
           "effective_from": {
@@ -17134,6 +17180,74 @@
           }
         ],
         "summary": "Revise Set",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/assumption-sets/{set_id}/tax": {
+      "put": {
+        "description": "The tax position at the cut-over (M6F-5): losses brought forward by year, provisional tax\npaid so far this tax year, and whether a deferred tax asset is recognised on losses.",
+        "operationId": "fcp_modules_projections_api_set_tax_position",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxPositionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssumptionSetOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Tax Position",
         "tags": [
           "projections"
         ]

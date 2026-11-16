@@ -55,7 +55,9 @@ export const STATEMENTS: {
       ["PL.EBIT", "subtotal"],
       line("PL.INTEREST"),
       ["PL.PBT", "subtotal"],
-      line("PL.TAX"),
+      line("PL.TAX.CURRENT"),
+      line("PL.TAX.DEFERRED"),
+      ["PL.TAX", "subtotal"],
       ["PL.NET_INCOME", "total"],
     ],
   },
@@ -80,6 +82,8 @@ export const STATEMENTS: {
         "BS.AP",
         "BS.OTHER_PAY",
         "BS.TAX_PAY",
+        "BS.INCOME_TAX",
+        "BS.DEFERRED_TAX",
       ].map(line),
       ["BS.TOTAL_LIABILITIES", "subtotal"],
       ...[
@@ -97,10 +101,11 @@ export const STATEMENTS: {
       ...[
         "CF.NET_INCOME",
         "CF.DA",
+        "CF.TAX_EXPENSE",
         "CF.WC.AR",
         "CF.WC.INVENTORY",
         "CF.WC.AP",
-        "CF.WC.TAX",
+        "CF.TAX_PAID",
       ].map(line),
       ["CF.OPERATING", "subtotal"],
       line("CF.CAPEX"),
@@ -127,6 +132,7 @@ const INVARIANTS = [
   "roll_forwards_tie",
   "aggregation_consistent",
   "debt_reconciles",
+  "tax_reconciles",
 ];
 
 export function columnLabel(

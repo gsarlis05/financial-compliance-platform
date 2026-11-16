@@ -19,6 +19,31 @@ export interface AssumptionSet {
   supersedes_id: string | null;
   created_at: string;
   approved_at: string | null;
+  tax_losses_bf: Record<string, string>;
+  tax_paid_ytd: string;
+  recognise_loss_dta: boolean;
+}
+
+export interface TaxPositionInput {
+  tax_losses_bf: Record<string, string>;
+  tax_paid_ytd: string;
+  recognise_loss_dta: boolean;
+}
+
+export interface TaxRuleSet {
+  id: string;
+  jurisdiction: string;
+  tax: string;
+  effective_from: string;
+  effective_to: string | null;
+  rate: string;
+  loss_carryforward_years: number;
+  tax_year_start_month: number;
+  provisional_instalments: { month: number; day: number; share: string }[];
+  final_payment: string;
+  verified: boolean;
+  verification_note: string;
+  sources: { publisher: string; title: string; url: string; note: string }[];
 }
 
 export interface GridRow {
@@ -328,4 +353,26 @@ export function useLoanMutations(setId: string) {
       onSuccess: refresh,
     }),
   };
+}
+
+export function useTaxRules() {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["tax-rules", entityId],
+    queryFn: () => api<TaxRuleSet[]>(`${base}/tax-rules`),
+  });
+}
+
+export function useTaxPosition(setId: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TaxPositionInput) =>
+      api<AssumptionSet>(`${base}/assumption-sets/${setId}/tax`, {
+        method: "PUT",
+        body,
+      }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["assumptions", entityId] }),
+  });
 }

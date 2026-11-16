@@ -1231,7 +1231,8 @@ export const en = {
   "as.driver.dso": "Days sales outstanding (DSO)",
   "as.driver.dio": "Days inventory (DIO)",
   "as.driver.dpo": "Days payables (DPO)",
-  "as.driver.tax_rate": "Tax rate on profit",
+  "as.driver.tax_adjustment":
+    "Tax adjustments (non-deductible +, non-taxable -)",
   "as.driver.borrowing": "New borrowing",
   "as.driver.repayment": "Loan repayments",
   "as.driver.interest_rate": "Interest rate (a year)",
@@ -1276,6 +1277,8 @@ export const en = {
   "pj.k.PL.EBIT": "Operating profit (EBIT)",
   "pj.k.PL.INTEREST": "Net finance costs",
   "pj.k.PL.PBT": "Profit before tax",
+  "pj.k.PL.TAX.CURRENT": "Current tax",
+  "pj.k.PL.TAX.DEFERRED": "Deferred tax",
   "pj.k.PL.TAX": "Income tax",
   "pj.k.PL.NET_INCOME": "Net income",
   "pj.k.BS.PPE.GROSS": "Property, plant and equipment at cost",
@@ -1292,7 +1295,9 @@ export const en = {
   "pj.k.BS.DEBT.CURRENT": "Short-term debt and credit facility",
   "pj.k.BS.AP": "Trade payables",
   "pj.k.BS.OTHER_PAY": "Other payables",
-  "pj.k.BS.TAX_PAY": "Tax payable",
+  "pj.k.BS.TAX_PAY": "VAT and other taxes payable",
+  "pj.k.BS.INCOME_TAX": "Income tax payable (receivable if negative)",
+  "pj.k.BS.DEFERRED_TAX": "Deferred tax liability (asset if negative)",
   "pj.k.BS.TOTAL_LIABILITIES": "Total liabilities",
   "pj.k.BS.EQUITY.SHARE_CAPITAL": "Share capital",
   "pj.k.BS.EQUITY.SHARE_PREMIUM": "Share premium",
@@ -1304,7 +1309,8 @@ export const en = {
   "pj.k.CF.WC.AR": "Change in trade receivables",
   "pj.k.CF.WC.INVENTORY": "Change in inventory",
   "pj.k.CF.WC.AP": "Change in trade payables",
-  "pj.k.CF.WC.TAX": "Change in tax payable",
+  "pj.k.CF.TAX_EXPENSE": "Income tax expense",
+  "pj.k.CF.TAX_PAID": "Income tax paid",
   "pj.k.CF.OPERATING": "Cash from operations",
   "pj.k.CF.CAPEX": "Capital expenditure",
   "pj.k.CF.INVESTING": "Cash from investing",
@@ -1466,6 +1472,31 @@ export const en = {
   "as.driver.loan_drawdown": "Extra drawdown",
   "pj.inv.debt_reconciles":
     "Each loan, the interest and the debt lines reconcile",
+  "pj.inv.tax_reconciles":
+    "Tax expense, tax balances, payments and losses reconcile",
+  "as.tax": "Corporate tax",
+  "as.taxIntro":
+    "Corporate income tax is worked out from the versioned rule sets of the entity's jurisdiction: current tax on taxable profit after usable losses, provisional instalments, the final payment and deferred tax. Enter the tax position at the cut-over. The rules are pending verification by a qualified tax professional.",
+  "as.taxRules": "Rule sets used by this projection",
+  "as.taxRule": "Rule set",
+  "as.taxFrom": "In force",
+  "as.taxRate": "Rate",
+  "as.taxCarry": "Loss carry-forward (years)",
+  "as.taxPayments": "Instalments · final payment",
+  "as.taxVerified": "Verification",
+  "as.taxIsVerified": "Verified by a tax professional",
+  "as.taxPending": "Pending professional verification",
+  "as.taxNoRules":
+    "No corporate tax rule set covers these years: the projection cannot be run until one does.",
+  "as.taxLosses": "Unused tax losses brought forward, by the year they arose",
+  "as.taxLossYear": "Year of loss",
+  "as.taxLossAmount": "Unused amount",
+  "as.taxAddLoss": "Add a year of losses",
+  "as.taxPaidYtd": "Provisional tax already paid for the cut-over's tax year",
+  "as.taxDta":
+    "Recognise a deferred tax asset on unused losses (only if future taxable profit is probable, IAS 12.34; a deferred tax asset already in the books counts first, any rest is recognised in the first projected month)",
+  "as.taxSave": "Save the tax position",
+  "as.taxSaved": "Tax position saved.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2719,7 +2750,8 @@ export const el: Record<MessageKey, string> = {
   "as.driver.dso": "Ημέρες είσπραξης (DSO)",
   "as.driver.dio": "Ημέρες αποθέματος (DIO)",
   "as.driver.dpo": "Ημέρες πληρωμής (DPO)",
-  "as.driver.tax_rate": "Φορολογικός συντελεστής επί κερδών",
+  "as.driver.tax_adjustment":
+    "Φορολογικές προσαρμογές (μη εκπιπτόμενα +, μη φορολογητέα -)",
   "as.driver.borrowing": "Νέος δανεισμός",
   "as.driver.repayment": "Αποπληρωμές δανείων",
   "as.driver.interest_rate": "Επιτόκιο (ανά έτος)",
@@ -2764,6 +2796,8 @@ export const el: Record<MessageKey, string> = {
   "pj.k.PL.EBIT": "Λειτουργικό αποτέλεσμα (EBIT)",
   "pj.k.PL.INTEREST": "Καθαρό χρηματοοικονομικό κόστος",
   "pj.k.PL.PBT": "Κέρδος προ φόρων",
+  "pj.k.PL.TAX.CURRENT": "Τρέχων φόρος",
+  "pj.k.PL.TAX.DEFERRED": "Αναβαλλόμενος φόρος",
   "pj.k.PL.TAX": "Φόρος εισοδήματος",
   "pj.k.PL.NET_INCOME": "Καθαρό αποτέλεσμα",
   "pj.k.BS.PPE.GROSS": "Ενσώματα πάγια (κόστος)",
@@ -2780,7 +2814,10 @@ export const el: Record<MessageKey, string> = {
   "pj.k.BS.DEBT.CURRENT": "Βραχυπρόθεσμος δανεισμός και πιστωτικό όριο",
   "pj.k.BS.AP": "Εμπορικές υποχρεώσεις",
   "pj.k.BS.OTHER_PAY": "Λοιπές υποχρεώσεις",
-  "pj.k.BS.TAX_PAY": "Υποχρεώσεις φόρων",
+  "pj.k.BS.TAX_PAY": "ΦΠΑ και λοιποί φόροι πληρωτέοι",
+  "pj.k.BS.INCOME_TAX": "Φόρος εισοδήματος πληρωτέος (απαίτηση εάν αρνητικός)",
+  "pj.k.BS.DEFERRED_TAX":
+    "Αναβαλλόμενη φορολογική υποχρέωση (απαίτηση εάν αρνητική)",
   "pj.k.BS.TOTAL_LIABILITIES": "Σύνολο υποχρεώσεων",
   "pj.k.BS.EQUITY.SHARE_CAPITAL": "Μετοχικό κεφάλαιο",
   "pj.k.BS.EQUITY.SHARE_PREMIUM": "Υπέρ το άρτιο",
@@ -2792,7 +2829,8 @@ export const el: Record<MessageKey, string> = {
   "pj.k.CF.WC.AR": "Μεταβολή εμπορικών απαιτήσεων",
   "pj.k.CF.WC.INVENTORY": "Μεταβολή αποθεμάτων",
   "pj.k.CF.WC.AP": "Μεταβολή εμπορικών υποχρεώσεων",
-  "pj.k.CF.WC.TAX": "Μεταβολή υποχρεώσεων φόρων",
+  "pj.k.CF.TAX_EXPENSE": "Δαπάνη φόρου εισοδήματος",
+  "pj.k.CF.TAX_PAID": "Φόρος εισοδήματος που καταβλήθηκε",
   "pj.k.CF.OPERATING": "Ταμειακές ροές λειτουργικών δραστηριοτήτων",
   "pj.k.CF.CAPEX": "Επενδύσεις σε πάγια",
   "pj.k.CF.INVESTING": "Ταμειακές ροές επενδυτικών δραστηριοτήτων",
@@ -2957,6 +2995,33 @@ export const el: Record<MessageKey, string> = {
   "as.driver.loan_drawdown": "Πρόσθετη εκταμίευση",
   "pj.inv.debt_reconciles":
     "Κάθε δάνειο, οι τόκοι και οι γραμμές δανεισμού συμφωνούν",
+  "pj.inv.tax_reconciles":
+    "Δαπάνη φόρου, φορολογικά υπόλοιπα, πληρωμές και ζημιές συμφωνούν",
+  "as.tax": "Εταιρικός φόρος",
+  "as.taxIntro":
+    "Ο φόρος εισοδήματος υπολογίζεται από τα εκδομένα σύνολα κανόνων της δικαιοδοσίας της οντότητας: τρέχων φόρος επί του φορολογητέου κέρδους μετά τις συμψηφιζόμενες ζημιές, προσωρινές δόσεις, τελική πληρωμή και αναβαλλόμενος φόρος. Εισαγάγετε τη φορολογική θέση κατά την ημερομηνία αποκοπής. Οι κανόνες εκκρεμούν επαλήθευσης από εξειδικευμένο φοροτεχνικό.",
+  "as.taxRules": "Σύνολα κανόνων που χρησιμοποιεί η προβολή",
+  "as.taxRule": "Σύνολο κανόνων",
+  "as.taxFrom": "Σε ισχύ",
+  "as.taxRate": "Συντελεστής",
+  "as.taxCarry": "Μεταφορά ζημιών (έτη)",
+  "as.taxPayments": "Δόσεις · τελική πληρωμή",
+  "as.taxVerified": "Επαλήθευση",
+  "as.taxIsVerified": "Επαληθεύτηκε από φοροτεχνικό",
+  "as.taxPending": "Εκκρεμεί επαγγελματική επαλήθευση",
+  "as.taxNoRules":
+    "Κανένα σύνολο κανόνων εταιρικού φόρου δεν καλύπτει αυτά τα έτη: η προβολή δεν μπορεί να εκτελεστεί μέχρι να υπάρξει.",
+  "as.taxLosses":
+    "Αχρησιμοποίητες φορολογικές ζημιές που μεταφέρονται, ανά έτος προέλευσης",
+  "as.taxLossYear": "Έτος ζημιάς",
+  "as.taxLossAmount": "Αχρησιμοποίητο ποσό",
+  "as.taxAddLoss": "Προσθήκη έτους ζημιών",
+  "as.taxPaidYtd":
+    "Προσωρινός φόρος ήδη καταβληθείς για το φορολογικό έτος της αποκοπής",
+  "as.taxDta":
+    "Αναγνώριση αναβαλλόμενης φορολογικής απαίτησης επί αχρησιμοποίητων ζημιών (μόνο αν είναι πιθανό μελλοντικό φορολογητέο κέρδος, ΔΛΠ 12.34· μετρά πρώτα η απαίτηση που ήδη υπάρχει στα βιβλία, το υπόλοιπο αναγνωρίζεται τον πρώτο μήνα της προβολής)",
+  "as.taxSave": "Αποθήκευση φορολογικής θέσης",
+  "as.taxSaved": "Η φορολογική θέση αποθηκεύτηκε.",
 };
 
 export const catalogs = { en, el } as const;

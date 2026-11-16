@@ -62,10 +62,14 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     ) in result.steps, result.steps
     projection_step = next(s for s in result.steps if s.startswith("three-statement"))
     # 2028 revenue = 2026 revenue x 1.1^2 (the approved assumptions); the run is checked and
-    # published (M6-3).
+    # published (M6-3). Corporate tax (M6F-5) by the 2026 rule set (15%, pending verification):
+    # 2028 profit before tax 196,572.33 + depreciation 6,801.07 (no allowances) = taxable
+    # 203,373.40; tax 30,506.01; net income 166,066.32. Cash: the VAT payable balance is held
+    # (before M6F-5 it was paid out once as "tax", 149,339.98), and the income tax is paid in
+    # July and December instalments (52,102.02 over the two years).
     assert projection_step == (
-        "three-statement projection 2027-2028: VALID, 7 invariants hold, published; 2028: "
-        "revenue 1452000.00, net income 196572.33, closing cash 550508.64"
+        "three-statement projection 2027-2028: VALID, 8 invariants hold, published; 2028: "
+        "revenue 1452000.00, net income 166066.32, closing cash 647746.60"
     ), projection_step
     budget_step = next(s for s in result.steps if s.startswith("budget "))
     assert "approved by the owner: total 738000.00" in budget_step

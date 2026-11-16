@@ -13,7 +13,10 @@ import {
   useAssumptionSets,
   useLoanMutations,
   useLoans,
+  useTaxPosition,
+  useTaxRules,
 } from "../api/projections";
+import type { AssumptionSet } from "../api/projections";
 import {
   FieldError,
   Loading,
@@ -141,6 +144,163 @@ function rowLabel(t: (k: MessageKey) => string, row: GridRow) {
 }
 
 const STRUCTURES: LoanStructure[] = ["ANNUITY", "EQUAL_PRINCIPAL", "BULLET"];
+
+function TaxPosition({ set }: { set: AssumptionSet }) {
+  const { t, locale } = useI18n();
+  const rules = useTaxRules();
+  const save = useTaxPosition(set.id);
+  const draft = set.status === "DRAFT";
+  const first =
+    Number(set.cutover.slice(0, 4)) + (set.cutover.endsWith("12-31") ? 1 : 0);
+  const last = first + Math.ceil(set.months / 12);
+  const [losses, setLosses] = useState<[string, string][]>(() =>
+    Object.entries(set.tax_losses_bf),
+  );
+  const [paid, setPaid] = useState(set.tax_paid_ytd);
+  const [dta, setDta] = useState(set.recognise_loss_dta);
+  const applying = (rules.data ?? []).filter(
+    (r) =>
+      Number(r.effective_from.slice(0, 4)) <= last &&
+      (r.effective_to === null || Number(r.effective_to.slice(0, 4)) >= first),
+  );
+  const percent = (rate: string) =>
+    `${(Number(rate) * 100).toLocaleString(locale, { maximumFractionDigits: 2 })}%`;
+  return (
+    <section className="card" aria-labelledby="as-tax">
+      <h2 id="as-tax">{t("as.tax")}</h2>
+      <p className="muted">{t("as.taxIntro")}</p>
+      {applying.length ? (
+        <div className="table-scroll">
+          <table className="grid">
+            <caption>{t("as.taxRules")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("as.taxRule")}</th>
+                <th scope="col">{t("as.taxFrom")}</th>
+                <th scope="col" className="num">
+                  {t("as.taxRate")}
+                </th>
+                <th scope="col" className="num">
+                  {t("as.taxCarry")}
+                </th>
+                <th scope="col">{t("as.taxPayments")}</th>
+                <th scope="col">{t("as.taxVerified")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applying.map((r) => (
+                <tr key={r.id}>
+                  <th scope="row">{r.id}</th>
+                  <td>
+                    {r.effective_from}
+                    {r.effective_to ? ` – ${r.effective_to}` : ""}
+                  </td>
+                  <td className="num">{percent(r.rate)}</td>
+                  <td className="num">{r.loss_carryforward_years}</td>
+                  <td>
+                    {r.provisional_instalments
+                      .map(
+                        (i) =>
+                          `${String(i.day).padStart(2, "0")}/${String(i.month).padStart(2, "0")}`,
+                      )
+                      .join(", ")}
+                    {" · "}
+                    {r.final_payment}
+                  </td>
+                  <td>
+                    {r.verified ? t("as.taxIsVerified") : t("as.taxPending")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : rules.data ? (
+        <p className="problem">{t("as.taxNoRules")}</p>
+      ) : null}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate({
+            tax_losses_bf: Object.fromEntries(
+              losses.filter(([y, a]) => y.trim() && a.trim()),
+            ),
+            tax_paid_ytd: paid || "0",
+            recognise_loss_dta: dta,
+          });
+        }}
+      >
+        <fieldset disabled={!draft}>
+          <legend>{t("as.taxLosses")}</legend>
+          {losses.map(([year, amount], n) => (
+            <div className="row" key={n}>
+              <label>
+                {t("as.taxLossYear")} {n + 1}
+                <input
+                  inputMode="numeric"
+                  value={year}
+                  onChange={(e) =>
+                    setLosses(
+                      losses.map((x, i) =>
+                        i === n ? [e.target.value, x[1]] : x,
+                      ),
+                    )
+                  }
+                />
+              </label>
+              <label>
+                {t("as.taxLossAmount")} {n + 1}
+                <input
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) =>
+                    setLosses(
+                      losses.map((x, i) =>
+                        i === n ? [x[0], e.target.value] : x,
+                      ),
+                    )
+                  }
+                />
+              </label>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setLosses([...losses, [String(first - 1), ""]])}
+          >
+            {t("as.taxAddLoss")}
+          </button>
+        </fieldset>
+        <fieldset disabled={!draft}>
+          <label>
+            {t("as.taxPaidYtd")}
+            <input
+              inputMode="decimal"
+              value={paid}
+              onChange={(e) => setPaid(e.target.value)}
+            />
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={dta}
+              onChange={(e) => setDta(e.target.checked)}
+            />
+            {t("as.taxDta")}
+          </label>
+          {draft ? (
+            <button type="submit" disabled={save.isPending}>
+              {t("as.taxSave")}
+            </button>
+          ) : null}
+        </fieldset>
+        {save.isSuccess ? <p role="status">{t("as.taxSaved")}</p> : null}
+        <ProblemMessage error={save.error} />
+      </form>
+    </section>
+  );
+}
 
 function Loans({ setId, draft }: { setId: string; draft: boolean }) {
   const { t, locale } = useI18n();
@@ -570,6 +730,10 @@ export function AssumptionsPage() {
           <Loans
             setId={open}
             draft={grid.data.assumption_set.status === "DRAFT"}
+          />
+          <TaxPosition
+            key={`${open}-${grid.data.assumption_set.status}`}
+            set={grid.data.assumption_set}
           />
           <Grid key={open + grid.data.assumption_set.status} grid={grid.data} />
         </>

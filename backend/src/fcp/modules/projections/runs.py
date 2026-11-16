@@ -21,7 +21,7 @@ from typing import Any
 from uuid import UUID
 
 from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
-from fcp.modules.assets.api import depreciation_plan
+from fcp.modules.assets.api import capital_allowance_plan, depreciation_plan
 from fcp.modules.calendar.api import add_months
 from fcp.modules.metrics.api import (
     CalcRun,
@@ -34,13 +34,15 @@ from fcp.modules.metrics.api import (
     list_calc_runs,
     register_engine,
 )
-from fcp.modules.reporting.api import fiscal_year_start, opening_net
+from fcp.modules.reporting.api import accounts, actuals_monthly, fiscal_year_start, opening_net
+from fcp.modules.taxrules.api import rules_for
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from . import engine
 from .assumptions import READ, RUN, approved_loans, approved_values, horizon
 from .debt import LoanTerms, project_loan
 from .models import AssumptionSet
+from .tax import TaxInputs, TaxYearRule
 
 KIND = "PROJECTION"
 ZERO_AMOUNT = Decimal("0.00")
@@ -74,9 +76,101 @@ def opening_balance_sheet(net: dict[UUID, Decimal],
     return dict(opening)
 
 
-def _mapping(entity_id: UUID) -> dict[str, str]:
-    return {str(account_id): ("PL" if line.statement == "PL" else line.code)
-            for account_id, line in current_mapping(entity_id).items()}  # fmt: skip
+TAX_LINES = ("BS.TAX_PAY", "BS.TAX_REC")
+
+
+def _mapping(ctx: WorkspaceContext, entity_id: UUID) -> dict[str, str]:
+    """Account -> line for the opening balance sheet; income and expense accounts -> "PL". Tax
+    accounts that are not VAT accounts hold income tax (M6F-5): they go to ``BS.INCOME_TAX``,
+    VAT and other taxes stay on their lines."""
+    vat = {a.id for a in accounts(ctx, entity_id) if a.vat_role}
+    out = {}
+    for account_id, line in current_mapping(entity_id).items():
+        code = "PL" if line.statement == "PL" else line.code
+        if code in TAX_LINES and account_id not in vat:
+            code = "BS.INCOME_TAX"
+        out[str(account_id)] = code
+    return out
+
+
+def _tax_refs(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet, cutover: date,
+              months: list[date], mapping: dict[str, str]) -> dict[str, Any]:  # fmt: skip
+    """Everything the tax book reads, pinned (M6F-5): the rule set of each tax year involved,
+    the cut-over tax year's actual figures to the cut-over, the registered assets' allowances and
+    their qualifying depreciation, and the set's tax position."""
+    entity = get_entity(ctx, entity_id, RUN)
+    losses = {int(y): v for y, v in made.tax_losses_bf.items()}
+    years = range(min([*losses, months[0].year - 1]), months[-1].year + 1)
+    rules: dict[str, Any] = {}
+    for year in years:
+        try:
+            found = rules_for(entity.jurisdiction, date(year, 1, 1))
+        except NotFoundError:
+            if year >= months[0].year or year in losses:
+                raise ValidationFailedError(
+                    f"No corporate tax rules for {entity.jurisdiction} for tax year {year}; "
+                    "projections need them.",
+                    field_errors={"tax": [str(year)]},
+                ) from None
+            continue  # the year before the projection: only its final payment date is used
+        if found.tax_year_start_month != 1:
+            raise ValidationFailedError("Tax years that do not start in January are not yet "
+                                        "supported in projections.")  # fmt: skip
+        rules[str(year)] = {**found.as_refs(), "year": year,
+                            "instalments": [[d.isoformat(), str(sh)]
+                                            for d, sh in found.instalment_dates(year)],
+                            "final_date": found.final_payment_date(year).isoformat()}  # fmt: skip
+    ytd = {"pbt": "0", "da": "0", "tax": "0"}
+    if months[0].year == cutover.year:
+        facts = actuals_monthly(ctx, entity_id, date_from=date(cutover.year, 1, 1),
+                                date_to=cutover).facts  # fmt: skip
+        lines = current_mapping(entity_id)
+        pbt = da = tax = Decimal(0)
+        for fact in facts:
+            line = lines.get(fact.account_id)
+            if line is None or line.statement != "PL":
+                continue
+            if line.code == "TAX.INCOME":
+                tax += fact.net_debit
+                continue
+            pbt -= fact.net_debit
+            if line.code.startswith("DA."):
+                da += fact.net_debit
+        ytd = {"pbt": str(pbt), "da": str(da), "tax": str(tax)}
+    tax_years = sorted({m.year for m in months})
+    allowances = capital_allowance_plan(ctx, entity_id, tax_years)
+    qualifying = depreciation_plan(ctx, entity_id, months, qualifying_only=True)
+    return {
+        "jurisdiction": entity.jurisdiction, "rules": rules,
+        "losses_bf": {str(y): str(v) for y, v in losses.items()},
+        "paid_ytd": str(made.tax_paid_ytd), "recognise_loss_dta": made.recognise_loss_dta,
+        "ytd": ytd,
+        "allowances": {str(y): str(v) for y, v in allowances.items() if v},
+        "qualifying_dep": {d.month.isoformat(): str(d.amount) for d in qualifying if d.amount},
+    }  # fmt: skip
+
+
+def tax_inputs(refs: dict[str, Any]) -> TaxInputs:
+    """The pinned tax references as engine input."""
+    rules = {
+        int(y): TaxYearRule(
+            year=int(y), rate=Decimal(r["rate"]), carry_years=int(r["loss_carryforward_years"]),
+            instalments=tuple((date.fromisoformat(d), Decimal(sh)) for d, sh in r["instalments"]),
+            final_date=date.fromisoformat(r["final_date"]), rule_id=r["id"],
+            verified=bool(r["verified"]),
+        )
+        for y, r in refs["rules"].items()
+    }  # fmt: skip
+    ytd = refs["ytd"]
+    return TaxInputs(
+        rules=rules, losses_bf={int(y): Decimal(v) for y, v in refs["losses_bf"].items()},
+        ytd_pbt=Decimal(ytd["pbt"]), ytd_da=Decimal(ytd["da"]), ytd_tax=Decimal(ytd["tax"]),
+        paid_ytd=Decimal(refs["paid_ytd"]),
+        allowances={int(y): Decimal(v) for y, v in refs["allowances"].items()},
+        qualifying_dep={date.fromisoformat(m): Decimal(v)
+                        for m, v in refs["qualifying_dep"].items()},
+        recognise_loss_dta=bool(refs["recognise_loss_dta"]),
+    )  # fmt: skip
 
 
 Drivers = dict[tuple[str, str], dict[date, Decimal]]
@@ -104,13 +198,15 @@ def _pinned(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet,
     cutover = cutover or made.cutover
     months = horizon(cutover, count or made.months)
     plan = depreciation_plan(ctx, entity_id, months)
+    mapping = _mapping(ctx, entity_id)
     return {
         "assumption_set_id": str(made.id),
         "assumption_set_version": made.version,
         "currency": get_entity(ctx, entity_id, RUN).functional_currency,
         "cutover": cutover.isoformat(),
         "months": [m.isoformat() for m in months],
-        "mapping": _mapping(entity_id),
+        "mapping": mapping,
+        "tax": _tax_refs(ctx, entity_id, made, cutover, months, mapping),
         "register_depreciation": {d.month.isoformat(): str(d.amount) for d in plan if d.amount},
         "fiscal_year_starts": [m.isoformat() for m in months
                                if fiscal_year_start(ctx, entity_id, m) == m],
@@ -180,7 +276,7 @@ def check_loans(opening: dict[str, Decimal], loans: tuple[LoanTerms, ...]) -> No
 
 class ProjectionEngine:
     kind = KIND
-    version = "2"  # M6F-4: loans
+    version = "3"  # M6F-4: loans; M6F-5: corporate tax
 
     def load(self, ctx: WorkspaceContext, inputs: RunInputs) -> Loaded:
         refs = inputs.refs
@@ -201,6 +297,7 @@ class ProjectionEngine:
             fiscal_year_starts={date.fromisoformat(m) for m in refs["fiscal_year_starts"]},
             currency=refs.get("currency", "EUR"),  # runs made before M6F-1 are in EUR
             loans=loan_terms(made, drivers, months),
+            tax=tax_inputs(refs["tax"]) if "tax" in refs else None,
         ))  # fmt: skip
 
     def compute(self, inputs: RunInputs, data: Loaded) -> Output:

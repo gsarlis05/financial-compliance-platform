@@ -48,6 +48,12 @@ class AssumptionSet(TenantOwned):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     superseded_at = models.DateTimeField(null=True, blank=True)
+    # Tax position at the cut-over (M6F-5, #150): unused losses by the year they arose, available
+    # to the first projected tax year ({"2024": "1500.00"}); provisional tax already paid for the
+    # cut-over's tax year; whether a deferred tax asset is recognised on losses (a judgement).
+    tax_losses_bf = models.JSONField(default=dict, blank=True)
+    tax_paid_ytd = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    recognise_loss_dta = models.BooleanField(default=False)
 
     class Meta:
         db_table = "projections_assumption_set"
