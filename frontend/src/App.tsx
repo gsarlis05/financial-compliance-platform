@@ -9,6 +9,7 @@ import { AccountsPage } from "./pages/Accounts";
 import { BankPage } from "./pages/Bank";
 import { BudgetsPage } from "./pages/Budgets";
 import { CustomKpisPage } from "./pages/CustomKpis";
+import { GoalsPage } from "./pages/Goals";
 import { KpisPage } from "./pages/Kpis";
 import { CashForecastPage } from "./pages/CashForecast";
 import { CommitmentsPage } from "./pages/Commitments";
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
       {
         path: "w/:slug/e/:entityId/kpis",
         element: <KpisPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/goals",
+        element: <GoalsPage />,
       },
       {
         path: "w/:slug/e/:entityId/budgets",

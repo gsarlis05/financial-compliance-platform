@@ -5014,6 +5014,740 @@
         "title": "FormulaIn",
         "type": "object"
       },
+      "GoalEvaluateIn": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: today",
+            "title": "As Of"
+          },
+          "driver": {
+            "default": "",
+            "description": "Override the goal's goal-seek driver",
+            "maxLength": 40,
+            "title": "Driver",
+            "type": "string"
+          }
+        },
+        "title": "GoalEvaluateIn",
+        "type": "object"
+      },
+      "GoalEvaluationOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "cut_over": {
+            "description": "Actuals up to this date; projected after it",
+            "format": "date",
+            "title": "Cut Over",
+            "type": "string"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/GoalFigureOut"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "goal_id": {
+            "format": "uuid",
+            "title": "Goal Id",
+            "type": "string"
+          },
+          "history": {
+            "description": "Earlier evaluations: the trend of the gap",
+            "items": {
+              "$ref": "#/components/schemas/GoalHistoryOut"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "method_note": {
+            "title": "Method Note",
+            "type": "string"
+          },
+          "out_of_date": {
+            "description": "Entries were posted after this evaluation",
+            "title": "Out Of Date",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "Run Status",
+            "type": "string"
+          },
+          "status": {
+            "description": "ON_TRACK, AT_RISK, OFF_TRACK or UNDETERMINED",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "goal_id",
+          "version",
+          "run_id",
+          "run_status",
+          "watermark",
+          "as_of",
+          "cut_over",
+          "status",
+          "method",
+          "method_note",
+          "out_of_date",
+          "figures",
+          "history"
+        ],
+        "title": "GoalEvaluationOut",
+        "type": "object"
+      },
+      "GoalFigureOut": {
+        "properties": {
+          "dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "granularity": {
+            "title": "Granularity",
+            "type": "string"
+          },
+          "key": {
+            "description": "e.g. goal.projected, goal.required.run_rate, goal.trend",
+            "title": "Key",
+            "type": "string"
+          },
+          "nature": {
+            "title": "Nature",
+            "type": "string"
+          },
+          "nm_reason": {
+            "title": "Nm Reason",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "result_id": {
+            "description": "For calc-runs/{run}/results/{result}/explain",
+            "format": "uuid",
+            "title": "Result Id",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "result_id",
+          "key",
+          "dimensions",
+          "period_start",
+          "period_end",
+          "granularity",
+          "nature",
+          "value",
+          "unit",
+          "nm_reason"
+        ],
+        "title": "GoalFigureOut",
+        "type": "object"
+      },
+      "GoalHistoryOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "status",
+          "projected",
+          "gap",
+          "created_at"
+        ],
+        "title": "GoalHistoryOut",
+        "type": "object"
+      },
+      "GoalIn": {
+        "properties": {
+          "driver": {
+            "default": "",
+            "description": "Taxonomy key for the goal-seek",
+            "maxLength": 40,
+            "title": "Driver",
+            "type": "string"
+          },
+          "materiality": {
+            "default": "0.05",
+            "pattern": "^-?\\d{1,16}(\\.\\d{1,12})?$",
+            "title": "Materiality",
+            "type": "string"
+          },
+          "metric": {
+            "description": "A key from goal-metrics",
+            "maxLength": 60,
+            "title": "Metric",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          },
+          "period_end": {
+            "description": "The last day of a month: the target date",
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "description": "The first day of a month",
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "target": {
+            "description": "Ratios and changes as fractions (0.2 = 20%)",
+            "pattern": "^-?\\d{1,16}(\\.\\d{1,12})?$",
+            "title": "Target",
+            "type": "string"
+          },
+          "target_type": {
+            "description": "ABSOLUTE, CHANGE_PCT, MAINTAIN_MIN or MAINTAIN_MAX",
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "metric",
+          "period_start",
+          "period_end",
+          "target_type",
+          "target"
+        ],
+        "title": "GoalIn",
+        "type": "object"
+      },
+      "GoalLatestOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "breach_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breach Date"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "as_of",
+          "status",
+          "projected",
+          "gap",
+          "breach_date",
+          "method",
+          "created_at"
+        ],
+        "title": "GoalLatestOut",
+        "type": "object"
+      },
+      "GoalListQuery": {
+        "properties": {
+          "include_retired": {
+            "default": false,
+            "title": "Include Retired",
+            "type": "boolean"
+          }
+        },
+        "title": "GoalListQuery",
+        "type": "object"
+      },
+      "GoalMetricOut": {
+        "properties": {
+          "convention": {
+            "title": "Convention",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "description": "ADDITIVE, RATIO or BALANCE",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "name_el": {
+            "title": "Name El",
+            "type": "string"
+          },
+          "ref": {
+            "description": "The definition version, e.g. CORE@1.0:DSO",
+            "title": "Ref",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "ref",
+          "name",
+          "name_el",
+          "kind",
+          "formula",
+          "direction",
+          "unit",
+          "display",
+          "convention"
+        ],
+        "title": "GoalMetricOut",
+        "type": "object"
+      },
+      "GoalOut": {
+        "properties": {
+          "current": {
+            "$ref": "#/components/schemas/GoalVersionOut"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoalLatestOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metric_kind": {
+            "title": "Metric Kind",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "metric_ref": {
+            "title": "Metric Ref",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/GoalVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "metric",
+          "metric_name",
+          "metric_kind",
+          "metric_ref",
+          "unit",
+          "display",
+          "period_start",
+          "period_end",
+          "status",
+          "current",
+          "versions",
+          "latest"
+        ],
+        "title": "GoalOut",
+        "type": "object"
+      },
+      "GoalOwnerOut": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "email"
+        ],
+        "title": "GoalOwnerOut",
+        "type": "object"
+      },
+      "GoalRevisionIn": {
+        "properties": {
+          "driver": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Driver",
+            "type": "string"
+          },
+          "materiality": {
+            "default": "0.05",
+            "pattern": "^-?\\d{1,16}(\\.\\d{1,12})?$",
+            "title": "Materiality",
+            "type": "string"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "target": {
+            "pattern": "^-?\\d{1,16}(\\.\\d{1,12})?$",
+            "title": "Target",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_type",
+          "target",
+          "reason"
+        ],
+        "title": "GoalRevisionIn",
+        "type": "object"
+      },
+      "GoalVersionOut": {
+        "properties": {
+          "baseline_from": {
+            "format": "date",
+            "title": "Baseline From",
+            "type": "string"
+          },
+          "baseline_nm_reason": {
+            "title": "Baseline Nm Reason",
+            "type": "string"
+          },
+          "baseline_run_id": {
+            "format": "uuid",
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "baseline_to": {
+            "format": "date",
+            "title": "Baseline To",
+            "type": "string"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "description": "AT_LEAST or AT_MOST",
+            "title": "Direction",
+            "type": "string"
+          },
+          "driver": {
+            "title": "Driver",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "materiality": {
+            "description": "A fraction of |target| (0.05 = 5%)",
+            "title": "Materiality",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "target_input": {
+            "description": "As entered; a change as a fraction (0.15 = +15%)",
+            "title": "Target Input",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          },
+          "target_value": {
+            "description": "The value to reach, in the metric's unit",
+            "title": "Target Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "target_type",
+          "target_input",
+          "target_value",
+          "direction",
+          "materiality",
+          "owner_id",
+          "driver",
+          "baseline_value",
+          "baseline_nm_reason",
+          "baseline_from",
+          "baseline_to",
+          "baseline_run_id",
+          "reason",
+          "created_at",
+          "superseded_at"
+        ],
+        "title": "GoalVersionOut",
+        "type": "object"
+      },
       "HistoryQuery": {
         "properties": {
           "limit": {
@@ -16435,6 +17169,532 @@
         "summary": "Reopen Fiscal Year",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goal-metrics": {
+      "get": {
+        "operationId": "fcp_modules_goals_api_goal_metrics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalMetricOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Goal Metrics",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goal-owners": {
+      "get": {
+        "operationId": "fcp_modules_goals_api_goal_owners",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalOwnerOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Goal Owners",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals": {
+      "get": {
+        "operationId": "fcp_modules_goals_api_list_goals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Goals",
+        "tags": [
+          "goals"
+        ]
+      },
+      "post": {
+        "description": "Create a goal; its baseline is computed now, as a calculation run, and frozen (AC-GO1).",
+        "operationId": "fcp_modules_goals_api_create_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}": {
+      "get": {
+        "operationId": "fcp_modules_goals_api_get_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}/evaluations": {
+      "post": {
+        "description": "Evaluate the goal now: a reproducible calculation run and a stored summary.",
+        "operationId": "fcp_modules_goals_api_evaluate_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalEvaluateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalEvaluationOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Evaluate Goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}/evaluations/latest": {
+      "get": {
+        "operationId": "fcp_modules_goals_api_latest_evaluation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalEvaluationOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Latest Evaluation",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}/retire": {
+      "post": {
+        "operationId": "fcp_modules_goals_api_retire_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retire Goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}/versions": {
+      "post": {
+        "description": "A new target is a new version, with a reason; the baseline is unchanged.",
+        "operationId": "fcp_modules_goals_api_revise_goal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalRevisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Revise Goal",
+        "tags": [
+          "goals"
         ]
       }
     },

@@ -215,3 +215,7 @@ a.download { text-decoration: underline; font-weight: 600; }
 .kpi-value { font-size: 1.5rem; font-weight: 600; margin: 0.25rem 0; }
 /* Values that use data entered by hand, not the ledger (M4-5, AC-KP5): dashed, never colour alone. */
 .non-ledger { display: inline-block; font-size: 0.8rem; border: 1px dashed currentColor; border-radius: 0.25rem; padding: 0 0.35rem; margin: 0.25rem 0 0; }
+/* Goals (M4-6): a figure list as label / value pairs. */
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0.5rem 0; }
+dl.facts dt { font-weight: 600; }
+dl.facts dd { margin: 0; }

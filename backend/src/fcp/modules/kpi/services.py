@@ -163,3 +163,29 @@ def latest(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date, date_to: 
         ):
             return _set(ctx, entity_id, candidate)
     raise NotFoundError("No KPI set for this period yet.")
+
+
+@dataclass(frozen=True)
+class KpiFormula:
+    """A KPI another module may track (goals, M4-6): a library definition or an approved
+    workspace KPI, with the exact version of its formula."""
+
+    id: str
+    key: str
+    name: str
+    name_el: str
+    display: str
+    direction: str
+    formula: str
+
+
+def trackable(entity_id: UUID) -> list[KpiFormula]:
+    """The core library and the entity's approved workspace KPIs (personal KPIs are private)."""
+    found = [
+        KpiFormula(d.id, d.key, d.name, d.name_el, d.display, d.direction, d.formula)
+        for d in definitions()
+    ]
+    return found + [
+        KpiFormula(c["id"], c["key"], c["name"], "", c["display"], c["direction"], c["formula"])
+        for c in custom.workspace_snapshot(entity_id)
+    ]

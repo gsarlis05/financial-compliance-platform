@@ -43,6 +43,7 @@ from .expr import (
     Param,
     compile_expression,
     evaluate,
+    ratio_parts,
     scalar,
 )
 from .hashing import canonical_decimal
@@ -77,6 +78,7 @@ __all__ = [
     "Value",
     "blend",
     "calc_results",
+    "canonical_decimal",
     "canonical_digest",
     "compile_expression",
     "completeness",
@@ -88,6 +90,7 @@ __all__ = [
     "latest_requesters",
     "list_calc_runs",
     "mark_stale",
+    "ratio_parts",
     "register_engine",
     "router",
     "scalar",
