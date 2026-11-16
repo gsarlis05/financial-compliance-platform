@@ -88,6 +88,42 @@ def get(tenant_id: UUID, key: str) -> bytes:
     return data
 
 
+def delete_all(tenant_id: UUID) -> dict[str, int]:
+    """Remove every object of a workspace (its purge, M5-6), all versions where the store keeps
+    versions. An object under a retention lock cannot be removed before the lock ends; it is
+    counted as retained and expires with the bucket's lifecycle rules."""
+    client, bucket, prefix = _client(), settings.DOCUMENTS_BUCKET, tenant_prefix(tenant_id)
+    result = {"deleted": 0, "retained": 0}
+    try:
+        try:
+            pages = client.get_paginator("list_object_versions").paginate(
+                Bucket=bucket, Prefix=prefix
+            )
+            found: list[tuple[str, str | None]] = []
+            for page in pages:
+                for version in page.get("Versions", []):
+                    found.append((version["Key"], version.get("VersionId")))
+                for marker in page.get("DeleteMarkers", []):
+                    found.append((marker["Key"], marker.get("VersionId")))
+        except ClientError:  # a store without versioning
+            found = []
+        if not found:
+            listing = client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix)
+            found = [(item["Key"], None) for page in listing for item in page.get("Contents", [])]
+        for key, version_id in found:
+            try:
+                if version_id and version_id != "null":
+                    client.delete_object(Bucket=bucket, Key=key, VersionId=version_id)
+                else:
+                    client.delete_object(Bucket=bucket, Key=key)
+                result["deleted"] += 1
+            except ClientError:
+                result["retained"] += 1
+    except BotoCoreError:
+        raise StorageUnavailableError("The document storage could not be reached.") from None
+    return result
+
+
 def ensure_bucket() -> None:
     """Development and tests only: deployed buckets are created by infrastructure code."""
     client = _client()

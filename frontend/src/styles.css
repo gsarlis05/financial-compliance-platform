@@ -831,3 +831,17 @@ ul.alerts .card a {
   margin-inline-end: 0.75rem;
   font-size: 0.85rem;
 }
+
+/* A confirmed workspace deletion, shown on every page until it is cancelled (M5-6). */
+.banner-warning {
+  margin: 0;
+  padding: 0.6rem 1.5rem;
+  border-bottom: 2px solid var(--warn);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}

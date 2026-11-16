@@ -4219,6 +4219,77 @@
         "title": "DefaultsOut",
         "type": "object"
       },
+      "DeletionConfirmIn": {
+        "properties": {
+          "workspace_name": {
+            "description": "The workspace's exact name",
+            "maxLength": 200,
+            "title": "Workspace Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_name"
+        ],
+        "title": "DeletionConfirmIn",
+        "type": "object"
+      },
+      "DeletionOut": {
+        "properties": {
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "grace_days": {
+            "title": "Grace Days",
+            "type": "integer"
+          },
+          "purge_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The workspace is deleted for good after this moment",
+            "title": "Purge After"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "status": {
+            "description": "NONE, REQUESTED (not confirmed yet) or CONFIRMED",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "grace_days"
+        ],
+        "title": "DeletionOut",
+        "type": "object"
+      },
       "DimensionIn": {
         "properties": {
           "code": {
@@ -12317,6 +12388,19 @@
       },
       "WorkspaceOut": {
         "properties": {
+          "deletion_due": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a confirmed deletion will purge the workspace (M5-6)",
+            "title": "Deletion Due"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -12848,6 +12932,164 @@
           }
         ],
         "summary": "Add Engagement Staff",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/deletion": {
+      "get": {
+        "operationId": "fcp_modules_tenancy_api_get_deletion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Deletion",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "post": {
+        "description": "Step 1: ask for the workspace to be deleted. Nothing happens until it is confirmed.",
+        "operationId": "fcp_modules_tenancy_api_request_deletion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Request Deletion",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/deletion/cancel": {
+      "post": {
+        "operationId": "fcp_modules_tenancy_api_cancel_deletion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Cancel Deletion",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/deletion/confirm": {
+      "post": {
+        "description": "Step 2: an owner confirms with a recent sign-in and the workspace's name. The grace\nperiod starts; the deletion can still be cancelled until it ends.",
+        "operationId": "fcp_modules_tenancy_api_confirm_deletion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Confirm Deletion",
         "tags": [
           "workspaces"
         ]
@@ -25809,6 +26051,37 @@
         "summary": "List Vat Codes",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/export": {
+      "post": {
+        "description": "Everything the workspace holds, as one ZIP with a manifest of counts and hashes.",
+        "operationId": "fcp_modules_tenancy_api_export_workspace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Workspace",
+        "tags": [
+          "workspaces"
         ]
       }
     },

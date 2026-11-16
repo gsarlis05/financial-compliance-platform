@@ -20,6 +20,7 @@ export interface Workspace {
   kind: WorkspaceKind;
   roles: string[];
   via_engagement?: string | null; // reached through a firm's engagement grant (M5-4)
+  deletion_due?: string | null; // a confirmed deletion purges the workspace after this (M5-6)
 }
 
 export interface LegalEntity {

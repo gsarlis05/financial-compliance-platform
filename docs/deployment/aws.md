@@ -49,6 +49,7 @@ empty host lists). `manage.py check --deploy` runs in CI with no warnings.
 |---|---|---|
 | Migrations | `make migrate` | one-off ECS task `python manage.py migrate` with `DB_ROLE=owner`, run by the release pipeline after approval |
 | Nightly checks | `make ops-checks` | EventBridge Scheduler → ECS task `ledger_integrity_check`, `audit_verify`; non-zero exit → alarm |
+| Workspace deletion (M5-6) | `DB_ROLE=owner python manage.py tenancy_purge_workspaces` | EventBridge Scheduler → ECS task with the owner-role task definition, daily; a failure raises an alarm (ADR-0036) |
 | Bank statement imports (M2-5) | parsed inline in development (`BANKING_PROCESS_INLINE`) | ECS service `python manage.py banking_process_imports --loop` (runtime role, 1 task; scale on the pending count later). Never inline in deployed settings (ADR-0015) |
 | Cash forecast refresh (M3-8) | on demand (`POST …/cash-forecasts/refresh`) or `python manage.py cashflow_refresh` | EventBridge Scheduler → ECS task `python manage.py cashflow_refresh` every 15 minutes (runtime role). No background threads in web processes (ADR-0021) |
 | Documents (M2-4) | SeaweedFS + ClamAV (`make services`; `make dev` creates the bucket) | S3 bucket (block public access, versioning) with SSE-KMS (`DOCUMENTS_KMS_KEY_ID`, tenant encryption context); task role limited to `tenants/*` objects; ClamAV as an internal ECS service (`CLAMD_HOST`), signatures updated by freshclam; both from IaC with the staging environment (ADR-0016) |

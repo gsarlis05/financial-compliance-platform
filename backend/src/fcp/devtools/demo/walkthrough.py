@@ -11,8 +11,11 @@ pass ``share_with`` to give an existing (signed-in-before) user access to the de
 Synthetic data only (ADR-0010). Never run against production.
 """
 
+import hashlib
+import io
 import json
 import time
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
@@ -383,6 +386,35 @@ def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[st
     return {"firm": firm["name"], "roles": inside["roles"], "clients": len(rows)}
 
 
+def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
+    """The full export of the workspace, checked against its own manifest; and the two-step
+    deletion of a throwaway workspace, cancelled inside the grace period (M5-6)."""
+    csrf = owner.cookies["__Host-fcp_csrftoken"].value
+    response = owner.post(f"/api/w/{slug}/export", "{}", content_type="application/json",
+                          headers={"X-CSRFToken": csrf})  # fmt: skip
+    if response.status_code != 200:
+        raise DemoStepError(f"Export returned {response.status_code}: {response.content[:300]!r}")
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    manifest = json.loads(archive.read("manifest.json"))
+    for table, meta in manifest["tables"].items():
+        data = archive.read(f"tables/{table}.jsonl")
+        if (
+            hashlib.sha256(data).hexdigest() != meta["sha256"]
+            or len(data.splitlines()) != meta["rows"]
+        ):
+            raise DemoStepError(f"The export of {table} does not match its manifest.")
+    body = {"name": "Old project (Demo)", "kind": "BUSINESS",
+            "entity_name": "Old project Ltd (Demo)"}  # fmt: skip
+    spare = owner.call("POST", "/api/workspaces", body, 201)
+    url = f"/api/w/{spare['slug']}/deletion"
+    owner.call("POST", url, {}, 201)
+    confirmed = owner.call("POST", f"{url}/confirm", {"workspace_name": "Old project (Demo)"})
+    owner.call("POST", f"{url}/cancel", {})
+    return {"tables": len(manifest["tables"]), "files": len(manifest["files"]),
+            "rows": sum(t["rows"] for t in manifest["tables"].values()),
+            "grace_days": confirmed["grace_days"]}  # fmt: skip
+
+
 def _demo_user(role: str) -> User:
     user, _ = User.objects.get_or_create(
         idp_subject=f"demo|{role}",
@@ -720,6 +752,12 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     step(f"engagement grant: {engaged['firm']} let in as {' + '.join(engaged['roles'])}, "
          f"{engaged['clients']} client in the firm portfolio; after the owner revoked it, the "
          "firm's next request is refused and the client is gone from its portfolio")  # fmt: skip
+
+    exported = _export_and_deletion(owner, slug)
+    step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
+         "document file(s), every file matching its count and hash in the manifest; a spare "
+         f"workspace's deletion confirmed with {exported['grace_days']} days' grace, then "
+         "cancelled")  # fmt: skip
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()

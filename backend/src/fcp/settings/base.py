@@ -148,6 +148,10 @@ S3_SECRET_KEY = env("S3_SECRET_KEY", "")
 DOCUMENTS_BUCKET = env("DOCUMENTS_BUCKET", "fcp-documents")
 DOCUMENTS_KMS_KEY_ID = env("DOCUMENTS_KMS_KEY_ID", "")  # set: SSE-KMS with a tenant context
 DOCUMENTS_MAX_BYTES = 10 * 1024 * 1024
+
+# Days between an owner confirming a workspace deletion and its purge (M5-6); it can be cancelled
+# until then.
+WORKSPACE_DELETION_GRACE_DAYS = int(env("WORKSPACE_DELETION_GRACE_DAYS", "30"))
 CLAMD_HOST = env("CLAMD_HOST", "127.0.0.1")
 CLAMD_PORT = int(env("CLAMD_PORT", "3310"))
 CLAMD_TIMEOUT_SECONDS = int(env("CLAMD_TIMEOUT_SECONDS", "30"))

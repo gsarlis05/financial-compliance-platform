@@ -104,6 +104,32 @@ export async function api<T>(
   return (await response.json()) as T;
 }
 
+/** POST that answers with a file (e.g. the workspace export); the browser saves it. */
+export async function apiDownload(path: string): Promise<string> {
+  const response = await fetch(apiUrl(path), {
+    method: "POST",
+    headers: {
+      Accept: "application/zip, application/problem+json",
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken(),
+    },
+    credentials: "same-origin",
+    body: "{}",
+  });
+  if (!response.ok) {
+    throw new ApiError(await toProblem(response));
+  }
+  const header = response.headers.get("Content-Disposition") ?? "";
+  const filename = /filename="([^"]+)"/.exec(header)?.[1] ?? "export.zip";
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+  return filename;
+}
+
 export function loginUrl(next: string = window.location.pathname): string {
   return `/auth/login?next=${encodeURIComponent(next)}`;
 }
