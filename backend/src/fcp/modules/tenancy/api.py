@@ -141,7 +141,9 @@ class EntityOut(Schema):
     entity_type: str
     registration_no: str
     jurisdiction: str
-    functional_currency: str
+    functional_currency: str = Field(description="ISO 4217")
+    reporting_currency: str = Field(description="ISO 4217; equal to functional in this release")
+    multi_currency_enabled: bool = Field(description="False in this release (#80)")
     status: str
 
 

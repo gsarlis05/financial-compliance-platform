@@ -18,7 +18,7 @@ from django.apps import apps
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 
-from fcp.core.errors import NotFoundError
+from fcp.core.errors import NotFoundError, ValidationFailedError
 from fcp.core.money import Money, MoneyError
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import LegalEntity, Tenant, WorkspaceContext, get_entity
@@ -84,6 +84,7 @@ class EntryInput:
     document_date: date | None = None
     journal_code: str = "GJ"
     use_adjustment_period: bool = False
+    currency: str | None = None  # the transaction currency; None: the functional currency
 
 
 # --- settings, journals ----------------------------------------------------------------------
@@ -199,6 +200,19 @@ def _amount(value: str, currency: str, field: str) -> Money:
             field_errors={field: ["too many decimal places"]},
         )
     return money
+
+
+def _check_currency(entity: Any, currency: str | None) -> None:
+    """Only the functional currency while multi-currency is disabled (M6F-1, #80; owner decision
+    D8): foreign-currency transactions need translation, revaluation and FX gains and losses,
+    which are not implemented yet."""
+    if currency is None or currency == entity.functional_currency:
+        return
+    message = (
+        f"Transactions in {currency} are not available yet: this entity records "
+        f"{entity.functional_currency} only (multi-currency is disabled in this release)."
+    )
+    raise ValidationFailedError(message, field_errors={"currency": [message]})
 
 
 def _validated_lines(
@@ -375,6 +389,9 @@ def _hash_line(ln: JournalLine) -> list[Any]:
         row.append(tags)
     if ln.vat_code_id:  # likewise for the VAT code
         row.append(f"vat={ln.vat_code_id}")
+    if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1)
+        row.append([ln.txn_currency, f"{ln.txn_debit:.4f}", f"{ln.txn_credit:.4f}",
+                    f"{ln.exchange_rate:.10f}"])  # fmt: skip
     if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
         row.append(
             [
@@ -529,6 +546,7 @@ def create_draft(  # noqa: PLR0913 - keyword-only options
     """``mirror``: a reversal copying a posted entry's lines; its dimension values may have been
     deactivated since, which must not prevent correcting the books."""
     entity = get_entity(ctx, entity_id, "ledger.entry.create")
+    _check_currency(entity, data.currency)
     lines = _validated_lines(entity.id, entity.functional_currency, data.lines, mirror=mirror)
     entry = JournalEntry.objects.create(
         tenant=ctx.tenant,
@@ -576,6 +594,7 @@ def update_draft(
             "A closing entry is generated from the ledger and cannot be edited. Void it and "
             "generate it again."
         )
+    _check_currency(entity, data.currency)
     lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
     before = {
         "accounting_date": entry.accounting_date,

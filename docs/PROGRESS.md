@@ -17,8 +17,10 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 `docs/milestone-5-report.md`; owner, 2026-11-10: "continue with what is easier for now for best
 coding"; brief `docs/planning/18-milestone-5-brief.md`). **Nothing was created on AWS; the pilot
 environment waits for the owner's approval (Gate P).** **Milestone 6 is complete and awaits review** (see `docs/milestone-6-report.md`; owner,
-2026-11-12 and 2026-11-15: "Continue"; brief `docs/planning/19-milestone-6-brief.md`). M6-0
-multi-currency (#80) waits for the owner's answer on currencies. Cloud-readiness review:
+2026-11-12 and 2026-11-15: "Continue"; brief `docs/planning/19-milestone-6-brief.md`). **Milestone 6 follow-up in progress** (owner decisions
+2026-11-15: accounting correctness before speed; the projection engine is not production-ready
+until validated and signed by a qualified professional; brief
+`docs/planning/20-milestone-6-follow-up-brief.md`). Cloud-readiness review:
 `docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
@@ -90,6 +92,9 @@ multi-currency (#80) waits for the owner's answer on currencies. Cloud-readiness
 | M6-5 Full-year outlook (actual + forecast with natures), goals use the projection (issue #139) | `claude/m6-5-outlook` | #145 | Open |
 | M6-6 Projection screens: statements with natures, checks, explain, chart, Excel export, rolling forecast and outlook (issue #140) | `claude/m6-6-projection-screens` | #146 | Open |
 | M6 report (`docs/milestone-6-report.md`) | `claude/m6-6-projection-screens` | #146 | Open, with M6-6 |
+| **Milestone 6 follow-up** (owner decisions 2026-11-15; brief `docs/planning/20-milestone-6-follow-up-brief.md`) | | | |
+| M6F-1 Currency foundation: ISO 4217, transaction/functional/reporting currencies, FX rates; multi-currency disabled (issue #80) | `claude/m6f-1-currency-foundation` | #155 | Open |
+| M6F-2 Tax rule sets (issue #147) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
