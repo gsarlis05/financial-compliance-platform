@@ -21,8 +21,8 @@ in order.
 | M1-3 Roles, permissions, authz | `claude/m1-3-authz` | #11 | Open |
 | M1-5 Audit log | `claude/m1-5-audit-log` | #12 | Open |
 | M1-6 + M1-7 Chart of accounts, fiscal periods | `claude/m1-6-coa-periods` | #13 | Open |
-| M1-8 Journal entries | `claude/m1-8-journal-entries` | — | Next |
-| M1-9 Reversals, period locks, unlock | — | — | Planned |
+| M1-8 Journal entries | `claude/m1-8-journal-entries` | #14 | Open |
+| M1-9 Reversals, period locks, unlock | `claude/m1-9-corrections` | — | Next |
 | M1-10 Balances, TB, GL, export | — | — | Planned |
 | M1-11 Integrity job | — | — | Planned |
 | M1-12 UI | — | — | Planned |

@@ -24,6 +24,7 @@ from .services import WorkspaceContext, enter_workspace, get_entity
 __all__ = [
     "Feature",
     "Role",
+    "Tenant",
     "WorkspaceContext",
     "all_tenant_ids",
     "enter_workspace",
