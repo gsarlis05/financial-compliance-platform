@@ -1397,6 +1397,18 @@ export const en = {
   "pj.noAccuracy":
     "No closed month has a forecast made 1, 3 or 6 months earlier yet.",
   "pj.month": "Month",
+  "pj.interval": "Re-run regularly every",
+  "pj.minutes": "minutes",
+  "pj.hours": "hour(s)",
+  "pj.materiality": "Re-run at once when postings reach (total debits)",
+  "pj.materialityNone": "only at the regular interval",
+  "pj.rerunMaterial": "a material change: re-run within 15 minutes",
+  "pj.rerunRegular": "re-run at the regular interval, from",
+  "pj.vsActuals": "Against actuals",
+  "pj.vsActualsCaption":
+    "This projection against the posted books, for its closed months",
+  "pj.allClosed": "All closed months",
+  "pj.variance": "Difference (actual − forecast)",
   "pj.measure": "Measure",
   "pj.actual": "Actual",
   "pj.monthsBefore": "Months before",
@@ -2918,6 +2930,19 @@ export const el: Record<MessageKey, string> = {
   "pj.noAccuracy":
     "Κανένας κλεισμένος μήνας δεν έχει ακόμη πρόβλεψη 1, 3 ή 6 μήνες νωρίτερα.",
   "pj.month": "Μήνας",
+  "pj.interval": "Τακτική επανεκτέλεση κάθε",
+  "pj.minutes": "λεπτά",
+  "pj.hours": "ώρα(ες)",
+  "pj.materiality":
+    "Άμεση επανεκτέλεση όταν οι καταχωρήσεις φτάσουν (σύνολο χρεώσεων)",
+  "pj.materialityNone": "μόνο στο τακτικό διάστημα",
+  "pj.rerunMaterial": "ουσιώδης μεταβολή: επανεκτέλεση εντός 15 λεπτών",
+  "pj.rerunRegular": "επανεκτέλεση στο τακτικό διάστημα, από",
+  "pj.vsActuals": "Σε σύγκριση με τα πραγματικά",
+  "pj.vsActualsCaption":
+    "Η προβολή σε σύγκριση με τα καταχωρημένα βιβλία, για τους κλεισμένους μήνες της",
+  "pj.allClosed": "Όλοι οι κλεισμένοι μήνες",
+  "pj.variance": "Διαφορά (πραγματικό − πρόβλεψη)",
   "pj.measure": "Μέγεθος",
   "pj.actual": "Πραγματικό",
   "pj.monthsBefore": "Μήνες νωρίτερα",

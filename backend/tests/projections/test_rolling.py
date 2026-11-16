@@ -1,16 +1,17 @@
 """Rolling forecasts (M6-4, AC-RF1), on the books of ``test_assumptions.hist``: a 12-month set
 for 2027 started from 2026 actuals (January sales 1,200; February 1,100), approved."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
 import pytest
 from django.core.management import call_command
 from django.db import transaction
+from django.utils import timezone
 
 from fcp.core.errors import NotFoundError
-from fcp.modules.projections import rolling
+from fcp.modules.projections import outlook, rolling
 from fcp.modules.projections.runs import same_month_of_the_set
 from fcp.modules.tenancy import services as tenancy
 
@@ -55,13 +56,17 @@ def test_rolling_runs_go_stale_and_are_rerun(hist: dict[str, Any]) -> None:
     got = c.get(f"{base}/rolling-forecast").json()
     assert (got["stale"], got["latest"]["id"]) == (False, str(first.id))
 
-    # A posting after the watermark makes it stale; the job makes a new run and keeps the old one.
+    # A posting after the watermark makes it stale. Without a materiality threshold it is not a
+    # material change: the 15-minute pass waits for the regular (hourly) interval, then makes a
+    # new run and keeps the old one (M6F-6).
     post(hist, ("1300", "50.00", "0"), ("4000", "0", "50.00"), day="2026-12-20")
     commit_point()
     got = c.get(f"{base}/rolling-forecast").json()
     assert got["stale"] is True
     assert got["stale_reasons"] == ["new postings since the forecast was made"]
-    report = rolling.refresh_all(JAN_15)
+    assert (got["material"], got["posted_since"], got["interval_minutes"]) == (False, "50.00", 60)
+    assert rolling.refresh_all(JAN_15).current == 1  # waiting for the interval
+    report = rolling.refresh_all(JAN_15, now=timezone.now() + timedelta(minutes=61))
     assert (report.refreshed, report.current, report.skipped) == (1, 0, [])
     assert rolling.refresh_all(JAN_15).current == 1
     got = c.get(f"{base}/rolling-forecast").json()
@@ -89,6 +94,105 @@ def test_rolling_runs_go_stale_and_are_rerun(hist: dict[str, Any]) -> None:
     assert c.put_json(f"{base}/rolling-forecast", off).status_code == 200
     assert rolling.refresh_all(MAR_10).refreshed == 0
     call_command("projections_refresh")  # the command runs one pass
+
+
+def test_material_changes_rerun_at_once_and_published_runs_stay(hist: dict[str, Any]) -> None:
+    c, base = hist["client"], hist["base"]
+    s = setup(hist)
+    cadence = {"assumption_set_id": s["id"], "horizon": 12, "interval_minutes": 240,
+               "materiality": "40.00"}  # fmt: skip
+    got = c.put_json(f"{base}/rolling-forecast", cadence)
+    assert got.status_code == 200, got.content
+    assert (got.json()["interval_minutes"], got.json()["materiality"]) == (240, "40.00")
+    first = refresh(hist, JAN_15)
+    assert c.post_json(f"{base}/calc-runs/{first.id}/publish", {}).status_code == 200
+
+    # 30 of postings: below the threshold, so the pass waits (the interval is 4 hours).
+    post(hist, ("1300", "30.00", "0"), ("4000", "0", "30.00"), day="2026-12-20")
+    commit_point()
+    assert rolling.refresh_all(JAN_15, now=timezone.now() + timedelta(hours=3)).current == 1
+    # 20 more: 50 in total since the run, at or above 40: a material change, re-run at once.
+    post(hist, ("1300", "20.00", "0"), ("4000", "0", "20.00"), day="2026-12-21")
+    commit_point()
+    got = c.get(f"{base}/rolling-forecast").json()
+    assert got["material"] is True
+    assert got["stale_reasons"] == [
+        "postings of 50.00 since the forecast was made, at or above the materiality of 40.00"
+    ]
+    assert rolling.refresh_all(JAN_15).refreshed == 1
+    second = c.get(f"{base}/rolling-forecast").json()["latest"]
+
+    # The published run is untouched and stays the reference until a newer run is published.
+    with transaction.atomic():
+        ctx = tenancy.enter_workspace(hist["owner"], hist["ws"]["slug"])
+        reference = outlook.covering(ctx, hist["entity"]["id"], [date(2027, 1, 1)])
+        assert reference is not None
+        assert reference.id == first.id
+    runs = {r["id"]: r for r in c.get(f"{base}/rolling-forecast").json()["history"]}
+    published = (runs[str(first.id)]["is_published"], runs[second["id"]]["is_published"])
+    assert published == (True, False)
+    assert c.post_json(f"{base}/calc-runs/{second['id']}/publish", {}).status_code == 200
+    with transaction.atomic():
+        ctx = tenancy.enter_workspace(hist["owner"], hist["ws"]["slug"])
+        reference = outlook.covering(ctx, hist["entity"]["id"], [date(2027, 1, 1)])
+        assert reference is not None
+        assert str(reference.id) == second["id"]
+
+    # A newly approved version of the assumptions is material too.
+    v2 = c.post_json(f"{base}/assumption-sets/{s['id']}/revise", {}).json()
+    assert c.post_json(f"{base}/assumption-sets/{v2['id']}/approve", {}).status_code == 200
+    assert c.get(f"{base}/rolling-forecast").json()["material"] is True
+    assert rolling.refresh_all(JAN_15).refreshed == 1
+
+    # Below the threshold, Refresh now re-runs at once.
+    post(hist, ("1300", "5.00", "0"), ("4000", "0", "5.00"), day="2026-12-22")
+    commit_point()
+    before = c.get(f"{base}/rolling-forecast").json()["latest"]["id"]
+    after = c.post_json(f"{base}/rolling-forecast/refresh", {}).json()
+    assert after["latest"]["id"] != before
+    assert after["stale"] is False
+
+
+def test_cadence_is_checked(hist: dict[str, Any]) -> None:
+    c, base = hist["client"], hist["base"]
+    s = setup(hist)
+    for bad in ({"interval_minutes": 45}, {"materiality": "-1"}, {"materiality": "1.234"}):
+        body = {"assumption_set_id": s["id"], "horizon": 12, **bad}
+        assert c.put_json(f"{base}/rolling-forecast", body).status_code == 422, bad
+
+
+def test_a_past_projection_against_actuals(hist: dict[str, Any]) -> None:
+    setup(hist)
+    run = refresh(hist, JAN_15)  # made to 31/12/2026: January 2027 sales 1,200, February 1,100
+    post(hist, ("1300", "1000.00", "0"), ("4000", "0", "1000.00"), day="2027-01-10")
+    post(hist, ("5000", "300.00", "0"), ("1300", "0", "300.00"), day="2027-01-11")
+    commit_point()
+    with transaction.atomic():
+        ctx = tenancy.enter_workspace(hist["owner"], hist["ws"]["slug"])
+        found = outlook.versus_actuals(ctx, hist["entity"]["id"], run.id, MAR_10)
+    assert found.months == [date(2027, 1, 1), date(2027, 2, 1)]  # closed before March
+    lines = {line.key: line for line in found.lines}
+    revenue = lines["PL.REVENUE"]
+    assert (revenue.forecast, revenue.actual, revenue.variance) == (
+        [Decimal(1200), Decimal(1100)], [Decimal(1000), Decimal(0)],
+        [Decimal(-200), Decimal(-1100)])  # fmt: skip
+    assert (revenue.forecast_total, revenue.actual_total, revenue.variance_total) == (
+        Decimal(2300), Decimal(1000), Decimal(-1300))  # fmt: skip
+    assert lines["PL.EBITDA"].actual[0] == Decimal(700)
+    cash = lines["BS.CASH"]
+    assert cash.actual[0] == Decimal(800)
+    assert cash.actual_total == cash.actual[-1]  # a balance: the last closed month
+    assert "2 closed month(s)" in found.note
+    # Through the API (today: no month of 2027 has closed yet).
+    got = hist["client"].get(f"{hist['base']}/projections/{run.id}/actuals")
+    assert got.status_code == 200, got.content
+    body = got.json()
+    assert (body["months"], body["as_of"]) == ([], "2026-12-31")
+    assert body["note"].startswith("No month of this projection has closed yet")
+    missing = hist["client"].get(
+        f"{hist['base']}/projections/00000000-0000-0000-0000-000000000000/actuals"
+    )
+    assert missing.status_code == 404
 
 
 def test_accuracy_compares_forecast_with_actual(hist: dict[str, Any]) -> None:

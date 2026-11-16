@@ -22,6 +22,7 @@ from uuid import UUID
 
 from django.utils import timezone
 
+from fcp.core.errors import NotFoundError
 from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.metrics.api import (
     ActualSeries,
@@ -31,6 +32,7 @@ from fcp.modules.metrics.api import (
     blend,
     calc_results,
     current_mapping,
+    get_calc_run,
     list_calc_runs,
 )
 from fcp.modules.reporting.api import actuals_monthly, fiscal_year_start, opening_net
@@ -238,3 +240,67 @@ def projected_plan(ctx: WorkspaceContext, entity_id: UUID,
                                      for m in projected}
                     for code, key in GOAL_LINES.items()},
     }  # fmt: skip
+
+
+# --- a past projection against what happened (M6F-6, #151) ---------------------------------------
+
+
+@dataclass(frozen=True)
+class VersusLine:
+    key: str
+    forecast: list[Decimal | None]  # per closed month
+    actual: list[Decimal]
+    variance: list[Decimal | None]  # actual - forecast
+    # Over the closed months: sums for income statement lines, the last month for cash (a
+    # balance); None where a month has no forecast.
+    forecast_total: Decimal | None = None
+    actual_total: Decimal | None = None
+    variance_total: Decimal | None = None
+
+
+def _closed_total(key: str, values: list[Decimal | None]) -> Decimal | None:
+    if not values or any(v is None for v in values):
+        return None
+    if key == CASH:
+        return values[-1]
+    return sum((v for v in values if v is not None), ZERO)
+
+
+@dataclass(frozen=True)
+class VersusActuals:
+    run: CalcRun
+    months: list[date]
+    lines: list[VersusLine]
+    note: str
+
+
+def versus_actuals(ctx: WorkspaceContext, entity_id: UUID, run_id: UUID,
+                   today: date | None = None) -> VersusActuals:  # fmt: skip
+    """Any projection, published or not, against the posted books for its months that have
+    closed (before today's month): each income statement line and the month-end cash, with the
+    variance (actual - forecast). The run is read as it was made; it never changes."""
+    entity = get_entity(ctx, entity_id, READ).id
+    run = get_calc_run(ctx, entity, run_id)
+    if run.kind != KIND:
+        raise NotFoundError("Projection not found.")
+    this_month = month_start(today or timezone.localdate())
+    closed = [m for m in _months(run) if m < this_month]
+    forecast = forecast_values(run)
+    actual = actual_values(ctx, entity, closed)
+    lines = []
+    for key in ROWS:
+        f = [forecast.get(key, {}).get(m) for m in closed]
+        a = [actual[key].get(m, ZERO) for m in closed]
+        variance = [None if x is None else y - x for x, y in zip(f, a, strict=True)]
+        actual_list: list[Decimal | None] = list(a)
+        totals = (_closed_total(key, f), _closed_total(key, actual_list),
+                  _closed_total(key, variance))  # fmt: skip
+        lines.append(VersusLine(key, f, a, variance, *totals))
+    if not closed:
+        note = "No month of this projection has closed yet: nothing to compare."
+    else:
+        note = (
+            f"{len(closed)} closed month(s) of the projection made to "
+            f"{run.as_of_date:%d/%m/%Y}, against the posted books as they are now."
+        )
+    return VersusActuals(run, closed, lines, note)

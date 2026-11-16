@@ -184,6 +184,21 @@ def posted_since(entity_id: UUID, tenant_id: UUID, watermark: int) -> bool:
     return bool(row and row[0])
 
 
+def posted_volume_since(entity_id: UUID, tenant_id: UUID, watermark: int) -> Decimal:
+    """The total debits of the entity's entries posted after ``watermark`` (M6F-6: how much the
+    books moved, for the rolling forecast's materiality threshold)."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COALESCE(SUM(l.debit), 0) FROM ledger_journal_line l "
+            "JOIN ledger_journal_entry e ON e.id = l.entry_id AND e.tenant_id = l.tenant_id "
+            "WHERE e.tenant_id = %s AND e.legal_entity_id = %s AND e.status = 'POSTED' "
+            "AND e.posting_seq > %s",
+            [tenant_id, entity_id, watermark],
+        )
+        row = cursor.fetchone()
+    return Decimal(row[0]).quantize(Decimal("0.01")) if row else Decimal("0.00")
+
+
 def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date,
             watermark: int | None = None) -> Actuals:  # fmt: skip
     """Operating actuals per month: year-end closing entries are left out. With ``watermark``, the

@@ -11504,6 +11504,150 @@
         "title": "ProjectionStatementsQuery",
         "type": "object"
       },
+      "ProjectionVsActualsLineOut": {
+        "properties": {
+          "actual": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actual",
+            "type": "array"
+          },
+          "actual_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Total"
+          },
+          "forecast": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Forecast",
+            "type": "array"
+          },
+          "forecast_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Closed months: sum (cash: the last month)",
+            "title": "Forecast Total"
+          },
+          "key": {
+            "description": "Income statement line, or BS.CASH (month-end cash)",
+            "title": "Key",
+            "type": "string"
+          },
+          "variance": {
+            "description": "Actual - forecast",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Variance",
+            "type": "array"
+          },
+          "variance_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variance Total"
+          }
+        },
+        "required": [
+          "key",
+          "forecast",
+          "actual",
+          "variance",
+          "forecast_total",
+          "actual_total",
+          "variance_total"
+        ],
+        "title": "ProjectionVsActualsLineOut",
+        "type": "object"
+      },
+      "ProjectionVsActualsOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionVsActualsLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "made_at": {
+            "format": "date-time",
+            "title": "Made At",
+            "type": "string"
+          },
+          "months": {
+            "description": "The projection's months that have closed",
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "as_of",
+          "made_at",
+          "is_published",
+          "months",
+          "lines",
+          "note"
+        ],
+        "title": "ProjectionVsActualsOut",
+        "type": "object"
+      },
       "RateType": {
         "enum": [
           "FIXED",
@@ -11870,6 +12014,25 @@
             ],
             "title": "Horizon",
             "type": "integer"
+          },
+          "interval_minutes": {
+            "default": 60,
+            "description": "Minutes: 15, 30, 60, 120, 240, 480, 1440",
+            "title": "Interval Minutes",
+            "type": "integer"
+          },
+          "materiality": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,15}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Debits posted since the latest run that re-run it at once; empty: never",
+            "title": "Materiality"
           }
         },
         "required": [
@@ -11932,6 +12095,11 @@
             ],
             "title": "Horizon"
           },
+          "interval_minutes": {
+            "default": 60,
+            "title": "Interval Minutes",
+            "type": "integer"
+          },
           "latest": {
             "anyOf": [
               {
@@ -11941,6 +12109,42 @@
                 "type": "null"
               }
             ]
+          },
+          "material": {
+            "default": false,
+            "description": "A material change: re-run at the next pass",
+            "title": "Material",
+            "type": "boolean"
+          },
+          "materiality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality"
+          },
+          "next_regular_run": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When a change that is not material is picked up",
+            "title": "Next Regular Run"
+          },
+          "posted_since": {
+            "default": "0.00",
+            "description": "Debits posted since the latest run",
+            "title": "Posted Since",
+            "type": "string"
           },
           "stale": {
             "default": false,
@@ -28080,6 +28284,64 @@
           }
         ],
         "summary": "Get Projection",
+        "tags": [
+          "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/projections/{run_id}/actuals": {
+      "get": {
+        "description": "Any past projection against the posted books, line by line, for its months that have\nclosed (M6F-6, #151). Also needs ``reports.read`` for the actuals.",
+        "operationId": "fcp_modules_projections_api_projection_vs_actuals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectionVsActualsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Projection Vs Actuals",
         "tags": [
           "projections"
         ]

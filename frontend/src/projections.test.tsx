@@ -86,7 +86,40 @@ const rolling = {
   latest: { ...run, id: "r2", as_of_date: "2026-10-31" },
   stale: true,
   stale_reasons: ["new postings since the forecast was made"],
+  material: false,
+  posted_since: "50.00",
+  interval_minutes: 60,
+  materiality: null,
+  next_regular_run: "2026-11-01T10:00:00Z",
   history: [],
+};
+const versus = {
+  run_id: "r1",
+  as_of: "2026-12-31",
+  made_at: "2026-11-12T00:00:00Z",
+  is_published: false,
+  months: ["2027-01-01", "2027-02-01"],
+  lines: [
+    {
+      key: "PL.REVENUE",
+      forecast: ["1200.00", "1100.00"],
+      actual: ["1000.00", "0.00"],
+      variance: ["-200.00", "-1100.00"],
+      forecast_total: "2300.00",
+      actual_total: "1000.00",
+      variance_total: "-1300.00",
+    },
+    {
+      key: "BS.CASH",
+      forecast: ["900.00", "950.00"],
+      actual: ["800.00", "800.00"],
+      variance: ["-100.00", "-150.00"],
+      forecast_total: "950.00",
+      actual_total: "800.00",
+      variance_total: "-150.00",
+    },
+  ],
+  note: "2 closed month(s) of the projection made to 31/12/2026, against the posted books as they are now.",
 };
 const accuracy = [
   {
@@ -124,14 +157,18 @@ function mount(path: string, route: string, element: ReactElement) {
 
 describe("Projections (M6-6)", () => {
   it("shows natures, the checks, explains a line, publishes and keeps a rolling forecast", async () => {
-    const sent: { url: string; method: string }[] = [];
+    const sent: { url: string; method: string; body?: unknown }[] = [];
     document.cookie = "__Host-fcp_csrftoken=test";
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string, init: RequestInit) => {
         const method = init.method ?? "GET";
         if (method !== "GET") {
-          sent.push({ url, method });
+          sent.push(
+            init.body
+              ? { url, method, body: JSON.parse(init.body as string) }
+              : { url, method },
+          );
           return Promise.resolve(
             respond(url.includes("rolling") ? rolling : run),
           );
@@ -153,6 +190,8 @@ describe("Projections (M6-6)", () => {
           return Promise.resolve(respond(accuracy));
         if (url.includes("/rolling-forecast"))
           return Promise.resolve(respond(rolling));
+        if (url.includes("/projections/r1/actuals"))
+          return Promise.resolve(respond(versus));
         if (url.includes("/projections/r1"))
           return Promise.resolve(respond(statements));
         if (url.includes("/projections"))
@@ -221,6 +260,49 @@ describe("Projections (M6-6)", () => {
       name: "Forecast against actual for closed months",
     });
     expect(within(acc).getByText("20.00%")).toBeInTheDocument();
+    // M6F-6: not a material change, so it waits for the regular interval; the cadence is saved.
+    expect(
+      screen.getByText(/re-run at the regular interval, from/),
+    ).toBeInTheDocument();
+    fireEvent.change(
+      screen.getByLabelText(
+        "Re-run at once when postings reach (total debits)",
+      ),
+      { target: { value: "5000.00" } },
+    );
+    fireEvent.change(screen.getByLabelText("Re-run regularly every"), {
+      target: { value: "240" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(sent[2]).toEqual({
+        url: "/api/w/ws/entities/e1/rolling-forecast",
+        method: "PUT",
+        body: {
+          assumption_set_id: "s1",
+          horizon: 12,
+          active: true,
+          interval_minutes: 240,
+          materiality: "5000.00",
+        },
+      }),
+    );
+    // Any projection against the posted books: totals over the closed months, or one month.
+    const versusTable = await screen.findByRole("table", {
+      name: "This projection against the posted books, for its closed months",
+    });
+    const revenue = within(versusTable).getByRole("row", { name: /^Revenue/ });
+    expect(revenue).toHaveTextContent("2,300.00");
+    expect(revenue).toHaveTextContent("-1,300.00");
+    fireEvent.change(
+      within(
+        screen.getByRole("region", { name: "Against actuals" }),
+      ).getByLabelText("Month"),
+      { target: { value: "2027-02-01" } },
+    );
+    expect(
+      within(versusTable).getByRole("row", { name: /^Revenue/ }),
+    ).toHaveTextContent("-1,100.00");
     const results = await axe.run(container, {
       rules: { "color-contrast": { enabled: false } },
     });

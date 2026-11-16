@@ -14,6 +14,7 @@ import {
   useProjection,
   useProjectionMutations,
   useProjections,
+  useProjectionVsActuals,
   useRolling,
   useRollingAccuracy,
   useRollingMutations,
@@ -463,13 +464,20 @@ function RollingSection() {
   const m = useRollingMutations();
   const accuracy = useRollingAccuracy(!!rolling.data?.configured);
   const approved = (sets.data ?? []).filter((s) => s.status === "APPROVED");
-  const [form, setForm] = useState<{ set: string; horizon: number } | null>(
-    null,
-  );
+  const [form, setForm] = useState<{
+    set: string;
+    horizon: number;
+    interval: number;
+    materiality: string;
+  } | null>(null);
   const current = rolling.data;
   const setId =
     form?.set ?? current?.assumption_set_id ?? approved[0]?.id ?? "";
   const horizon = form?.horizon ?? current?.horizon ?? 12;
+  const interval = form?.interval ?? current?.interval_minutes ?? 60;
+  const materiality = form?.materiality ?? current?.materiality ?? "";
+  const change = (patch: Partial<NonNullable<typeof form>>) =>
+    setForm({ set: setId, horizon, interval, materiality, ...patch });
   const withComparisons = (accuracy.data ?? []).filter((a) =>
     Object.values(a.comparisons).some((c) => c.length > 0),
   );
@@ -491,6 +499,14 @@ function RollingSection() {
           {current.latest
             ? ` ${t("pj.latestTo")} ${current.latest.as_of_date} (${current.latest.status})`
             : null}
+          {current.stale && current.latest ? (
+            <>
+              {" · "}
+              {current.material
+                ? t("pj.rerunMaterial")
+                : `${t("pj.rerunRegular")} ${(current.next_regular_run ?? "").slice(0, 16).replace("T", " ")}`}
+            </>
+          ) : null}
         </p>
       ) : null}
       {approved.length ? (
@@ -499,7 +515,7 @@ function RollingSection() {
             {t("pj.set")}
             <select
               value={setId}
-              onChange={(e) => setForm({ set: e.target.value, horizon })}
+              onChange={(e) => change({ set: e.target.value })}
             >
               {approved.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -512,9 +528,7 @@ function RollingSection() {
             {t("as.horizon")}
             <select
               value={horizon}
-              onChange={(e) =>
-                setForm({ set: setId, horizon: Number(e.target.value) })
-              }
+              onChange={(e) => change({ horizon: Number(e.target.value) })}
             >
               {[12, 24].map((n) => (
                 <option key={n} value={n}>
@@ -522,6 +536,30 @@ function RollingSection() {
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            {t("pj.interval")}
+            <select
+              value={interval}
+              onChange={(e) => change({ interval: Number(e.target.value) })}
+            >
+              {[15, 30, 60, 120, 240, 480, 1440].map((n) => (
+                <option key={n} value={n}>
+                  {n < 60
+                    ? `${n} ${t("pj.minutes")}`
+                    : `${n / 60} ${t("pj.hours")}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t("pj.materiality")}
+            <input
+              inputMode="decimal"
+              value={materiality}
+              placeholder={t("pj.materialityNone")}
+              onChange={(e) => change({ materiality: e.target.value })}
+            />
           </label>
           <button
             type="button"
@@ -531,6 +569,8 @@ function RollingSection() {
                 assumption_set_id: setId,
                 horizon,
                 active: true,
+                interval_minutes: interval,
+                materiality: materiality.trim() || null,
               })
             }
           >
@@ -601,6 +641,98 @@ function RollingSection() {
               </table>
             </div>
           )}
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+const VERSUS_ROWS: [string, Kind][] = [
+  ["PL.REVENUE", "subtotal"],
+  ["PL.COGS", "line"],
+  ["PL.GROSS_PROFIT", "subtotal"],
+  ["PL.OPEX", "subtotal"],
+  ["PL.EBITDA", "subtotal"],
+  ["PL.DA", "line"],
+  ["PL.INTEREST", "line"],
+  ["PL.PBT", "subtotal"],
+  ["PL.TAX", "line"],
+  ["PL.NET_INCOME", "total"],
+  ["BS.CASH", "total"],
+];
+
+function AgainstActuals({ runId }: { runId: string }) {
+  const { t, locale } = useI18n();
+  const found = useProjectionVsActuals(runId);
+  const [month, setMonth] = useState<string>("ALL");
+  const data = found.data;
+  // One month, or the totals worked out by the server (sums; cash: the last month).
+  const pick = (values: (string | null)[], total: string | null) =>
+    !data || month === "ALL"
+      ? total
+      : (values[data.months.indexOf(month)] ?? null);
+  return (
+    <section className="card" aria-labelledby="pj-actuals">
+      <h2 id="pj-actuals">{t("pj.vsActuals")}</h2>
+      {found.isLoading ? <Loading /> : null}
+      {found.error ? <ProblemMessage error={found.error} /> : null}
+      {data ? <p>{data.note}</p> : null}
+      {data && data.months.length ? (
+        <>
+          <label>
+            {t("pj.month")}
+            <select value={month} onChange={(e) => setMonth(e.target.value)}>
+              <option value="ALL">{t("pj.allClosed")}</option>
+              {data.months.map((m) => (
+                <option key={m} value={m}>
+                  {m.slice(0, 7)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="table-scroll">
+            <table>
+              <caption>{t("pj.vsActualsCaption")}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t("pj.line")}</th>
+                  <th scope="col" className="amount">
+                    {t("pj.forecast")}
+                  </th>
+                  <th scope="col" className="amount">
+                    {t("pj.actual")}
+                  </th>
+                  <th scope="col" className="amount">
+                    {t("pj.variance")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {VERSUS_ROWS.map(([key, kind]) => {
+                  const line = data.lines.find((l) => l.key === key);
+                  if (!line) return null;
+                  const cells = [
+                    pick(line.forecast, line.forecast_total),
+                    pick(line.actual, line.actual_total),
+                    pick(line.variance, line.variance_total),
+                  ];
+                  return (
+                    <tr
+                      key={key}
+                      className={kind === "line" ? undefined : kind}
+                    >
+                      <th scope="row">{t(`pj.k.${key}` as MessageKey)}</th>
+                      {cells.map((v, i) => (
+                        <td key={i} className="amount">
+                          {v === null ? "—" : formatAmount(v, locale)}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       ) : null}
     </section>
@@ -728,6 +860,7 @@ export function ProjectionsPage() {
               onExplain={(key, index) => setExplain({ key, index })}
             />
           ))}
+          <AgainstActuals runId={data.projection.id} />
         </>
       ) : null}
       <RollingSection />

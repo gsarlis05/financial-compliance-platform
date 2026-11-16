@@ -166,7 +166,39 @@ export interface RollingForecast {
   latest: ProjectionRun | null;
   stale: boolean;
   stale_reasons: string[];
+  material: boolean;
+  posted_since: string;
+  interval_minutes: number;
+  materiality: string | null;
+  next_regular_run: string | null;
   history: ProjectionRun[];
+}
+
+export interface VersusActuals {
+  run_id: string;
+  as_of: string;
+  made_at: string;
+  is_published: boolean;
+  months: string[];
+  lines: {
+    key: string;
+    forecast: (string | null)[];
+    actual: string[];
+    variance: (string | null)[];
+    forecast_total: string | null;
+    actual_total: string | null;
+    variance_total: string | null;
+  }[];
+  note: string;
+}
+
+export function useProjectionVsActuals(runId: string | null) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["projections", entityId, runId, "actuals"],
+    queryFn: () => api<VersusActuals>(`${base}/projections/${runId}/actuals`),
+    enabled: !!runId,
+  });
 }
 
 export interface AccuracyComparison {
@@ -274,6 +306,8 @@ export function useRollingMutations() {
         assumption_set_id: string;
         horizon: number;
         active: boolean;
+        interval_minutes: number;
+        materiality: string | null;
       }) =>
         api<RollingForecast>(`${base}/rolling-forecast`, {
           method: "PUT",
