@@ -26,8 +26,8 @@ import { formatAmount } from "../money";
 import { NatureTag } from "./CashForecast";
 
 type Kind = "line" | "subtotal" | "total";
-const REVENUE = ["REV.SALES", "REV.SERVICES", "REV.OTHER"];
-const OPEX = [
+export const REVENUE = ["REV.SALES", "REV.SERVICES", "REV.OTHER"];
+export const OPEX = [
   "OPEX.PAYROLL",
   "OPEX.RENT",
   "OPEX.UTILITIES",
