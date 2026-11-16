@@ -65,9 +65,10 @@ according to our existing roadmap"). **Milestone 3 is complete and awaits review
 | M4-2 Budget grid, phasing, Excel import/export, department owners (issue #66) | `claude/m4-2-budget-grid` | #121 | Open |
 | M4-3 Variance, explanations, monthly review (issue #67) | `claude/m4-3-variance` | #122 | Open |
 | M4-4 KPI library: versioned definitions, KPI sets as calculation runs (issue #68) | `claude/m4-4-kpis` | #123 | Open |
-| M4-5 Custom KPIs (personal, workspace with approval) and operational metrics (issue #69) | `claude/m4-5-custom-kpis` | #124 | Open (resumed on the owner's "Continue", 2026-11-06) |
-| M4-6 Goals: frozen baselines, evaluations, goal-seek, contribution analysis (issue #70) | `claude/m4-6-goals` | #125 | Open |
-| M4-7 Alerts (issue #71) | — | — | Next |
+| M4-5 Custom KPIs (personal, workspace with approval) and operational metrics (issue #69) | `claude/m4-5-custom-kpis` | #124 | Open, CI green |
+| M4-6 Goals: frozen baselines, evaluations, goal-seek, contribution analysis (issue #70) | `claude/m4-6-goals` | #125 | Open, CI green |
+| M4-7 In-app alerts: goal status and breaches, budget overruns and trends (issue #71) | `claude/m4-7-alerts` | #126 | Open |
+| M4-8 CFO dashboard (issue #72) | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

@@ -452,6 +452,18 @@
         "title": "AccuracyWeekOut",
         "type": "object"
       },
+      "AcknowledgeIn": {
+        "properties": {
+          "note": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "AcknowledgeIn",
+        "type": "object"
+      },
       "AdjustIn": {
         "properties": {
           "accounting_date": {
@@ -631,6 +643,187 @@
           "total"
         ],
         "title": "AgeingRowOut",
+        "type": "object"
+      },
+      "AlertCheckIn": {
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default: the last complete month",
+            "title": "Month"
+          }
+        },
+        "title": "AlertCheckIn",
+        "type": "object"
+      },
+      "AlertCheckOut": {
+        "properties": {
+          "raised": {
+            "title": "Raised",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "raised"
+        ],
+        "title": "AlertCheckOut",
+        "type": "object"
+      },
+      "AlertCountsOut": {
+        "properties": {
+          "critical": {
+            "title": "Critical",
+            "type": "integer"
+          },
+          "warning": {
+            "title": "Warning",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "warning",
+          "critical"
+        ],
+        "title": "AlertCountsOut",
+        "type": "object"
+      },
+      "AlertOut": {
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by_name": {
+            "title": "Acknowledged By Name",
+            "type": "string"
+          },
+          "acknowledgement_note": {
+            "title": "Acknowledgement Note",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "description": "What is watched; an alert is raised once per change of state",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The calculation run behind it, if any",
+            "title": "Source Run Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "description": "goal or budget",
+            "title": "Subject Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "kind",
+          "state",
+          "severity",
+          "title",
+          "detail",
+          "subject_type",
+          "subject_id",
+          "period",
+          "source_run_id",
+          "created_at",
+          "acknowledged_by_name",
+          "acknowledged_at",
+          "acknowledgement_note"
+        ],
+        "title": "AlertOut",
+        "type": "object"
+      },
+      "AlertsQuery": {
+        "properties": {
+          "include_acknowledged": {
+            "default": false,
+            "title": "Include Acknowledged",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 100,
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "AlertsQuery",
         "type": "object"
       },
       "AllocationIn": {
@@ -11716,6 +11909,252 @@
         "summary": "Monthly Actuals",
         "tags": [
           "reporting"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/alerts": {
+      "get": {
+        "description": "Newest first; only alerts whose source you may see (goals, budgets).",
+        "operationId": "fcp_modules_dashboards_api_list_alerts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_acknowledged",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Acknowledged",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Alerts",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/alerts/check-budgets": {
+      "post": {
+        "description": "Check the current approved budgets for overruns and 3-month unfavourable trends (needs\n``budget.read``; otherwise nothing is checked). Goal alerts come with each evaluation.",
+        "operationId": "fcp_modules_dashboards_api_check_budgets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertCheckOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Check Budgets",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/alerts/open-count": {
+      "get": {
+        "operationId": "fcp_modules_dashboards_api_open_count",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertCountsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Open Count",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/alerts/{alert_id}/acknowledge": {
+      "post": {
+        "operationId": "fcp_modules_dashboards_api_acknowledge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Alert Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Acknowledge",
+        "tags": [
+          "dashboards"
         ]
       }
     },

@@ -27,15 +27,23 @@ from .services import (
     approved_plan,
     fiscal_months,
 )
+from .services import list_budgets as list_budget_views
+from .variance import Comparison as VarianceComparison
+from .variance import Row as VarianceRow
+from .variance import compute as compute_variance
 
 __all__ = [
     "ApprovedPlan",
     "Budget",
     "BudgetVersion",
     "BudgetView",
+    "VarianceComparison",
+    "VarianceRow",
     "VersionView",
     "approved_plan",
+    "compute_variance",
     "fiscal_months",
+    "list_budget_views",
     "router",
 ]
 

@@ -5,6 +5,7 @@ evaluation needs ``planning.run``. Each evaluation is a calculation run (``GOAL_
 append-only summary row that alerts read (M4-7).
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -30,6 +31,19 @@ from .engine import BASELINE_KIND, EVAL_KIND, STATUSES, cut_over
 from .models import Goal, GoalEvaluation, GoalVersion
 
 READ, MANAGE, RUN = "planning.read", "goal.manage", "planning.run"
+# Called after every stored evaluation, in its transaction (alerts, M4-7). Modules register
+# here so that goals never imports them.
+Listener = Callable[[WorkspaceContext, Goal, GoalEvaluation], None]
+_LISTENERS: list[Listener] = []
+
+
+def on_evaluation(listener: Listener) -> Listener:
+    """Register ``listener(ctx, goal, summary)`` for every new evaluation (idempotent)."""
+    if listener not in _LISTENERS:
+        _LISTENERS.append(listener)
+    return listener
+
+
 MAX_MONTHS = 24
 TargetType = GoalVersion.TargetType
 DEFAULT_MATERIALITY = Decimal("0.05")
@@ -405,6 +419,8 @@ def evaluate(ctx: WorkspaceContext, entity_id: UUID, goal_id: UUID, *, as_of: da
         actual=actual.value if actual else None, gap=gap.value if gap else None,
         breach_date=breach.period_start if breach else None, method=method, created_by=ctx.user,
     )  # fmt: skip
+    for listener in _LISTENERS:
+        listener(ctx, view.goal, summary)
     return _evaluation(ctx, view.goal, run, summary)
 
 

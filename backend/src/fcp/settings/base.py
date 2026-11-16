@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "fcp.modules.budgeting",
     "fcp.modules.kpi",
     "fcp.modules.goals",
+    "fcp.modules.dashboards",
 ]
 
 AUTH_USER_MODEL = "identity.User"

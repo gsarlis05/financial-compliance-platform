@@ -19,8 +19,9 @@ from fcp.modules.tenancy.api import active_members, workspace_ctx
 from . import services
 from .engine import cut_over, method_note
 from .models import Goal, GoalEvaluation, GoalVersion
+from .services import on_evaluation
 
-__all__ = ["Goal", "GoalEvaluation", "router"]
+__all__ = ["Goal", "GoalEvaluation", "on_evaluation", "router"]
 
 router = Router(tags=["goals"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

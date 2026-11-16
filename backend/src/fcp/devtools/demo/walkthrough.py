@@ -593,6 +593,9 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     goals = _goals(owner, base, year)
     step(f"{len(goals)} sample goals for {year + 1} set with frozen {year} baselines and "
          "evaluated: " + "; ".join(f"{g['name']} {g['status']}" for g in goals))  # fmt: skip
+    raised = owner.call("GET", f"{base}/alerts")
+    step(f"{len(raised)} in-app alert(s) raised by the evaluations: "
+         + "; ".join(a["title"] for a in raised))  # fmt: skip
 
     if share_with:
         viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()
