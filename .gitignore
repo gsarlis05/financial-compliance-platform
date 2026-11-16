@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Environment and secrets: never commit real values
+.env
+.env.*
+!.env.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Generated synthetic datasets (regenerate from seed)
+/var/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
