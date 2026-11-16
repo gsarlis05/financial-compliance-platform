@@ -25,6 +25,8 @@ from .debt import LoanTerms
 from .drivers import DRIVERS, OPEX_LINES, REVENUE_LINES
 from .engine import EngineInput, ExtraCapex, Projection
 from .engine import output as project
+from .layout import STATEMENTS as STATEMENT_LAYOUT
+from .layout import name as line_name
 from .layout import with_totals
 from .models import AssumptionSet
 from .outlook import GOAL_LINES, projected_plan
@@ -34,6 +36,7 @@ __all__ = [
     "GOAL_LINES",
     "OPEX_LINES",
     "REVENUE_LINES",
+    "STATEMENT_LAYOUT",
     "EngineInput",
     "ExtraCapex",
     "LoanTerms",
@@ -41,6 +44,7 @@ __all__ = [
     "Projection",
     "SetInfo",
     "derive_set",
+    "line_name",
     "load_input",
     "observed_days",
     "pin",
@@ -48,6 +52,7 @@ __all__ = [
     "projected_plan",
     "router",
     "set_info",
+    "with_totals",
 ]
 
 router = Router(tags=["projections"])
