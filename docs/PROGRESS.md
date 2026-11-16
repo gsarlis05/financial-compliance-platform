@@ -6,8 +6,9 @@ in order.
 
 ## Status (updated 2026-11-03)
 
-**Milestone 1 is complete** (see `docs/milestone-1-report.md`). Next: your review of PRs #1–#19,
-then your go-ahead for Milestone 2.
+**Milestone 1 is complete** (see `docs/milestone-1-report.md`). Milestone 2 is in progress (go-ahead
+2026-11-03: "continue developing according to our existing roadmap"). Cloud-readiness review:
+`docs/reviews/2026-11-03-cloud-readiness.md`; AWS target: `docs/deployment/aws.md`.
 
 | Item | Branch | PR | State |
 |---|---|---|---|
@@ -29,7 +30,9 @@ then your go-ahead for Milestone 2.
 | M1-10 Balances, TB, GL, export | `claude/m1-10-reports` | #16 | Open |
 | M1-11 Integrity job | `claude/m1-11-integrity` | #17 | Open |
 | M1-12 UI | `claude/m1-12-ui` | #18 | Open |
-| M1-13 Docs, sample data, demo | `claude/m1-13-docs` | #19 | Open |
+| M1-13 Docs, sample data, demo | `claude/m1-13-docs` | #19 | Open, CI green |
+| M2-0 Cloud packaging (images, prod settings, readiness) + cloud-readiness review | `claude/m2-0-cloud-packaging` | #20 | Open |
+| M2-1 Dimensions | — | — | Next |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

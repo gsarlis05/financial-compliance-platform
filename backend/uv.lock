@@ -367,6 +367,7 @@ dependencies = [
     { name = "authlib" },
     { name = "django" },
     { name = "django-ninja" },
+    { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
     { name = "requests" },
     { name = "structlog" },
@@ -392,6 +393,7 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.9,<2" },
     { name = "django", specifier = ">=5.2,<5.3" },
     { name = "django-ninja", specifier = ">=1.7,<2" },
+    { name = "gunicorn", specifier = ">=23,<24" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "requests", specifier = ">=2.34,<3" },
     { name = "structlog", specifier = ">=25,<27" },
@@ -448,6 +450,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ab/5e/cd18e2b7b7d3974365987984ca28bf0088d21d15da94eb63d37911fc39c7/grimp-3.18-cp313-cp313-win32.whl", hash = "sha256:22f1be5207d1244d90f502285c6ee0304a025633c381e44a796e6bcd41b13771", size = 1877463, upload-time = "2026-10-26T09:59:02.822Z" },
     { url = "https://files.pythonhosted.org/packages/ef/33/c83f4c643517d62535e3f3916d6f4b8b5d4422637275bd9d1c6f6d26e54e/grimp-3.18-cp313-cp313-win_amd64.whl", hash = "sha256:2aa75b562f134fab37d64b778b5152bef0be27549cdc2084feb5dae0329f3fff", size = 2004132, upload-time = "2026-10-26T09:58:52.636Z" },
     { url = "https://files.pythonhosted.org/packages/9c/a4/438df0ddd0f02e3ce95625632558c63bdb6f75031e423314a649787b6554/grimp-3.18-cp313-cp313-win_arm64.whl", hash = "sha256:a2fe4fb3529b3e68e70cf1bb026effd129e6f3887f5236c6062b89680f9214bf", size = 1925031, upload-time = "2026-10-26T09:58:41.348Z" },
+]
+
+[[package]]
+name = "gunicorn"
+version = "23.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/34/72/9614c465dc206155d93eff0ca20d42e1e35afc533971379482de953521a4/gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec", size = 375031, upload-time = "2024-08-10T20:25:27.378Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/7d/6dac2a6e1eba33ee43f318edbed4ff29151a49b5d37f080aad1e6469bca4/gunicorn-23.0.0-py3-none-any.whl", hash = "sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d", size = 85029, upload-time = "2024-08-10T20:25:24.996Z" },
 ]
 
 [[package]]

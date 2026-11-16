@@ -3,13 +3,15 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check e2e-login e2e-ui demo openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check e2e-login e2e-ui demo images container-smoke openapi openapi-check ops-checks test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
 	@echo "make run-backend   Django dev server on http://localhost:8000"
 	@echo "make run-frontend  Vite dev server on http://localhost:5173"
 	@echo "make demo          load the Demo Trading workspace via the API (SHARE_WITH=email to see it in the UI)"
+	@echo "make images        build the API and web container images (local only, never pushed)"
+	@echo "make container-smoke  run the images production-like (TLS DB, migration task, read-only)"
 	@echo "make openapi       regenerate docs/api/openapi.json"
 	@echo "make synthetic     generate synthetic business + household datasets into var/"
 	@echo "make test | lint | security | prove-gates"
@@ -92,6 +94,17 @@ e2e-ui:
 # AC-G5 demo: a new "Demo Trading" workspace with one synthetic year (local dev only).
 demo:
 	cd backend && uv run python -m fcp.devtools.demo $(if $(SHARE_WITH),--share-with $(SHARE_WITH),)
+
+# Container images. Behind a TLS-inspecting proxy, BUILD_CA=/path/ca.pem passes its CA as a build
+# secret (never stored in the image).
+comma := ,
+BUILD_FLAGS = $(if $(BUILD_CA),--network host --secret id=extra_ca$(comma)src=$(BUILD_CA) --build-arg HTTPS_PROXY --build-arg https_proxy,)
+images:
+	docker build $(BUILD_FLAGS) -t fcp-backend:dev backend/
+	docker build $(BUILD_FLAGS) -t fcp-web:dev frontend/
+
+container-smoke: images
+	scripts/ci/container-smoke.sh fcp-backend:dev fcp-web:dev
 
 openapi:
 	cd backend && uv run python -m fcp.openapi ../docs/api/openapi.json
