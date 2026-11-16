@@ -10,6 +10,7 @@ non-current debt). Amounts are in each account's natural direction (debit-normal
 debit minus credit, credit-normal ones the other way round):
 - ``flow(key)``: posted movements of the period (closing entries excluded);
 - ``prior_flow(key)``: the same months one year earlier;
+- ``ltm_flow(key)``: the 12 months to the period's last month (M7-6);
 - ``balance(key)`` / ``opening(key)``: the balance at the end / the start of the period;
   ``EQUITY`` and ``BS.EQUITY`` include the result of years not yet closed;
 - ``avg_balance(key)``: the mean of opening and closing;
@@ -132,6 +133,11 @@ class _Context:
     def prior_flow(self, key: str) -> Decimal:
         return self._flow(key, [add_months(m, -12) for m in self.months], "prior_flow")
 
+    def ltm_flow(self, key: str) -> Decimal:
+        """The 12 months to the period's last month (M7-6: last twelve months)."""
+        last = self.months[-1]
+        return self._flow(key, [add_months(last, -k) for k in range(11, -1, -1)], "ltm_flow")
+
     def _balance(self, key: str, cut: str) -> Decimal:
         net = self.data.balances.get(self.cut[cut], {})
         total = ZERO
@@ -195,6 +201,7 @@ class _Context:
         return [
             keyed("flow", self.flow),
             keyed("prior_flow", self.prior_flow),
+            keyed("ltm_flow", self.ltm_flow),
             keyed("balance", self.balance),
             keyed("opening", self.opening),
             keyed("avg_balance", self.avg_balance),

@@ -53,7 +53,7 @@ READ, MANAGE, APPROVE = "planning.read", "kpi.definition.manage", "kpi.definitio
 OPERATIONAL = "kpi.operational.manage"
 KEY = re.compile(r"^[A-Z][A-Z0-9_]{1,39}$")
 CALL = re.compile(r'([a-z_]+)\(\s*"([^"]*)"')
-TAXONOMY_FUNCTIONS = {"flow", "prior_flow", "balance", "opening", "avg_balance"}
+TAXONOMY_FUNCTIONS = {"flow", "prior_flow", "ltm_flow", "balance", "opening", "avg_balance"}
 METRIC_FUNCTIONS = {"count_metric": "count", "amount_metric": "EUR"}
 DISPLAY_UNITS = {
     "percent": "ratio",

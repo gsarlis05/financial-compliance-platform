@@ -118,6 +118,7 @@ until validated and signed by a qualified professional; brief
 | M7-3 Sensitivity (one variable) and tornado: cached by input hash, quotas and time limit (issue #178) | `claude/m7-3-sensitivity` | #185 | Open |
 | M7-4 Working-capital view (receivables, stock, payables, days, cash conversion cycle against observed days) and what N days are worth (issue #179) | `claude/m7-4-working-capital` | #186 | Open |
 | M7-5 Goals against up to three shared scenarios, side by side with the base, in memory (goal engine v3: method SCENARIO, nature HYPOTHETICAL) (issue #180) | `claude/m7-5-goals-scenarios` | #187 | Open |
+| M7-6 KPI library CORE@1.1 (net debt / EBITDA, DSCR, receivables and inventory turnover; `ltm_flow`) and KPIs on projected and scenario figures (issue #181) | `claude/m7-6-advanced-kpis` | #188 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
