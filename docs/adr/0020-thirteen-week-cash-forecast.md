@@ -51,14 +51,23 @@ allocated, settings change or new postings arrive.
   - no cash accounts mapped;
   - disputed items left out;
   - past manual items.
+- **What-ifs (M3-9).** A what-if applies overrides to a run's stored inputs and is computed on
+  request. It is **never saved**, so it can never replace the base. The overrides are:
+  - a timing shift for a customer or supplier and/or a category;
+  - a percentage change, rounded to cents per flow;
+  - a one-off with a reason.
+
+  Every flow an override touches becomes HYPOTHETICAL. The base is computed again from the same
+  pinned data and must reproduce the run's output hash. The result is both, week by week, with
+  the difference. Saved scenarios come with the scenarios module (M5).
 ## Consequences
 - **Testing:** the engine is tested against an independent reference calculation, including
   property tests over random flows and on the Demo Trading data. The golden 13-week fixture is
   marked `signed_off: false` until a finance professional has checked it (AC-CW5).
 - **Size:** runs carry their inputs, from a few KB to a few hundred KB. Old runs can later be
   compacted.
-- **Not yet built:** staleness and scheduled re-runs (M3-8), what-ifs (M3-9) and the dashboard
-  (M3-10).
+- **Not yet built:** the dashboard (M3-10). Staleness and scheduled re-runs are in ADR-0021
+  (M3-8).
 ## Alternatives considered
 - **Re-reading registers at re-run time:** not reproducible, because allocations and versions
   change.

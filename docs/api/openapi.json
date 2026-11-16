@@ -4908,6 +4908,74 @@
         "title": "OpenItemQuery",
         "type": "object"
       },
+      "OverrideIn": {
+        "properties": {
+          "amount": {
+            "default": "0",
+            "pattern": "^-?\\d{1,15}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "default": "",
+            "maxLength": 20,
+            "title": "Category",
+            "type": "string"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "days": {
+            "default": 0,
+            "maximum": 365,
+            "minimum": -365,
+            "title": "Days",
+            "type": "integer"
+          },
+          "party": {
+            "default": "",
+            "description": "Customer or supplier code",
+            "maxLength": 30,
+            "title": "Party",
+            "type": "string"
+          },
+          "percent": {
+            "default": "0",
+            "pattern": "^-?\\d{1,4}(\\.\\d{1,2})?$",
+            "title": "Percent",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Reason",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "TIMING_SHIFT",
+              "PCT_CHANGE",
+              "ONE_OFF"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "OverrideIn",
+        "type": "object"
+      },
       "PeriodOut": {
         "properties": {
           "end_date": {
@@ -6645,6 +6713,156 @@
           "flows"
         ],
         "title": "WeekOut",
+        "type": "object"
+      },
+      "WhatIfIn": {
+        "properties": {
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/OverrideIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Overrides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "overrides"
+        ],
+        "title": "WhatIfIn",
+        "type": "object"
+      },
+      "WhatIfOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "base_first_shortfall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShortfallOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hypothetical_total": {
+            "title": "Hypothetical Total",
+            "type": "string"
+          },
+          "matched": {
+            "description": "Flows each override changed or added",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Matched",
+            "type": "array"
+          },
+          "nature": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Nature"
+              }
+            ],
+            "default": "HYPOTHETICAL",
+            "description": "A what-if is never saved"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "saved": {
+            "default": false,
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfWeekOut"
+            },
+            "title": "Weeks",
+            "type": "array"
+          },
+          "what_if_first_shortfall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShortfallOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run_id",
+          "as_of",
+          "matched",
+          "base_first_shortfall",
+          "what_if_first_shortfall",
+          "hypothetical_total",
+          "weeks"
+        ],
+        "title": "WhatIfOut",
+        "type": "object"
+      },
+      "WhatIfWeekOut": {
+        "properties": {
+          "base_closing": {
+            "title": "Base Closing",
+            "type": "string"
+          },
+          "base_net": {
+            "title": "Base Net",
+            "type": "string"
+          },
+          "base_shortfall": {
+            "title": "Base Shortfall",
+            "type": "boolean"
+          },
+          "delta": {
+            "title": "Delta",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "what_if_closing": {
+            "title": "What If Closing",
+            "type": "string"
+          },
+          "what_if_net": {
+            "title": "What If Net",
+            "type": "string"
+          },
+          "what_if_shortfall": {
+            "title": "What If Shortfall",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "label",
+          "start",
+          "base_closing",
+          "what_if_closing",
+          "delta",
+          "base_net",
+          "what_if_net",
+          "base_shortfall",
+          "what_if_shortfall"
+        ],
+        "title": "WhatIfWeekOut",
         "type": "object"
       },
       "WorkspaceIn": {
@@ -9470,6 +9688,74 @@
           }
         ],
         "summary": "Get Forecast",
+        "tags": [
+          "cashflow"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/cash-forecasts/{run_id}/what-if": {
+      "post": {
+        "description": "The forecast under hypothetical changes, week by week against the base. Computed on\nrequest and never saved: the base run is unchanged (AC-CW7).",
+        "operationId": "fcp_modules_cashflow_api_forecast_what_if",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatIfIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatIfOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Forecast What If",
         "tags": [
           "cashflow"
         ]

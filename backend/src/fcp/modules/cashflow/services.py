@@ -221,10 +221,18 @@ def payables_date(due: date, settings: SettingsView) -> date:
     return due
 
 
-def _flow(
-    day: date, amount: Decimal, nature: str, category: str, source: str, ref: str
+def _flow(  # noqa: PLR0913 (one argument per field)
+    day: date,
+    amount: Decimal,
+    nature: str,
+    category: str,
+    source: str,
+    ref: str,
+    *,
+    party: str = "",
 ) -> dict[str, str]:
-    return {
+    """One flow as stored in a run's inputs; ``party`` is the customer or supplier code."""
+    flow = {
         "day": day.isoformat(),
         "amount": f"{amount:.2f}",
         "nature": nature,
@@ -232,6 +240,9 @@ def _flow(
         "source": source,
         "ref": ref,
     }
+    if party:
+        flow["party"] = party
+    return flow
 
 
 def _cash_accounts(entity_id: UUID, warnings: list[dict[str, Any]]) -> list[str]:
@@ -297,6 +308,7 @@ def _open_item_flows(
                     "CUSTOMERS",
                     "RECEIVABLE",
                     f"open_item:{item.line_id}",
+                    party=item.counterparty_code,
                 )
             )
         else:
@@ -308,6 +320,7 @@ def _open_item_flows(
                     "SUPPLIERS",
                     "PAYABLE",
                     f"open_item:{item.line_id}",
+                    party=item.counterparty_code,
                 )
             )
     for side, amounts in disputed.items():

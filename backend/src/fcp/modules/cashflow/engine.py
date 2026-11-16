@@ -38,6 +38,7 @@ SOURCE_KINDS = {
     "DEBT": "SCHEDULE",
     "TAX": "SCHEDULE",
     "MANUAL": "MANUAL",
+    "WHATIF": "OVERRIDE",  # added by a what-if (M3-9), never stored
 }
 
 
