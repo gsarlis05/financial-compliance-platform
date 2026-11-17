@@ -80,7 +80,27 @@ Every new tenant table has FORCE row-level security and composite tenant keys. A
 - **No AWS resource and no real email**: development sends to the local Mailpit catcher.
 
 ## Quality
-QUALITY_PLACEHOLDER
+Measured on 2026-11-17 on the M8-6 branch, on a fresh test database (`make test`, `make lint`,
+`make openapi-check`, `make security`, `make validation`, all passing):
+- Backend: **1,326 tests passed**, **96.25%** line and branch coverage overall. The new code:
+  `mgmt_reporting` exports 99%, services 99%, snapshot 95%, sections 95%; `dashboards` emails 97%,
+  overview 96%. The email job's command (`dashboards_send_alert_emails`) had no test of its own;
+  the scheduled-job test now runs it, once and with `--loop`.
+- Frontend: **74 tests**, including axe on the report-pack, dashboard and alert screens; ESLint
+  strict, `tsc`, build.
+- Security: Semgrep 0 findings; gitleaks no leaks. Validation package unchanged and passing.
+- **Excel and PDF equal the API**: the export tests compare every exported value with the API's
+  value for the same snapshot, cell by cell and line by line (more than 100 cells per pack).
+- **Live checks** with MFA sign-in on the local stack, at 1280 px and 390 px (no horizontal scroll
+  on any screen), on the demo pack. A pack was created, commented, given a risk, exported to PDF
+  and Excel, a dashboard view was saved and the email preference set to a daily digest. They
+  found and fixed:
+  - goal statuses shown as codes (`ON_TRACK`) instead of words, in the pack, the PDF and Excel;
+  - ratios shown as raw decimals (`0.2`) instead of percentages (20.00%), and days unrounded;
+  - every commentary box labelled only "Commentary"; each now names its section, for screen
+    readers;
+  - the demo's 2026 pack has an empty budget section: the demo budget is for 2027, so this is
+    correct (the section says "No approved annual budget covers this period.").
 
 ## Known limitations
 - **Packs:** one built-in template; no logo or colours on the PDF (brief §7 item 2); charts appear
