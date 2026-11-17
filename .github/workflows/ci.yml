@@ -187,7 +187,7 @@ jobs:
               anchore/syft:v1.18.1 "docker:$image:ci" -o "spdx-json=/out/$image.spdx.json" -q
             test -s "sbom/$image.spdx.json"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom/
