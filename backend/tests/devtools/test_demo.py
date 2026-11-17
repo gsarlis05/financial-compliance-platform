@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 34
+    assert len(result.steps) == 35
     assert (
         "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
         "revenue 1320000.00"
@@ -121,6 +121,9 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     # 15% of 2,156,000 = 323,400.
     scenario_step = next(s for s in result.steps if s.startswith("scenario "))
     assert "hypothetical, all checks hold; revenue -323400.00" in scenario_step, scenario_step
+    pack_step = next(s for s in result.steps if s.startswith("management pack"))
+    assert "submitted, finalised by the owner (10 sections)" in pack_step, pack_step
+    assert pack_step.endswith("PDF report-pack-2026-12-v1.pdf"), pack_step
     export_step = next(s for s in result.steps if s.startswith("full export of the workspace"))
     assert "deletion confirmed with 30 days' grace, then cancelled" in export_step, export_step
     assert all(line.startswith("✔") for line in said)

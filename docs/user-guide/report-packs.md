@@ -5,7 +5,7 @@ board: statements, budget performance, KPIs, cash, the forecast and goals, with 
 **Its figures are frozen when you generate it**, so it reads the same in a year as on the day it
 was made.
 
-The screens follow in a later release (M8-6); everything below is available through the API.
+Open **Reports → Report packs**.
 
 ## Generating a pack
 Choose a period (a month, or the fiscal quarter or fiscal year that contains a month) and generate.
