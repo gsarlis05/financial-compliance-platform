@@ -11,7 +11,7 @@ from uuid import UUID
 from django.http import HttpRequest
 from ninja import Field, Query, Router, Schema
 
-from fcp.core.api.permissions import requires
+from fcp.core.api.permissions import PUBLIC, requires
 from fcp.modules.kpi.api import run_kpi_set
 from fcp.modules.tenancy.api import workspace_ctx
 
@@ -309,6 +309,7 @@ def set_alert_email(request: HttpRequest, slug: str, payload: AlertEmailIn) -> A
 
 
 @router.get("/alert-emails/unsubscribe", auth=None, response=dict[str, str])
+@requires(PUBLIC)  # the link in an email works without signing in; it reveals nothing
 def unsubscribe_alert_emails(request: HttpRequest, token: str = "") -> dict[str, str]:
     """The link in every alert email: turns those emails off, without signing in."""
     done = emails.unsubscribe(token)
