@@ -1,8 +1,8 @@
 # 22 — Milestone 8 Implementation Brief: management report packs, dashboard v2, email alerts
 
-Status: **PROPOSED, AWAITING THE PRODUCT OWNER'S APPROVAL.** No M8 code is written before you
-approve this brief, as for Milestone 7. Answer §7 (or say "take the defaults"), and the work
-starts in the order of §4.
+Status: **APPROVED, IN PROGRESS.** No M8 code was written before approval, as for Milestone 7. The
+product owner answered the proposed brief with "Continue" (2026-11-17), so the defaults in §3 and
+the proposed answers in §7 are taken. Each can be changed at any time.
 
 Backlog: [08 §Phase 3](08-implementation-backlog.md) (M8). Specification:
 [10](10-cfo-fpa-specification.md) §7 (variance explanations), §9 (management reporting), §10
@@ -130,10 +130,10 @@ environment.
 | Projections in a pack read as validated | The pending-review notice on every projection and scenario section, in the app and in exports |
 | Scope (three L items) | One PR per issue in the order above; each PR stands alone |
 
-## 7. Decisions needed from you
-| # | Question | Proposed |
+## 7. Decisions (taken as proposed on 2026-11-17; change any of them at any time)
+| # | Question | Taken for now |
 |---|---|---|
-| 1 | Approve this brief and its defaults (§3)? | — |
+| 1 | Approve this brief and its defaults (§3)? | Approved: "Continue" |
 | 2 | Branding on PDF packs: the workspace name only (proposed), or an uploaded logo and colours? | Name only in M8 |
 | 3 | Email alerts: default **off** until each user turns them on (proposed), or **daily digest** by default for owners? | Off |
 | 4 | Should emails show amounts (for example "Cash forecast below minimum by €12,400")? Proposed: no, only the title and a link, so figures stay behind sign-in. | No amounts |

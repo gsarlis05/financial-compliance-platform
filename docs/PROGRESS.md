@@ -122,7 +122,7 @@ until validated and signed by a qualified professional; brief
 | M7-7 Screens: Scenarios (builder, comparison, cash chart with dotted scenario line, what changed, liquidity, KPIs), Sensitivity (tornado and one variable), Working capital, goals against scenarios; Excel export of a comparison; demo step; M7 report (`docs/milestone-7-report.md`) (issue #182) | `claude/m7-7-screens` | #189 | Open |
 | Owner items for M7: review and merge #183–#189; ADRs 0049–0052; defaults in the M7 report | — | — | Waiting for the owner |
 | **Milestone 8** (epic #83) | | | |
-| M8 brief (`docs/planning/22-milestone-8-brief.md`): report packs, dashboard v2, email alerts; issues #190–#195, blocked until the owner approves the brief | `claude/m8-0-brief` | #196 | Open, awaiting the owner |
+| M8 brief (`docs/planning/22-milestone-8-brief.md`): report packs, dashboard v2, email alerts; issues #190–#195; approved 2026-11-17 ("Continue"), defaults taken | `claude/m8-0-brief` | #196 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
