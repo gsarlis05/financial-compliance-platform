@@ -32,11 +32,13 @@ from fcp.modules.mgmt_reporting.models import PackComment, ReportPack
 from ..goals.test_goals import budget, g
 from ..kpi.test_kpis import k
 from ..ledger.conftest import books
+from ..projections.test_assumptions import hist
+from ..projections.test_projections import approved
 from .test_packs import act, explain_all, generate, reviewer
 
 pytestmark = pytest.mark.django_db
 Make = Callable[..., Any]
-__all__ = ["books", "g", "k"]
+__all__ = ["books", "g", "hist", "k"]
 
 
 def sections(g: dict[str, Any], pack_id: str, lang: str = "en") -> list[dict[str, Any]]:
@@ -173,3 +175,34 @@ def test_columns_commentary_and_risks(g: dict[str, Any], make_user: Make,
     again = sections(g, second["id"])
     assert section(again, "budget")["comment"] == "Orders moved to April"
     assert [r["title"] for r in section(again, "risks")["risks"]] == ["Customer C1 pays late"]
+
+
+def test_forecast_cash_kpi_and_goal_sections(hist: dict[str, Any]) -> None:
+    """Sections built from runs: the 13-week forecast and the projection are forecast figures,
+    and the projection's section carries the pending-review notice."""
+    c, base = hist["client"], hist["base"]
+    run = c.post_json(f"{base}/projections", {"assumption_set_id": approved(hist)}).json()
+    c.post_json(f"{base}/calc-runs/{run['id']}/publish", {})
+    c.post_json(f"{base}/kpi-sets", {"date_from": "2026-12-01", "date_to": "2026-12-31"})
+    c.post_json(f"{base}/cash-forecasts", {"as_of": "2026-12-31"})
+    pack = generate(hist, {"period_kind": "MONTH", "month": "2026-12-01"})
+    found = sections(hist, pack["id"])
+    forecast = section(found, "forecast")
+    assert forecast["notice"].startswith("Pending professional review")
+    table = forecast["tables"][0]
+    assert [r["key"] for r in table["rows"]] == [
+        "PL.REVENUE", "PL.EBITDA", "PL.NET_INCOME", "CF.NET_CHANGE", "BS.CASH"]  # fmt: skip
+    assert {cell["nature"] for r in table["rows"] for cell in r["cells"]} == {"FORECAST"}
+    assert table["columns"][1]["label"] == "2027-01"
+    cash = section(found, "cash")["tables"]
+    assert [t["caption"] for t in cash][1] == "13-week cash forecast"
+    assert len(cash[1]["columns"]) == 14  # the line and 13 weeks
+    assert {cell["nature"] for r in cash[1]["rows"] for cell in r["cells"]} == {"FORECAST"}
+    wc = section(found, "working_capital")["tables"]
+    assert wc[1]["caption"] == "Working-capital KPIs"
+    assert {r["key"] for r in wc[1]["rows"]} <= {"DSO", "DIO", "DPO", "CASH_CONVERSION_CYCLE",
+                                                 "CURRENT_RATIO", "QUICK_RATIO"}  # fmt: skip
+    assert section(found, "kpis")["tables"][0]["rows"]
+    assert section(found, "goals")["tables"][0]["rows"] == []
+    assert section(found, "budget")["status"] == "empty"
+    assert section(found, "budget")["tables"] == []
