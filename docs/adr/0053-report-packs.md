@@ -45,6 +45,12 @@ versions for corrections.
   live in two append-only tables (`mgmt_reporting_comment`, `mgmt_reporting_risk`), written only
   while the pack is a draft (database trigger), and copied into a new version.
 
+- **Exports (M8-3)** render the same sections: Excel with a Nature row under each table header
+  and numbers in numeric cells; PDF (ReportLab, the bundled Liberation Sans for Greek) in A4
+  landscape with a provenance footer, page numbers and a DRAFT watermark until final. The PDF's
+  table text comes from one function (`pdf_lines`), which the tests compare with the API line by
+  line, because the embedded font subsets make the PDF's own text hard to read back.
+
 ## Consequences
 - Packs read the same for ever, and two renderings of one snapshot are identical (M8-3 exports
   read the same snapshot).

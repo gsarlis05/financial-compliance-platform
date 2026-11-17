@@ -5,8 +5,7 @@ board: statements, budget performance, KPIs, cash, the forecast and goals, with 
 **Its figures are frozen when you generate it**, so it reads the same in a year as on the day it
 was made.
 
-The Excel and PDF exports and the screens follow in later releases (M8-3 to M8-6); everything below
-is available through the API.
+The screens follow in a later release (M8-6); everything below is available through the API.
 
 ## Generating a pack
 Choose a period (a month, or the fiscal quarter or fiscal year that contains a month) and generate.
@@ -62,11 +61,25 @@ A **final** pack never changes and is never deleted. To correct it, start a **ne
 draft with figures taken now. When the new version is finalised, the earlier one is marked
 **superseded** and stays readable.
 
+## Excel and PDF
+Export any pack, in English or Greek, with the right to export reports (every export is recorded
+in the audit trail):
+- **Excel:** a cover sheet (the pack, its status and version, its scope, where the figures come
+  from, and what each nature means), then one sheet per section. Under each table's header a
+  **Nature** row says what the figures are; amounts are numbers you can add up.
+- **PDF:** A4 landscape, a cover page, then each section with its tables, notices and commentary.
+  Every page carries the entity, the pack, where the figures come from ("Actuals as of …; ledger
+  posting #…; Budget …; Forecast run …") and the page number. Until the pack is final, every page
+  says **DRAFT** across it, and the file name ends in "-draft".
+
+Both are made from the pack's frozen figures, so they show exactly what the screen shows.
+
 ## Who can do what
 | Action | Read only | Accountant | Finance manager, partner, owner |
 |---|---|---|---|
 | See packs | ✔ | ✔ | ✔ |
 | Generate, regenerate, retitle, submit, new version | | ✔ | ✔ |
 | Return or finalise (not your own) | | | ✔ |
+| Export to Excel or PDF | | ✔ | ✔ |
 
 Every step is recorded in the audit trail.
