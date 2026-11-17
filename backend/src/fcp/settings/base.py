@@ -160,3 +160,13 @@ WORKSPACE_DELETION_GRACE_DAYS = int(env("WORKSPACE_DELETION_GRACE_DAYS", "30"))
 CLAMD_HOST = env("CLAMD_HOST", "127.0.0.1")
 CLAMD_PORT = int(env("CLAMD_PORT", "3310"))
 CLAMD_TIMEOUT_SECONDS = int(env("CLAMD_TIMEOUT_SECONDS", "30"))
+
+# --- email (M8-5): alert emails through SMTP; locally the Mailpit catcher in compose.yaml ---------
+EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("SMTP_HOST", "127.0.0.1")
+EMAIL_PORT = int(env("SMTP_PORT", "1025"))
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "Financial Compliance Platform <alerts@localhost>")
+APP_URL = env("APP_URL", "http://localhost:5173").rstrip("/")  # links in emails
+ALERT_DIGEST_HOUR = 8  # Europe/Nicosia
+ALERT_EMAILS_PER_HOUR = 20  # immediate emails per user; beyond that the app still lists them

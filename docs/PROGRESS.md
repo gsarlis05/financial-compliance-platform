@@ -127,6 +127,7 @@ until validated and signed by a qualified professional; brief
 | M8-2 Pack sections from the snapshot (ten, chosen and ordered), comparison columns (actual, budget, original budget, prior year, variance, full-year outlook), human commentary and risks (append-only, draft-only), golden budget variance pack (issue #191) | `claude/m8-2-sections` | #198 | Open |
 | M8-3 Report pack exports: Excel (cover with scope, provenance and legend; a sheet per section with a Nature row; formula-safe) and PDF (A4 landscape, provenance footer and page numbers, DRAFT watermark until final), both from the same sections as the API; audited (issue #192) | `claude/m8-3-exports` | #199 | Open |
 | M8-4 Dashboard v2: widget widths (full or half), waterfall (budget to actual) and scenario comparison widgets, only the shown widgets built, last-twelve-months preset, personal saved views (issue #193) | `claude/m8-4-dashboard` | #200 | Open |
+| M8-5 Alert emails: per-user preference (immediate, daily digest, off by default), titles and links only, outbox with one email per alert and user, retries, hourly limit, one-click unsubscribe, scheduled sender (issue #194) | `claude/m8-5-email` | #201 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
