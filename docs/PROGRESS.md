@@ -128,6 +128,8 @@ until validated and signed by a qualified professional; brief
 | M8-3 Report pack exports: Excel (cover with scope, provenance and legend; a sheet per section with a Nature row; formula-safe) and PDF (A4 landscape, provenance footer and page numbers, DRAFT watermark until final), both from the same sections as the API; audited (issue #192) | `claude/m8-3-exports` | #199 | Open |
 | M8-4 Dashboard v2: widget widths (full or half), waterfall (budget to actual) and scenario comparison widgets, only the shown widgets built, last-twelve-months preset, personal saved views (issue #193) | `claude/m8-4-dashboard` | #200 | Open |
 | M8-5 Alert emails: per-user preference (immediate, daily digest, off by default), titles and links only, outbox with one email per alert and user, retries, hourly limit, one-click unsubscribe, scheduled sender (issue #194) | `claude/m8-5-email` | #201 | Open |
+| M8-6 Screens: report packs (generate, sections with natures, commentary, risks, review, finalise, versions, Excel/PDF), dashboard v2 controls (widths, waterfall, scenario, saved views, LTM), alert email preference; demo step; Milestone 8 report (`docs/milestone-8-report.md`) (issue #195) | `claude/m8-6-screens` | #202 | Open |
+| Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Waiting for the owner |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
