@@ -79,3 +79,53 @@ class ReportPack(TenantOwned):
             ),
         ]
         indexes = [models.Index(fields=["legal_entity", "period_end", "created_at"])]
+
+
+class PackComment(TenantOwned):
+    """Human-written commentary on one section of a pack (M8-2, doc 10 §9). Append-only: a change
+    adds a row and the latest row of a section is the current text. Written only while the pack is
+    a draft, so a pack in review or final keeps its commentary (database trigger)."""
+
+    pack = models.ForeignKey(ReportPack, on_delete=models.PROTECT, related_name="+")
+    section = models.CharField(max_length=20)
+    seq = models.PositiveIntegerField()
+    text = models.CharField(max_length=4000, blank=True)  # empty: the comment was removed
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                               related_name="+")  # fmt: skip
+
+    class Meta:
+        db_table = "mgmt_reporting_comment"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pack", "section", "seq"], name="mgmt_reporting_comment_seq"
+            ),
+        ]
+
+
+class PackRisk(TenantOwned):
+    """One risk in a pack's risks section (M8-2): written by people, never generated.
+    Append-only like commentary: ``ref`` names the risk, the latest ``seq`` is its current
+    state."""
+
+    class RiskStatus(models.TextChoices):
+        OPEN = "OPEN"
+        MONITORING = "MONITORING"
+        CLOSED = "CLOSED"
+
+    pack = models.ForeignKey(ReportPack, on_delete=models.PROTECT, related_name="+")
+    ref = models.PositiveSmallIntegerField()
+    seq = models.PositiveIntegerField()
+    title = models.CharField(max_length=200)
+    owner = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=10, choices=RiskStatus.choices,
+                              default=RiskStatus.OPEN)  # fmt: skip
+    mitigation = models.CharField(max_length=1000, blank=True)
+    removed = models.BooleanField(default=False)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                               related_name="+")  # fmt: skip
+
+    class Meta:
+        db_table = "mgmt_reporting_risk"
+        constraints = [
+            models.UniqueConstraint(fields=["pack", "ref", "seq"], name="mgmt_reporting_risk_seq"),
+        ]

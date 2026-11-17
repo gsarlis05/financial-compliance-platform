@@ -168,3 +168,100 @@ def new_pack_version(request: HttpRequest, slug: str, entity_id: UUID,
     """Correct a final pack: a new draft version with figures taken now."""
     ctx = workspace_ctx(request, slug, entity_id)
     return Status(201, _detail(ctx, services.new_version(ctx, entity_id, pack_id)))
+
+
+# --- sections, comparison columns, commentary and risks (M8-2) ------------------------------------
+
+
+class ArrangeIn(Schema):
+    sections: list[str] = Field(description=f"In order, from: {', '.join(services.SECTIONS)}")
+    columns: list[str] = Field(description=f"From: {', '.join(services.COLUMNS)} (with actual)")
+
+
+class CommentIn(Schema):
+    section: str
+    text: str = Field(max_length=4000, description="Empty: remove the section's comment")
+
+
+class RiskIn(Schema):
+    title: str = Field(min_length=1, max_length=200)
+    owner: str = Field(default="", max_length=120)
+    status: Literal["OPEN", "MONITORING", "CLOSED"] = "OPEN"
+    mitigation: str = Field(default="", max_length=1000)
+
+
+class RiskOut(Schema):
+    ref: int
+    title: str
+    owner: str
+    status: str
+    mitigation: str
+
+
+class SectionsOut(Schema):
+    pack: PackOut
+    sections: list[dict[str, Any]] = Field(
+        description="Each chosen section: tables whose cells carry a value and its nature, "
+        "the section's commentary, and (for risks) the risks"
+    )
+
+
+@router.put(f"{BASE}/{{uuid:pack_id}}/arrangement", response=PackOut)
+@requires("reports.pack.prepare")
+def arrange_pack(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+                 body: ArrangeIn) -> PackOut:  # fmt: skip
+    """Choose the draft's sections (in order) and comparison columns."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = services.choose(ctx, entity_id, pack_id, sections=body.sections, columns=body.columns)
+    return PackOut(**_out(p))
+
+
+@router.post(f"{BASE}/{{uuid:pack_id}}/comments", response=dict[str, str])
+@requires("reports.pack.prepare")
+def comment_pack(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+                 body: CommentIn) -> dict[str, str]:  # fmt: skip
+    """Write a section's commentary (people only; earlier texts are kept)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.comment(ctx, entity_id, pack_id, section=body.section, text=body.text)
+
+
+@router.post(f"{BASE}/{{uuid:pack_id}}/risks", response={201: list[RiskOut]})
+@requires("reports.pack.prepare")
+def add_risk(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+             body: RiskIn) -> Status[list[RiskOut]]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = services.risk(ctx, entity_id, pack_id, ref=None, values=body.dict())
+    return Status(201, [RiskOut(**r) for r in found])
+
+
+@router.put(f"{BASE}/{{uuid:pack_id}}/risks/{{int:ref}}", response=list[RiskOut])
+@requires("reports.pack.prepare")
+def change_risk(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID, ref: int,
+                body: RiskIn) -> list[RiskOut]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [RiskOut(**r) for r in services.risk(ctx, entity_id, pack_id, ref=ref,
+                                                values=body.dict())]  # fmt: skip
+
+
+@router.post(f"{BASE}/{{uuid:pack_id}}/risks/{{int:ref}}/remove", response=list[RiskOut])
+@requires("reports.pack.prepare")
+def remove_risk(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+                ref: int) -> list[RiskOut]:  # fmt: skip
+    """Take a risk out of the pack (its history is kept)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    current = next((r for r in services.risks(services.get(ctx, entity_id, pack_id))
+                    if r["ref"] == ref), None)  # fmt: skip
+    values = {**(current or {"title": "-"}), "removed": True}
+    values.pop("ref", None)
+    return [RiskOut(**r) for r in services.risk(ctx, entity_id, pack_id, ref=ref,
+                                                values=values)]  # fmt: skip
+
+
+@router.get(f"{BASE}/{{uuid:pack_id}}/sections", response=SectionsOut)
+@requires("reports.pack.read")
+def pack_sections(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+                  lang: Literal["en", "el"] = "en") -> SectionsOut:  # fmt: skip
+    """The pack as its reader sees it, from the frozen snapshot."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = services.get(ctx, entity_id, pack_id)
+    return SectionsOut(pack=PackOut(**_out(p)), sections=services.rendered(p, lang))

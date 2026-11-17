@@ -1096,6 +1096,32 @@
         "title": "Approval",
         "type": "string"
       },
+      "ArrangeIn": {
+        "properties": {
+          "columns": {
+            "description": "From: actual, budget, original_budget, forecast, prior_year, variance (with actual)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "sections": {
+            "description": "In order, from: overview, profitability, cash, working_capital, budget, kpis, forecast, risks, goals, commentary",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections",
+          "columns"
+        ],
+        "title": "ArrangeIn",
+        "type": "object"
+      },
       "AsOf": {
         "properties": {
           "as_of": {
@@ -3514,6 +3540,26 @@
           "nature"
         ],
         "title": "ColumnOut",
+        "type": "object"
+      },
+      "CommentIn": {
+        "properties": {
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "text": {
+            "description": "Empty: remove the section's comment",
+            "maxLength": 4000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "text"
+        ],
+        "title": "CommentIn",
         "type": "object"
       },
       "CommitmentFlowOut": {
@@ -12762,6 +12808,76 @@
         "title": "ReverseIn",
         "type": "object"
       },
+      "RiskIn": {
+        "properties": {
+          "mitigation": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Mitigation",
+            "type": "string"
+          },
+          "owner": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Owner",
+            "type": "string"
+          },
+          "status": {
+            "default": "OPEN",
+            "enum": [
+              "OPEN",
+              "MONITORING",
+              "CLOSED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "RiskIn",
+        "type": "object"
+      },
+      "RiskOut": {
+        "properties": {
+          "mitigation": {
+            "title": "Mitigation",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "title",
+          "owner",
+          "status",
+          "mitigation"
+        ],
+        "title": "RiskOut",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "owner",
@@ -14215,6 +14331,28 @@
           "entry_id"
         ],
         "title": "ScheduleRowOut",
+        "type": "object"
+      },
+      "SectionsOut": {
+        "properties": {
+          "pack": {
+            "$ref": "#/components/schemas/PackOut"
+          },
+          "sections": {
+            "description": "Each chosen section: tables whose cells carry a value and its nature, the section's commentary, and (for risks) the risks",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pack",
+          "sections"
+        ],
+        "title": "SectionsOut",
         "type": "object"
       },
       "SensitivityOut": {
@@ -30710,6 +30848,146 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/arrangement": {
+      "put": {
+        "description": "Choose the draft's sections (in order) and comparison columns.",
+        "operationId": "fcp_modules_mgmt_reporting_api_arrange_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Arrange Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/comments": {
+      "post": {
+        "description": "Write a section's commentary (people only; earlier texts are kept).",
+        "operationId": "fcp_modules_mgmt_reporting_api_comment_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Comment Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/finalise": {
       "post": {
         "description": "Make the pack final: it never changes again (409 with the reasons while it cannot).",
@@ -30957,6 +31235,300 @@
           }
         ],
         "summary": "Return Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/risks": {
+      "post": {
+        "operationId": "fcp_modules_mgmt_reporting_api_add_risk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Risk",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/risks/{ref}": {
+      "put": {
+        "operationId": "fcp_modules_mgmt_reporting_api_change_risk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Change Risk",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/risks/{ref}/remove": {
+      "post": {
+        "description": "Take a risk out of the pack (its history is kept).",
+        "operationId": "fcp_modules_mgmt_reporting_api_remove_risk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Risk",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/sections": {
+      "get": {
+        "description": "The pack as its reader sees it, from the frozen snapshot.",
+        "operationId": "fcp_modules_mgmt_reporting_api_pack_sections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "enum": [
+                "en",
+                "el"
+              ],
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Pack Sections",
         "tags": [
           "report packs"
         ]

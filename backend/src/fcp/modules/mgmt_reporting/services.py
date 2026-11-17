@@ -22,13 +22,18 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from fcp.core.errors import ConflictError, NotFoundError, PermissionDeniedError
+from fcp.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationFailedError,
+)
 from fcp.core.ids import uuid7
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
-from . import snapshot
-from .models import ReportPack
+from . import sections, snapshot
+from .models import PackComment, PackRisk, ReportPack
 
 READ, PREPARE, FINALISE = "reports.pack.read", "reports.pack.prepare", "reports.finalise"
 Status = ReportPack.Status
@@ -202,6 +207,7 @@ def new_version(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID) -> Report
                    created_by=ctx.user)  # fmt: skip
     _fill(ctx, p, snapshot.take(ctx, final.legal_entity_id, _period(final)))
     p.save()
+    _copy_notes(ctx, final, p)
     _audit(ctx, "versioned", p, supersedes=str(final.id), snapshot_hash=p.snapshot_hash)
     return p
 
@@ -209,3 +215,105 @@ def new_version(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID) -> Report
 def summary(p: ReportPack) -> dict[str, Any]:
     """The state of each block, for lists and checks."""
     return {k: b["status"] for k, b in p.snapshot.get("blocks", {}).items()}
+
+
+# --- sections, comparison columns, commentary and risks (M8-2) ------------------------------------
+
+MAX_RISKS = 30
+
+
+@transaction.atomic
+def choose(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID, *, sections: list[str],
+           columns: list[str]) -> ReportPack:  # fmt: skip
+    """Which sections appear, in which order, and which comparison columns."""
+    unknown = [x for x in sections if x not in SECTIONS] + [x for x in columns if x not in COLUMNS]
+    if unknown or not sections or len(set(sections)) != len(sections) \
+            or len(set(columns)) != len(columns) or "actual" not in columns:  # fmt: skip
+        raise ValidationFailedError(
+            "Choose at least one section and the actual column, each once"
+            + (f"; unknown: {', '.join(unknown)}." if unknown else "."),
+            field_errors={"sections": [f"Choose from {', '.join(SECTIONS)}."],
+                          "columns": [f"Choose from {', '.join(COLUMNS)}, with actual."]},
+        )  # fmt: skip
+    p = _locked(ctx, entity_id, pack_id, PREPARE, Status.DRAFT)
+    p.sections, p.columns = sections, [c for c in COLUMNS if c in columns]
+    p.save(update_fields=["sections", "columns"])
+    _audit(ctx, "arranged", p, sections=sections, columns=p.columns)
+    return p
+
+
+def comments(p: ReportPack) -> dict[str, str]:
+    """The current comment of each section."""
+    out: dict[str, str] = {}
+    for c in PackComment.objects.filter(pack=p).order_by("section", "seq"):
+        out[c.section] = c.text
+    return {k: v for k, v in out.items() if v}
+
+
+def risks(p: ReportPack) -> list[dict[str, Any]]:
+    """The current state of each risk that has not been removed, in order."""
+    latest: dict[int, PackRisk] = {}
+    for r in PackRisk.objects.filter(pack=p).order_by("ref", "seq"):
+        latest[r.ref] = r
+    return [
+        {
+            "ref": r.ref,
+            "title": r.title,
+            "owner": r.owner,
+            "status": r.status,
+            "mitigation": r.mitigation,
+        }
+        for _, r in sorted(latest.items())
+        if not r.removed
+    ]
+
+
+@transaction.atomic
+def comment(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID, *, section: str,
+            text: str) -> dict[str, str]:  # fmt: skip
+    """Write (or clear, with an empty text) a section's commentary; earlier texts are kept."""
+    if section not in SECTIONS:
+        raise ValidationFailedError(f"Choose a section from {', '.join(SECTIONS)}.",
+                                    field_errors={"section": ["Unknown section."]})  # fmt: skip
+    p = _locked(ctx, entity_id, pack_id, PREPARE, Status.DRAFT)
+    seq = (PackComment.objects.filter(pack=p, section=section).aggregate(s=Max("seq"))["s"]
+           or 0) + 1  # fmt: skip
+    PackComment.objects.create(tenant=ctx.tenant, pack=p, section=section, seq=seq,
+                               text=text.strip(), author=ctx.user)  # fmt: skip
+    _audit(ctx, "commented", p, section=section, seq=seq)
+    return comments(p)
+
+
+@transaction.atomic
+def risk(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID, *, ref: int | None,
+         values: dict[str, Any]) -> list[dict[str, Any]]:  # fmt: skip
+    """Add a risk (``ref`` None) or change or remove one; earlier states are kept."""
+    p = _locked(ctx, entity_id, pack_id, PREPARE, Status.DRAFT)
+    rows = PackRisk.objects.filter(pack=p)
+    if ref is None:
+        ref = (rows.aggregate(r=Max("ref"))["r"] or 0) + 1
+        if len(risks(p)) >= MAX_RISKS:
+            raise ValidationFailedError(f"A pack holds at most {MAX_RISKS} risks.",
+                                        field_errors={"title": ["Too many risks."]})  # fmt: skip
+    elif not rows.filter(ref=ref).exists():
+        raise NotFoundError("Risk not found in this pack.")
+    seq = (rows.filter(ref=ref).aggregate(s=Max("seq"))["s"] or 0) + 1
+    PackRisk.objects.create(tenant=ctx.tenant, pack=p, ref=ref, seq=seq, author=ctx.user,
+                            **values)  # fmt: skip
+    _audit(ctx, "risk_removed" if values.get("removed") else "risk_written", p, ref=ref)
+    return risks(p)
+
+
+def _copy_notes(ctx: WorkspaceContext, source: ReportPack, target: ReportPack) -> None:
+    """A new version starts with the commentary and risks of the version it corrects."""
+    for section, text in comments(source).items():
+        PackComment.objects.create(tenant=ctx.tenant, pack=target, section=section, seq=1,
+                                   text=text, author=ctx.user)  # fmt: skip
+    for r in risks(source):
+        PackRisk.objects.create(tenant=ctx.tenant, pack=target, ref=r["ref"], seq=1,
+                                title=r["title"], owner=r["owner"], status=r["status"],
+                                mitigation=r["mitigation"], author=ctx.user)  # fmt: skip
+
+
+def rendered(p: ReportPack, lang: str = "en") -> list[dict[str, Any]]:
+    return sections.render(p, comments(p), risks(p), lang)

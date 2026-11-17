@@ -40,6 +40,11 @@ versions for corrections.
   `SUPERSEDED` (when its next version is finalised); nothing is deleted. At most one open version
   per family (partial unique index).
 
+- **Sections (M8-2)** are rendered from the snapshot by pure functions (`sections.py`), so the
+  screen and the exports read the same tables; every cell carries its nature. Commentary and risks
+  live in two append-only tables (`mgmt_reporting_comment`, `mgmt_reporting_risk`), written only
+  while the pack is a draft (database trigger), and copied into a new version.
+
 ## Consequences
 - Packs read the same for ever, and two renderings of one snapshot are identical (M8-3 exports
   read the same snapshot).
