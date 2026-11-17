@@ -202,9 +202,9 @@ describe("Report packs (M8-6)", () => {
       within(table).getByRole("row", { name: /Sales of goods/ }),
     ).toHaveTextContent("-1,000.00");
     // Commentary: edited in the draft and saved.
-    const box = within(view).getByLabelText(
+    const box = within(view).getByLabelText<HTMLTextAreaElement>(
       "Commentary: Budget performance",
-    ) as HTMLTextAreaElement;
+    );
     expect(box.value).toBe("Orders moved to April");
     fireEvent.change(box, { target: { value: "Orders moved to May" } });
     fireEvent.click(
