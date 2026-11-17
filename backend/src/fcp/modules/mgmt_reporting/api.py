@@ -277,7 +277,7 @@ CONTENT_TYPES = {
 }
 
 
-class ExportQuery(Schema):
+class PackExportQuery(Schema):
     format: Literal["xlsx", "pdf"]
     lang: Literal["en", "el"] = "en"
 
@@ -285,7 +285,7 @@ class ExportQuery(Schema):
 @router.get(f"{BASE}/{{uuid:pack_id}}/export")
 @requires("reports.export")
 def export_pack(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
-                query: Query[ExportQuery]) -> HttpResponse:  # fmt: skip
+                query: Query[PackExportQuery]) -> HttpResponse:  # fmt: skip
     """The pack as Excel or PDF, from its frozen snapshot: the same figures as on screen, with
     provenance on every page or sheet and DRAFT until final. Audited."""
     ctx = workspace_ctx(request, slug, entity_id)

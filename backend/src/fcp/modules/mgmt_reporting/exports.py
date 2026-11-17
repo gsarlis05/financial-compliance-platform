@@ -58,6 +58,11 @@ _TEXT = {
     },
 }  # fmt: skip
 AMOUNT_FORMAT = "#,##0.00;-#,##0.00;-"
+# PDF layout in points and opacity, not amounts.
+CELL, NOTE = 7.5, 8.5  # fcp-lint: allow-float (PDF font sizes, not amounts)
+RULE, WATERMARK_ALPHA = 0.6, 0.12  # fcp-lint: allow-float (PDF line width and opacity)
+WATERMARK_RED = (0.8, 0.1, 0.1)  # fcp-lint: allow-float (PDF colour, not an amount)
+LABEL_SHARE = 0.3  # fcp-lint: allow-float (share of the page width for row labels)
 
 
 def provenance(pack: Any, lang: Lang) -> str:
@@ -211,11 +216,11 @@ def to_pdf(pack: Any, entity_name: str, rendered: list[dict[str, Any]], lang: La
         "title": ParagraphStyle("title", fontName=bold, fontSize=16, leading=20),
         "heading": ParagraphStyle("heading", fontName=bold, fontSize=12, leading=16),
         "body": ParagraphStyle("body", fontName=regular, fontSize=9, leading=12),
-        "small": ParagraphStyle("small", fontName=regular, fontSize=7.5, leading=10,
+        "small": ParagraphStyle("small", fontName=regular, fontSize=CELL, leading=10,
                                 textColor=colors.HexColor("#555555")),
-        "notice": ParagraphStyle("notice", fontName=bold, fontSize=8.5, leading=11,
+        "notice": ParagraphStyle("notice", fontName=bold, fontSize=NOTE, leading=11,
                                  textColor=colors.HexColor("#7a3e00")),
-        "cell": ParagraphStyle("cell", fontName=regular, fontSize=7.5, leading=9),
+        "cell": ParagraphStyle("cell", fontName=regular, fontSize=CELL, leading=9),
     }  # fmt: skip
     footer = provenance(pack, lang)
     draft = pack.status not in {"FINAL", "SUPERSEDED"}
@@ -229,7 +234,7 @@ def to_pdf(pack: Any, entity_name: str, rendered: list[dict[str, Any]], lang: La
         canvas.drawRightString(width - 14 * mm, 8 * mm, t["page"].format(n=doc.page))
         if draft:
             canvas.setFont(bold, 90)
-            canvas.setFillColor(colors.Color(0.8, 0.1, 0.1, alpha=0.12))
+            canvas.setFillColor(colors.Color(*WATERMARK_RED, alpha=WATERMARK_ALPHA))
             canvas.translate(width / 2, height / 2)
             canvas.rotate(30)
             canvas.drawCentredString(0, 0, t["draft"])
@@ -265,7 +270,7 @@ def to_pdf(pack: Any, entity_name: str, rendered: list[dict[str, Any]], lang: La
 
 
 def _pdf_section(section: dict[str, Any], lang: Lang, t: dict[str, str],
-                 styles: dict[str, Any], width: float) -> list[Any]:  # fmt: skip
+                 styles: dict[str, Any], width: Any) -> list[Any]:  # fmt: skip
     from reportlab.lib.units import mm  # noqa: PLC0415
     from reportlab.platypus import Paragraph, Spacer  # noqa: PLC0415
 
@@ -309,8 +314,9 @@ def pdf_lines(table: dict[str, Any], lang: Lang) -> list[list[str]]:
 
 
 def _pdf_table(table: dict[str, Any], lang: Lang, t: dict[str, str], styles: dict[str, Any],
-               width: float) -> Any:  # fmt: skip
+               width: Any) -> Any:  # fmt: skip
     from reportlab.lib import colors  # noqa: PLC0415
+    from reportlab.lib.units import mm  # noqa: PLC0415
     from reportlab.platypus import Paragraph, Table, TableStyle  # noqa: PLC0415
 
     del t
@@ -323,15 +329,15 @@ def _pdf_table(table: dict[str, Any], lang: Lang, t: dict[str, str], styles: dic
         *([Paragraph(escape(line[0]), styles["cell"]), *line[1:]] for line in lines[2:]),
     ]
     look: list[tuple[Any, ...]] = [
-        ("FONT", (0, 0), (-1, 0), bold, 7.5), ("FONT", (0, 1), (-1, -1), regular, 7.5),
+        ("FONT", (0, 0), (-1, 0), bold, CELL), ("FONT", (0, 1), (-1, -1), regular, CELL),
         ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#555555")),
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LINEBELOW", (0, 1), (-1, 1), 0.6, colors.black),
+        ("LINEBELOW", (0, 1), (-1, 1), RULE, colors.black),
     ]  # fmt: skip
     for number, row in enumerate(table["rows"], start=2):
         if row.get("kind") in ("heading", "subtotal", "total"):
-            look.append(("FONT", (1, number), (-1, number), bold, 7.5))
-    first = min(70 * 2.83465, width * 0.3)
+            look.append(("FONT", (1, number), (-1, number), bold, CELL))
+    first = min(70 * mm, width * LABEL_SHARE)
     rest = (width - first) / max(count - 1, 1)
     grid = Table(data, colWidths=[first, *([rest] * (count - 1))], repeatRows=2)
     grid.setStyle(TableStyle(look))

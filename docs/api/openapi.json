@@ -6349,8 +6349,28 @@
       },
       "ExportQuery": {
         "properties": {
+          "comparative": {
+            "default": "prior_year",
+            "enum": [
+              "prior_year",
+              "none"
+            ],
+            "title": "Comparative",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
           "format": {
             "enum": [
+              "csv",
               "xlsx",
               "pdf"
             ],
@@ -6368,6 +6388,8 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
           "format"
         ],
         "title": "ExportQuery",
@@ -10726,6 +10748,32 @@
           "blockers"
         ],
         "title": "PackDetailOut",
+        "type": "object"
+      },
+      "PackExportQuery": {
+        "properties": {
+          "format": {
+            "enum": [
+              "xlsx",
+              "pdf"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "lang": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Lang",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "title": "PackExportQuery",
         "type": "object"
       },
       "PackIn": {
