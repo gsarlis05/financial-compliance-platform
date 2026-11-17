@@ -70,8 +70,9 @@ def test_excel_equals_the_api_cell_by_cell(g: dict[str, Any]) -> None:
         rows = [list(r) for r in sheet.iter_rows(values_only=True)]
         assert rows[0][0] == section["title"]
         assert rows[1][0] == provenance
+        at = 1
         for table in section["tables"]:
-            at = next(i for i, r in enumerate(rows) if r[0] == table["caption"])
+            at = next(i for i in range(at + 1, len(rows)) if rows[i][0] == table["caption"])
             assert list(rows[at + 1][: len(table["columns"])]) == [c["label"] for c in
                                                                   table["columns"]]  # fmt: skip
             assert rows[at + 2][0] == "Nature"
@@ -95,6 +96,9 @@ def test_pdf_lines_equal_the_api_and_say_draft(g: dict[str, Any], make_user: Mak
                                                api_client: Make) -> None:  # fmt: skip
     budget(g)
     pack = generate(g)
+    url = f"{g['base']}/report-packs/{pack['id']}"
+    g["client"].post_json(f"{url}/risks", {"title": "Rates rise", "mitigation": "Fix the rate"})
+    g["client"].post_json(f"{url}/comments", {"section": "commentary", "text": "Line one\nTwo"})
     shown = sections(g, pack["id"])
     pdf = export(g, pack["id"], "pdf")
     assert (pdf.status_code, pdf["Content-Type"]) == (200, "application/pdf")
@@ -109,13 +113,14 @@ def test_pdf_lines_equal_the_api_and_say_draft(g: dict[str, Any], make_user: Mak
                 for text, cell in zip(line[1:], row["cells"], strict=True):
                     if cell["value"] and text and text[0].isdigit() | text.startswith("-"):
                         assert Decimal(text.replace(",", "")) == Decimal(cell["value"])
-    sales = next(r for r in pdf_lines(next(s for s in shown if s["key"] == "budget")["tables"][0],
-                                      "en")[2:] if r[0] == "Sales of goods")  # fmt: skip
+    month = next(s for s in shown if s["key"] == "budget")["tables"][0]
+    where = [r["key"] for r in month["rows"]].index("REV.SALES")
+    sales = pdf_lines(month, "en")[2 + where]
     assert sales[1:6] == ["0.00", "1,000.00", "1,000.00", "0.00", "-1,000.00"]
     greek = pdf_lines(next(s for s in sections(g, pack["id"], "el")
                            if s["key"] == "budget")["tables"][0], "el")  # fmt: skip
     assert greek[1][0] == "Φύση"
-    assert "1.000,00" in next(r for r in greek[2:] if r[1:2] == ["0,00"] and "1.000,00" in r)
+    assert greek[2 + where][1:6] == ["0,00", "1.000,00", "1.000,00", "0,00", "-1.000,00"]
     assert export(g, pack["id"], "pdf", "el").content.startswith(b"%PDF")
 
     # Final: the file name drops "draft"; a read-only user cannot export; every export audited.
