@@ -9803,6 +9803,18 @@
         "title": "NetWorthPointOut",
         "type": "object"
       },
+      "NoteIn": {
+        "properties": {
+          "note": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "NoteIn",
+        "type": "object"
+      },
       "ObligationIn": {
         "properties": {
           "adjust": {
@@ -10498,6 +10510,407 @@
           "type"
         ],
         "title": "OverrideIn",
+        "type": "object"
+      },
+      "PackDetailOut": {
+        "properties": {
+          "blockers": {
+            "description": "In review: why it cannot be finalised yet",
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "blocks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Each block's state: ok, empty or denied",
+            "title": "Blocks",
+            "type": "object"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "family_id": {
+            "format": "uuid",
+            "title": "Family Id",
+            "type": "string"
+          },
+          "finalised_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised At"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_kind": {
+            "title": "Period Kind",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "review_note": {
+            "title": "Review Note",
+            "type": "string"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "description": "Every frozen figure, with its nature",
+            "title": "Snapshot",
+            "type": "object"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "watermark": {
+            "description": "The last posting included in the pack's figures",
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "family_id",
+          "version",
+          "supersedes_id",
+          "title",
+          "period_kind",
+          "period_start",
+          "period_end",
+          "status",
+          "sections",
+          "columns",
+          "snapshot_hash",
+          "watermark",
+          "generated_at",
+          "created_by_id",
+          "created_at",
+          "submitted_at",
+          "reviewed_by_id",
+          "review_note",
+          "finalised_at",
+          "superseded_at",
+          "blocks",
+          "snapshot",
+          "blockers"
+        ],
+        "title": "PackDetailOut",
+        "type": "object"
+      },
+      "PackIn": {
+        "properties": {
+          "month": {
+            "description": "Any day of the (last) month the pack reports on",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "period_kind": {
+            "description": "A month, or the fiscal quarter or fiscal year containing the month",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ],
+            "title": "Period Kind",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "description": "Empty: a title from the period",
+            "maxLength": 160,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_kind",
+          "month"
+        ],
+        "title": "PackIn",
+        "type": "object"
+      },
+      "PackOut": {
+        "properties": {
+          "blocks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Each block's state: ok, empty or denied",
+            "title": "Blocks",
+            "type": "object"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "family_id": {
+            "format": "uuid",
+            "title": "Family Id",
+            "type": "string"
+          },
+          "finalised_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised At"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_kind": {
+            "title": "Period Kind",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "review_note": {
+            "title": "Review Note",
+            "type": "string"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "watermark": {
+            "description": "The last posting included in the pack's figures",
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "family_id",
+          "version",
+          "supersedes_id",
+          "title",
+          "period_kind",
+          "period_start",
+          "period_end",
+          "status",
+          "sections",
+          "columns",
+          "snapshot_hash",
+          "watermark",
+          "generated_at",
+          "created_by_id",
+          "created_at",
+          "submitted_at",
+          "reviewed_by_id",
+          "review_note",
+          "finalised_at",
+          "superseded_at",
+          "blocks"
+        ],
+        "title": "PackOut",
         "type": "object"
       },
       "PeriodIn": {
@@ -12304,6 +12717,22 @@
           "nm_reason"
         ],
         "title": "ResultOut",
+        "type": "object"
+      },
+      "ReturnIn": {
+        "properties": {
+          "note": {
+            "description": "What the preparer should change",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ReturnIn",
         "type": "object"
       },
       "ReverseIn": {
@@ -14770,6 +15199,21 @@
           "template"
         ],
         "title": "TemplateIn",
+        "type": "object"
+      },
+      "TitleIn": {
+        "properties": {
+          "title": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "TitleIn",
         "type": "object"
       },
       "TornadoBarOut": {
@@ -30098,6 +30542,548 @@
         "summary": "Export Projection",
         "tags": [
           "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs": {
+      "get": {
+        "description": "Every pack of the entity, latest period first, newest version first.",
+        "operationId": "fcp_modules_mgmt_reporting_api_list_packs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Packs",
+        "tags": [
+          "report packs"
+        ]
+      },
+      "post": {
+        "description": "Generate a pack: a draft whose figures are frozen now, under your permissions.",
+        "operationId": "fcp_modules_mgmt_reporting_api_create_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}": {
+      "get": {
+        "operationId": "fcp_modules_mgmt_reporting_api_get_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/finalise": {
+      "post": {
+        "description": "Make the pack final: it never changes again (409 with the reasons while it cannot).",
+        "operationId": "fcp_modules_mgmt_reporting_api_finalise_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Finalise Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/new-version": {
+      "post": {
+        "description": "Correct a final pack: a new draft version with figures taken now.",
+        "operationId": "fcp_modules_mgmt_reporting_api_new_pack_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "New Pack Version",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/regenerate": {
+      "post": {
+        "description": "Take the draft's figures again, now.",
+        "operationId": "fcp_modules_mgmt_reporting_api_regenerate_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Regenerate Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/return": {
+      "post": {
+        "description": "Send the pack back to its preparer as a draft, saying what to change.",
+        "operationId": "fcp_modules_mgmt_reporting_api_return_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Return Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/submit": {
+      "post": {
+        "description": "Send the draft for review; it no longer changes unless returned.",
+        "operationId": "fcp_modules_mgmt_reporting_api_submit_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Submit Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/title": {
+      "put": {
+        "operationId": "fcp_modules_mgmt_reporting_api_retitle_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Retitle Pack",
+        "tags": [
+          "report packs"
         ]
       }
     },
