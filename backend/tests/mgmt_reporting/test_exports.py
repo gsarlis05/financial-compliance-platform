@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 
 from fcp.core.db.rls import set_context
 from fcp.modules.audit_log.models import AuditEvent
-from fcp.modules.mgmt_reporting.exports import _amount, pdf_lines
+from fcp.modules.mgmt_reporting.exports import _amount, cell_text, pdf_lines
 
 from ..goals.test_goals import budget, g
 from ..kpi.test_kpis import k
@@ -109,8 +109,12 @@ def test_pdf_lines_equal_the_api_and_say_draft(g: dict[str, Any], make_user: Mak
             assert lines[0] == [c["label"] for c in table["columns"]]
             for line, row in zip(lines[2:], table["rows"], strict=True):
                 assert line[0] == row["label"]
-                assert line[1:] == [_amount(c["value"], "en") for c in row["cells"]]
+                assert line[1:] == [
+                    cell_text(c["value"], row.get("display"), "en") for c in row["cells"]
+                ]
                 for text, cell in zip(line[1:], row["cells"], strict=True):
+                    if row.get("display") == "percent":
+                        continue
                     if cell["value"] and text and text[0].isdigit() | text.startswith("-"):
                         assert Decimal(text.replace(",", "")) == Decimal(cell["value"])
     month = next(s for s in shown if s["key"] == "budget")["tables"][0]
@@ -138,3 +142,11 @@ def test_pdf_lines_equal_the_api_and_say_draft(g: dict[str, Any], make_user: Mak
     events = AuditEvent.objects.filter(action="reports.exported", subject_id=pack["id"])
     assert sorted(e.changes["format"] for e in events) == ["pdf", "pdf", "pdf"]
     assert {e.changes["status"] for e in events} == {"DRAFT", "FINAL"}
+
+
+def test_pdf_shows_percentages_and_goal_words() -> None:
+    assert cell_text("0.2", "percent", "en") == "20.00%"
+    assert cell_text("0.7712", "percent", "el") == "77,12%"
+    assert cell_text("132.2775269", "days", "en") == "132.28"
+    assert cell_text(None, "percent", "en") == ""
+    assert _amount("On track", "en") == "On track"

@@ -1,6 +1,7 @@
 // Management report packs (M8-6 for M8-1 to M8-3): generate a pack whose figures are frozen,
 // arrange its sections and comparison columns, write commentary and risks, send it for review,
 // finalise it (never your own), start a new version, and export it to Excel or PDF.
+import Decimal from "decimal.js";
 import { type SyntheticEvent, useState } from "react";
 import { useScope } from "../api/hooks";
 import {
@@ -24,9 +25,19 @@ import { formatAmount } from "../money";
 
 const NUMBER = /^-?\d+(\.\d+)?$/;
 
-function cellText(value: string | null, locale: string): string {
+/** A figure as the reader sees it: two decimals, and a percentage where the row holds ratios
+ * shown as percentages (KPIs and goals). Text is shown as it is. */
+export function cellText(
+  value: string | null,
+  locale: string,
+  display?: string,
+): string {
   if (value === null) return "—";
-  return NUMBER.test(value) ? formatAmount(value, locale) : value;
+  if (!NUMBER.test(value)) return value;
+  const n = new Decimal(value);
+  return display === "percent"
+    ? `${formatAmount(n.times(100).toFixed(2), locale)}%`
+    : formatAmount(n.toFixed(2), locale);
 }
 
 function natureOf(table: Table, column: number): string | null {
@@ -77,7 +88,7 @@ function PackTable({ table }: { table: Table }) {
               <th scope="row">{el ? r.label_el : r.label}</th>
               {r.cells.map((c, i) => (
                 <td key={values[i]?.key ?? i} className="num">
-                  {cellText(c.value, locale)}
+                  {cellText(c.value, locale, r.display)}
                 </td>
               ))}
             </tr>

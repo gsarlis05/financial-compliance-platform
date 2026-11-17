@@ -12,7 +12,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { I18nProvider } from "./i18n/I18n";
 import { AlertsPage } from "./pages/Alerts";
 import { DashboardPage } from "./pages/Dashboard";
-import { ReportPacksPage } from "./pages/ReportPacks";
+import { ReportPacksPage, cellText } from "./pages/ReportPacks";
 
 function respond(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -161,6 +161,13 @@ const sections = [
 ];
 
 describe("Report packs (M8-6)", () => {
+  it("formats figures: two decimals, percentages for ratio rows, text as it is", () => {
+    expect(cellText("132.2775269", "en", "days")).toBe("132.28");
+    expect(cellText("0.2", "en", "percent")).toBe("20.00%");
+    expect(cellText("On track", "en")).toBe("On track");
+    expect(cellText(null, "en")).toBe("—");
+  });
+
   it("generates a pack, shows natures, edits commentary and risks, and sends it for review", async () => {
     let current = { ...pack };
     const sent = stub(

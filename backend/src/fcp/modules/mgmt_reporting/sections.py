@@ -254,7 +254,7 @@ def _build(key: str, blocks: dict[str, Any], columns: list[str], period_kind: st
         "budget": lambda: _budget_section(blocks, columns, period_kind, lang),
         "kpis": lambda: _kpis_section(blocks),
         "forecast": lambda: _forecast(blocks["projection"]),
-        "goals": lambda: _goals(blocks["goals"]),
+        "goals": lambda: _goals(blocks["goals"], lang),
     }
     build = builders.get(key)
     return build() if build else _notes_section(key, risks)
@@ -303,7 +303,19 @@ def _forecast(block: dict[str, Any]) -> dict[str, Any]:
     return s
 
 
-def _goals(block: dict[str, Any]) -> dict[str, Any]:
+GOAL_STATUS = {"ON_TRACK": ("On track", "Εντός πορείας"), "AT_RISK": ("At risk", "Σε κίνδυνο"),
+               "OFF_TRACK": ("Off track", "Εκτός πορείας"),
+               "UNDETERMINED": ("Undetermined", "Απροσδιόριστο")}  # fmt: skip
+
+
+def _status_word(status: str | None, lang: str) -> str | None:
+    if status is None:
+        return None
+    words = GOAL_STATUS.get(status)
+    return status if words is None else words[1 if lang == "el" else 0]
+
+
+def _goals(block: dict[str, Any], lang: str = "en") -> dict[str, Any]:
     s = _section("goals", block)
     if block["status"] != "ok":
         return s
@@ -311,7 +323,7 @@ def _goals(block: dict[str, Any]) -> dict[str, Any]:
     rows = [{"key": x["id"], "label": x["name"], "label_el": x["name"], "kind": "line",
              "display": x["display"],
              "cells": [_cell(x["target"], None), _cell(x["projected"], "FORECAST"),
-                       _cell(x["status"], None), _cell(x["as_of"], None)]}
+                       _cell(_status_word(x["status"], lang), None), _cell(x["as_of"], None)]}
             for x in block["data"]["goals"]]  # fmt: skip
     s["tables"] = [_table(TITLES["goals"], cols, rows)]
     return s
