@@ -101,3 +101,22 @@ class DashboardLayout(TenantOwned):
                 nulls_distinct=False,
             ),
         ]  # fmt: skip
+
+
+class SavedView(TenantOwned):
+    """A user's named dashboard view (M8-4): a period preset and a comparison. Personal
+    convenience: only its owner sees, uses or deletes it."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="+")
+    name = models.CharField(max_length=60)
+    preset = models.CharField(max_length=5)  # MONTH | QTD | YTD | LTM
+    comparison = models.CharField(max_length=10)  # BUDGET | PRIOR_YEAR
+
+    class Meta:
+        db_table = "dashboards_saved_view"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "user", "name"], name="dashboards_saved_view_name"
+            ),
+        ]

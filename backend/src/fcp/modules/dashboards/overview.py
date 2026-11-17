@@ -32,13 +32,15 @@ from fcp.modules.cashflow.api import forecast_freshness, latest_cash_forecast
 from fcp.modules.goals.api import goal_views
 from fcp.modules.kpi.api import latest_kpi_set
 from fcp.modules.reporting.api import fiscal_year_start
+from fcp.modules.scenarios.api import scenario_summary
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
 from . import alerts as alert_service
 
-PRESETS = ("MONTH", "QTD", "YTD")
+PRESETS = ("MONTH", "QTD", "YTD", "LTM")
 COMPARISONS = ("BUDGET", "PRIOR_YEAR")
-WIDGETS = ("kpis", "cash", "budget", "top_variances", "goals", "alerts")
+BUILT_IN_WIDGETS = ("kpis", "cash", "budget", "top_variances", "goals", "alerts")
+WIDGETS = (*BUILT_IN_WIDGETS, "waterfall", "scenario")  # M8-4
 DEFAULT_KPIS = ("GROSS_MARGIN", "EBITDA_MARGIN", "CURRENT_RATIO", "DSO", "CASH_RUNWAY",
                 "REVENUE_GROWTH")  # fmt: skip
 TOP = 5
@@ -68,6 +70,8 @@ def period(ctx: WorkspaceContext, entity_id: UUID, preset: str, month: date,
     start = month_start(start)
     if preset == "MONTH":
         first = month
+    elif preset == "LTM":
+        first = add_months(month, -11)  # the last twelve months, whatever the fiscal year
     elif preset == "QTD":
         elapsed = (month.year - start.year) * 12 + month.month - start.month
         first = add_months(start, elapsed - elapsed % 3)
@@ -156,14 +160,48 @@ def _current_budget(ctx: WorkspaceContext, entity_id: UUID, month: date) -> Any:
     raise NotFoundError("No approved annual budget covers this month.")
 
 
-def _variance(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
+def _budget_report(ctx: WorkspaceContext, entity_id: UUID, p: Period,
+                   comparison: str) -> tuple[Any, Any]:  # fmt: skip
     if not ctx.can("budget.read", entity_id):
         raise PermissionDeniedError("You do not have permission to see budgets.")
+    if p.preset == "LTM":
+        raise NotFoundError("Budgets follow the fiscal year: choose the month, quarter to date or "
+                            "year to date to compare with the budget.")  # fmt: skip
     view = _current_budget(ctx, entity_id, p.month)
+    return view, compute_variance(ctx, entity_id, view.current.id, month=p.month, view=p.preset,
+                                  comparison=comparison)  # fmt: skip
+
+
+def _waterfall(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
+    """From the budgeted result to the actual result, one step per budget line (M8-4): income
+    counts up, costs count down, so the steps add up exactly to the difference."""
+    view, found = _budget_report(ctx, entity_id, p, VarianceComparison.ACTUAL_VS_BUDGET)
+    kept = [r for r in found.rows if r.line_id is not None]
+
+    def sign(r: Any) -> Decimal:
+        return Decimal(1) if r.direction == "HIGHER_BETTER" else Decimal(-1)
+
+    start = sum((sign(r) * r.comparison for r in kept), Decimal(0))
+    end = sum((sign(r) * r.subject for r in kept), Decimal(0))
+    steps = [{"line": r.taxonomy_code or str(r.account_id), "value": _money(sign(r) * r.variance),
+              "favourable": r.favourable} for r in kept if r.variance]  # fmt: skip
+    return {
+        "budget_name": view.budget.name, "version_id": str(view.current.id),
+        "start": _money(start), "start_nature": "BUDGET", "steps": steps,
+        "end": _money(end), "end_nature": kept[0].subject_nature if kept else "ACTUAL",
+    }  # fmt: skip
+
+
+def _scenario(ctx: WorkspaceContext, entity_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
+    if not ctx.can("planning.run", entity_id):
+        raise PermissionDeniedError("You do not have permission to run scenarios.")
+    return scenario_summary(ctx, entity_id, UUID(str(options["scenario_id"])))
+
+
+def _variance(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
     comparison = (VarianceComparison.ACTUAL_VS_BUDGET if p.comparison == "BUDGET"
                   else VarianceComparison.ACTUAL_VS_PRIOR_YEAR)  # fmt: skip
-    found = compute_variance(ctx, entity_id, view.current.id, month=p.month, view=p.preset,
-                             comparison=comparison)  # fmt: skip
+    view, found = _budget_report(ctx, entity_id, p, comparison)
     kept = [r for r in found.rows if r.line_id is not None]
     rows = [{
         "line": r.taxonomy_code or str(r.account_id), "dimension_value_id":
@@ -207,21 +245,33 @@ def _alerts(ctx: WorkspaceContext, entity_id: UUID) -> dict[str, Any]:
                        for a in latest]}  # fmt: skip
 
 
-def overview(ctx: WorkspaceContext, entity_id: UUID, p: Period,
-             kpi_keys: list[str]) -> dict[str, Widget]:  # fmt: skip
+def overview(ctx: WorkspaceContext, entity_id: UUID, p: Period, kpi_keys: list[str],
+             widgets: list[dict[str, Any]] | None = None) -> dict[str, Widget]:  # fmt: skip
+    """The widgets of a layout (the built-in six when none is given), each built only when
+    shown."""
     entity = get_entity(ctx, entity_id, "planning.read")
-    variance = _guard(lambda: _variance(ctx, entity.id, p), "No budget")
-    top = Widget(
-        variance.status,
-        variance.reason,
-        {k: variance.data[k] for k in ("budget_name", "top")} if variance.data else {},
-    )
-    return {
-        "kpis": _guard(lambda: _kpis(ctx, entity.id, p, kpi_keys),
-                       "No KPI set for this period yet."),
-        "cash": _guard(lambda: _cash(ctx, entity.id), "No cash forecast yet."),
-        "budget": variance,
-        "top_variances": top,
-        "goals": _guard(lambda: _goals(ctx, entity.id), "No goals yet."),
-        "alerts": _guard(lambda: _alerts(ctx, entity.id), "No alerts."),
-    }  # fmt: skip
+    wanted = widgets if widgets is not None else [{"type": w} for w in BUILT_IN_WIDGETS]
+    kinds = {w["type"] for w in wanted}
+    out: dict[str, Widget] = {}
+    if kinds & {"budget", "top_variances"}:
+        variance = _guard(lambda: _variance(ctx, entity.id, p), "No budget")
+        out["budget"] = variance
+        out["top_variances"] = Widget(
+            variance.status,
+            variance.reason,
+            {k: variance.data[k] for k in ("budget_name", "top")} if variance.data else {},
+        )
+    builders: dict[str, tuple[Callable[[], dict[str, Any]], str]] = {
+        "kpis": (lambda: _kpis(ctx, entity.id, p, kpi_keys), "No KPI set for this period yet."),
+        "cash": (lambda: _cash(ctx, entity.id), "No cash forecast yet."),
+        "goals": (lambda: _goals(ctx, entity.id), "No goals yet."),
+        "alerts": (lambda: _alerts(ctx, entity.id), "No alerts."),
+        "waterfall": (lambda: _waterfall(ctx, entity.id, p), "No budget"),
+    }
+    for kind, (build, empty) in builders.items():
+        if kind in kinds:
+            out[kind] = _guard(build, empty)
+    chosen = next((w for w in wanted if w["type"] == "scenario"), None)
+    if chosen is not None:
+        out["scenario"] = _guard(lambda: _scenario(ctx, entity.id, chosen), "No scenario.")
+    return out

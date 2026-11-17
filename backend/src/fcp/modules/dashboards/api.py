@@ -117,7 +117,7 @@ def acknowledge(request: HttpRequest, slug: str, entity_id: UUID, alert_id: UUID
 
 
 class DashboardQuery(Schema):
-    preset: Literal["MONTH", "QTD", "YTD"] = "YTD"
+    preset: Literal["MONTH", "QTD", "YTD", "LTM"] = "YTD"
     month: date = Field(description="Any day of the month the period ends in")
     comparison: Literal["BUDGET", "PRIOR_YEAR"] = "BUDGET"
 
@@ -158,7 +158,7 @@ def dashboard(request: HttpRequest, slug: str, entity_id: UUID,
     widgets, source = layouts.layout(ctx, entity_id)
     p = _period(ctx, entity_id, q)
     keys: list[str] = next((w.get("kpis", []) for w in widgets if w["type"] == "kpis"), [])
-    built = overview.overview(ctx, entity_id, p, list(keys))
+    built = overview.overview(ctx, entity_id, p, list(keys), widgets)
     return DashboardOut(
         period=DashboardPeriodOut(**p.__dict__),
         layout_source=source,
@@ -232,6 +232,46 @@ def save_default_layout(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     saved = layouts.save(ctx, entity_id, payload.widgets, default=True)
     return LayoutOut(widgets=saved, source="WORKSPACE")
+
+
+# --- saved views (M8-4) ----------------------------------------------------------------------
+
+
+class ViewIn(Schema):
+    name: str = Field(min_length=1, max_length=60)
+    preset: Literal["MONTH", "QTD", "YTD", "LTM"]
+    comparison: Literal["BUDGET", "PRIOR_YEAR"]
+
+
+class ViewOut(ViewIn):
+    id: UUID
+
+
+@router.get(f"{BASE}/dashboard-views", response=list[ViewOut])
+@requires("planning.read")
+def list_views(request: HttpRequest, slug: str, entity_id: UUID) -> list[ViewOut]:
+    """Your own saved views (a period preset and a comparison each), by name."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [ViewOut(id=v.id, name=v.name, preset=v.preset, comparison=v.comparison)  # type: ignore[arg-type]
+            for v in layouts.views(ctx, entity_id)]  # fmt: skip
+
+
+@router.put(f"{BASE}/dashboard-views", response=ViewOut)
+@requires("planning.read")
+def save_view(request: HttpRequest, slug: str, entity_id: UUID, payload: ViewIn) -> ViewOut:
+    """Save a view, or replace the one with the same name."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    v = layouts.save_view(ctx, entity_id, name=payload.name, preset=payload.preset,
+                          comparison=payload.comparison)  # fmt: skip
+    return ViewOut(id=v.id, name=v.name, preset=payload.preset, comparison=payload.comparison)
+
+
+@router.delete(f"{BASE}/dashboard-views/{{uuid:view_id}}", response={204: None})
+@requires("planning.read")
+def delete_view(request: HttpRequest, slug: str, entity_id: UUID, view_id: UUID) -> Any:
+    ctx = workspace_ctx(request, slug, entity_id)
+    layouts.delete_view(ctx, entity_id, view_id)
+    return 204, None
 
 
 # --- firm portfolio (M4-9) --------------------------------------------------------------------
