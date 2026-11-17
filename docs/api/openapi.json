@@ -4603,7 +4603,8 @@
             "enum": [
               "MONTH",
               "QTD",
-              "YTD"
+              "YTD",
+              "LTM"
             ],
             "title": "Preset",
             "type": "string"
@@ -16291,6 +16292,82 @@
         "title": "VerifyOut",
         "type": "object"
       },
+      "ViewIn": {
+        "properties": {
+          "comparison": {
+            "enum": [
+              "BUDGET",
+              "PRIOR_YEAR"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "preset": {
+            "enum": [
+              "MONTH",
+              "QTD",
+              "YTD",
+              "LTM"
+            ],
+            "title": "Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "preset",
+          "comparison"
+        ],
+        "title": "ViewIn",
+        "type": "object"
+      },
+      "ViewOut": {
+        "properties": {
+          "comparison": {
+            "enum": [
+              "BUDGET",
+              "PRIOR_YEAR"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "preset": {
+            "enum": [
+              "MONTH",
+              "QTD",
+              "YTD",
+              "LTM"
+            ],
+            "title": "Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "preset",
+          "comparison",
+          "id"
+        ],
+        "title": "ViewOut",
+        "type": "object"
+      },
       "WeekOut": {
         "properties": {
           "closing": {
@@ -23762,7 +23839,8 @@
               "enum": [
                 "MONTH",
                 "QTD",
-                "YTD"
+                "YTD",
+                "LTM"
               ],
               "title": "Preset",
               "type": "string"
@@ -24019,6 +24097,164 @@
           }
         ],
         "summary": "Save Default Layout",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard-views": {
+      "get": {
+        "description": "Your own saved views (a period preset and a comparison each), by name.",
+        "operationId": "fcp_modules_dashboards_api_list_views",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ViewOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Views",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "description": "Save a view, or replace the one with the same name.",
+        "operationId": "fcp_modules_dashboards_api_save_view",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Save View",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/dashboard-views/{view_id}": {
+      "delete": {
+        "operationId": "fcp_modules_dashboards_api_delete_view",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "view_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "View Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Delete View",
         "tags": [
           "dashboards"
         ]

@@ -23,7 +23,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from fcp.core.errors import ConflictError, ValidationFailedError
+from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
 from fcp.modules.metrics.api import (
     CalcRun,
     Nature,
@@ -319,3 +319,24 @@ def promote(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID, *,
     )  # fmt: skip
     services.audit_scenario(ctx, "promoted", s, assumption_set_id=str(made.id))
     return made
+
+
+def summary(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID) -> dict[str, Any]:
+    """A shared scenario against its base in a few figures (for the dashboard, M8-4): the total
+    change of each headline over the horizon and the lowest cash of each. Hypothetical figures;
+    computed now, not stored. Drafts are private to their author, so only shared ones qualify."""
+    s = services.get(ctx, entity_id, scenario_id)
+    if s.status != Scenario.Status.SHARED:
+        raise NotFoundError("Choose a shared scenario for this widget.")
+    c = compare(ctx, entity_id, scenario_id)
+    total = c.effects[-1].changes
+    return {
+        "scenario_id": str(s.id), "name": s.name, "base_name": c.base.name,
+        "base_version": c.base.version, "valid": c.valid, "nature": "HYPOTHETICAL",
+        "changes": {k: f"{v:.2f}" for k, v in total.items()},
+        "lowest_cash": {k: f"{v.lowest_cash:.2f}" for k, v in c.liquidity.items()},
+        "first_negative_month": {k: v.first_negative_month.isoformat()
+                                 if v.first_negative_month else None
+                                 for k, v in c.liquidity.items()},
+        "engine_status": "PENDING_PROFESSIONAL_REVIEW",
+    }  # fmt: skip
