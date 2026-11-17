@@ -7,13 +7,15 @@ from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from django.http import HttpRequest
-from ninja import Field, Router, Schema, Status
+from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
+from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
-from fcp.modules.tenancy.api import workspace_ctx
+from fcp.modules.audit_log.api import record as audit
+from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
-from . import services
+from . import exports, services
 from .models import ReportPack
 
 __all__ = ["router"]
@@ -265,3 +267,39 @@ def pack_sections(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUI
     ctx = workspace_ctx(request, slug, entity_id)
     p = services.get(ctx, entity_id, pack_id)
     return SectionsOut(pack=PackOut(**_out(p)), sections=services.rendered(p, lang))
+
+
+# --- exports (M8-3) -------------------------------------------------------------------------------
+
+CONTENT_TYPES = {
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "pdf": "application/pdf",
+}
+
+
+class ExportQuery(Schema):
+    format: Literal["xlsx", "pdf"]
+    lang: Literal["en", "el"] = "en"
+
+
+@router.get(f"{BASE}/{{uuid:pack_id}}/export")
+@requires("reports.export")
+def export_pack(request: HttpRequest, slug: str, entity_id: UUID, pack_id: UUID,
+                query: Query[ExportQuery]) -> HttpResponse:  # fmt: skip
+    """The pack as Excel or PDF, from its frozen snapshot: the same figures as on screen, with
+    provenance on every page or sheet and DRAFT until final. Audited."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = services.get(ctx, entity_id, pack_id)
+    entity = get_entity(ctx, entity_id, "reports.export")
+    rendered = services.rendered(p, query.lang)
+    write = exports.to_xlsx if query.format == "xlsx" else exports.to_pdf
+    content = write(p, entity.legal_name, rendered, query.lang, generated=timezone.now())
+    filename = (f"report-pack-{p.period_end:%Y-%m}-v{p.version}"
+                f"{'' if p.status == 'FINAL' else '-draft'}.{query.format}")  # fmt: skip
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="reports.exported",
+          subject_type="report_pack", subject_id=p.id, entity_id=entity_id,
+          changes={"format": query.format, "filename": filename, "status": p.status,
+                   "snapshot_hash": p.snapshot_hash})  # fmt: skip
+    response = HttpResponse(content, content_type=CONTENT_TYPES[query.format])
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
