@@ -5,8 +5,8 @@ board: statements, budget performance, KPIs, cash, the forecast and goals, with 
 **Its figures are frozen when you generate it**, so it reads the same in a year as on the day it
 was made.
 
-The sections, commentary, risks and the Excel and PDF exports follow in later releases (M8-2 to
-M8-6); everything below is available through the API.
+The Excel and PDF exports and the screens follow in later releases (M8-3 to M8-6); everything below
+is available through the API.
 
 ## Generating a pack
 Choose a period (a month, or the fiscal quarter or fiscal year that contains a month) and generate.
@@ -21,6 +21,30 @@ The pack takes, at that moment and **with your own permissions**:
 
 A part you may not see is left out and says so; a part without data says why (for example "No KPI
 set for this period yet"). The pack records the last posting it includes and the runs it used.
+
+## Sections and comparison columns
+A pack has up to ten sections, in the order you choose: executive overview, revenue and
+profitability, cash flow (with the 13-week forecast), financial position and working capital (with
+the working-capital KPIs), budget performance, KPI scorecard, forecast (the published projection,
+marked pending professional review), risks, goal progress and commentary.
+
+**Comparison columns:** actual is always shown. Add any of budget (the current approved budget),
+original budget, prior year and variance (the variance, its percentage, whether it is favourable,
+and its explanation). "Forecast" adds the full-year outlook to budget performance: actual months
+plus the budget for the rest of the year.
+
+Budget performance has a table for the pack's period and for each longer view after it (a March
+pack: the month, the quarter to date and the year to date, and the full-year outlook). For a cost,
+spending below budget is favourable.
+
+Every figure says what it is: actual, budget, blended (actual plus budget) or forecast.
+
+## Commentary and risks
+Write a comment for any section, and keep a short list of risks with an owner, a status (open,
+monitoring or closed) and the mitigation. They are written by people; nothing is generated.
+Earlier texts are kept. Commentary and risks change only while the pack is a draft, so a pack in
+review or final keeps exactly what was reviewed. A new version starts with the commentary and
+risks of the version it corrects.
 
 ## Review and sign-off
 1. The preparer **submits** the draft. Until then it can be **regenerated** (the figures are taken
