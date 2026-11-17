@@ -809,12 +809,21 @@ ul.alerts .card a {
 }
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 .dash-widget {
   padding: 1rem;
   min-width: 0;
+  grid-column: 1 / -1; /* full width unless chosen half (M8-4) */
+}
+.dash-widget.dash-half {
+  grid-column: auto;
+}
+@media (max-width: 52rem) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .dash-widget a,
 ul.alerts .card a {

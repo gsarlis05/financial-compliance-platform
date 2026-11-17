@@ -36,6 +36,7 @@ import {
   NewEntryPage,
 } from "./pages/Entries";
 import { PeriodsPage } from "./pages/Periods";
+import { ReportPacksPage } from "./pages/ReportPacks";
 import { StatementsPage } from "./pages/Statements";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
 import { WorkspaceHome, WorkspacesPage } from "./pages/Workspaces";
@@ -134,6 +135,10 @@ const router = createBrowserRouter([
         element: <TrialBalancePage />,
       },
       { path: "w/:slug/e/:entityId/statements", element: <StatementsPage /> },
+      {
+        path: "w/:slug/e/:entityId/report-packs",
+        element: <ReportPacksPage />,
+      },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
       { path: "w/:slug/e/:entityId/engagements", element: <EngagementsPage /> },
     ],

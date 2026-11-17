@@ -243,6 +243,7 @@ function MainNav({ base }: { base: string }) {
       links: [
         [`${base}/trial-balance`, "nav.trialBalance"],
         [`${base}/statements`, "nav.statements"],
+        [`${base}/report-packs`, "nav.packs"],
       ],
     },
     {

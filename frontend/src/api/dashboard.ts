@@ -9,7 +9,9 @@ export type WidgetType =
   | "budget"
   | "top_variances"
   | "goals"
-  | "alerts";
+  | "alerts"
+  | "waterfall"
+  | "scenario";
 export const WIDGET_TYPES: WidgetType[] = [
   "kpis",
   "cash",
@@ -17,15 +19,22 @@ export const WIDGET_TYPES: WidgetType[] = [
   "top_variances",
   "goals",
   "alerts",
+  "waterfall",
+  "scenario",
 ];
 
 export interface LayoutItem {
   type: WidgetType;
   kpis?: string[];
+  width?: "half";
+  scenario_id?: string;
 }
 
+export type Preset = "MONTH" | "QTD" | "YTD" | "LTM";
+export const PRESETS: Preset[] = ["MONTH", "QTD", "YTD", "LTM"];
+
 export interface DashboardQuery {
-  preset: "MONTH" | "QTD" | "YTD";
+  preset: Preset;
   month: string;
   comparison: "BUDGET" | "PRIOR_YEAR";
 }
@@ -103,13 +112,27 @@ export interface WidgetData {
     kind: string;
     created_at: string;
   }[];
+  // waterfall (M8-4)
+  start?: string;
+  start_nature?: string;
+  end?: string;
+  end_nature?: string;
+  steps?: { line: string; value: string; favourable: boolean | null }[];
+  // scenario (M8-4)
+  name?: string;
+  base_name?: string;
+  base_version?: number;
+  nature?: string;
+  engine_status?: string;
+  changes?: Record<string, string>;
+  lowest_cash?: { base: string; scenario: string };
 }
 
 export interface Widget {
   type: WidgetType;
   status: "ok" | "empty" | "denied";
   reason: string;
-  options: { kpis?: string[] };
+  options: { kpis?: string[]; width?: "half"; scenario_id?: string };
   data: WidgetData;
 }
 
@@ -164,6 +187,38 @@ export function useDashboardMutations() {
     }),
     reset: useMutation({
       mutationFn: () => api(`${base}/dashboard-layout`, { method: "DELETE" }),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+// --- saved views (M8-4) ---------------------------------------------------------------------
+
+export interface SavedView {
+  id: string;
+  name: string;
+  preset: Preset;
+  comparison: "BUDGET" | "PRIOR_YEAR";
+}
+
+export function useSavedViews() {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({ queryKey: ["dashboard-views", entityId] });
+  return {
+    list: useQuery({
+      queryKey: ["dashboard-views", entityId],
+      queryFn: () => api<SavedView[]>(`${base}/dashboard-views`),
+    }),
+    save: useMutation({
+      mutationFn: (body: Omit<SavedView, "id">) =>
+        api<SavedView>(`${base}/dashboard-views`, { method: "PUT", body }),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) =>
+        api(`${base}/dashboard-views/${id}`, { method: "DELETE" }),
       onSuccess: refresh,
     }),
   };
