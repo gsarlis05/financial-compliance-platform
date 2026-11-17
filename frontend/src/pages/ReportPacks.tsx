@@ -95,13 +95,15 @@ function CommentEditor({
   packId: string;
   section: Section;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const m = usePackMutations(packId);
   const [text, setText] = useState(section.comment ?? "");
   const id = `pk-comment-${section.key}`;
   return (
     <div className="form">
-      <label htmlFor={id}>{t("pk.comment")}</label>
+      <label htmlFor={id}>
+        {t("pk.comment")}: {locale === "el" ? section.title_el : section.title}
+      </label>
       <textarea
         id={id}
         rows={3}

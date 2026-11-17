@@ -697,7 +697,7 @@ function SavedViews({
   const [name, setName] = useState("");
   const list = views.list.data ?? [];
   return (
-    <div className="form inline" role="group" aria-label={t("dash.views")}>
+    <div className="form inline">
       <label>
         {t("dash.views")}
         <select
