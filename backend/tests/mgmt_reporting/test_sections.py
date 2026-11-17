@@ -91,9 +91,9 @@ def test_golden_budget_variance_pack(g: dict[str, Any]) -> None:
         "COGS": ("600.00", "1800.00", "0.00", "-1200.00", "-66.67"),
     }.items():
         r = row(ytd, code)
-        got = tuple(r[k]["value"] for k in ("actual", "budget", "prior_year", "variance",
-                                             "variance_pct"))  # fmt: skip
-        assert got == expected, code
+        to_date = tuple(r[k]["value"] for k in ("actual", "budget", "prior_year", "variance",
+                                                 "variance_pct"))  # fmt: skip
+        assert to_date == expected, code
     # The full-year outlook blends actual months with the budget for the rest of the year.
     outlook = row(perf["tables"][3], "REV.SALES")
     assert outlook["actual"]["nature"] == "BLENDED"
