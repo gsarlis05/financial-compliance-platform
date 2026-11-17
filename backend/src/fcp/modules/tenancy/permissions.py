@@ -75,6 +75,10 @@ PERMISSIONS: dict[str, str] = {
     "reports.read": "See trial balance and general ledger",
     "ledger.fx.manage": "Record exchange rates (with their source)",
     "reports.export": "Export reports",
+    # management report packs (M8-1)
+    "reports.pack.read": "See management report packs",
+    "reports.pack.prepare": "Generate report packs, regenerate drafts and submit them for review",
+    "reports.finalise": "Return report packs to the preparer or finalise them (never your own)",
     "audit.read": "See the audit trail",
     "admin.integrity.read": "See ledger integrity check results",
 }
@@ -94,6 +98,7 @@ _READ = frozenset(
         "planning.read",
         "budget.read",
         "budget.department",
+        "reports.pack.read",
     }
 )
 _PREPARE = _READ | {
@@ -118,6 +123,7 @@ _PREPARE = _READ | {
     "goal.manage",
     "alert.acknowledge",
     "reports.export",
+    "reports.pack.prepare",
 }
 _REVIEW = _READ | {
     "ledger.entry.approve",
@@ -140,6 +146,7 @@ _SIGN_OFF = (
         "budget.settings.manage",
         "kpi.definition.approve",
         "dashboard.manage_default",
+        "reports.finalise",
     }
 )
 

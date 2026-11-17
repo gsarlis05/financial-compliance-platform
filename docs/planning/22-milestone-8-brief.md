@@ -66,7 +66,7 @@ pack**: the document a CFO sends to the owner or the board.
 | Comparison columns (M8-2) | Actual, budget (original and current), forecast, prior year, and the variances, for month, quarter-to-date, year-to-date and full-year outlook. The preparer chooses which columns appear. |
 | Risks section (M8-2) | Written by people, like commentary (a short list of risks with owner and status). Nothing is generated. |
 | Commentary (M8-2) | Plain text per section, attributed and versioned, at most 4,000 characters per section. No rich text. |
-| Finalising (M8-1) | Refused while any variance above the threshold has no explanation, while the snapshot is older than the latest posting in the period, or while a referenced run is stale; each refusal says what to do. |
+| Finalising (M8-1) | Refused while any variance above the threshold has no explanation, or while the period's figures have changed since the snapshot (an entry dated in or before the period was posted after it); each refusal says what to do. Entries for later months don't block (ADR-0053: "a referenced run is stale" would block every pack, because forecasts and KPI sets go stale on any posting). |
 | Excel export (M8-3) | One sheet per section, values with number formats, a nature column and legend, formula-safe text, a cover sheet with scope and provenance. No formulas sheet in M8. |
 | PDF export (M8-3) | ReportLab (already used for statement exports): A4, the workspace name and the pack title on each page (no logo in M8), page numbers, provenance footer ("Actuals as of {date}, ledger watermark {n}; Budget v{n}; Forecast run {id}"), a **DRAFT** watermark until final, charts as vector drawings with a table next to each. English or Greek. |
 | Dashboard v2 (M8-4) | Users arrange widgets in a grid (order and width: full or half). New widgets: **scenario comparison** (a shared scenario against its base), **waterfall** (from budget to actual, or month to month), **top variances**. **Saved views**: a named period preset (MTD, QTD, YTD, LTM, custom) and comparison (budget, forecast, prior year) per user. A "today / cut-over" marker on every time chart. First load p95 < 1.5 s on the demo entity, measured. |
@@ -100,8 +100,8 @@ environment.
 - **AC-MR2** A final pack cannot be changed or deleted (database tests as the runtime role). A
   correction is a new version naming the one it supersedes.
 - **AC-MR3** The reviewer cannot be the preparer. Finalising is refused, with a reason, while a
-  variance above the threshold lacks an explanation, while the snapshot is older than the latest
-  posting in the period, or while a referenced run is stale.
+  variance above the threshold lacks an explanation, or while the period's figures have changed
+  since the snapshot (ADR-0053). Entries for later months do not block it.
 - **AC-MR4** The golden budget variance pack matches a hand-worked example to the cent, including
   favourable and unfavourable directions and the comparison columns.
 - **AC-MR5** Every value in the Excel and PDF exports equals the API value for the same snapshot
