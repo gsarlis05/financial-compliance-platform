@@ -27,6 +27,7 @@ from fcp.modules.budgeting.api import VarianceComparison, compute_variance, list
 from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
+from . import emails
 from .models import Alert, AlertState
 
 READ, ACK = "planning.read", "alert.acknowledge"
@@ -76,6 +77,7 @@ def observe(ctx: WorkspaceContext, entity_id: UUID, seen: Observation) -> Alert 
         audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="dashboards.alert.raised",
               subject_type="alert", subject_id=alert.id, entity_id=entity_id,
               changes={"key": seen.key, "state": seen.state, "kind": seen.kind})  # fmt: skip
+        emails.on_alert(ctx, alert)  # queued in the same transaction (M8-5)
         return alert
 
 

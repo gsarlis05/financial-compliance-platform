@@ -16,7 +16,7 @@ from fcp.modules.kpi.api import run_kpi_set
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import alerts as service
-from . import layouts, overview, portfolio
+from . import emails, layouts, overview, portfolio
 from .models import Alert
 
 __all__ = ["Alert", "router"]
@@ -272,6 +272,49 @@ def delete_view(request: HttpRequest, slug: str, entity_id: UUID, view_id: UUID)
     ctx = workspace_ctx(request, slug, entity_id)
     layouts.delete_view(ctx, entity_id, view_id)
     return 204, None
+
+
+# --- alert emails (M8-5) -------------------------------------------------------------------------
+
+
+class AlertEmailIn(Schema):
+    mode: Literal["IMMEDIATE", "DIGEST", "OFF"] = Field(
+        description="Immediately, a daily digest at 08:00 Cyprus time, or no email"
+    )
+    language: Literal["en", "el"] = "en"
+
+
+class AlertEmailOut(AlertEmailIn):
+    pass
+
+
+@router.get("/w/{slug}/alert-email-preference", response=AlertEmailOut)
+@requires("tenancy.workspace.read")
+def get_alert_email(request: HttpRequest, slug: str) -> AlertEmailOut:
+    """Your alert emails in this workspace (off unless you turned them on)."""
+    ctx = workspace_ctx(request, slug)
+    p = emails.preference(ctx)
+    if p is None:
+        return AlertEmailOut(mode="OFF", language="en")
+    return AlertEmailOut.model_validate({"mode": p.mode, "language": p.language})
+
+
+@router.put("/w/{slug}/alert-email-preference", response=AlertEmailOut)
+@requires("tenancy.workspace.read")
+def set_alert_email(request: HttpRequest, slug: str, payload: AlertEmailIn) -> AlertEmailOut:
+    """Choose alert emails: titles and links only, never amounts."""
+    ctx = workspace_ctx(request, slug)
+    p = emails.choose(ctx, payload.mode, payload.language)
+    return AlertEmailOut.model_validate({"mode": p.mode, "language": p.language})
+
+
+@router.get("/alert-emails/unsubscribe", auth=None, response=dict[str, str])
+def unsubscribe_alert_emails(request: HttpRequest, token: str = "") -> dict[str, str]:
+    """The link in every alert email: turns those emails off, without signing in."""
+    done = emails.unsubscribe(token)
+    return {"status": "off" if done else "unknown",
+            "message": "You will get no more alert emails from this workspace." if done
+            else "This link is not valid (any more)."}  # fmt: skip
 
 
 # --- firm portfolio (M4-9) --------------------------------------------------------------------

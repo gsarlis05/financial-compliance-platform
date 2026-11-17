@@ -120,3 +120,58 @@ class SavedView(TenantOwned):
                 fields=["legal_entity", "user", "name"], name="dashboards_saved_view_name"
             ),
         ]
+
+
+class AlertEmailPreference(TenantOwned):
+    """Whether a user gets alerts by email in this workspace (M8-5): immediately, as a daily
+    digest, or not at all. No row means off: nobody gets email they did not ask for."""
+
+    class Mode(models.TextChoices):
+        IMMEDIATE = "IMMEDIATE"
+        DIGEST = "DIGEST"
+        OFF = "OFF"
+
+    user = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="+")
+    mode = models.CharField(max_length=10, choices=Mode.choices, default=Mode.OFF)
+    language = models.CharField(max_length=2, default="en")  # en | el
+    unsubscribe_token = models.CharField(max_length=64, unique=True)  # the email's one-click off
+    last_digest_on = models.DateField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "dashboards_alert_email_preference"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "user"],
+                                    name="dashboards_alert_email_preference_user"),
+        ]  # fmt: skip
+
+
+class AlertEmail(TenantOwned):
+    """One email in the outbox (M8-5): an immediate alert email or a daily digest. It carries
+    titles and links only, never amounts. Sent by the scheduled job with retries."""
+
+    class Kind(models.TextChoices):
+        IMMEDIATE = "IMMEDIATE"
+        DIGEST = "DIGEST"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING"
+        SENT = "SENT"
+        FAILED = "FAILED"  # given up after the last retry
+        SKIPPED = "SKIPPED"  # over the hourly limit; the alert stays in the app
+
+    user = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField(max_length=9, choices=Kind.choices)
+    dedupe_key = models.CharField(max_length=120, unique=True)  # one email per alert or day
+    alert_ids = models.JSONField(default=list)
+    subject = models.CharField(max_length=250)
+    body = models.TextField()
+    status = models.CharField(max_length=7, choices=Status.choices, default=Status.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField()
+    last_error = models.CharField(max_length=500, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "dashboards_alert_email"
+        indexes = [models.Index(fields=["status", "next_attempt_at"])]
