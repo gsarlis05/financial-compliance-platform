@@ -9,7 +9,7 @@ from uuid import UUID
 
 import pytest
 from django.core import mail
-from django.test import override_settings
+from django.test import Client, override_settings
 
 from fcp.core.db.rls import set_context
 from fcp.modules.dashboards import emails
@@ -69,7 +69,7 @@ def test_immediate_email_once_with_titles_only(g: dict[str, Any], make_user: Mak
 
     # The link turns the emails off without signing in; a wrong token changes nothing.
     token = message.body.split("token=")[1].split()[0]
-    anonymous = api_client()
+    anonymous = Client()  # not signed in
     assert anonymous.get("/api/alert-emails/unsubscribe?token=nope").json()["status"] == "unknown"
     done = anonymous.get(f"/api/alert-emails/unsubscribe?token={token}")
     assert done.json()["status"] == "off", done.content
