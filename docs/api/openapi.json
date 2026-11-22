@@ -10750,6 +10750,32 @@
         "title": "PackDetailOut",
         "type": "object"
       },
+      "PackExportQuery": {
+        "properties": {
+          "format": {
+            "enum": [
+              "xlsx",
+              "pdf"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "lang": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Lang",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "title": "PackExportQuery",
+        "type": "object"
+      },
       "PackIn": {
         "properties": {
           "month": {
@@ -30983,6 +31009,84 @@
           }
         ],
         "summary": "Comment Pack",
+        "tags": [
+          "report packs"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/report-packs/{pack_id}/export": {
+      "get": {
+        "description": "The pack as Excel or PDF, from its frozen snapshot: the same figures as on screen, with\nprovenance on every page or sheet and DRAFT until final. Audited.",
+        "operationId": "fcp_modules_mgmt_reporting_api_export_pack",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "enum": [
+                "xlsx",
+                "pdf"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "enum": [
+                "en",
+                "el"
+              ],
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Pack",
         "tags": [
           "report packs"
         ]
