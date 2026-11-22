@@ -10,7 +10,10 @@ consolidation every new PR targets `main`.
 ## Status (updated 2026-11-22)
 
 **Milestones 7 and 8 are merged into `main`** (2026-11-22; the owner asked the developer to merge
-each PR in order once its checks passed: #183–#189, then #196–#202). **Version 1 in progress**:
+each PR in order once its checks passed: #183–#189, then #196–#202). Checks on `main` after
+the merge: 1,326 backend tests (96.30% coverage), 74 frontend tests, lint, OpenAPI, security
+(Semgrep 0 findings, no leaks) and the validation package (six scenarios to EUR 0.01) pass.
+**Version 1 in progress**:
 a complete platform for the owner's own use, on the owner's computer, with one-person approvals
 and Cyprus VAT return preparation (brief `docs/planning/24-version-1-brief.md`, approved
 2026-11-22). Gate G is not needed for version 1 and is deferred (brief 23). Nothing is created on
