@@ -397,6 +397,11 @@ def publish(ctx: WorkspaceContext, entity_id: UUID, run_id: UUID) -> CalcRun:
     run = get_run(ctx, entity_id, run_id)
     if run.is_published:
         return run
+    if not getattr(engine_for(run.kind), "publishable", True):  # e.g. scenarios (M7-2)
+        raise ConflictError(
+            "This run is hypothetical (a scenario) and is never published. "
+            "Create an assumption-set draft from the scenario instead."
+        )
     if run.status != CalcRun.Status.VALID:
         raise ConflictError(f"Only a valid run can be published; this one is {run.status}.")
     if run.stale:

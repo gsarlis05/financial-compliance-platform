@@ -12578,6 +12578,126 @@
         "title": "ScenarioBaseOut",
         "type": "object"
       },
+      "ScenarioColumnOut": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "nature": {
+            "description": "ACTUAL (the opening balance sheet) or HYPOTHETICAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "nature"
+        ],
+        "title": "ScenarioColumnOut",
+        "type": "object"
+      },
+      "ScenarioComparisonOut": {
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ScenarioBaseOut"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "effects": {
+            "description": "What changed and why",
+            "items": {
+              "$ref": "#/components/schemas/ScenarioEffectOut"
+            },
+            "title": "Effects",
+            "type": "array"
+          },
+          "engine_status": {
+            "default": "PENDING_PROFESSIONAL_REVIEW",
+            "description": "The projection engine is not yet validated by a professional",
+            "title": "Engine Status",
+            "type": "string"
+          },
+          "failures": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failures",
+            "type": "array"
+          },
+          "granularity": {
+            "title": "Granularity",
+            "type": "string"
+          },
+          "liquidity": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ScenarioLiquidityOut"
+            },
+            "description": "base and scenario",
+            "title": "Liquidity",
+            "type": "object"
+          },
+          "nature": {
+            "default": "HYPOTHETICAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/ScenarioOut"
+          },
+          "valid": {
+            "description": "All eight projection invariants hold for the scenario",
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "watermark": {
+            "description": "The comparison includes every posting up to this number",
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scenario",
+          "base",
+          "watermark",
+          "granularity",
+          "columns",
+          "rows",
+          "effects",
+          "liquidity",
+          "valid",
+          "failures",
+          "notes"
+        ],
+        "title": "ScenarioComparisonOut",
+        "type": "object"
+      },
       "ScenarioCopyIn": {
         "properties": {
           "base_set_id": {
@@ -12634,6 +12754,58 @@
         "title": "ScenarioDetailOut",
         "type": "object"
       },
+      "ScenarioEffectOut": {
+        "properties": {
+          "changes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Change in revenue, EBITDA, net income and net cash flow over the horizon, and in cash and debt at its end",
+            "title": "Changes",
+            "type": "object"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "override_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for the total row",
+            "title": "Override Id"
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seq"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "override_id",
+          "seq",
+          "type",
+          "label",
+          "changes"
+        ],
+        "title": "ScenarioEffectOut",
+        "type": "object"
+      },
       "ScenarioIn": {
         "properties": {
           "base_set_id": {
@@ -12660,6 +12832,60 @@
           "base_set_id"
         ],
         "title": "ScenarioIn",
+        "type": "object"
+      },
+      "ScenarioLiquidityOut": {
+        "properties": {
+          "closing_debt": {
+            "title": "Closing Debt",
+            "type": "string"
+          },
+          "first_negative_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Negative Month"
+          },
+          "lowest_cash": {
+            "title": "Lowest Cash",
+            "type": "string"
+          },
+          "lowest_cash_month": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lowest Cash Month"
+          },
+          "months_below_minimum": {
+            "title": "Months Below Minimum",
+            "type": "integer"
+          },
+          "peak_facility": {
+            "title": "Peak Facility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lowest_cash",
+          "lowest_cash_month",
+          "first_negative_month",
+          "months_below_minimum",
+          "peak_facility",
+          "closing_debt"
+        ],
+        "title": "ScenarioLiquidityOut",
         "type": "object"
       },
       "ScenarioOut": {
@@ -12846,6 +13072,49 @@
         "title": "ScenarioOverrideOut",
         "type": "object"
       },
+      "ScenarioPromoteIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ScenarioPromoteIn",
+        "type": "object"
+      },
+      "ScenarioPromotedOut": {
+        "properties": {
+          "assumption_set_id": {
+            "format": "uuid",
+            "title": "Assumption Set Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assumption_set_id",
+          "name",
+          "status"
+        ],
+        "title": "ScenarioPromotedOut",
+        "type": "object"
+      },
       "ScenarioRenameIn": {
         "properties": {
           "description": {
@@ -12865,6 +13134,132 @@
           "name"
         ],
         "title": "ScenarioRenameIn",
+        "type": "object"
+      },
+      "ScenarioRowOut": {
+        "properties": {
+          "base": {
+            "description": "The base (FORECAST) per column",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Base",
+            "type": "array"
+          },
+          "difference": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Difference",
+            "type": "array"
+          },
+          "key": {
+            "description": "Statement line, e.g. PL.REVENUE, BS.CASH, CF.OPERATING",
+            "title": "Key",
+            "type": "string"
+          },
+          "overrides": {
+            "description": "Per column: ids of the overrides that changed the value",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Overrides",
+            "type": "array"
+          },
+          "scenario": {
+            "description": "The scenario (HYPOTHETICAL) per column",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Scenario",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "base",
+          "scenario",
+          "difference",
+          "overrides"
+        ],
+        "title": "ScenarioRowOut",
+        "type": "object"
+      },
+      "ScenarioRunOut": {
+        "properties": {
+          "actuals_watermark": {
+            "title": "Actuals Watermark",
+            "type": "integer"
+          },
+          "as_of_date": {
+            "format": "date",
+            "title": "As Of Date",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "output_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Hash"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "created_at",
+          "as_of_date",
+          "actuals_watermark",
+          "output_hash",
+          "stale"
+        ],
+        "title": "ScenarioRunOut",
         "type": "object"
       },
       "ScheduleOut": {
@@ -29776,6 +30171,79 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/comparison": {
+      "get": {
+        "description": "Run the scenario now and compare it with its base (not stored).",
+        "operationId": "fcp_modules_scenarios_api_compare_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "default": "MONTH",
+              "enum": [
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "title": "Granularity",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioComparisonOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Compare Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/copy": {
       "post": {
         "description": "A new draft with the same overrides, optionally on another approved base.",
@@ -30112,6 +30580,191 @@
           }
         ],
         "summary": "Change Override",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/promote": {
+      "post": {
+        "description": "Create an assumption-set draft from the scenario; it needs the normal approval.",
+        "operationId": "fcp_modules_scenarios_api_promote_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioPromoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioPromotedOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Promote Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/runs": {
+      "get": {
+        "operationId": "fcp_modules_scenarios_api_list_scenario_runs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioRunOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Scenario Runs",
+        "tags": [
+          "scenarios"
+        ]
+      },
+      "post": {
+        "description": "Record the scenario's run (a calculation run of kind SCENARIO; never published). Its\nvalues are read through the calculation-run routes.",
+        "operationId": "fcp_modules_scenarios_api_save_scenario_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Save Scenario Run",
         "tags": [
           "scenarios"
         ]
