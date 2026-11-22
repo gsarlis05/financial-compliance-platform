@@ -29,7 +29,8 @@ from .layout import STATEMENTS as STATEMENT_LAYOUT
 from .layout import name as line_name
 from .layout import with_totals
 from .models import AssumptionSet
-from .outlook import GOAL_LINES, projected_plan
+from .outlook import GOAL_LINES, forecast_values, projected_plan
+from .outlook import published as published_projections
 from .runs import load_input, pin
 
 __all__ = [
@@ -44,12 +45,14 @@ __all__ = [
     "Projection",
     "SetInfo",
     "derive_set",
+    "forecast_values",
     "line_name",
     "load_input",
     "observed_days",
     "pin",
     "project",
     "projected_plan",
+    "published_projections",
     "router",
     "set_info",
     "with_totals",

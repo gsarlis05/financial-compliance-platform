@@ -17,6 +17,7 @@ from fcp.modules.identity.api import router as identity_router
 from fcp.modules.kpi.api import router as kpi_router
 from fcp.modules.ledger.api import router as ledger_router
 from fcp.modules.metrics.api import router as metrics_router
+from fcp.modules.mgmt_reporting.api import router as mgmt_reporting_router
 from fcp.modules.personal.api import router as personal_router
 from fcp.modules.projections.api import router as projections_router
 from fcp.modules.registers.api import router as registers_router
@@ -50,5 +51,6 @@ api.add_router("/", personal_router)
 api.add_router("/", assets_router)
 api.add_router("/", projections_router)
 api.add_router("/", scenarios_router)
+api.add_router("/", mgmt_reporting_router)
 api.add_router("/", taxrules_router)
 api.add_router("/", reporting_router)

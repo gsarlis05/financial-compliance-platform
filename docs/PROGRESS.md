@@ -123,6 +123,7 @@ until validated and signed by a qualified professional; brief
 | Owner items for M7: review and merge #183–#189; ADRs 0049–0052; defaults in the M7 report | — | — | Waiting for the owner |
 | **Milestone 8** (epic #83) | | | |
 | M8 brief (`docs/planning/22-milestone-8-brief.md`): report packs, dashboard v2, email alerts; issues #190–#195; approved 2026-11-17 ("Continue"), defaults taken | `claude/m8-0-brief` | #196 | Open |
+| M8-1 Report packs: frozen snapshot of statements, budget variance (with explanations), KPIs, cash, published projection and goals under the preparer's permissions; DRAFT → IN_REVIEW → FINAL with a reviewer who is not the preparer; finalising blocked by missing explanations or changed figures; new versions supersede (issue #190) | `claude/m8-1-packs` | #197 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
