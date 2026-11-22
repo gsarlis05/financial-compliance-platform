@@ -208,6 +208,7 @@ class CustomKpiOut(Schema):
     decided_by_name: str
     decided_at: datetime | None
     decision_comment: str
+    self_approved: bool
     created_at: datetime
 
 
@@ -229,6 +230,7 @@ def _kpi_out(k: CustomKpi) -> CustomKpiOut:
         decided_by_name=(k.decided_by.display_name or k.decided_by.email) if k.decided_by else "",
         decided_at=k.decided_at,
         decision_comment=k.decision_comment,
+        self_approved=k.self_approved,
         created_at=k.created_at,
     )
 

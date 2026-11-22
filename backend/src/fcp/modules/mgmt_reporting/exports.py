@@ -36,6 +36,7 @@ _TEXT = {
         "DRAFT": "Draft", "IN_REVIEW": "In review", "FINAL": "Final", "SUPERSEDED": "Superseded",
         "ACTUAL": "Actual", "BUDGET": "Budget", "BLENDED": "Blended", "FORECAST": "Forecast",
         "HYPOTHETICAL": "Hypothetical",
+        "self_approved": "self-approved (one-person workspace)",
     },
     "el": {
         "pack": "Πακέτο αναφοράς διοίκησης", "status": "Κατάσταση", "version": "Έκδοση",
@@ -55,6 +56,7 @@ _TEXT = {
         "SUPERSEDED": "Αντικαταστάθηκε",
         "ACTUAL": "Πραγματικό", "BUDGET": "Προϋπολογισμός", "BLENDED": "Μικτό",
         "FORECAST": "Πρόβλεψη", "HYPOTHETICAL": "Υποθετικό",
+        "self_approved": "αυτοέγκριση (χώρος εργασίας ενός ατόμου)",
     },
 }  # fmt: skip
 AMOUNT_FORMAT = "#,##0.00;-#,##0.00;-"
@@ -63,6 +65,13 @@ CELL, NOTE = 7.5, 8.5  # fcp-lint: allow-float (PDF font sizes, not amounts)
 RULE, WATERMARK_ALPHA = 0.6, 0.12  # fcp-lint: allow-float (PDF line width and opacity)
 WATERMARK_RED = (0.8, 0.1, 0.1)  # fcp-lint: allow-float (PDF colour, not an amount)
 LABEL_SHARE = 0.3  # fcp-lint: allow-float (share of the page width for row labels)
+
+
+def status_line(pack: Any, lang: Lang) -> str:
+    """ "Status: Final · Version 2", and whether its preparer finalised it (V1-1)."""
+    t = _TEXT[lang]
+    line = f"{t['status']}: {t[pack.status]} · {t['version']} {pack.version}"
+    return f"{line} · {t['self_approved']}" if pack.self_approved else line
 
 
 def provenance(pack: Any, lang: Lang) -> str:
@@ -121,7 +130,7 @@ def to_xlsx(pack: Any, entity_name: str, rendered: list[dict[str, Any]], lang: L
     hidden = _hidden(pack)
     for line in (entity_name, pack.title, t["pack"],
                  f"{t['period']}: {pack.period_start.isoformat()} - {pack.period_end.isoformat()}",
-                 f"{t['status']}: {t[pack.status]} · {t['version']} {pack.version}",
+                 status_line(pack, lang),
                  f"{t['generated']}: {pack.generated_at.isoformat(timespec='seconds')}",
                  t["scope"], *([t["hidden"].format(parts=", ".join(hidden))] if hidden else []),
                  provenance(pack, lang), t["legend"],
@@ -251,8 +260,7 @@ def to_pdf(pack: Any, entity_name: str, rendered: list[dict[str, Any]], lang: La
         Spacer(1, 3 * mm),
         Paragraph(escape(f"{t['period']}: {pack.period_start.isoformat()} - "
                          f"{pack.period_end.isoformat()}"), styles["body"]),
-        Paragraph(escape(f"{t['status']}: {t[pack.status]} · {t['version']} {pack.version}"),
-                  styles["body"]),
+        Paragraph(escape(status_line(pack, lang)), styles["body"]),
         Paragraph(escape(f"{t['generated']}: {pack.generated_at.isoformat(timespec='seconds')}"),
                   styles["body"]),
         Spacer(1, 3 * mm),

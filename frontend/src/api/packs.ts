@@ -45,6 +45,7 @@ export interface Pack {
   created_at: string;
   submitted_at: string | null;
   reviewed_by_id: string | null;
+  self_approved?: boolean; // finalised by its preparer in a one-person workspace (V1-1)
   review_note: string;
   finalised_at: string | null;
   superseded_at: string | null;

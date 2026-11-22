@@ -1,6 +1,7 @@
 // Management report packs (M8-6 for M8-1 to M8-3): generate a pack whose figures are frozen,
 // arrange its sections and comparison columns, write commentary and risks, send it for review,
-// finalise it (never your own), start a new version, and export it to Excel or PDF.
+// finalise it (never your own, except in a one-person workspace, where it is recorded as
+// self-approved), start a new version, and export it to Excel or PDF.
 import Decimal from "decimal.js";
 import { type SyntheticEvent, useState } from "react";
 import { useScope } from "../api/hooks";
@@ -382,6 +383,9 @@ function PackView({ id }: { id: string }) {
         <span className="badge">
           {t(`pk.status.${p.status}` as MessageKey)}
         </span>{" "}
+        {p.self_approved ? (
+          <span className="badge">{t("approval.self")}</span>
+        ) : null}{" "}
         <span className="badge">
           {t("pk.version")} {p.version}
         </span>
@@ -542,7 +546,10 @@ export function ReportPacksPage() {
                       {p.period_start} – {p.period_end}
                     </td>
                     <td>{p.version}</td>
-                    <td>{t(`pk.status.${p.status}` as MessageKey)}</td>
+                    <td>
+                      {t(`pk.status.${p.status}` as MessageKey)}
+                      {p.self_approved ? ` · ${t("approval.self")}` : ""}
+                    </td>
                   </tr>
                 ))}
               </tbody>

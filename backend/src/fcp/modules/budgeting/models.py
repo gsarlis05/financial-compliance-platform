@@ -97,6 +97,8 @@ class BudgetVersion(TenantOwned):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     sod_applied = models.BooleanField(null=True, blank=True)
+    # V1-1 (#207): approved by the person who submitted it, in a one-person workspace.
+    self_approved = models.BooleanField(default=False)
     locked_by = models.ForeignKey(
         USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
@@ -125,6 +127,11 @@ class BudgetVersion(TenantOwned):
                 condition=~models.Q(sod_applied=True)
                 | ~models.Q(approved_by=models.F("submitted_by")),
                 name="budgeting_version_sod",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(approved_by=models.F("submitted_by"), sod_applied=False),
+                name="budgeting_version_self_approved",
             ),
             models.CheckConstraint(
                 condition=models.Q(status__in=["DRAFT"])

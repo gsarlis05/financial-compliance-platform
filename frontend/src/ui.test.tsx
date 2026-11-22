@@ -555,4 +555,20 @@ describe("EntryActions (AC-F2)", () => {
     );
     expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
   });
+
+  it("in a one-person workspace the preparer may approve (V1-1)", () => {
+    const onAct = vi.fn();
+    render(
+      wrap(
+        <EntryActions
+          entry={{ ...posted, status: "SUBMITTED" }}
+          myId="u1"
+          onAct={onAct}
+          onePerson
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(onAct).toHaveBeenCalledWith("approve");
+  });
 });

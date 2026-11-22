@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from fcp.core.errors import NotFoundError, ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import entries
 from .errors import AlreadyReversedError, InvalidStateError, SegregationOfDutiesError
@@ -282,9 +282,22 @@ def approve_unlock(ctx: WorkspaceContext, entity_id: UUID, unlock_id: UUID) -> P
     if unlock.status != PeriodUnlock.Status.REQUESTED:
         raise InvalidStateError(f"This unlock is {unlock.status.lower()}.")
     if ctx.user.id == unlock.requested_by_id:
-        raise SegregationOfDutiesError(
-            "You requested this unlock, so two other people must approve it."
-        )
+        if not self_approval_allowed(ctx):
+            raise SegregationOfDutiesError(
+                "You requested this unlock, so two other people must approve it."
+            )
+        # One-person workspace (V1-1): the requester's own approval opens the period, and the
+        # unlock is recorded as self-approved.
+        now = timezone.now()
+        unlock.first_approver, unlock.self_approved = ctx.user, True
+        unlock.status = PeriodUnlock.Status.ACTIVE
+        unlock.active_from = now
+        unlock.active_until = now + timedelta(minutes=unlock.window_minutes)
+        unlock.save(update_fields=["first_approver", "self_approved", "status", "active_from",
+                                   "active_until"])  # fmt: skip
+        _audit_unlock(ctx, unlock, "ledger.period.unlock_approved", approval=1,
+                      self_approved=True, active_until=unlock.active_until)  # fmt: skip
+        return unlock
     if ctx.user.id == unlock.first_approver_id:
         raise SegregationOfDutiesError(
             "You already approved this unlock; a second person must approve."

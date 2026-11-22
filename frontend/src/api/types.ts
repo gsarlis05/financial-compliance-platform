@@ -21,6 +21,7 @@ export interface Workspace {
   roles: string[];
   via_engagement?: string | null; // reached through a firm's engagement grant (M5-4)
   deletion_due?: string | null; // a confirmed deletion purges the workspace after this (M5-6)
+  one_person?: boolean; // in force: whoever prepares may also approve (V1-1)
 }
 
 export interface LegalEntity {
@@ -138,6 +139,7 @@ export interface JournalEntry {
   correction_reason: string;
   prepared_by_id: string;
   approved_by_id: string | null;
+  self_approved?: boolean; // approved by its preparer in a one-person workspace (V1-1)
   posted_by_id: string | null;
   rejection_reason: string;
   unlock_request_id: string | null;
@@ -192,6 +194,7 @@ export interface PeriodUnlock {
   requested_by_id: string;
   first_approver_id: string | null;
   second_approver_id: string | null;
+  self_approved?: boolean; // opened on the requester's own approval (one-person, V1-1)
   active_until: string | null;
 }
 

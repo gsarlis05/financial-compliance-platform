@@ -28,6 +28,7 @@ from fcp.modules.identity.api import User
 from .engagements import access_through_engagement
 from .entitlements import Feature, Role, allowed_roles, require_feature
 from .models import Invitation, LegalEntity, Membership, RoleAssignment, Tenant
+from .one_person import refuse_people
 from .permissions import is_known, permissions_for
 
 INVITATION_LIFETIME = timedelta(days=7)
@@ -303,6 +304,7 @@ def invite_member(
 ) -> IssuedInvitation:
     ctx.authorize("tenancy.members.manage", legal_entity_id)
     require_feature(ctx.tenant.kind, Feature.INVITE_MEMBERS)
+    refuse_people(ctx.tenant)
     if role_key not in allowed_roles(ctx.tenant.kind) or role_key == Role.OWNER:
         raise ValidationFailedError(
             "This role cannot be granted in this workspace.", field_errors={"role_key": ["invalid"]}
@@ -361,6 +363,7 @@ def accept_invitation(user: User, token: str) -> WorkspaceContext:
     )
     if invitation is None or invitation.expires_at < timezone.now():
         raise NotFoundError("This invitation is invalid or has expired.")
+    refuse_people(Tenant.objects.get(id=tenant_id))
     if invitation.email != user.email.strip().lower():
         raise PermissionDeniedError(
             "This invitation was sent to a different e-mail address. Sign in with that address."

@@ -270,6 +270,9 @@ export function PeriodsPage() {
             {openUnlocks.map((u) => (
               <li key={u.id}>
                 <strong>{u.status}</strong> · {u.reason}{" "}
+                {u.self_approved ? (
+                  <span className="badge">{t("approval.self")}</span>
+                ) : null}{" "}
                 {u.status === "REQUESTED" ? (
                   <>
                     <button

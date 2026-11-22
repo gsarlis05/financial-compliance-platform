@@ -141,6 +141,7 @@ until validated and signed by a qualified professional; brief
 | Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Merged 2026-11-22 (owner asked the developer to merge) |
 | **Version 1** (owner's own use; brief `docs/planning/24-version-1-brief.md`, approved 2026-11-22) | | | |
 | Version 1 brief: one-person workspace, Cyprus VAT return preparation, local install, end-to-end check, dependencies (issues #207–#211); Gate G brief (`docs/planning/23-gate-g-brief.md`, first proposed in #205) kept as deferred | `claude/v1-0-brief` | #206 | Open |
+| V1-1 One-person workspace: a setting in force only while the workspace has exactly one member (database-enforced); preparers may approve their own journal entries, period unlocks (one approval), budget versions, workspace KPIs and report packs, each recorded as self-approved, audited and shown on screen and in exports; ADR-0055 (issue #207) | `claude/v1-1-one-person` | #212 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

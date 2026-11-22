@@ -45,7 +45,13 @@ from fcp.modules.metrics.api import (
     current_mapping,
 )
 from fcp.modules.reporting.api import accounts, actuals_monthly, dimension_values, fiscal_years
-from fcp.modules.tenancy.api import MemberRef, WorkspaceContext, active_members, get_entity
+from fcp.modules.tenancy.api import (
+    MemberRef,
+    WorkspaceContext,
+    active_members,
+    get_entity,
+    self_approval_allowed,
+)
 
 from . import excel
 from .models import (
@@ -705,10 +711,13 @@ def approve(
     version = _version(entity.id, version_id, lock=True)
     _require(version, Status.SUBMITTED)
     sod = get_settings(ctx, entity.id).sod_required
-    if sod and version.submitted_by_id == ctx.user.id:
+    own = sod and version.submitted_by_id == ctx.user.id
+    if own and not self_approval_allowed(ctx):
         raise SegregationOfDutiesError(
             "You submitted this version, so someone else must approve it (segregation of duties)."
         )
+    # One-person workspace (V1-1): the submitter approves; recorded as self-approved, without SoD.
+    sod = sod and not own
     if content_hash(_load(version)) != version.content_hash:  # pragma: no cover (DB-guarded)
         raise LifecycleError("The lines changed after submission; submit again.")
     now = timezone.now()
@@ -726,7 +735,10 @@ def approve(
     version.approved_by_id = ctx.user.id
     version.approved_at = now
     version.sod_applied = sod
-    version.save(update_fields=["status", "approved_by", "approved_at", "sod_applied"])
+    version.self_approved = own
+    version.save(
+        update_fields=["status", "approved_by", "approved_at", "sod_applied", "self_approved"]
+    )
     _event(ctx, version, BudgetEvent.Action.APPROVED, comment.strip())
     _audit(
         ctx,
@@ -738,6 +750,7 @@ def approve(
             "version": version.number,
             "content_hash": version.content_hash,
             "sod_applied": sod,
+            "self_approved": own,
             "superseded": str(previous.id) if previous else "",
         },
     )

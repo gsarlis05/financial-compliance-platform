@@ -30,7 +30,7 @@ from fcp.core.errors import (
 )
 from fcp.core.ids import uuid7
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import sections, snapshot
 from .models import PackComment, PackRisk, ReportPack
@@ -175,7 +175,8 @@ def blockers(ctx: WorkspaceContext, p: ReportPack) -> list[str]:
 def finalise(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID,
              note: str = "") -> ReportPack:  # fmt: skip
     p = _locked(ctx, entity_id, pack_id, FINALISE, Status.IN_REVIEW)
-    if p.created_by_id == ctx.user.id:
+    own = p.created_by_id == ctx.user.id
+    if own and not self_approval_allowed(ctx):
         raise PermissionDeniedError("The person who prepared a pack cannot also finalise it.")
     problems = blockers(ctx, p)
     if problems:
@@ -183,13 +184,14 @@ def finalise(ctx: WorkspaceContext, entity_id: UUID, pack_id: UUID,
     now = timezone.now()
     p.status, p.reviewed_by, p.finalised_at = Status.FINAL, ctx.user, now
     p.review_note = note.strip()
+    p.self_approved = own
     p.save()
     if p.supersedes_id:
         earlier = ReportPack.objects.select_for_update().get(id=p.supersedes_id)
         earlier.status, earlier.superseded_at = Status.SUPERSEDED, now
         earlier.save(update_fields=["status", "superseded_at"])
         _audit(ctx, "superseded", earlier, by=str(p.id))
-    _audit(ctx, "finalised", p, snapshot_hash=p.snapshot_hash)
+    _audit(ctx, "finalised", p, snapshot_hash=p.snapshot_hash, self_approved=own)
     return p
 
 

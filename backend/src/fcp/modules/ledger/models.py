@@ -274,6 +274,8 @@ class JournalEntry(TenantOwned):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_hash = models.CharField(max_length=64, blank=True)
+    # V1-1 (#207): approved by its preparer in a one-person workspace (database-checked).
+    self_approved = models.BooleanField(default=False)
     rejection_reason = models.CharField(max_length=500, blank=True)
     # Set at posting.
     period = models.ForeignKey(
@@ -310,6 +312,19 @@ class JournalEntry(TenantOwned):
                 condition=~models.Q(status="POSTED")
                 | models.Q(entry_no__isnull=False, posting_seq__isnull=False, period__isnull=False),
                 name="ledger_entry_posted_fields",
+            ),
+            # Segregation of duties (V1-1): the approver is never the preparer, except a
+            # self-approval, which only a one-person workspace allows (trigger).
+            models.CheckConstraint(
+                condition=models.Q(approved_by__isnull=True)
+                | ~models.Q(approved_by=models.F("prepared_by"))
+                | models.Q(self_approved=True),
+                name="ledger_entry_approver_not_preparer",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(approved_by=models.F("prepared_by")),
+                name="ledger_entry_self_approved_by_preparer",
             ),
         ]
         indexes = [models.Index(fields=["legal_entity", "status", "accounting_date"])]
@@ -463,6 +478,8 @@ class PeriodUnlock(TenantOwned):
     active_until = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     decision_note = models.CharField(max_length=500, blank=True)
+    # V1-1 (#207): in a one-person workspace the requester's own approval opens the period.
+    self_approved = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ledger_period_unlock"
@@ -475,7 +492,8 @@ class PeriodUnlock(TenantOwned):
             ),
             models.CheckConstraint(
                 condition=models.Q(first_approver__isnull=True)
-                | ~models.Q(first_approver=models.F("requested_by")),
+                | ~models.Q(first_approver=models.F("requested_by"))
+                | models.Q(self_approved=True, second_approver__isnull=True),
                 name="ledger_unlock_first_approver_not_requester",
             ),
             models.CheckConstraint(

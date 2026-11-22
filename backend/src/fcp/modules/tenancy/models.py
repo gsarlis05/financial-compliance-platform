@@ -29,6 +29,10 @@ class Tenant(models.Model):
     kind = models.CharField(max_length=16, choices=Kind.choices)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     data_region = models.CharField(max_length=32, default="eu-central-1")
+    # Version 1 (V1-1, #207): a one-person workspace lets the person who prepared something also
+    # approve it. On only while the workspace has exactly one active member, no pending
+    # invitation and no active engagement grant (database triggers, migration 0009).
+    one_person = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
