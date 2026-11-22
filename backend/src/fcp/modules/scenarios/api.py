@@ -34,8 +34,9 @@ from . import (
 from . import runs as scenario_runs
 from .models import Scenario, ScenarioOverride
 from .overrides import MAX_OVERRIDES
+from .runs import summary as scenario_summary
 
-__all__ = ["OverrideType", "router"]
+__all__ = ["OverrideType", "router", "scenario_summary"]
 
 router = Router(tags=["scenarios"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}/scenarios"
