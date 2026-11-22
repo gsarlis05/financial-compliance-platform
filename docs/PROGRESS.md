@@ -130,6 +130,8 @@ until validated and signed by a qualified professional; brief
 | M8-5 Alert emails: per-user preference (immediate, daily digest, off by default), titles and links only, outbox with one email per alert and user, retries, hourly limit, one-click unsubscribe, scheduled sender (issue #194) | `claude/m8-5-email` | #201 | Open |
 | M8-6 Screens: report packs (generate, sections with natures, commentary, risks, review, finalise, versions, Excel/PDF), dashboard v2 controls (widths, waterfall, scenario, saved views, LTM), alert email preference; demo step; Milestone 8 report (`docs/milestone-8-report.md`) (issue #195) | `claude/m8-6-screens` | #202 | Open |
 | Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Waiting for the owner |
+| **Gate G** (before any external customer) | | | |
+| Gate G readiness brief (`docs/planning/23-gate-g-brief.md`): what can be prepared in the repository (support access, ASVS L2 self-assessment, load test, recovery plan, pen-test pack, legal inputs, status page options, Greek list) and what needs the owner; proposed | `claude/g-0-brief` | #205 | Waiting for the owner |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
