@@ -18,6 +18,7 @@ import {
 import { PersonalPlanPage } from "./pages/PersonalPlan";
 import { PortfolioPage } from "./pages/Portfolio";
 import { EngagementsPage } from "./pages/Engagements";
+import { VatPage } from "./pages/Vat";
 import { WorkspaceDataPage } from "./pages/WorkspaceData";
 import { FixedAssetsPage } from "./pages/FixedAssets";
 import { AssumptionsPage } from "./pages/Assumptions";
@@ -139,6 +140,7 @@ const router = createBrowserRouter([
         path: "w/:slug/e/:entityId/report-packs",
         element: <ReportPacksPage />,
       },
+      { path: "w/:slug/e/:entityId/vat", element: <VatPage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
       { path: "w/:slug/e/:entityId/engagements", element: <EngagementsPage /> },
     ],
