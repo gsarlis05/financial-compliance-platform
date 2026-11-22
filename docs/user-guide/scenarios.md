@@ -86,6 +86,11 @@ those days changed for every month, and you see the cash released (or tied up) b
 end, at its lowest point, and the change in working capital. Each balance is rounded to cents on
 its own, so the answer can differ by a cent from a quick hand calculation.
 
+## Goals against scenarios
+Each goal can be tested against up to three shared scenarios, side by side with its base: the
+likely outcome, the gap and the status under each, labelled hypothetical. Nothing is saved and the
+goal never changes (see the goals guide).
+
 ## Turning a scenario into a plan
 **Create an assumption-set draft** copies the base with the changes written into its values and
 loans. The draft then goes through the normal review and approval. Two kinds of change cannot be
@@ -110,6 +115,7 @@ and an investment in a month that already has capital expenditure with another u
 | See saved scenario runs | ✔ | ✔ | ✔ |
 | Run sensitivity and tornado analyses | | ✔ | ✔ |
 | See the working-capital view and what N days are worth | | ✔ | ✔ |
+| Test goals against shared scenarios | | ✔ | ✔ |
 | Archive someone else's scenario | | | ✔ |
 
 Every change is recorded in the audit trail.

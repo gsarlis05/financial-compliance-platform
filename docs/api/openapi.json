@@ -7501,6 +7501,80 @@
         "title": "GoalOut",
         "type": "object"
       },
+      "GoalOutlookOut": {
+        "properties": {
+          "applicable": {
+            "title": "Applicable",
+            "type": "boolean"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target - likely outcome",
+            "title": "Gap"
+          },
+          "label": {
+            "description": "Base, or the scenario's name",
+            "title": "Label",
+            "type": "string"
+          },
+          "method": {
+            "description": "e.g. PROJECTION, BUDGET, SCENARIO",
+            "title": "Method",
+            "type": "string"
+          },
+          "nature": {
+            "description": "Of the likely outcome: FORECAST, BUDGET or HYPOTHETICAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "note": {
+            "description": "How the likely outcome was projected, in words",
+            "title": "Note",
+            "type": "string"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The likely outcome",
+            "title": "Projected"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "description": "ON_TRACK, AT_RISK, OFF_TRACK or UNDETERMINED",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "applicable",
+          "reason",
+          "status",
+          "method",
+          "note",
+          "nature",
+          "projected",
+          "gap"
+        ],
+        "title": "GoalOutlookOut",
+        "type": "object"
+      },
       "GoalOwnerOut": {
         "properties": {
           "display_name": {
@@ -25693,6 +25767,78 @@
         "summary": "Retire Goal",
         "tags": [
           "goals"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/goals/{goal_id}/scenario-outlooks": {
+      "get": {
+        "description": "The goal against its base and up to three shared scenarios (comma-separated ids), side by\nside, computed now. Nothing is stored and the goal never changes.",
+        "operationId": "fcp_modules_scenarios_api_goal_scenario_outlooks",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scenario_ids",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Scenario Ids",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalOutlookOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Goal Scenario Outlooks",
+        "tags": [
+          "scenarios"
         ]
       }
     },

@@ -59,3 +59,15 @@ goal, as a new version.
 
 Every figure is a stored calculation that can be reproduced and explained down to accounts. If
 entries are posted after an evaluation, the page says it is out of date.
+
+## Testing a goal against scenarios
+A goal can be tested against up to three **shared** scenarios (Cash & planning → Scenarios), next
+to its base. For each scenario, the goal's likely outcome takes the scenario's projected months in
+place of the published projection; you see the likely outcome, the gap to the target and the
+status (on track, at risk, off track), labelled **hypothetical**, with "then the scenario
+(hypothetical)" in the method.
+
+These are computed when you ask and are not saved: they raise no alert and never change the goal or
+its own evaluations, which keep using the published projection, the budget or the run rate. Cash
+goals follow the 13-week cash forecast, so a scenario does not apply to them; the row says so.
+

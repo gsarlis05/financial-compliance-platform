@@ -27,10 +27,11 @@ from .engine import EngineInput, ExtraCapex, Projection
 from .engine import output as project
 from .layout import with_totals
 from .models import AssumptionSet
-from .outlook import projected_plan
+from .outlook import GOAL_LINES, projected_plan
 from .runs import load_input, pin
 
 __all__ = [
+    "GOAL_LINES",
     "OPEX_LINES",
     "REVENUE_LINES",
     "EngineInput",

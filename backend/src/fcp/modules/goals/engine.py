@@ -99,6 +99,9 @@ METHODS = {
     "PROJECTION": "then the published projection",
     "PROJECTION_RUN_RATE": "then the published projection, and the 3-month run rate where it "
     "does not cover a month",
+    "SCENARIO": "then the scenario (hypothetical)",
+    "SCENARIO_RUN_RATE": "then the scenario (hypothetical), and the 3-month run rate where it "
+    "does not cover a month",
     "CASH_FORECAST": "then the 13-week cash forecast",
     "HELD": "then held at the latest actual value (no cash forecast)",
 }
@@ -149,9 +152,10 @@ def _lineage(sources: dict[str, Decimal]) -> tuple[Source, ...]:
         if ref.startswith("operational:"):
             kind, note = "MANUAL", ""
         elif ref.startswith(("account:plan:", "account:proj:", "account:rate:", "account:bud:",
-                             "account:fcst:")):  # fmt: skip
+                             "account:fcst:", "account:scen:")):  # fmt: skip
             kind = "ASSUMPTION"
             note = {"plan": "budget", "proj": "published projection", "bud": "approved budget",
+                    "scen": "scenario (hypothetical)",
                     "fcst": "published projection (months to date)"}.get(
                 ref.split(":")[1], "run rate (3 months)"
             )  # fmt: skip
@@ -322,23 +326,26 @@ class _Book:
             return "ACTUALS"
         if self.goal.kind == "BALANCE":
             return "CASH_FORECAST" if self.refs.get("forecast") else "HELD"
-        if self.plan_prefix == "proj":  # a published projection (M6-5)
+        if self.plan_prefix in ("proj", "scen"):  # a published projection (M6-5) or a scenario
+            name = "PROJECTION" if self.plan_prefix == "proj" else "SCENARIO"
             if len(self.plan_months) == len(self.remaining):
-                return "PROJECTION"
-            return "PROJECTION_RUN_RATE" if self.plan_months else "RUN_RATE"
+                return name
+            return f"{name}_RUN_RATE" if self.plan_months else "RUN_RATE"
         if len(self.plan_months) == len(self.remaining):
             return "BUDGET"
         return "BUDGET_AND_RUN_RATE" if self.plan_months else "RUN_RATE"
 
     @property
     def plan_prefix(self) -> str:
-        plan = self.refs.get("plan") or {}
-        return "proj" if plan.get("source") == "PROJECTION" else "plan"
+        source = str((self.refs.get("plan") or {}).get("source") or "")
+        return {"PROJECTION": "proj", "SCENARIO": "scen"}.get(source, "plan")
 
     @property
     def projected_nature(self) -> Nature:
         if not self.remaining:
             return Nature.ACTUAL
+        if self.method.startswith("SCENARIO"):  # M7-5: a goal tested against a scenario
+            return Nature.HYPOTHETICAL
         return Nature.BUDGET if self.method == "BUDGET" else Nature.FORECAST
 
     def note(self) -> str:
@@ -410,7 +417,7 @@ def _ratio(a: Decimal | None, b: Decimal | None) -> Decimal | None:
 
 class GoalEvalEngine:
     kind = EVAL_KIND
-    version = "2"  # M6F-7: benchmarks; the contribution analysis uses the approved budget
+    version = "3"  # M6F-7: benchmarks (v2); M7-5: a scenario as the forward plan
 
     def load(self, ctx: WorkspaceContext, inputs: RunInputs) -> Data:
         g = inputs.refs["goal"]
