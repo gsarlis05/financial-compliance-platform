@@ -140,7 +140,7 @@ until validated and signed by a qualified professional; brief
 | M8-6 Screens: report packs (generate, sections with natures, commentary, risks, review, finalise, versions, Excel/PDF), dashboard v2 controls (widths, waterfall, scenario, saved views, LTM), alert email preference; demo step; Milestone 8 report (`docs/milestone-8-report.md`) (issue #195) | `claude/m8-6-screens` | #202 | Merged 2026-11-22 |
 | Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Merged 2026-11-22 (owner asked the developer to merge) |
 | **Version 1** (owner's own use; brief `docs/planning/24-version-1-brief.md`, approved 2026-11-22) | | | |
-| Version 1 brief: one-person workspace, Cyprus VAT return preparation, local install, end-to-end check, dependencies; Gate G deferred | `claude/v1-0-brief` | #206 | Open |
+| Version 1 brief: one-person workspace, Cyprus VAT return preparation, local install, end-to-end check, dependencies (issues #207–#211); Gate G brief (`docs/planning/23-gate-g-brief.md`, first proposed in #205) kept as deferred | `claude/v1-0-brief` | #206 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)
