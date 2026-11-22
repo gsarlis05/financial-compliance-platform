@@ -4569,6 +4569,113 @@
         "title": "DashboardQuery",
         "type": "object"
       },
+      "DaysWorthIn": {
+        "properties": {
+          "base_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Set Id"
+          },
+          "days": {
+            "description": "e.g. -10: customers pay 10 days sooner",
+            "maximum": 365,
+            "minimum": -365,
+            "title": "Days",
+            "type": "integer"
+          },
+          "driver": {
+            "enum": [
+              "dso",
+              "dio",
+              "dpo"
+            ],
+            "title": "Driver",
+            "type": "string"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          }
+        },
+        "required": [
+          "driver",
+          "days"
+        ],
+        "title": "DaysWorthIn",
+        "type": "object"
+      },
+      "DaysWorthOut": {
+        "properties": {
+          "by_month": {
+            "description": "The cash difference by month",
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "By Month",
+            "type": "array"
+          },
+          "closing_cash_change": {
+            "description": "At the end of the horizon",
+            "title": "Closing Cash Change",
+            "type": "string"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "driver": {
+            "title": "Driver",
+            "type": "string"
+          },
+          "engine_status": {
+            "default": "PENDING_PROFESSIONAL_REVIEW",
+            "title": "Engine Status",
+            "type": "string"
+          },
+          "lowest_cash_change": {
+            "title": "Lowest Cash Change",
+            "type": "string"
+          },
+          "nature": {
+            "default": "HYPOTHETICAL",
+            "title": "Nature",
+            "type": "string"
+          },
+          "net_working_capital_change": {
+            "description": "Negative: cash released",
+            "title": "Net Working Capital Change",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driver",
+          "days",
+          "closing_cash_change",
+          "lowest_cash_change",
+          "net_working_capital_change",
+          "by_month"
+        ],
+        "title": "DaysWorthOut",
+        "type": "object"
+      },
       "DebtIn": {
         "properties": {
           "adjust": {
@@ -15651,6 +15758,131 @@
           "data"
         ],
         "title": "WidgetOut",
+        "type": "object"
+      },
+      "WorkingCapitalMonthOut": {
+        "properties": {
+          "cash_effect": {
+            "description": "Working-capital lines of the cash flow statement",
+            "title": "Cash Effect",
+            "type": "string"
+          },
+          "ccc": {
+            "description": "Cash conversion cycle: DSO + DIO - DPO",
+            "title": "Ccc",
+            "type": "string"
+          },
+          "change": {
+            "description": "Against the month before (the cut-over for the first)",
+            "title": "Change",
+            "type": "string"
+          },
+          "dio": {
+            "title": "Dio",
+            "type": "string"
+          },
+          "dpo": {
+            "title": "Dpo",
+            "type": "string"
+          },
+          "dso": {
+            "title": "Dso",
+            "type": "string"
+          },
+          "inventory": {
+            "title": "Inventory",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "net": {
+            "description": "Receivables + inventory - payables",
+            "title": "Net",
+            "type": "string"
+          },
+          "payables": {
+            "title": "Payables",
+            "type": "string"
+          },
+          "receivables": {
+            "title": "Receivables",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "receivables",
+          "inventory",
+          "payables",
+          "net",
+          "change",
+          "cash_effect",
+          "dso",
+          "dio",
+          "dpo",
+          "ccc"
+        ],
+        "title": "WorkingCapitalMonthOut",
+        "type": "object"
+      },
+      "WorkingCapitalOut": {
+        "properties": {
+          "base_label": {
+            "title": "Base Label",
+            "type": "string"
+          },
+          "cutover": {
+            "format": "date",
+            "title": "Cutover",
+            "type": "string"
+          },
+          "engine_status": {
+            "default": "PENDING_PROFESSIONAL_REVIEW",
+            "title": "Engine Status",
+            "type": "string"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/WorkingCapitalMonthOut"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "nature": {
+            "description": "FORECAST (assumption set) or HYPOTHETICAL (scenario)",
+            "title": "Nature",
+            "type": "string"
+          },
+          "observed": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "DSO, DIO and DPO over the 12 months to the cut-over",
+            "title": "Observed",
+            "type": "object"
+          },
+          "observed_ccc": {
+            "title": "Observed Ccc",
+            "type": "string"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "base_label",
+          "nature",
+          "watermark",
+          "cutover",
+          "observed",
+          "observed_ccc",
+          "months"
+        ],
+        "title": "WorkingCapitalOut",
         "type": "object"
       },
       "WorkspaceIn": {
@@ -32540,6 +32772,146 @@
         "summary": "List Vat Codes",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/working-capital": {
+      "get": {
+        "description": "Receivables, stock and payables by month, the days that drive them and the cash\nconversion cycle, next to the days observed over the last 12 months (computed now).",
+        "operationId": "fcp_modules_scenarios_api_working_capital_view",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_set_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Base Set Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scenario_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingCapitalOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Working Capital View",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/working-capital/days-worth": {
+      "post": {
+        "description": "What N days are worth: the cash released by changing DSO, DIO or DPO by N days.",
+        "operationId": "fcp_modules_scenarios_api_working_capital_days_worth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DaysWorthIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DaysWorthOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Working Capital Days Worth",
+        "tags": [
+          "scenarios"
         ]
       }
     },
