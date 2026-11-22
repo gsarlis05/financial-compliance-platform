@@ -2,6 +2,7 @@
 
 import json
 import os
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -51,7 +52,16 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 35
+    assert len(result.steps) == 36
+    vat_step = next(s for s in result.steps if s.startswith("VAT: quarterly periods"))
+    assert "0 exception(s); signed off by the owner" in vat_step, vat_step
+    # The report's VAT equals the VAT the synthetic invoices of the first quarter carry.
+    q1 = [e for e in books.entries if e.accounting_date < date(2026, 4, 1)]
+    output = sum((e.lines["2120"][1] - e.lines["2120"][0] for e in q1 if "2120" in e.lines),
+                 Decimal(0))  # fmt: skip
+    inputs = sum((e.lines["1220"][0] - e.lines["1220"][1] for e in q1 if "1220" in e.lines),
+                 Decimal(0))  # fmt: skip
+    assert f"output VAT {output:.2f}, input VAT {inputs:.2f}, net {output - inputs:.2f}" in vat_step
     assert (
         "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
         "revenue 1320000.00"
@@ -196,7 +206,6 @@ def _assert_golden_forecast(forecast: dict[str, Any], refs: dict[str, Any]) -> N
        professional has checked it (brief §3); regenerate with ``UPDATE_GOLDEN=1`` only after
        reviewing the change.
     """
-    from datetime import date  # noqa: PLC0415
 
     from ..cashflow.test_engine import reference  # noqa: PLC0415
 

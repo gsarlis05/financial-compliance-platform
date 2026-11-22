@@ -73,8 +73,8 @@ def v(books: dict[str, Any]) -> dict[str, Any]:
 
 
 def scheme(v: dict[str, Any], months: int, start: str, client: Any = None) -> Any:
-    return (client or v["client"]).post_json(f"{v['base']}/vat-period-schemes",
-                                             {"months": months, "effective_from": start})  # fmt: skip
+    body = {"months": months, "effective_from": start}
+    return (client or v["client"]).post_json(f"{v['base']}/vat-period-schemes", body)
 
 
 def generate(v: dict[str, Any], start: str = Q1, client: Any = None) -> Any:
@@ -118,7 +118,7 @@ def test_the_golden_quarter(v: dict[str, Any]) -> None:
     made = scheme(v, 3, Q1)
     assert made.status_code == 201, made.content
     listed = v["client"].get(f"{v['base']}/vat-periods").json()
-    assert listed[-1]["start"] == Q1 and listed[-1]["report"] is None
+    assert (listed[-1]["start"], listed[-1]["report"]) == (Q1, None)
     assert generate(v, "2026-02-01").status_code == 422  # not the start of a period
 
     report = generate(v).json()
@@ -143,7 +143,7 @@ def test_the_golden_quarter(v: dict[str, Any]) -> None:
     assert snap["law"]["status"] == "AWAITING_SOURCES"
     # Every figure can be traced to its lines, and they add up.
     sales = sum(Decimal(ln["amount"]) for ln in snap["lines"] if ln["kind"] == "SALE")
-    assert sales == Decimal("1700.00") and len(snap["lines"]) == 10
+    assert (sales, len(snap["lines"])) == (Decimal("1700.00"), 10)
     assert all(ln["date"] < "2026-04-01" for ln in snap["lines"])
     assert report["blockers"] == []  # the quarter has ended and nothing changed
 

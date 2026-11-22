@@ -29,6 +29,7 @@ from typing import Any
 CENT = Decimal("0.01")
 SETTLEMENT = "SETTLEMENT"
 NO_VAT = ("ZERO", "EXEMPT", "OUT_OF_SCOPE")
+SIDES = {"sales": "sales", "purchase": "purchases"}
 
 
 @dataclass(frozen=True)
@@ -67,7 +68,7 @@ def _kind(line: Line, roles: set[str]) -> str:
 def compute(lines: list[Line]) -> dict[str, Any]:
     roles: dict[tuple[str, str], set[str]] = defaultdict(set)
     for ln in lines:
-        if ln.vat_role and ln.code:
+        if ln.vat_role and ln.code and ln.treatment != SETTLEMENT:
             roles[(ln.entry_id, ln.code)].add(ln.vat_role)
 
     zero = Decimal(0)
@@ -108,7 +109,7 @@ def compute(lines: list[Line]) -> dict[str, Any]:
             row["purchase_vat"] += amount
             acc["vat"] += amount
             shown.append(_shown(ln, "PURCHASE_VAT", amount))
-        elif _kind(ln, roles[(ln.entry_id, ln.code)]) == "SALE":
+        elif _kind(ln, roles.get((ln.entry_id, ln.code), set())) == "SALE":
             row["sales_base"] += -ln.net_debit
             shown.append(_shown(ln, "SALE", -ln.net_debit))
         else:
@@ -148,7 +149,13 @@ def _summarise(
         rate = Decimal(row["rate"]) if row["rate"] is not None else None
         for side in ("sales", "purchase"):
             recorded = row[f"{side}_vat"]
-            expected = (row[f"{side}_base"] * rate).quantize(CENT, ROUND_HALF_UP) if rate else zero
+            # A reverse charge: the buyer accounts for the output VAT on its own purchase.
+            base = (
+                row["purchase_base"]
+                if row["treatment"] == "REVERSE_CHARGE"
+                else row[f"{side}_base"]
+            )
+            expected = (base * rate).quantize(CENT, ROUND_HALF_UP) if rate else zero
             row[f"{side}_expected_vat"] = expected
             if row["treatment"] in NO_VAT and recorded:
                 exceptions.append(
@@ -160,7 +167,7 @@ def _summarise(
                 )
             elif abs(recorded - expected) > CENT * len(entries[code]):
                 exceptions.append({"kind": "RATE_MISMATCH", "entry": "", "detail":
-                                   f"{code} ({'sales' if side == 'sales' else 'purchases'}): VAT recorded {money(recorded)}, "
+                                   f"{code} ({SIDES[side]}): VAT recorded {money(recorded)}, "
                                    f"{money(expected)} at the code's rate."})  # fmt: skip
         rows.append({k: money(v) if isinstance(v, Decimal) else v for k, v in row.items()})
     return totals, rows
