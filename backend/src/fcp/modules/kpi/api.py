@@ -26,6 +26,7 @@ from .engine import (
     period_months,
     reference_functions,
 )
+from .library import DEFAULT_LIBRARY
 from .models import CustomKpi, KpiDefinition, OperationalMetric, OperationalValue
 from .services import KpiFormula, KpiSet, trackable
 from .services import latest as latest_kpi_set
@@ -33,6 +34,7 @@ from .services import run as run_kpi_set
 from .services import run_refs as kpi_inputs
 
 __all__ = [
+    "DEFAULT_LIBRARY",
     "KIND",
     "Account",
     "Evaluated",

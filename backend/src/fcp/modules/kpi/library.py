@@ -4,8 +4,8 @@ import json
 from importlib import resources
 from typing import Any
 
-LIBRARIES = ("core_1.0",)
-DEFAULT_LIBRARY = "CORE@1.0"
+LIBRARIES = ("core_1.0", "core_1.1")
+DEFAULT_LIBRARY = "CORE@1.1"  # M7-6: + net debt / EBITDA, DSCR, receivables and inventory turnover
 
 
 def _load(name: str) -> dict[str, Any]:

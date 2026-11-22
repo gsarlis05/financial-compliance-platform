@@ -11513,6 +11513,113 @@
         "title": "PrepareIn",
         "type": "object"
       },
+      "ProjectedKpiOut": {
+        "properties": {
+          "base_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a scenario: its base's value",
+            "title": "Base Value"
+          },
+          "display": {
+            "description": "percent, ratio, times, days or months",
+            "title": "Display",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nm_reason": {
+            "title": "Nm Reason",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "display",
+          "value",
+          "nm_reason"
+        ],
+        "title": "ProjectedKpiOut",
+        "type": "object"
+      },
+      "ProjectedKpisOut": {
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "engine_status": {
+            "default": "PENDING_PROFESSIONAL_REVIEW",
+            "title": "Engine Status",
+            "type": "string"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedKpiOut"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "library": {
+            "title": "Library",
+            "type": "string"
+          },
+          "nature": {
+            "description": "FORECAST (assumption set) or HYPOTHETICAL (scenario)",
+            "title": "Nature",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "nature",
+          "library",
+          "year",
+          "start",
+          "end",
+          "kpis"
+        ],
+        "title": "ProjectedKpisOut",
+        "type": "object"
+      },
       "ProjectionExportQuery": {
         "properties": {
           "granularity": {
@@ -29558,6 +29665,97 @@
         "summary": "Set Valuation",
         "tags": [
           "personal"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/projected-kpis": {
+      "get": {
+        "description": "The KPI library on a projected year of an approved set, or of a shared scenario next to\nits base (computed now; not stored).",
+        "operationId": "fcp_modules_scenarios_api_projected_kpis_view",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_set_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Base Set Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scenario_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectedKpisOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Projected Kpis View",
+        "tags": [
+          "scenarios"
         ]
       }
     },
