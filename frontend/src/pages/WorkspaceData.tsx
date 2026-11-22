@@ -124,7 +124,7 @@ function OnePersonSetting({ slug }: { slug: string }) {
   const { t } = useI18n();
   const state = useOnePerson(slug);
   const change = useSetOnePerson(slug);
-  if (!state.data) {
+  if (!state.data || !Array.isArray(state.data.blockers)) {
     // Only people who manage members may see or change it; others see nothing here.
     return null;
   }

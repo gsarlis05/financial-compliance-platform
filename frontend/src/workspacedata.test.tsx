@@ -37,6 +37,15 @@ describe("Workspace export and deletion (M5-6)", () => {
       "fetch",
       vi.fn((url: string, init: RequestInit) => {
         if ((init.method ?? "GET") === "GET") {
+          if (url.endsWith("/one-person")) {
+            // Covered by v1.test.tsx; here the user may not manage members.
+            return Promise.resolve(
+              respond(
+                { title: "Forbidden", status: 403, code: "permission_denied" },
+                403,
+              ),
+            );
+          }
           return Promise.resolve(
             url.endsWith("/deletion")
               ? respond(state)
