@@ -77,6 +77,7 @@ if not DOCUMENTS_KMS_KEY_ID:
 
 # --- Identity provider ---------------------------------------------------------------------------
 OIDC_ISSUER = _https("OIDC_ISSUER")
+OIDC_METADATA_URL = f"{OIDC_ISSUER}/.well-known/openid-configuration"
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET")
 OIDC_REDIRECT_URI = _https("OIDC_REDIRECT_URI")

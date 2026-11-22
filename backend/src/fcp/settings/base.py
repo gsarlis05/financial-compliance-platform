@@ -133,6 +133,10 @@ OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", "fcp-backend")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", "")
 OIDC_REDIRECT_URI = env("OIDC_REDIRECT_URI", "http://localhost:8000/auth/callback")
 OIDC_POST_LOGOUT_REDIRECT_URI = env("OIDC_POST_LOGOUT_REDIRECT_URI", "http://localhost:5173/")
+# Where the backend reads the provider's configuration. Normally under the issuer; on the owner's
+# computer (V1-3) the backend reaches the provider inside the container network, while browsers use
+# the issuer's public address.
+OIDC_METADATA_URL = env("OIDC_METADATA_URL", f"{OIDC_ISSUER}/.well-known/openid-configuration")
 # Claim values accepted as proof of multi-factor authentication.
 OIDC_MFA_AMR_VALUES = frozenset(env("OIDC_MFA_AMR_VALUES", "otp,mfa,hwk,swk,webauthn").split(","))
 OIDC_MFA_ACR_VALUES = frozenset(v for v in env("OIDC_MFA_ACR_VALUES", "").split(",") if v)
