@@ -12523,6 +12523,350 @@
         "title": "RunsQuery",
         "type": "object"
       },
+      "ScenarioBaseOut": {
+        "properties": {
+          "first_month": {
+            "format": "date",
+            "title": "First Month",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_month": {
+            "format": "date",
+            "title": "Last Month",
+            "type": "string"
+          },
+          "loans": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Loans",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "newer_version_approved": {
+            "title": "Newer Version Approved",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "APPROVED, or SUPERSEDED when a newer version is approved",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "status",
+          "newer_version_approved",
+          "first_month",
+          "last_month",
+          "loans"
+        ],
+        "title": "ScenarioBaseOut",
+        "type": "object"
+      },
+      "ScenarioCopyIn": {
+        "properties": {
+          "base_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Another approved assumption set (rebase); default: the same",
+            "title": "Base Set Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "ScenarioCopyIn",
+        "type": "object"
+      },
+      "ScenarioDetailOut": {
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ScenarioBaseOut"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioOverrideOut"
+            },
+            "title": "Overrides",
+            "type": "array"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/ScenarioOut"
+          }
+        },
+        "required": [
+          "scenario",
+          "base",
+          "overrides"
+        ],
+        "title": "ScenarioDetailOut",
+        "type": "object"
+      },
+      "ScenarioIn": {
+        "properties": {
+          "base_set_id": {
+            "description": "An approved assumption set of the entity",
+            "format": "uuid",
+            "title": "Base Set Id",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "base_set_id"
+        ],
+        "title": "ScenarioIn",
+        "type": "object"
+      },
+      "ScenarioOut": {
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "base_set_id": {
+            "format": "uuid",
+            "title": "Base Set Id",
+            "type": "string"
+          },
+          "copied_from_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copied From Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nature": {
+            "default": "HYPOTHETICAL",
+            "description": "Every scenario figure is hypothetical",
+            "title": "Nature",
+            "type": "string"
+          },
+          "shared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared At"
+          },
+          "status": {
+            "description": "DRAFT, SHARED or ARCHIVED",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "status",
+          "base_set_id",
+          "copied_from_id",
+          "created_by_id",
+          "created_at",
+          "shared_at",
+          "archived_at"
+        ],
+        "title": "ScenarioOut",
+        "type": "object"
+      },
+      "ScenarioOverrideIn": {
+        "properties": {
+          "params": {
+            "additionalProperties": true,
+            "description": "Parameters of the type (see the user guide)",
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "PCT_CHANGE",
+              "ABS_CHANGE",
+              "TIMING_SHIFT",
+              "NEW_DEBT",
+              "NEW_HIRE",
+              "CAPEX",
+              "ONE_OFF",
+              "RATE_CHANGE"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "params"
+        ],
+        "title": "ScenarioOverrideIn",
+        "type": "object"
+      },
+      "ScenarioOverrideOrderIn": {
+        "properties": {
+          "order": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Order",
+            "type": "array"
+          }
+        },
+        "required": [
+          "order"
+        ],
+        "title": "ScenarioOverrideOrderIn",
+        "type": "object"
+      },
+      "ScenarioOverrideOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "seq": {
+            "description": "The order in which the override applies (1 first)",
+            "title": "Seq",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "type",
+          "params",
+          "rationale"
+        ],
+        "title": "ScenarioOverrideOut",
+        "type": "object"
+      },
+      "ScenarioRenameIn": {
+        "properties": {
+          "description": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ScenarioRenameIn",
+        "type": "object"
+      },
       "ScheduleOut": {
         "properties": {
           "allowance_rules": {
@@ -29142,6 +29486,692 @@
         "summary": "Refresh Rolling",
         "tags": [
           "projections"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios": {
+      "get": {
+        "description": "Your drafts, and every shared or archived scenario of the entity.",
+        "operationId": "fcp_modules_scenarios_api_list_scenarios",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Scenarios",
+        "tags": [
+          "scenarios"
+        ]
+      },
+      "post": {
+        "description": "Start a draft scenario on an approved assumption set.",
+        "operationId": "fcp_modules_scenarios_api_create_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Create Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}": {
+      "get": {
+        "operationId": "fcp_modules_scenarios_api_get_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      },
+      "patch": {
+        "operationId": "fcp_modules_scenarios_api_rename_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioRenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Rename Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/archive": {
+      "post": {
+        "operationId": "fcp_modules_scenarios_api_archive_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Archive Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/copy": {
+      "post": {
+        "description": "A new draft with the same overrides, optionally on another approved base.",
+        "operationId": "fcp_modules_scenarios_api_copy_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCopyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Copy Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/overrides": {
+      "post": {
+        "description": "Add an override at the end of the list (it applies after the others).",
+        "operationId": "fcp_modules_scenarios_api_add_override",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioOverrideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOverrideOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Add Override",
+        "tags": [
+          "scenarios"
+        ]
+      },
+      "put": {
+        "description": "Put the overrides in a new order: list every override's id once.",
+        "operationId": "fcp_modules_scenarios_api_reorder_overrides",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioOverrideOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioOverrideOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reorder Overrides",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/overrides/{override_id}": {
+      "delete": {
+        "operationId": "fcp_modules_scenarios_api_remove_override",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "override_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Override Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Remove Override",
+        "tags": [
+          "scenarios"
+        ]
+      },
+      "put": {
+        "operationId": "fcp_modules_scenarios_api_change_override",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "override_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Override Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioOverrideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOverrideOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Change Override",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/share": {
+      "post": {
+        "description": "Make a draft visible to everyone who can read plans; it then never changes.",
+        "operationId": "fcp_modules_scenarios_api_share_scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Share Scenario",
+        "tags": [
+          "scenarios"
         ]
       }
     },

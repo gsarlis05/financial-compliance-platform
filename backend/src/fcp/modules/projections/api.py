@@ -20,12 +20,13 @@ from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
 from . import assumptions, engine, exports, loans, outlook, rolling, runs
-from .drivers import DRIVERS
+from .assumptions import SetInfo, set_info
+from .drivers import DRIVERS, OPEX_LINES, REVENUE_LINES
 from .layout import with_totals
 from .models import AssumptionSet
 from .outlook import projected_plan
 
-__all__ = ["projected_plan", "router"]
+__all__ = ["OPEX_LINES", "REVENUE_LINES", "SetInfo", "projected_plan", "router", "set_info"]
 
 router = Router(tags=["projections"])
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
