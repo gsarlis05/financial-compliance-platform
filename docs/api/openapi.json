@@ -741,6 +741,62 @@
         "title": "AlertCountsOut",
         "type": "object"
       },
+      "AlertEmailIn": {
+        "properties": {
+          "language": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Immediately, a daily digest at 08:00 Cyprus time, or no email",
+            "enum": [
+              "IMMEDIATE",
+              "DIGEST",
+              "OFF"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AlertEmailIn",
+        "type": "object"
+      },
+      "AlertEmailOut": {
+        "properties": {
+          "language": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Immediately, a daily digest at 08:00 Cyprus time, or no email",
+            "enum": [
+              "IMMEDIATE",
+              "DIGEST",
+              "OFF"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AlertEmailOut",
+        "type": "object"
+      },
       "AlertOut": {
         "properties": {
           "acknowledged_at": {
@@ -16920,6 +16976,44 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/alert-emails/unsubscribe": {
+      "get": {
+        "description": "The link in every alert email: turns those emails off, without signing in.",
+        "operationId": "fcp_modules_dashboards_api_unsubscribe_alert_emails",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Unsubscribe Alert Emails",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
     "/api/invitations/accept": {
       "post": {
         "operationId": "fcp_modules_tenancy_api_accept",
@@ -17093,6 +17187,90 @@
         "summary": "Verify Actuals",
         "tags": [
           "reporting"
+        ]
+      }
+    },
+    "/api/w/{slug}/alert-email-preference": {
+      "get": {
+        "description": "Your alert emails in this workspace (off unless you turned them on).",
+        "operationId": "fcp_modules_dashboards_api_get_alert_email",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertEmailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Alert Email",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "description": "Choose alert emails: titles and links only, never amounts.",
+        "operationId": "fcp_modules_dashboards_api_set_alert_email",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertEmailIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertEmailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set Alert Email",
+        "tags": [
+          "dashboards"
         ]
       }
     },
