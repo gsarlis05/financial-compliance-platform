@@ -79,6 +79,13 @@ PERMISSIONS: dict[str, str] = {
     "reports.pack.read": "See management report packs",
     "reports.pack.prepare": "Generate report packs, regenerate drafts and submit them for review",
     "reports.finalise": "Return report packs to the preparer or finalise them (never your own)",
+    # VAT period reports (V1-2)
+    "tax.vat.read": "See VAT periods and VAT reports",
+    "tax.vat.prepare": "Prepare VAT reports and prepare the VAT settlement entry",
+    "tax.vat.sign_off": (
+        "Choose the VAT periods; sign off VAT reports (never your own, except in a one-person "
+        "workspace) and record their filing"
+    ),
     "audit.read": "See the audit trail",
     "admin.integrity.read": "See ledger integrity check results",
 }
@@ -99,6 +106,7 @@ _READ = frozenset(
         "budget.read",
         "budget.department",
         "reports.pack.read",
+        "tax.vat.read",
     }
 )
 _PREPARE = _READ | {
@@ -124,6 +132,7 @@ _PREPARE = _READ | {
     "alert.acknowledge",
     "reports.export",
     "reports.pack.prepare",
+    "tax.vat.prepare",
 }
 _REVIEW = _READ | {
     "ledger.entry.approve",
@@ -147,6 +156,7 @@ _SIGN_OFF = (
         "kpi.definition.approve",
         "dashboard.manage_default",
         "reports.finalise",
+        "tax.vat.sign_off",
     }
 )
 

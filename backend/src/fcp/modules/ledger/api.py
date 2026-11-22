@@ -10,7 +10,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
@@ -62,6 +62,7 @@ __all__ = [
     "PostedEntry",
     "PostedLine",
     "TrialBalanceRow",
+    "VatLine",
     "account_balance",
     "account_list",
     "add_account",
@@ -69,16 +70,19 @@ __all__ = [
     "apply_account_template",
     "create_and_post",
     "create_entry_draft",
+    "create_system_draft",
     "dimension_list",
     "fiscal_year_list",
     "posted_dimension_totals",
     "posted_entries",
     "posted_lines",
+    "posting_watermark",
     "reverse_and_post",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
     "unposted_entries",
+    "vat_lines",
 ]
 
 EntryInput = entries.EntryInput
@@ -198,6 +202,74 @@ def create_entry_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> J
     """A draft from another module (e.g. a bank statement line), source IMPORT; it follows the
     normal workflow (doc 05 §8: sub-ledgers never write journal lines directly)."""
     return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.IMPORT)
+
+
+def create_system_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> JournalEntry:
+    """A draft prepared by the platform (e.g. a VAT settlement, V1-2), source SYSTEM; it follows
+    the normal workflow like every other entry."""
+    return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.SYSTEM)
+
+
+@dataclass(frozen=True)
+class VatLine:
+    """A posted line that carries a VAT code or sits on a VAT account (V1-2)."""
+
+    line_id: UUID
+    entry_id: UUID
+    entry_ref: str
+    posting_seq: int
+    accounting_date: date
+    description: str
+    account_code: str
+    account_name: str
+    account_type: str
+    vat_role: str  # INPUT, OUTPUT or "" (a taxable amount on an income or expense account)
+    vat_code_id: str | None
+    vat_code: str
+    treatment: str
+    rate: Decimal | None
+    verified: bool
+    net_debit: Decimal
+    counterparty: str
+    reference: str
+
+
+def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> list[VatLine]:
+    """Posted lines dated in the range that carry a VAT code or sit on a VAT account, closing
+    entries excluded (requires ``reports.read``)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    rows = (
+        JournalLine.objects.filter(
+            _operating("entry__"),
+            Q(vat_code__isnull=False) | ~Q(account__vat_role=""),
+            entry__legal_entity_id=entity.id, entry__status=JournalEntry.Status.POSTED,
+            entry__accounting_date__gte=date_from, entry__accounting_date__lte=date_to,
+        )
+        .select_related("entry__journal", "account", "vat_code", "counterparty")
+        .order_by("entry__accounting_date", "entry__posting_seq", "line_no")
+    )  # fmt: skip
+    return [
+        VatLine(
+            ln.id, ln.entry_id, f"{ln.entry.journal.code}-{ln.entry.entry_no}",
+            ln.entry.posting_seq or 0, ln.entry.accounting_date, ln.entry.description,
+            ln.account.code, ln.account.name, ln.account.type, ln.account.vat_role,
+            ln.vat_code_id, ln.vat_code.code if ln.vat_code else "",
+            ln.vat_code.treatment if ln.vat_code else "",
+            ln.vat_code.rate if ln.vat_code else None,
+            bool(ln.vat_code and ln.vat_code.verified), ln.debit - ln.credit,
+            ln.counterparty.name if ln.counterparty else "", ln.reference,
+        )
+        for ln in rows
+    ]  # fmt: skip
+
+
+def posting_watermark(ctx: Any, entity_id: UUID) -> int:
+    """The entity's latest posting sequence number (0 before the first posting)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    found = JournalEntry.objects.filter(
+        legal_entity_id=entity.id, status=JournalEntry.Status.POSTED
+    ).aggregate(m=Max("posting_seq"))["m"]
+    return int(found or 0)
 
 
 @dataclass(frozen=True)
