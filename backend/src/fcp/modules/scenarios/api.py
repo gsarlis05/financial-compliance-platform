@@ -19,7 +19,7 @@ from fcp.modules.projections.api import SetInfo
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import runs as scenario_runs
-from . import services
+from . import sensitivity, sensitivity_runs, services
 from .models import Scenario, ScenarioOverride
 from .overrides import MAX_OVERRIDES
 
@@ -386,3 +386,111 @@ def promote_scenario(request: HttpRequest, slug: str, entity_id: UUID, scenario_
     made = scenario_runs.promote(ctx, entity_id, scenario_id, name=payload.name)
     return Status(201, ScenarioPromotedOut(assumption_set_id=made.id, name=made.name,
                                            status=made.status))  # fmt: skip
+
+
+# --- sensitivity and tornado (M7-3) --------------------------------------------------------------
+
+SENSITIVITY = "/w/{slug}/entities/{uuid:entity_id}/sensitivity"
+Output = Literal["MIN_CASH", "CLOSING_CASH", "FIRST_SHORTFALL", "EBITDA", "NET_INCOME"]
+
+
+class SensitivityBaseIn(Schema):
+    base_set_id: UUID | None = Field(default=None, description="An approved assumption set")
+    scenario_id: UUID | None = Field(default=None, description="Or a shared scenario")
+    output: Output = "MIN_CASH"
+    year: int | None = Field(
+        default=None, ge=2000, le=2100, description="EBITDA and NET_INCOME: a year of the horizon"
+    )
+
+
+class OneVariableIn(SensitivityBaseIn):
+    driver: str = Field(max_length=40, description="e.g. revenue, opex:OPEX.RENT, dso")
+    unit: Literal["PERCENT", "DAYS"] = "PERCENT"
+    low: str = Field(pattern=r"^-?\d{1,4}(\.\d{1,4})?$", description="% or days")
+    high: str = Field(pattern=r"^-?\d{1,4}(\.\d{1,4})?$")
+    steps: int = Field(default=5, ge=2, le=11)
+
+
+class TornadoIn(SensitivityBaseIn):
+    drivers: list[str] = Field(default_factory=list, max_length=25,
+                               description="Empty: every driver the base uses")  # fmt: skip
+    percent: str = Field(default="10", pattern=r"^\d{1,3}(\.\d{1,4})?$",
+                         description="The shock, down and up")  # fmt: skip
+
+
+class MeasureOut(Schema):
+    value: str = Field(description="Money, or a number of months for FIRST_SHORTFALL")
+    month: date | None = Field(description="The month of the lowest cash or first shortfall")
+
+
+class SensitivityPointOut(Schema):
+    shock: str = Field(description="% or days")
+    result: MeasureOut
+    change: str = Field(description="Against the base")
+
+
+class TornadoBarOut(Schema):
+    driver: str
+    label: str
+    low: MeasureOut
+    high: MeasureOut
+    swing: str
+
+
+class SensitivityOut(Schema):
+    kind: str
+    output: str
+    year: int | None
+    base_label: str
+    base: MeasureOut
+    points: list[SensitivityPointOut]
+    bars: list[TornadoBarOut] = Field(description="Ranked by swing, largest first")
+    input_hash: str
+    watermark: int
+    cached: bool
+    nature: str = "HYPOTHETICAL"
+    engine_status: str = sensitivity_runs.ENGINE_STATUS
+
+
+def _measure(m: sensitivity.Measure, output: str) -> MeasureOut:
+    value = f"{m.value:.0f}" if output == "FIRST_SHORTFALL" else f"{m.value:.2f}"
+    return MeasureOut(value=value, month=m.month)
+
+
+def _analysis_out(a: sensitivity_runs.Analysis) -> SensitivityOut:
+    o = a.output
+    return SensitivityOut(
+        kind=a.kind, output=o, year=a.year, base_label=a.base_label, base=_measure(a.base_value, o),
+        points=[SensitivityPointOut(shock=f"{p.shock.normalize():f}", result=_measure(p.result, o),
+                                    change=f"{p.result.value - a.base_value.value:.2f}")
+                for p in a.points],
+        bars=[TornadoBarOut(driver=b.driver, label=b.label, low=_measure(b.low, o),
+                            high=_measure(b.high, o), swing=f"{b.swing:.2f}") for b in a.bars],
+        input_hash=a.input_hash, watermark=a.watermark, cached=a.cached,
+    )  # fmt: skip
+
+
+@router.post(f"{SENSITIVITY}/one-variable", response=SensitivityOut)
+@requires("planning.run")
+def sensitivity_one_variable(request: HttpRequest, slug: str, entity_id: UUID,
+                             payload: OneVariableIn) -> SensitivityOut:  # fmt: skip
+    """One driver over a range (up to 11 steps): the output at each step. Not stored."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _analysis_out(sensitivity_runs.one_variable(
+        ctx, entity_id, set_id=payload.base_set_id, scenario_id=payload.scenario_id,
+        driver=payload.driver, unit=payload.unit, low=Decimal(payload.low),
+        high=Decimal(payload.high), steps=payload.steps, output=payload.output, year=payload.year,
+    ))  # fmt: skip
+
+
+@router.post(f"{SENSITIVITY}/tornado", response=SensitivityOut)
+@requires("planning.run")
+def sensitivity_tornado(request: HttpRequest, slug: str, entity_id: UUID,
+                        payload: TornadoIn) -> SensitivityOut:  # fmt: skip
+    """Each driver shocked down and up on its own, ranked by the swing of the output."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _analysis_out(sensitivity_runs.tornado(
+        ctx, entity_id, set_id=payload.base_set_id, scenario_id=payload.scenario_id,
+        drivers=payload.drivers, percent=Decimal(payload.percent), output=payload.output,
+        year=payload.year,
+    ))  # fmt: skip

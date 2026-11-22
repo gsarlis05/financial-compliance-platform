@@ -55,6 +55,23 @@ the end of the window, and the comparison says how much.
 **Save** records the scenario's run, so it can be reproduced later; a saved scenario run is never
 published as an official forecast.
 
+## Which assumptions matter most: sensitivity and tornado
+Start from an approved assumption set, or from a **shared** scenario.
+
+- **One variable:** choose one assumption (for example revenue, rent, customer days) and a range
+  (for example −20% to +20%, or 0 to 60 more days for customer, stock or supplier days), in up to 11
+  steps. You get the result at each step and its change from the base.
+- **Tornado:** every assumption is moved down and up by the same % (10% unless you choose), one at
+  a time. The assumptions are ranked by how much the result moves between the two; equal ones are
+  listed by name.
+- **Results you can choose:** the lowest month-end cash, cash at the end, the number of months
+  before cash first goes below zero, or EBITDA or net income for a year.
+
+Results are hypothetical and are not saved. Asking the same question again on the same books gives
+the cached answer at once. To protect the service there is a limit on how many analyses one person
+and one workspace can run each minute, and on how long one analysis may take; the message says what
+to do if you reach it.
+
 ## Turning a scenario into a plan
 **Create an assumption-set draft** copies the base with the changes written into its values and
 loans. The draft then goes through the normal review and approval. Two kinds of change cannot be
@@ -77,6 +94,7 @@ and an investment in a month that already has capital expenditure with another u
 | Create, change, share and copy your scenarios | | ✔ | ✔ |
 | Compare, save a run, create a draft set from a scenario | | ✔ | ✔ |
 | See saved scenario runs | ✔ | ✔ | ✔ |
+| Run sensitivity and tornado analyses | | ✔ | ✔ |
 | Archive someone else's scenario | | | ✔ |
 
 Every change is recorded in the audit trail.
