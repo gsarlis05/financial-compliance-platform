@@ -6,13 +6,17 @@ import {
   type DashboardQuery,
   type KpiCard,
   type LayoutItem,
+  PRESETS,
+  type Preset,
   type VarianceLine,
   type Widget,
   type WidgetType,
   WIDGET_TYPES,
   useDashboard,
   useDashboardMutations,
+  useSavedViews,
 } from "../api/dashboard";
+import { useScenarios } from "../api/scenarios";
 import { useScope } from "../api/hooks";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
@@ -378,6 +382,10 @@ function WidgetBody({
           <Link to={`${base}/goals`}>{t("dash.open")}</Link>
         </>
       );
+    case "waterfall":
+      return <Waterfall data={d} />;
+    case "scenario":
+      return <ScenarioSummary data={d} />;
     case "alerts":
       return (
         <>
@@ -398,6 +406,115 @@ function WidgetBody({
   }
 }
 
+const HEADLINE_KEYS = [
+  "PL.REVENUE",
+  "PL.EBITDA",
+  "PL.NET_INCOME",
+  "CF.NET_CHANGE",
+  "BS.CASH",
+  "BS.DEBT",
+];
+
+/** From the budgeted result to the actual result, one row per budget line (M8-4). The table is
+ * the widget: every step is listed with its effect, and the steps add up to the difference. */
+function Waterfall({ data }: { data: Widget["data"] }) {
+  const { t, locale } = useI18n();
+  const amount = (v: string | undefined) => (v ? formatAmount(v, locale) : "—");
+  return (
+    <div className="table-scroll">
+      <table className="grid">
+        <caption>
+          {t("dash.wf.caption")} ({data.budget_name})
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{t("dash.line")}</th>
+            <th scope="col" className="num">
+              {t("dash.wf.amount")}
+            </th>
+            <th scope="col">{t("dash.wf.nature")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="subtotal">
+            <th scope="row">{t("dash.wf.start")}</th>
+            <td className="num">{amount(data.start)}</td>
+            <td>
+              {t(`nature.${data.start_nature ?? "BUDGET"}` as MessageKey)}
+            </td>
+          </tr>
+          {(data.steps ?? []).map((s) => (
+            <tr key={s.line}>
+              <th scope="row">{s.line}</th>
+              <td className="num">
+                {s.favourable === null ? "" : s.favourable ? "▲ " : "▼ "}
+                {amount(s.value)}
+              </td>
+              <td>{t("dash.wf.variance")}</td>
+            </tr>
+          ))}
+          <tr className="total">
+            <th scope="row">{t("dash.wf.end")}</th>
+            <td className="num">{amount(data.end)}</td>
+            <td>{t(`nature.${data.end_nature ?? "ACTUAL"}` as MessageKey)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** A shared scenario against its base (M8-4): hypothetical figures, named as such. */
+function ScenarioSummary({ data }: { data: Widget["data"] }) {
+  const { t, locale } = useI18n();
+  const changes = data.changes ?? {};
+  return (
+    <>
+      <p>
+        <strong>{data.name}</strong>{" "}
+        <span className="badge nature-hypothetical">
+          {t("nature.HYPOTHETICAL")}
+        </span>{" "}
+        · {t("sc.base")}: {data.base_name} v{data.base_version}
+      </p>
+      <p className="notice" role="note">
+        {t("pj.pendingReview")}
+      </p>
+      <div className="table-scroll">
+        <table className="grid">
+          <caption>{t("dash.sc.caption")}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("dash.line")}</th>
+              <th scope="col" className="num">
+                {t("dash.sc.change")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {HEADLINE_KEYS.map((k) => (
+              <tr key={k}>
+                <th scope="row">{t(`sc.h.${k}` as MessageKey)}</th>
+                <td className="num">
+                  {changes[k] ? formatAmount(changes[k], locale) : "—"}
+                </td>
+              </tr>
+            ))}
+            <tr>
+              <th scope="row">{t("dash.sc.lowestCash")}</th>
+              <td className="num">
+                {data.lowest_cash
+                  ? `${formatAmount(data.lowest_cash.base, locale)} → ${formatAmount(data.lowest_cash.scenario, locale)}`
+                  : "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 function Customise({
   current,
   onDone,
@@ -408,11 +525,24 @@ function Customise({
   const { t } = useI18n();
   const m = useDashboardMutations();
   const [items, setItems] = useState<LayoutItem[]>(
-    current.map((w) => ({
-      type: w.type,
-      ...(w.options.kpis ? { kpis: w.options.kpis } : {}),
-    })),
+    current.map((w) => ({ type: w.type, ...w.options })),
   );
+  const shared = (useScenarios().data ?? []).filter(
+    (s) => s.status === "SHARED",
+  );
+  const update = (type: WidgetType, change: Partial<LayoutItem>) =>
+    setItems((list) =>
+      list.map((i) => (i.type === type ? { ...i, ...change } : i)),
+    );
+  const setWidth = (type: WidgetType, half: boolean) =>
+    setItems((list) =>
+      list.map((i) => {
+        if (i.type !== type) return i;
+        const rest: LayoutItem = { ...i };
+        delete rest.width;
+        return half ? { ...rest, width: "half" as const } : rest;
+      }),
+    );
   const kpis = items.find((i) => i.type === "kpis")?.kpis ?? [];
   const [kpiText, setKpiText] = useState(kpis.join(", "));
   const toggle = (type: WidgetType) =>
@@ -432,18 +562,22 @@ function Customise({
       ];
       return next;
     });
-  const widgets = () =>
-    items.map((i) =>
-      i.type === "kpis"
+  const widgets = (): LayoutItem[] =>
+    items.map((i) => ({
+      type: i.type,
+      ...(i.type === "kpis"
         ? {
-            type: i.type,
             kpis: kpiText
               .split(",")
               .map((k) => k.trim().toUpperCase())
               .filter(Boolean),
           }
-        : { type: i.type },
-    );
+        : {}),
+      ...(i.type === "scenario" && i.scenario_id
+        ? { scenario_id: i.scenario_id }
+        : {}),
+      ...(i.width === "half" ? { width: "half" as const } : {}),
+    }));
   const save = (asDefault: boolean) =>
     m.save.mutate({ widgets: widgets(), asDefault }, { onSuccess: onDone });
   return (
@@ -479,7 +613,38 @@ function Customise({
               aria-label={`${t("dash.down")} ${t(`dash.w.${i.type}` as MessageKey)}`}
             >
               ↓
-            </button>
+            </button>{" "}
+            <label>
+              <span className="visually-hidden">
+                {t("dash.width")} {t(`dash.w.${i.type}` as MessageKey)}
+              </span>
+              <select
+                value={i.width ?? "full"}
+                onChange={(e) => setWidth(i.type, e.target.value === "half")}
+              >
+                <option value="full">{t("dash.width.full")}</option>
+                <option value="half">{t("dash.width.half")}</option>
+              </select>
+            </label>
+            {i.type === "scenario" ? (
+              <label>
+                {" "}
+                {t("dash.chooseScenario")}
+                <select
+                  value={i.scenario_id ?? ""}
+                  onChange={(e) =>
+                    update(i.type, { scenario_id: e.target.value })
+                  }
+                >
+                  <option value="">—</option>
+                  {shared.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </li>
         ))}
       </ol>
@@ -518,6 +683,74 @@ function Customise({
   );
 }
 
+/** Your saved views: a name for a period preset and a comparison (M8-4). */
+function SavedViews({
+  q,
+  onApply,
+}: {
+  q: DashboardQuery;
+  onApply: (v: Pick<DashboardQuery, "preset" | "comparison">) => void;
+}) {
+  const { t } = useI18n();
+  const views = useSavedViews();
+  const [chosen, setChosen] = useState("");
+  const [name, setName] = useState("");
+  const list = views.list.data ?? [];
+  return (
+    <div className="form inline">
+      <label>
+        {t("dash.views")}
+        <select
+          value={chosen}
+          onChange={(e) => {
+            setChosen(e.target.value);
+            const v = list.find((x) => x.id === e.target.value);
+            if (v) onApply({ preset: v.preset, comparison: v.comparison });
+          }}
+        >
+          <option value="">—</option>
+          {list.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {chosen ? (
+        <button
+          type="button"
+          onClick={() =>
+            views.remove.mutate(chosen, { onSuccess: () => setChosen("") })
+          }
+        >
+          {t("dash.view.delete")}
+        </button>
+      ) : null}
+      <label>
+        {t("dash.view.name")}
+        <input
+          value={name}
+          maxLength={60}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+      <button
+        type="button"
+        disabled={!name.trim()}
+        onClick={() =>
+          views.save.mutate(
+            { name: name.trim(), preset: q.preset, comparison: q.comparison },
+            { onSuccess: () => setName("") },
+          )
+        }
+      >
+        {t("dash.view.save")}
+      </button>
+      <ProblemMessage error={views.save.error ?? views.remove.error} />
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { t } = useI18n();
   const [q, setQ] = useState<DashboardQuery>({
@@ -543,11 +776,9 @@ export function DashboardPage() {
           {t("dash.period")}
           <select
             value={q.preset}
-            onChange={(e) =>
-              setQ({ ...q, preset: e.target.value as DashboardQuery["preset"] })
-            }
+            onChange={(e) => setQ({ ...q, preset: e.target.value as Preset })}
           >
-            {(["MONTH", "QTD", "YTD"] as const).map((x) => (
+            {PRESETS.map((x) => (
               <option key={x} value={x}>
                 {t(`dash.preset.${x}` as MessageKey)}
               </option>
@@ -587,6 +818,7 @@ export function DashboardPage() {
           {t("dash.refresh")}
         </button>
       </div>
+      <SavedViews q={q} onApply={(v) => setQ({ ...q, ...v })} />
       {p ? (
         <p className="muted" role="status">
           {p.date_from} – {p.date_to} ·{" "}
@@ -605,7 +837,7 @@ export function DashboardPage() {
         {(board.data?.widgets ?? []).map((w) => (
           <section
             key={w.type}
-            className="card dash-widget"
+            className={`card dash-widget${w.options.width === "half" ? " dash-half" : ""}`}
             aria-labelledby={`dash-${w.type}`}
           >
             <h2 id={`dash-${w.type}`}>{t(`dash.w.${w.type}` as MessageKey)}</h2>

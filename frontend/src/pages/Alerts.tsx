@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { type Alert, useAlertMutations, useAlerts } from "../api/alerts";
+import {
+  type Alert,
+  type AlertEmailPreference,
+  useAlertEmail,
+  useAlertMutations,
+  useAlerts,
+} from "../api/alerts";
 import { useScope } from "../api/hooks";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
@@ -32,6 +38,64 @@ function Acknowledge({ alert }: { alert: Alert }) {
   );
 }
 
+/** Alerts by email in this workspace (M8-5): off unless you choose; titles and links only. */
+function EmailPreference() {
+  const { t } = useI18n();
+  const email = useAlertEmail();
+  const current = email.current.data;
+  const [mode, setMode] = useState<AlertEmailPreference["mode"] | null>(null);
+  const [language, setLanguage] = useState<"en" | "el" | null>(null);
+  if (!current) return null;
+  const chosen = {
+    mode: mode ?? current.mode,
+    language: language ?? current.language,
+  };
+  return (
+    <section className="card" aria-labelledby="alert-email">
+      <h2 id="alert-email">{t("alert.email.title")}</h2>
+      <p className="muted">{t("alert.email.intro")}</p>
+      <div className="form inline">
+        <label>
+          {t("alert.email.mode")}
+          <select
+            value={chosen.mode}
+            onChange={(e) =>
+              setMode(e.target.value as AlertEmailPreference["mode"])
+            }
+          >
+            {(["OFF", "IMMEDIATE", "DIGEST"] as const).map((x) => (
+              <option key={x} value={x}>
+                {t(`alert.email.${x}` as MessageKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("app.language")}
+          <select
+            value={chosen.language}
+            onChange={(e) => setLanguage(e.target.value as "en" | "el")}
+          >
+            <option value="en">English</option>
+            <option value="el">Ελληνικά</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          disabled={email.save.isPending}
+          onClick={() => email.save.mutate(chosen)}
+        >
+          {t("alert.email.save")}
+        </button>
+      </div>
+      {email.save.isSuccess ? (
+        <p role="status">{t("alert.email.saved")}</p>
+      ) : null}
+      <ProblemMessage error={email.save.error} />
+    </section>
+  );
+}
+
 export function AlertsPage() {
   const { t } = useI18n();
   const { slug, entityId } = useScope();
@@ -54,6 +118,7 @@ export function AlertsPage() {
       }
     >
       <p className="muted">{t("alert.intro")}</p>
+      <EmailPreference />
       {m.check.data ? (
         <p role="status">
           {t("alert.raised")}: {m.check.data.raised}

@@ -2,6 +2,7 @@
 a daily digest; only for users who may see the alert; titles and links but no amounts; a working
 one-click unsubscribe; retries, then failure recorded; an hourly limit."""
 
+import io
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -9,10 +10,12 @@ from uuid import UUID
 
 import pytest
 from django.core import mail
+from django.core.management import call_command
 from django.test import Client, override_settings
 
 from fcp.core.db.rls import set_context
 from fcp.modules.dashboards import emails
+from fcp.modules.dashboards.management.commands import dashboards_send_alert_emails as job
 from fcp.modules.dashboards.models import AlertEmail, AlertEmailPreference
 
 from ..goals.test_goals import budget, evaluate, g, goal
@@ -142,10 +145,27 @@ def test_retries_then_failure_and_hourly_limit(
     assert AlertEmail.objects.filter(status="SKIPPED").count() == 1
 
 
-def test_the_scheduled_job_finds_the_workspaces(g: dict[str, Any]) -> None:
+def test_the_scheduled_job_finds_the_workspaces(
+    g: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     budget(g)
     prefer(g, "IMMEDIATE")
     off_track(g)
-    assert emails.send_all().sent == 1  # through dashboards_alert_email_tenant_ids()
+    out = io.StringIO()
+    call_command("dashboards_send_alert_emails", stdout=out)  # dashboards_alert_email_tenant_ids()
+    assert out.getvalue().startswith("Sent 1; 0 to retry; 0 failed; 0 over the hourly limit;")
+    assert len(mail.outbox) == 1
+
+    class Stop(Exception):
+        pass
+
+    def stop(seconds: int) -> None:
+        assert seconds == 7
+        raise Stop
+
+    monkeypatch.setattr(f"{job.__name__}.time.sleep", stop)
+    with pytest.raises(Stop):  # --loop sends again after each pause; nothing new to send
+        call_command("dashboards_send_alert_emails", "--loop", "--interval", "7", stdout=out)
+    assert out.getvalue().count("Sent 0;") == 1
     set_context(tenant_id=UUID(g["ws"]["id"]))
     assert AlertEmailPreference.objects.get().unsubscribe_token

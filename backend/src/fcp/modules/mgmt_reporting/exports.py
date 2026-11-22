@@ -302,13 +302,25 @@ def _pdf_section(section: dict[str, Any], lang: Lang, t: dict[str, str],
     return out
 
 
+def cell_text(value: str | None, display: str | None, lang: Lang) -> str:
+    """A figure as the PDF prints it: two decimals, and a percentage where the row's figures are
+    ratios shown as percentages (KPIs and goals)."""
+    if value is not None and display == "percent":
+        try:
+            return _amount(f"{Decimal(value) * 100:.2f}", lang) + "%"
+        except (InvalidOperation, ValueError):
+            return value
+    return _amount(value, lang)
+
+
 def pdf_lines(table: dict[str, Any], lang: Lang) -> list[list[str]]:
     """The text of each line of a table as the PDF prints it: the header, the nature line, then
     one line per row (label and formatted figures)."""
     t = _TEXT[lang]
     header = [_label(c, lang) for c in table["columns"]]
     natures = [t["nature"], *(t.get(n, "") if n else "" for n in _column_natures(table))]
-    rows = [[_label(row, lang), *(_amount(c["value"], lang) for c in row["cells"])]
+    rows = [[_label(row, lang),
+             *(cell_text(c["value"], row.get("display"), lang) for c in row["cells"])]
             for row in table["rows"]]  # fmt: skip
     return [header, natures, *rows]
 
