@@ -33,6 +33,7 @@ from fcp.modules.projections.api import (
     REVENUE_LINES,
     EngineInput,
     Projection,
+    line_name,
     project,
 )
 
@@ -54,7 +55,11 @@ DRIVERS: tuple[str, ...] = (
 
 
 def label(driver: str) -> str:
-    return LABELS.get(driver) or driver.split(":", 1)[1]
+    """Plain words: a line driver is named by its projection line (e.g. "Payroll")."""
+    if driver in LABELS:
+        return LABELS[driver]
+    line = driver.split(":", 1)[1]
+    return line_name(f"PL.{line}", "en")
 
 
 def _invalid(name: str, message: str) -> ValidationFailedError:

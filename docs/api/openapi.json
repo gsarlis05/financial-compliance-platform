@@ -13218,6 +13218,31 @@
         "title": "ScenarioEffectOut",
         "type": "object"
       },
+      "ScenarioExportQuery": {
+        "properties": {
+          "granularity": {
+            "default": "MONTH",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "lang": {
+            "default": "en",
+            "enum": [
+              "en",
+              "el"
+            ],
+            "title": "Lang",
+            "type": "string"
+          }
+        },
+        "title": "ScenarioExportQuery",
+        "type": "object"
+      },
       "ScenarioIn": {
         "properties": {
           "base_set_id": {
@@ -31149,6 +31174,86 @@
           }
         ],
         "summary": "Compare Scenario",
+        "tags": [
+          "scenarios"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/scenarios/{scenario_id}/comparison/export": {
+      "get": {
+        "description": "The comparison as XLSX: base, scenario and difference per period, a nature row above the\nfigures and the change by override; audited.",
+        "operationId": "fcp_modules_scenarios_api_export_comparison",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "granularity",
+            "required": false,
+            "schema": {
+              "default": "MONTH",
+              "enum": [
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "title": "Granularity",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "enum": [
+                "en",
+                "el"
+              ],
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Export Comparison",
         "tags": [
           "scenarios"
         ]

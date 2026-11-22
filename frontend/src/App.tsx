@@ -41,6 +41,9 @@ import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
 import { WorkspaceHome, WorkspacesPage } from "./pages/Workspaces";
 import { OutlookPage } from "./pages/Outlook";
 import { ProjectionsPage } from "./pages/Projections";
+import { ScenariosPage } from "./pages/Scenarios";
+import { SensitivityPage } from "./pages/Sensitivity";
+import { WorkingCapitalPage } from "./pages/WorkingCapital";
 
 const router = createBrowserRouter([
   {
@@ -66,6 +69,12 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/assumptions", element: <AssumptionsPage /> },
       { path: "w/:slug/e/:entityId/projections", element: <ProjectionsPage /> },
       { path: "w/:slug/e/:entityId/outlook", element: <OutlookPage /> },
+      { path: "w/:slug/e/:entityId/scenarios", element: <ScenariosPage /> },
+      { path: "w/:slug/e/:entityId/sensitivity", element: <SensitivityPage /> },
+      {
+        path: "w/:slug/e/:entityId/working-capital",
+        element: <WorkingCapitalPage />,
+      },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
       {
         path: "w/:slug/e/:entityId/custom-kpis",

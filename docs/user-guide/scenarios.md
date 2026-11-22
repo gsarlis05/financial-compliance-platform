@@ -5,7 +5,10 @@ Assumptions) and changes some of its assumptions, so you can compare the result 
 Every figure a scenario produces is **hypothetical**. A scenario never changes the assumptions it is
 based on, a budget, a forecast or the books.
 
-The screens follow in a later release (M7-7); everything below is available through the API.
+Screens: **Cash & planning → Scenarios**, **Sensitivity** and **Working capital**, and a section on
+each goal (**Goals**, select a goal). Scenario figures are drawn as dotted lines and named
+"hypothetical" in words, so they never depend on colour alone; every chart has a table with the
+same figures.
 
 ## Starting a scenario
 Choose an approved assumption set of the entity as the **base** and give the scenario a name. It
@@ -54,6 +57,16 @@ the end of the window, and the comparison says how much.
 
 **Save** records the scenario's run, so it can be reproduced later; a saved scenario run is never
 published as an official forecast.
+
+**Export to Excel** downloads the comparison in the period you are viewing and in your language:
+one sheet per statement with the base, the scenario and the difference for each period, a
+"Nature" row above the figures (actual for the opening balance sheet, hypothetical otherwise), and
+a sheet with the change made by each override. Every sheet says that the figures are hypothetical,
+not actual results and not an approved forecast. Exporting needs the right to export reports and
+is recorded in the audit trail.
+
+Once the scenario is **shared**, the comparison also shows the KPI library on the scenario's
+first year next to the base's.
 
 ## Which assumptions matter most: sensitivity and tornado
 Start from an approved assumption set, or from a **shared** scenario.

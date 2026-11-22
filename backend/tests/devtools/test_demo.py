@@ -41,7 +41,7 @@ def test_demo_entry_nets_each_account_to_one_side() -> None:
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.usefixtures("reference_data", "document_bucket")
-def test_demo_walkthrough_runs_end_to_end() -> None:
+def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkthrough)
     viewer = User.objects.create(idp_subject="https://idp.test|viewer", email="viewer@example.test")
     said: list[str] = []
     result = run(share_with="Viewer@Example.test", say=said.append)
@@ -51,7 +51,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 33
+    assert len(result.steps) == 34
     assert (
         "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
         "revenue 1320000.00"
@@ -116,6 +116,11 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
         )
         for s in result.steps
     ), result.steps
+    # M7: revenue 15% lower from July 2027. The demo year is seasonal (2026: 560,000 to June,
+    # 640,000 after), so July-December 2027 is 640,000 x 1.1 = 704,000 and 2028 is 1,452,000:
+    # 15% of 2,156,000 = 323,400.
+    scenario_step = next(s for s in result.steps if s.startswith("scenario "))
+    assert "hypothetical, all checks hold; revenue -323400.00" in scenario_step, scenario_step
     export_step = next(s for s in result.steps if s.startswith("full export of the workspace"))
     assert "deletion confirmed with 30 days' grace, then cancelled" in export_step, export_step
     assert all(line.startswith("✔") for line in said)

@@ -15,6 +15,7 @@ import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
+import { GoalScenarios } from "./GoalScenarios";
 
 const TYPES: TargetType[] = [
   "ABSOLUTE",
@@ -759,6 +760,13 @@ export function GoalsPage() {
         </div>
       ) : null}
       {goal ? <Detail key={goal.id} goal={goal} /> : null}
+      {goal ? (
+        <GoalScenarios
+          key={`s${goal.id}`}
+          goalId={goal.id}
+          format={(v) => formatValue(v, goal.unit, goal.display, locale)}
+        />
+      ) : null}
     </Page>
   );
 }

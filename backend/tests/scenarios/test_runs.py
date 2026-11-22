@@ -224,3 +224,31 @@ def test_any_scenario_keeps_the_invariants_and_its_effects_add_up(
                      if x.ref.startswith("scenario_override:")), D(0))  # fmt: skip
         before = base_values.get((v.series_key, v.period_start, v.granularity)) or D(0)
         assert (v.value or D(0)) - before == shift, v.series_key
+
+
+def test_rate_targets_and_nothing_lost() -> None:
+    """The remaining branches of ``apply``: a month shift that loses nothing says nothing; a rate
+    change on the facility leaves the loans alone; a loan not named keeps its rate; a named loan's
+    rate cannot go below zero."""
+    inp = base()
+    quiet_dec = {**inp.drivers[("revenue", "REV.SALES")], MONTHS[-1]: D(0)}
+    quiet = replace(inp, drivers={**inp.drivers, ("revenue", "REV.SALES"): quiet_dec})
+    moved = apply(quiet, [item(1, "TIMING_SHIFT", mode="MONTHS", driver="revenue",
+                               line="REV.SALES", months=1)])  # fmt: skip
+    assert moved.notes == []  # December was empty, so nothing moved out of the window
+    assert moved.inp.drivers[("revenue", "REV.SALES")][MONTHS[-1]] == D(10000)
+
+    facility = apply(inp, [item(1, "RATE_CHANGE", target="FACILITY", points="2",
+                                from_month="2027-01-01")])  # fmt: skip
+    assert facility.inp.drivers[("revolver_rate", "")][MONTHS[0]] == D(2)
+    assert facility.inp.loans == inp.loans  # the term loan is not the facility
+
+    other = apply(inp, [item(1, "RATE_CHANGE", target="LOANS", loans=["NOT-THIS"], points="2",
+                             from_month="2027-01-01")])  # fmt: skip
+    assert other.inp.loans == inp.loans
+
+    with pytest.raises(
+        ValidationFailedError, match=re.escape("the rate of TERM-1 would be negative in 01/2027")
+    ):
+        apply(inp, [item(1, "RATE_CHANGE", target="LOANS", loans=["TERM-1"], points="-6",
+                         from_month="2027-01-01")])  # fmt: skip
