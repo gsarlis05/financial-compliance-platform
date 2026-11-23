@@ -22,6 +22,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+from django.db.models import F
 from django.test import Client
 
 from fcp.modules.identity.api import User
@@ -985,7 +986,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          "cancelled")  # fmt: skip
 
     if share_with:
-        viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()
+        # The account that signed in last: a reset identity-provider user (as the browser
+        # walk-through does) signs in as a new account with the same email (V1-4).
+        latest = (F("last_login").desc(nulls_last=True), "-created_at")
+        viewer = User.objects.filter(email__iexact=share_with).order_by(*latest).first()
         if viewer is None:
             say(f"! no user with email {share_with}; sign in once through the web UI, then rerun")
         else:
