@@ -36,9 +36,8 @@ platform never submits anything.
   - **Triangular:** triangular amounts are totalled apart and compared with no box. Their
     treatment in the return is for a tax professional to confirm.
 - **Corrections:** for a month, the latest statement filed replaces the earlier ones. A
-  correction is taken to carry the month's full corrected values. **This is an assumption to be
-  confirmed by a Cyprus tax professional (#93).** If corrections carry only the changes, the
-  comparison must add them instead.
+  correction carries the month's full corrected figures: **the owner's decision of 23 November
+  2026**.
 - The comparison is never part of the report's fingerprint, and never blocks a review: a
   statement can be filed after the return.
 

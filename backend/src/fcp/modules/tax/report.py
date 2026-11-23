@@ -590,9 +590,9 @@ def vies_reconcile(
     """The EU supplies in the books, per partner, against the VIES statements recorded for the
     period's months, and their totals against Boxes 8A (goods) and 8B (services).
 
-    For a month, the latest correction recorded replaces the original statement (an assumption
-    to be confirmed by a tax professional, #93). Triangular amounts are shown apart and compared
-    with no box. Differences are classed: a month with no statement, a partner only on one side,
+    For a month, the latest correction recorded replaces the original statement: a correction
+    carries the month's full figures (owner's decision, 2026-11-23). Triangular amounts are
+    shown apart and compared with no box. Differences are classed: a month with no statement, a partner only on one side,
     rounding (under one euro), or another difference to explain."""
     zero = Decimal(0)
     months = _months(start, end)

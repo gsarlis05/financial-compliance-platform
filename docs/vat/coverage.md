@@ -51,7 +51,6 @@ specification does not map that kind of line for that category.
 | LEGACY_REVERSE_CHARGE (the old code RC) | Use a specific reverse-charge or acquisition code. |
 | Special schemes (margin, travel agents, flat rate) | Not modelled; never treated as zero-rated. |
 | Triangular transactions | Recorded on VIES statements, kept apart and compared with no box; ask your adviser. |
-| VIES corrections carrying only the changes | Corrections are taken as full replacement values (to be confirmed, #93). |
 | Foreign-currency invoices | Waiting on the owner's decision (#219). |
 | The Tax Department's XML format | Waiting for the official XSD (#220). |
 | Bad-debt relief, capital goods and partial exemption | Enter them as adjustments with evidence. |
