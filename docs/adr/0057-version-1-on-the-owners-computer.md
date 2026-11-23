@@ -51,6 +51,20 @@ It must:
   - **upgrade** backs up, rebuilds from the checkout and lets the migration service run before
     the API starts.
 
+## Verification
+`scripts/local/smoke.js` drives a real browser through the local stack. On 2026-11-23 it ran
+from a clean install:
+1. First sign-in: the temporary password must be changed and an authenticator set up, then a
+   workspace is created.
+2. The temporary password is refused afterwards, and repeated failures lock the account for a
+   while (brute-force protection).
+3. A backup, then a restore over everything (the integrity checks pass), then signing in again
+   with the new password and code: the workspace is still there.
+4. An upgrade: backup, rebuild, migrate, checks.
+
+This run found that the realm had not enabled the "update password" required action, so the
+temporary password stayed valid. The realm now enables it.
+
 ## Consequences
 - The owner needs Docker and about 4 GB of memory. ClamAV alone takes about 1 GB.
 - No TLS on localhost. The platform is not reachable from other machines; moving to AWS is

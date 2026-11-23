@@ -15,6 +15,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DIR="$ROOT/deploy/local"
 ENV_FILE="$DIR/.env"
 BACKUPS="${FCP_BACKUPS:-$ROOT/backups}"
+work=""  # the temporary folder of a backup or restore, removed when the script ends
 compose() { docker compose --project-directory "$DIR" -f "$DIR/compose.yaml" --env-file "$ENV_FILE" "$@"; }
 say() { printf '%s\n' "$*"; }
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
@@ -76,14 +77,14 @@ create_owner() {
   local email="$1" password
   password="$(secret 12)Aa1"
   kcadm config credentials --server http://localhost:8080 --realm master --user admin \
-    --password "$(grep '^KEYCLOAK_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)" >/dev/null
+    --password "$(grep '^KEYCLOAK_ADMIN_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)" >/dev/null 2>&1
   if kcadm get users -r fcp -q "email=$email" --fields id | grep -q '"id"'; then
     say "A sign-in for $email already exists."
     return 0
   fi
   kcadm create users -r fcp -s "username=$email" -s "email=$email" -s enabled=true \
-    -s emailVerified=true -s 'requiredActions=["CONFIGURE_TOTP","UPDATE_PASSWORD"]' >/dev/null
-  kcadm set-password -r fcp --username "$email" --new-password "$password" --temporary >/dev/null
+    -s emailVerified=true -s 'requiredActions=["CONFIGURE_TOTP","UPDATE_PASSWORD"]' >/dev/null 2>&1
+  kcadm set-password -r fcp --username "$email" --new-password "$password" --temporary >/dev/null 2>&1
   say ""
   say "Your sign-in:   $email"
   say "First password: $password   (shown once; you choose a new one at first sign-in)"
@@ -113,10 +114,10 @@ cmd_backup() {
   need_docker
   [ -f "$ENV_FILE" ] || die "Not installed yet."
   mkdir -p "$BACKUPS"
-  local stamp work out
+  local stamp out
   stamp="$(date -u +%Y%m%d-%H%M%S)"
   work="$(mktemp -d)"
-  trap 'rm -rf "$work"' RETURN
+  trap '[ -n "$work" ] && rm -rf "$work"' EXIT
   say "Backing up the database, sign-in data and documents..."
   compose exec -T postgres pg_dump -U postgres -Fc fcp > "$work/fcp.dump"
   compose exec -T postgres pg_dump -U postgres -Fc keycloak > "$work/keycloak.dump"
@@ -135,9 +136,8 @@ cmd_restore() {
   local file="${1:-}"
   [ -f "$file" ] || die "Give a backup file: scripts/local/fcp.sh restore backups/fcp-....tar.gz"
   need_docker
-  local work
   work="$(mktemp -d)"
-  trap 'rm -rf "$work"' RETURN
+  trap '[ -n "$work" ] && rm -rf "$work"' EXIT
   tar -C "$work" -xzf "$file"
   (cd "$work" && sha256sum -c --quiet SHA256SUMS) || die "The backup is damaged (checksums do not match)."
   say "This replaces everything in your local platform with the backup of $(grep '^created=' "$work/manifest" | cut -d= -f2)."
