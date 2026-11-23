@@ -62,6 +62,8 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     inputs = sum((e.lines["1220"][0] - e.lines["1220"][1] for e in q1 if "1220" in e.lines),
                  Decimal(0))  # fmt: skip
     assert f"output VAT {output:.2f}, input VAT {inputs:.2f}, net {output - inputs:.2f}" in vat_step
+    # The return's boxes come from the same lines: domestic sales and purchases only.
+    assert f"Box 1 {output:.2f}, Box 4 {inputs:.2f}, Box 5 {output - inputs:.2f}" in vat_step
     assert (
         "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
         "revenue 1320000.00"

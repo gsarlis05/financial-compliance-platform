@@ -32,6 +32,29 @@ In **Periods**, choose **Prepare report** next to the period. The report shows:
 A VAT code is applied to the entries where you choose it. For a sale, put the code on the income
 line as well as on the VAT line, so that the taxable amount is counted.
 
+### The return's boxes
+At the top of the report, **VAT return** shows the 13 boxes you enter on the portal:
+- Boxes 1–5 (VAT) to the cent;
+- Boxes 6–11B (values) in whole euros, with the rounding next to them.
+
+Box 3 is Box 1 plus Box 2, and Box 5 is Box 3 minus Box 4: payable when positive, a credit when
+negative.
+
+Choose **Lines** next to a box to see the lines that make it up and their total. In the
+**Lines** table, **Boxes** shows where each line goes. Hover over it to see the rule. A line
+marked **not in any box** is one the rules do not cover, for example an exempt purchase or the
+value of an import. It is listed under **Checks**: ask your tax adviser how to report it.
+
+**Checks** also lists:
+- a tax point in another period;
+- EU sales or purchases where the customer or supplier has no country or VAT number;
+- a country that does not fit the code;
+- Box 6 or Box 7 smaller than the boxes it includes, which a credit note can cause.
+
+The box rules come from your specification and the Tax Department's guides. They are marked as
+not yet verified by a Cyprus tax professional. The figures are prepared for you to check and
+enter yourself.
+
 ### VAT codes and line details
 VAT codes are grouped by kind in the entry form: domestic, zero-rated, exempt, EU goods and
 services, reverse charge (EU services, non-EU services, domestic), imports and so on. Choose the
@@ -59,7 +82,12 @@ GR) and VAT number under **Customers & suppliers**.
 To correct a report that is already signed off or filed, choose **Start a new version**.
 
 ## What is still to come
-The report does not yet show the items of the VAT return exactly as the law sets them out. They
-will be added from the official documents (the VAT law, the VAT return form and its notes),
-with their sources. VAT codes show that they have not yet been checked by a Cyprus tax
+- Review and finalising in four steps (draft, reviewed, finalised, filed).
+- Manual adjustments with a reason and evidence.
+- A record of which return each line was included in.
+- Schedules (sales, purchases, EU trade, reverse charge, imports) and a reconciliation to the
+  VAT accounts.
+- Checks against the VIES statements.
+
+Rates, codes and box rules show that they have not yet been checked by a Cyprus tax
 professional.
