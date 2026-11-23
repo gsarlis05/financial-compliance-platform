@@ -103,11 +103,12 @@ class SuggestedRate:
     source: str
 
 
-def suggested_rate(ctx: WorkspaceContext, entity_id: UUID, currency: str,
-                   on: date) -> SuggestedRate | None:  # fmt: skip
+def suggested_rate(ctx: WorkspaceContext, entity_id: UUID, currency: str, on: date,
+                   prefer: str = "SPOT") -> SuggestedRate | None:  # fmt: skip
     """The latest stored rate on or before ``on`` between the currency and the entity's functional
-    currency, in either direction, spot rates first. Only a suggestion: the rate of the
-    transaction itself (bank, invoice) is what the line records."""
+    currency, in either direction; on the same date, ``prefer`` first (spot for a transaction,
+    closing for a revaluation). Only a suggestion: the rate of the transaction itself (bank,
+    invoice) is what the line records."""
     entity = get_entity(ctx, entity_id, "ledger.entry.read")
     functional = entity.functional_currency
     found = (
@@ -117,7 +118,10 @@ def suggested_rate(ctx: WorkspaceContext, entity_id: UUID, currency: str,
     )
     best = None
     for r in found[:20]:
-        rank = (r.rate_date, {"SPOT": 2, "CLOSING": 1}.get(r.rate_type, 0))
+        rank = (
+            r.rate_date,
+            3 if r.rate_type == prefer else {"SPOT": 2, "CLOSING": 1}.get(r.rate_type, 0),
+        )
         if best is None or rank > best[0]:
             best = (rank, r)
     if best is None:
@@ -138,6 +142,7 @@ def foreign_line(  # noqa: PLR0913 - the line's foreign-currency fields
     rate_at: datetime | None,
     rate_source: str,
     functional: Decimal,
+    difference: str = "",
 ) -> dict[str, Any]:
     """The transaction-currency fields of a line, checked: the currency is not the functional one
     and the entity allows foreign currency; the amount is positive and rounded to the currency;
@@ -161,12 +166,13 @@ def foreign_line(  # noqa: PLR0913 - the line's foreign-currency fields
     except UnknownCurrencyError:
         raise _invalid(f"{field}.txn_currency", "Use a supported ISO 4217 currency code.") from None
     try:
-        value, factor = Decimal(amount or ""), Decimal(rate or "")
+        value = Decimal(amount or ("0" if difference else ""))
+        factor = Decimal(rate or ("1" if difference == "REALISED" else ""))
     except InvalidOperation:
         raise _invalid(f"{field}.txn_amount", f"Line {i + 1}: enter the amount and the rate as "
                        "numbers.") from None  # fmt: skip
     step = Decimal(1).scaleb(-unit.minor_units)
-    if not value.is_finite() or value <= 0 or value != value.quantize(step):
+    if not difference and (not value.is_finite() or value <= 0 or value != value.quantize(step)):
         raise _invalid(f"{field}.txn_amount", f"Line {i + 1}: enter a positive amount in "
                        f"{currency} with at most {unit.minor_units} decimals.")  # fmt: skip
     exponent = factor.as_tuple().exponent
@@ -177,6 +183,9 @@ def foreign_line(  # noqa: PLR0913 - the line's foreign-currency fields
     if rate_at is None or not rate_source.strip():
         raise _invalid(f"{field}.rate_source", f"Line {i + 1}: give the date and time the rate "
                        "applied and where it comes from (bank, invoice, stored rate).")  # fmt: skip
+    if difference:
+        return _difference_line(field, i, currency, value, factor, rate_at=rate_at,
+                                rate_source=rate_source, difference=difference)  # fmt: skip
     converted = (value * factor).quantize(Decimal(1).scaleb(-home.minor_units), ROUND_HALF_UP)
     if converted != abs(functional):
         raise _invalid(f"{field}.txn_amount",
@@ -186,6 +195,27 @@ def foreign_line(  # noqa: PLR0913 - the line's foreign-currency fields
     return {"txn_currency": currency, "txn_debit": value if debit else Decimal(0),
             "txn_credit": Decimal(0) if debit else value, "exchange_rate": factor,
             "rate_at": rate_at, "rate_source": rate_source.strip()[:200]}  # fmt: skip
+
+
+def _difference_line(  # noqa: PLR0913 - the line's foreign-currency fields
+    field: str,
+    i: int,
+    currency: str,
+    value: Decimal,
+    factor: Decimal,
+    *,
+    rate_at: datetime,
+    rate_source: str,
+    difference: str,
+) -> dict[str, Any]:
+    """An exchange-difference line (V1-2h2): the position's currency, no foreign amount, and the
+    rate it was revalued at (unrealised) or none (realised on settlement)."""
+    if difference not in ("UNREALISED", "REALISED") or value != 0:
+        raise _invalid(f"{field}.txn_amount", f"Line {i + 1}: an exchange difference moves only "
+                       "the amount in euros.")  # fmt: skip
+    return {"txn_currency": currency, "txn_debit": Decimal(0), "txn_credit": Decimal(0),
+            "exchange_rate": factor if difference == "UNREALISED" else None, "rate_at": rate_at,
+            "rate_source": rate_source.strip()[:200], "fx_difference": difference}  # fmt: skip
 
 
 @transaction.atomic

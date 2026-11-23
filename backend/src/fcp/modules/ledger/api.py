@@ -27,6 +27,7 @@ from . import (
     dimensions,
     entries,
     fx,
+    fxdiff,
     idempotency,
     integrity,
     periods,
@@ -831,6 +832,9 @@ class LineOut(Schema):
     exchange_rate: str | None = None
     rate_at: datetime | None = None
     rate_source: str = ""
+    fx_difference: str = Field(
+        default="", description="UNREALISED or REALISED on an exchange-difference line (V1-2h2)"
+    )
 
 
 class EntryOut(Schema):
@@ -959,6 +963,7 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 exchange_rate=None if ln.exchange_rate is None else f"{ln.exchange_rate:f}",
                 rate_at=ln.rate_at,
                 rate_source=ln.rate_source,
+                fx_difference=ln.fx_difference,
                 tax_point=ln.tax_point,
                 vat_recovery_percent=None
                 if ln.vat_recovery_percent is None
@@ -1726,3 +1731,91 @@ def entry_suggestions(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     return [EntrySuggestionOut(value=s.value, uses=s.uses, last_used=s.last_used)
             for s in suggestions.suggest(ctx, entity_id, q.field, q.q, q.limit)]  # fmt: skip
+
+
+# --- Exchange differences (V1-2h2, #230) ---------------------------------------------------------
+
+
+class FxPositionsQuery(Schema):
+    on: date = Field(description="The date to revalue on, usually a period's last day")
+
+
+class FxPositionOut(Schema):
+    account_id: UUID
+    account_code: str
+    account_name: str
+    counterparty_id: UUID | None
+    currency: str
+    foreign: str = Field(description="The balance in the currency, debit positive")
+    euros: str = Field(description="The balance in euros, including earlier differences")
+    rate: str | None = Field(description="The closing rate used, euros per unit")
+    rate_date: date | None
+    rate_source: str
+    revalued: str | None = Field(description="The balance at the closing rate, in euros")
+    difference: str
+    kind: str = Field(description="UNREALISED, REALISED, NO_RATE, or empty: nothing to record")
+
+
+class FxPositionsOut(Schema):
+    on: date
+    positions: list[FxPositionOut]
+    unrealised: str
+    realised: str
+    missing_rates: list[str] = Field(description="Currencies with no stored rate on the date")
+    fx_account_id: UUID | None
+    waiting_entry_id: UUID | None = Field(
+        description="An exchange-differences draft not posted yet"
+    )
+
+
+class FxDraftIn(Schema):
+    on: date
+
+
+def _money(value: Decimal | None) -> str | None:
+    return None if value is None else f"{value:.2f}"
+
+
+@router.get(f"{BASE}/fx-positions", response=FxPositionsOut)
+@requires("ledger.entry.read")
+def fx_positions(request: HttpRequest, slug: str, entity_id: UUID,
+                 q: Query[FxPositionsQuery]) -> FxPositionsOut:  # fmt: skip
+    """Foreign-currency positions on a date and their exchange differences (nothing is recorded)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fxdiff.positions(ctx, entity_id, q.on)
+    return FxPositionsOut(
+        on=found.on,
+        positions=[
+            FxPositionOut(
+                account_id=p.account_id,
+                account_code=p.account_code,
+                account_name=p.account_name,
+                counterparty_id=p.counterparty_id,
+                currency=p.currency,
+                foreign=f"{p.foreign:.2f}",
+                euros=f"{p.euros:.2f}",
+                rate=None if p.rate is None else f"{p.rate:f}",
+                rate_date=p.rate_date,
+                rate_source=p.rate_source,
+                revalued=_money(p.revalued),
+                difference=f"{p.difference:.2f}",
+                kind=p.kind,
+            )
+            for p in found.positions
+        ],
+        unrealised=f"{found.unrealised:.2f}",
+        realised=f"{found.realised:.2f}",
+        missing_rates=found.missing_rates,
+        fx_account_id=found.fx_account_id,
+        waiting_entry_id=found.waiting_entry_id,
+    )
+
+
+@router.post(f"{BASE}/fx-differences", response={201: EntryOut})
+@requires("ledger.entry.create")
+def fx_differences(request: HttpRequest, slug: str, entity_id: UUID,
+                   payload: FxDraftIn) -> Status[EntryOut]:  # fmt: skip
+    """Prepare one draft entry with the exchange differences on the date. It follows the normal
+    approval and posting; refused while an earlier one is waiting."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, entry_out(fxdiff.draft(ctx, entity_id, payload.on)))

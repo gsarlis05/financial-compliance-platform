@@ -123,6 +123,7 @@ def create_reversal(
             exchange_rate=None if line.exchange_rate is None else str(line.exchange_rate),
             rate_at=line.rate_at,
             rate_source=line.rate_source,
+            fx_difference=line.fx_difference,
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
