@@ -7,7 +7,13 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Until 2026-11-16 branches were stacked (each PR targeted the previous one); since the
 consolidation every new PR targets `main`.
 
-## Status (updated 2026-11-22)
+## Status (updated 2026-11-23)
+
+**Version 1 is complete except V1-5 (dependency updates, #211).** The end-to-end check passes
+through the API (20 agreement checks) and in a real browser; see the
+[version 1 report](version-1-report.md).
+
+### Status of 2026-11-22
 
 **Milestones 7 and 8 are merged into `main`** (2026-11-22; the owner asked the developer to merge
 each PR in order once its checks passed: #183–#189, then #196–#202). Checks on `main` after
@@ -144,7 +150,7 @@ until validated and signed by a qualified professional; brief
 | Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Merged 2026-11-22 (owner asked the developer to merge) |
 | **Version 1** (owner's own use; brief `docs/planning/24-version-1-brief.md`, approved 2026-11-22) | | | |
 | Version 1 brief: one-person workspace, Cyprus VAT return preparation, local install, end-to-end check, dependencies (issues #207–#211); Gate G brief (`docs/planning/23-gate-g-brief.md`, first proposed in #205) kept as deferred | `claude/v1-0-brief` | #206 | Open |
-| V1-1 One-person workspace: a setting in force only while the workspace has exactly one member (database-enforced); preparers may approve their own journal entries, period unlocks (one approval), budget versions, workspace KPIs and report packs, each recorded as self-approved, audited and shown on screen and in exports; ADR-0055 (issue #207) | `claude/v1-1-one-person` | #212 | Open |
+| V1-1 One-person workspace: a setting in force only while the workspace has exactly one member (database-enforced); preparers may approve their own journal entries, period unlocks (one approval), budget versions, workspace KPIs and report packs, each recorded as self-approved, audited and shown on screen and in exports; ADR-0055 (issue #207) | `claude/v1-1-one-person` | #212 | Merged |
 | V1-2a VAT (brief `docs/planning/25-cyprus-vat-return-brief.md`, approved 2026-11-23): periods chosen per company (versioned, changed from the start of a later period); a VAT report per period from the posted ledger (totals, by VAT code, VAT accounts, checks, every line), frozen; sign-off (self-approved in a one-person workspace), filing recorded by hand with the portal's reference (never filed by the platform), versions, settlement entry draft, PDF and Excel (ADR-0056); the 13-box return and the rest of the owner's specification follow in V1-2b to V1-2i (issue #208) | `claude/v1-2-vat-report` | #221 | Merged |
 | V1-3 Version 1 on the owner's computer: the production images with local services (PostgreSQL, Keycloak with MFA, documents store, ClamAV, Mailpit), scheduled jobs, `scripts/local/fcp.sh` (install, start, stop, backup, restore, upgrade, verify), guide, ADR-0057; verified by a real browser through install, sign-in, backup, restore and upgrade (issue #209) | `claude/v1-3-local-install` | #222 | Merged |
 | V1-2b VAT codes v2 and line VAT details: 32 codes in 14 categories (3% rate; EU acquisition, reverse-charge and import codes); the box rules of the owner's specification as versioned, sourced data, marked unverified, with excluded and unsupported cases explicit; tax point, recoverable % and non-recoverable VAT on lines (hashed, reversed, checked by the database); counterparty country; the entry form and counterparties screen (ADR-0058, issue #213) | `claude/v1-2b-vat-codes` | #223 | Merged |
@@ -156,6 +162,7 @@ until validated and signed by a qualified professional; brief
 | V1-2h Foreign-currency lines: switched on per entity with the account for exchange differences; each line keeps its currency, amount, rate, the rate's date and time and its source, and its euro amount must equal amount × rate rounded to the cent (service and database); stored rates offered, never imposed; reversals mirror the foreign figures; the VAT report states the conversion policy and keeps each line's original figures (CSV too); Ledger settings screen for approvals, foreign currency and exchange rates; converted at the rate of the purchase's date and time (owner's decision, 2026-11-23) (ADR-0064, issue #219) | `claude/v1-2h-foreign-currency` | #232 | Merged |
 | V1-2i Help for data entry (the owner's request of 2026-11-23): a VAT code picker that searches by code, name or rate and lists the user's starred favourites, then the company's most used codes, then all by category; favourites kept per user and company (RLS); the account's usual code offered, never applied; suggestions for descriptions, memos and references from the company's own entries, ranked by match, use and recency; accessible combobox; no AI and no outside service (ADR-0065, issue #231) | `claude/v1-2i-entry-helpers` | #233 | Merged |
 | V1-2h2 Exchange differences: positions per monetary account (receivables, payables, foreign-currency accounts), counterparty and currency; unrealised differences at the stored closing rate and realised ones when a foreign balance is settled; one draft entry against the exchange-differences account, refused while an earlier one waits; missing rates shown, never guessed; exchange-difference lines keep the currency with no foreign amount (database constraint); screen (ADR-0066, issue #230) | `claude/v1-2h2-exchange-differences` | #234 | Merged |
+| V1-4 End-to-end check: the demo year ends with 20 agreement checks from the ledger through statements, budget variance, KPIs, cash forecast, fixed assets, projection and report pack to the VAT return; `make e2e-walkthrough` walks nine screens in a real browser after MFA sign-in and checks their figures; fixed: packs calculate their KPI set, the fixed-asset register reconciles to the ledger (API and screen), projections open on the published run, the demo books its asset purchase; version 1 report (`docs/version-1-report.md`, issue #210) | `claude/v1-4-walkthrough` | — | Open |
 
 ## Open questions for the product owner
 - Bank used and statement export formats (CSV / CAMT.053)? Any current accounting software? (before M2)
