@@ -352,7 +352,9 @@ class JournalLine(TenantOwned):
     # input VAT line, the share of the VAT that may be deducted and the VAT that may not. The line's
     # amount is the deductible VAT; the blocked VAT is recorded for the VAT return's schedules.
     tax_point = models.DateField(null=True, blank=True)
-    vat_recovery_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    vat_recovery_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
     vat_blocked = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
     # Multi-currency (M6F-1, #80): the transaction currency amount and the rate that converted it
     # into the functional amounts above (debit, credit). All four are empty for a transaction in

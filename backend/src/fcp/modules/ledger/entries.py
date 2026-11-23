@@ -80,6 +80,10 @@ class LineInput:
     reference: str = ""
     due_date: date | None = None
     vat_code_id: str | None = None
+    # VAT details (V1-2b): see ``JournalLine``; amounts as strings like debit and credit.
+    tax_point: date | None = None
+    vat_recovery_percent: str | None = None
+    vat_blocked: str | None = None
 
 
 @dataclass(frozen=True)
@@ -267,10 +271,47 @@ def _validated_lines(
                 "reference": line.reference.strip(),
                 "due_date": line.due_date,
                 "vat_code_id": line.vat_code_id,
+                **_vat_details(line, account, i, debit.amount - credit.amount),
                 "tags": tags[i],
             }
         )
     return result
+
+
+def _invalid(field: str, message: str) -> ValidationFailedError:
+    return ValidationFailedError(message, field_errors={field: [message]})
+
+
+def _vat_details(line: LineInput, account: Account, i: int, deductible: Decimal) -> dict[str, Any]:
+    """Tax point, deductible share and blocked VAT (V1-2b). A tax point needs a VAT code; the
+    deductible share and the blocked VAT belong to input VAT lines only, whose amount is the
+    deductible VAT, so the line's amount and the blocked VAT must agree with the share."""
+    field = f"lines.{i}"
+    if line.tax_point is not None and not line.vat_code_id:
+        raise _invalid(f"{field}.tax_point", f"Line {i + 1}: a tax point needs a VAT code.")
+    if line.vat_recovery_percent is None and line.vat_blocked is None:
+        return {"tax_point": line.tax_point, "vat_recovery_percent": None, "vat_blocked": None}
+    if account.vat_role != Account.VatRole.INPUT:
+        raise _invalid(f"{field}.vat_recovery_percent",
+                       f"Line {i + 1}: a deductible share or blocked VAT belongs on an input VAT "
+                       "line.")  # fmt: skip
+    try:
+        recovery = Decimal(line.vat_recovery_percent or "100")
+        blocked = Decimal(line.vat_blocked or "0")
+    except ArithmeticError:
+        raise _invalid(f"{field}.vat_recovery_percent", "Enter numbers.") from None
+    if not (0 <= recovery <= 100):
+        raise _invalid(f"{field}.vat_recovery_percent",
+                       f"Line {i + 1}: the deductible share is between 0 and 100%.")  # fmt: skip
+    if blocked < 0 or blocked != blocked.quantize(Decimal("0.01")):
+        raise _invalid(f"{field}.vat_blocked",
+                       f"Line {i + 1}: blocked VAT is a positive amount in cents.")  # fmt: skip
+    expected = ((abs(deductible) + blocked) * recovery / 100).quantize(Decimal("0.01"))
+    if abs(abs(deductible) - expected) > Decimal("0.01"):
+        raise _invalid(f"{field}.vat_blocked",
+                       f"Line {i + 1}: {abs(deductible):.2f} deductible and {blocked:.2f} blocked "
+                       f"do not make {recovery}% deductible.")  # fmt: skip
+    return {"tax_point": line.tax_point, "vat_recovery_percent": recovery, "vat_blocked": blocked}
 
 
 def _counterparties(
@@ -395,6 +436,10 @@ def _hash_line(ln: JournalLine) -> list[Any]:
         row.append(tags)
     if ln.vat_code_id:  # likewise for the VAT code
         row.append(f"vat={ln.vat_code_id}")
+    if ln.tax_point or ln.vat_recovery_percent is not None:  # likewise for VAT details (V1-2b)
+        row.append([ln.tax_point.isoformat() if ln.tax_point else "",
+                    f"{ln.vat_recovery_percent:.2f}" if ln.vat_recovery_percent is not None else "",
+                    f"{ln.vat_blocked:.2f}" if ln.vat_blocked is not None else ""])  # fmt: skip
     if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1)
         row.append([ln.txn_currency, f"{ln.txn_debit:.4f}", f"{ln.txn_credit:.4f}",
                     f"{ln.exchange_rate:.10f}"])  # fmt: skip

@@ -112,7 +112,13 @@ def create_counterparty(
 
 
 _EDITABLE = (
-    "name", "vat_no", "email", "payment_terms_days", "status", "days_late_override", "country"
+    "name",
+    "vat_no",
+    "email",
+    "payment_terms_days",
+    "status",
+    "days_late_override",
+    "country",
 )
 _NULLABLE = frozenset({"days_late_override"})
 

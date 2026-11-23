@@ -232,6 +232,14 @@ class VatLine:
     net_debit: Decimal
     counterparty: str
     reference: str
+    # V1-2b: the code's category, the line's VAT details and the party's EU data.
+    category: str = ""
+    tax_point: date | None = None
+    vat_recovery_percent: Decimal | None = None
+    vat_blocked: Decimal | None = None
+    counterparty_country: str = ""
+    counterparty_vat_no: str = ""
+    entry_status: str = "POSTED"
 
 
 def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> list[VatLine]:
@@ -258,6 +266,9 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
             ln.vat_code.rate if ln.vat_code else None,
             bool(ln.vat_code and ln.vat_code.verified), ln.debit - ln.credit,
             ln.counterparty.name if ln.counterparty else "", ln.reference,
+            ln.vat_code.category if ln.vat_code else "", ln.tax_point, ln.vat_recovery_percent,
+            ln.vat_blocked, ln.counterparty.country if ln.counterparty else "",
+            ln.counterparty.vat_no if ln.counterparty else "",
         )
         for ln in rows
     ]  # fmt: skip
@@ -490,6 +501,7 @@ class VatCodeOut(Schema):
     name: str
     name_el: str
     treatment: str
+    category: str = Field(description="The VAT return's category of the code (V1-2b)")
     rate: str | None
     valid_from: date | None
     valid_to: date | None
@@ -514,6 +526,7 @@ def list_vat_codes(
             name=v.name,
             name_el=v.name_el,
             treatment=v.treatment,
+            category=v.category,
             rate=f"{v.rate:.4f}" if v.rate is not None else None,
             valid_from=v.valid_from,
             valid_to=v.valid_to,
@@ -718,6 +731,13 @@ class LineIn(Schema):
     vat_code_id: str | None = Field(
         default=None, max_length=40, description="VAT code id; required on VAT-account lines"
     )
+    tax_point: date | None = Field(default=None, description="When it differs from the date")
+    vat_recovery_percent: str | None = Field(
+        default=None, description="Input VAT lines: the deductible share, 0 to 100"
+    )
+    vat_blocked: str | None = Field(
+        default=None, description="Input VAT lines: the VAT that may not be deducted"
+    )
 
 
 class EntryIn(Schema):
@@ -756,6 +776,9 @@ class LineOut(Schema):
     due_date: date | None
     vat_code_id: str | None
     vat_code: str | None
+    tax_point: date | None = None
+    vat_recovery_percent: str | None = None
+    vat_blocked: str | None = None
 
 
 class EntryOut(Schema):
@@ -853,6 +876,11 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 due_date=ln.due_date,
                 vat_code_id=ln.vat_code_id,
                 vat_code=ln.vat_code.code if ln.vat_code else None,
+                tax_point=ln.tax_point,
+                vat_recovery_percent=None
+                if ln.vat_recovery_percent is None
+                else f"{ln.vat_recovery_percent:.2f}",
+                vat_blocked=None if ln.vat_blocked is None else f"{ln.vat_blocked:.2f}",
             )
             for ln in lines
         ],
@@ -878,6 +906,9 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
                 ln.reference,
                 ln.due_date,
                 ln.vat_code_id,
+                ln.tax_point,
+                ln.vat_recovery_percent,
+                ln.vat_blocked,
             )
             for ln in payload.lines
         ],
