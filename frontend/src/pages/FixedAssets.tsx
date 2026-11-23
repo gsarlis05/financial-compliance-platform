@@ -14,6 +14,7 @@ import {
   type FixedAsset,
   useAllowanceClasses,
   useAssetMutations,
+  useAssetReconciliation,
   useAssetSchedule,
   useDepreciationRuns,
   useFixedAssets,
@@ -600,6 +601,69 @@ function Depreciation() {
   );
 }
 
+/** The register against the ledger on the date shown (V1-4). */
+function Reconciliation({ asOf }: { asOf: string }) {
+  const { t, locale } = useI18n();
+  const found = useAssetReconciliation(asOf);
+  const data = found.data;
+  if (!data || data.rows.length === 0) {
+    return <ProblemMessage error={found.error} />;
+  }
+  return (
+    <section className="panel" aria-labelledby="fa-rec">
+      <h2 id="fa-rec">{t("fa.rec.title")}</h2>
+      <p className={data.agrees ? "muted" : "notice warn"} role="status">
+        {data.agrees ? t("fa.rec.agrees") : t("fa.rec.differs")}
+      </p>
+      <div className="table-scroll">
+        <table className="grid">
+          <caption className="visually-hidden">{t("fa.rec.title")}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("fa.rec.account")}</th>
+              <th scope="col" className="num">
+                {t("fa.rec.register")}
+              </th>
+              <th scope="col" className="num">
+                {t("fa.rec.ledger")}
+              </th>
+              <th scope="col" className="num">
+                {t("fa.rec.difference")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((r) => (
+              <tr key={`${r.kind}-${r.account_id}`}>
+                <th scope="row">
+                  {r.account_code} · {r.account_name}
+                  <br />
+                  <span className="muted">
+                    {t(`fa.rec.${r.kind}` as MessageKey)}
+                  </span>
+                </th>
+                <td className="num">
+                  {formatAmount(r.register_total, locale)}
+                </td>
+                <td className="num">{formatAmount(r.ledger_total, locale)}</td>
+                <td className="num">{formatAmount(r.difference, locale)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {data.unposted_runs.length ? (
+        <p className="muted">
+          {t("fa.rec.unposted").replace(
+            "{months}",
+            data.unposted_runs.map((r) => r.month.slice(0, 7)).join(", "),
+          )}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export function FixedAssetsPage() {
   const { t, locale } = useI18n();
   const [asOf, setAsOf] = useState(today());
@@ -736,6 +800,7 @@ export function FixedAssetsPage() {
           </section>
         ) : null,
       )}
+      <Reconciliation asOf={asOf} />
       <Depreciation />
     </Page>
   );

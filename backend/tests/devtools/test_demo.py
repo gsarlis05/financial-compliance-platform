@@ -52,7 +52,16 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 36
+    assert len(result.steps) == 37
+    # V1-4 (#210): the numbers agree from screen to screen, module by module.
+    assert [a for a in result.agreements if not a.ok] == []
+    names = [a.name for a in result.agreements]
+    for module in ("Ledger", "Statements", "Budget variance", "KPIs", "Cash forecast",
+                   "Fixed assets", "Projection", "Report pack", "VAT return"):  # fmt: skip
+        assert any(n.startswith(module) for n in names), module
+    assert len(names) == 20, names
+    agreed = next(s for s in result.steps if s.startswith("the numbers agree"))
+    assert agreed.startswith("the numbers agree from screen to screen: 20 checks"), agreed
     vat_step = next(s for s in result.steps if s.startswith("VAT: quarterly periods"))
     assert "0 exception(s); reviewed and finalised by the owner" in vat_step, vat_step
     # The report's VAT equals the VAT the synthetic invoices of the first quarter carry.

@@ -351,9 +351,9 @@ class ReconciliationRowOut(Schema):
     account_code: str
     account_name: str
     kind: str = Field(description="COST or ACCUMULATED (depreciation)")
-    register: str = Field(description="What the account should hold: cost a debit, accumulated "
-                                      "depreciation a credit")  # fmt: skip
-    ledger: str
+    register_total: str = Field(description="What the account should hold: cost a debit, "
+                                            "accumulated depreciation a credit")  # fmt: skip
+    ledger_total: str
     difference: str = Field(description="Ledger minus register")
 
 
@@ -377,7 +377,8 @@ def reconciliation(request: HttpRequest, slug: str, entity_id: UUID,
         as_of=found.as_of,
         rows=[ReconciliationRowOut(account_id=r.account_id, account_code=r.account_code,
                                    account_name=r.account_name, kind=r.kind,
-                                   register=f"{r.register:.2f}", ledger=f"{r.ledger:.2f}",
+                                   register_total=f"{r.register:.2f}",
+                                   ledger_total=f"{r.ledger:.2f}",
                                    difference=f"{r.difference:.2f}") for r in found.rows],
         agrees=found.agrees,
         unposted_runs=[_run_out(v) for v in found.unposted_runs],

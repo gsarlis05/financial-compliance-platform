@@ -26,6 +26,8 @@ from django.test import Client
 
 from fcp.modules.identity.api import User
 
+from . import agreement
+from .agreement import Agreement
 from .books import BANK, DemoBooks, build_demo_books
 from .camt import Txn, camt053
 
@@ -116,6 +118,7 @@ class DemoResult:
     steps: list[str] = field(default_factory=list)
     statements: dict[str, Any] = field(default_factory=dict)
     forecast: dict[str, Any] = field(default_factory=dict)
+    agreements: list[Agreement] = field(default_factory=list)
 
 
 def _demo_invoice_pdf(text: str, amount: str) -> bytes:
@@ -388,11 +391,12 @@ def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[st
 
 def _fixed_assets(owner: "DemoClient", base: str, by_code: dict[str, str],
                   year: int) -> dict[str, Any]:  # fmt: skip
-    """Two synthetic assets bought in December and brought into use on 1 January, so under IAS 16
-    depreciation starts in January (M6F-3); January's depreciation is prepared as a draft entry
-    (M6-1). The register only prepares; the normal workflow approves and posts it."""
+    """Two synthetic assets bought and brought into use on 1 January (their purchase is booked in
+    the ledger first, so the register agrees with it, V1-4); under IAS 16 depreciation starts in
+    January (M6F-3) and January's depreciation is prepared as a draft entry (M6-1). The register
+    only prepares; the normal workflow approves and posts it."""
     common = {"asset_account_id": by_code["1010"], "accumulated_account_id": by_code["1019"],
-              "expense_account_id": by_code["6600"], "acquired_on": f"{year}-12-10",
+              "expense_account_id": by_code["6600"], "acquired_on": f"{year + 1}-01-01",
               "available_on": f"{year + 1}-01-01"}  # fmt: skip
     for body in (
         {"code": "VAN-1", "name": "Delivery van (Demo)", "category": "VEHICLES",
@@ -536,7 +540,8 @@ def _vat(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) ->
                 "evidence": "Demo: acknowledgement kept with the books"})  # fmt: skip
     totals = signed["snapshot"]["totals"]
     boxes = {b["box"]: b["amount"] for b in signed["snapshot"]["return"]["boxes"]}
-    return {"boxes": f"Box 1 {boxes['1']}, Box 4 {boxes['4']}, Box 5 {boxes['5']}, "
+    return {"id": report["id"],
+            "boxes": f"Box 1 {boxes['1']}, Box 4 {boxes['4']}, Box 5 {boxes['5']}, "
                      f"Box 6 {boxes['6']}, Box 7 {boxes['7']}",
             "sales_vat": totals["sales_vat"], "purchase_vat": totals["purchase_vat"],
             "net": totals["net"], "direction": totals["direction"],
@@ -919,6 +924,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{engaged['clients']} client in the firm portfolio; after the owner revoked it, the "
          "firm's next request is refused and the client is gone from its portfolio")  # fmt: skip
 
+    supplier = next(c.code for c in books.counterparties if c.kind == "SUPPLIER")
+    through_workflow(draft(date(year + 1, 1, 1), "Delivery van and laptops (Demo), invoice FA-1",
+                           [("1010", Decimal("27600.00"), Decimal(0)),
+                            (f"2100@{supplier}", Decimal(0), Decimal("27600.00"))]))  # fmt: skip
     run = _fixed_assets(accountant, base, by_code, year)
     posted_dep = through_workflow({"id": run["entry_id"]})
     step(f"fixed-asset register: 2 assets; depreciation for {year + 1}-01 prepared by the "
@@ -958,6 +967,17 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and "
          f"recorded as filed (reference {vat['reference']}); nothing was sent to the Tax "
          "Department")  # fmt: skip
+    agreements = agreement.check(
+        owner.call, base, year, statements=statements, forecast=forecast,
+        budget_version=budget["id"], pack_id=packed["id"], vat_report=vat["id"],
+    )  # fmt: skip
+    failed = [a for a in agreements if not a.ok]
+    if failed:
+        raise DemoStepError("Figures differ between screens: " + "; ".join(
+            f"{a.name}: {a.left} against {a.right}" for a in failed))  # fmt: skip
+    step(f"the numbers agree from screen to screen: {len(agreements)} checks from the ledger "
+         "through the statements, budget variance, KPIs, cash forecast, fixed assets, "
+         "projection and report pack to the VAT return")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "
@@ -987,6 +1007,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         forecast=forecast,
         steps=steps,
         statements=statements,
+        agreements=agreements,
     )
 
 

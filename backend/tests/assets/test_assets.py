@@ -192,7 +192,8 @@ def test_the_register_reconciles_to_the_ledger(reg: dict[str, Any]) -> None:
         return dict(got.json())
 
     def rows(found: dict[str, Any]) -> list[tuple[str, str, str, str, str]]:
-        return [(r["account_code"], r["kind"], r["register"], r["ledger"], r["difference"])
+        return [(r["account_code"], r["kind"], r["register_total"], r["ledger_total"],
+                 r["difference"])
                 for r in found["rows"]]  # fmt: skip
 
     # The van is in the register but its purchase is not booked: the difference says so.

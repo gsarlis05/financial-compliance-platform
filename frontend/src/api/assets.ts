@@ -180,3 +180,30 @@ export function useAssetMutations() {
     }),
   };
 }
+
+/** The register against the ledger on a date, per account (V1-4). */
+export interface AssetReconciliation {
+  as_of: string;
+  rows: {
+    account_id: string;
+    account_code: string;
+    account_name: string;
+    kind: "COST" | "ACCUMULATED";
+    register_total: string;
+    ledger_total: string;
+    difference: string;
+  }[];
+  agrees: boolean;
+  unposted_runs: DepreciationRun[];
+}
+
+export function useAssetReconciliation(asOf: string) {
+  const { base, entityId } = useScope();
+  return useQuery({
+    queryKey: ["fixed-assets", entityId, "reconciliation", asOf],
+    queryFn: () =>
+      api<AssetReconciliation>(`${base}/fixed-assets/reconciliation`, {
+        query: { as_of: asOf },
+      }),
+  });
+}
