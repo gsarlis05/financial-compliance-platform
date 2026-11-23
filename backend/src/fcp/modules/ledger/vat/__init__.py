@@ -29,6 +29,7 @@ def catalogue_rows() -> list[dict[str, Any]]:
                     "name": row["name"],
                     "name_el": row.get("name_el", ""),
                     "treatment": row["treatment"],
+                    "category": row.get("category", ""),
                     "rate": row.get("rate"),
                     "valid_from": row.get("valid_from"),
                     "valid_to": row.get("valid_to"),
@@ -41,6 +42,11 @@ def catalogue_rows() -> list[dict[str, Any]]:
 
 def seed_catalogue(model: Any) -> int:
     """Upsert every catalogue row into ``model`` (the VatCode model, current or historical)."""
+    # Earlier migrations seed an earlier version of the table: give it only the fields it has.
+    fields = {f.name for f in model._meta.get_fields()}
     for row in catalogue_rows():
-        model.objects.update_or_create(id=row.pop("id"), defaults=row)
+        code_id = row.pop("id")
+        model.objects.update_or_create(
+            id=code_id, defaults={k: v for k, v in row.items() if k in fields}
+        )
     return len(catalogue_rows())

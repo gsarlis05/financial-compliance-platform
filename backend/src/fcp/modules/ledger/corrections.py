@@ -111,6 +111,11 @@ def create_reversal(
             reference=line.reference,
             due_date=line.due_date,
             vat_code_id=line.vat_code_id,
+            tax_point=line.tax_point,
+            vat_recovery_percent=None
+            if line.vat_recovery_percent is None
+            else str(line.vat_recovery_percent),
+            vat_blocked=None if line.vat_blocked is None else f"{line.vat_blocked:.2f}",
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]

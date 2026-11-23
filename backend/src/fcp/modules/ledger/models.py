@@ -35,6 +35,8 @@ class VatCode(models.Model):
     name = models.CharField(max_length=200)
     name_el = models.CharField(max_length=200, blank=True)
     treatment = models.CharField(max_length=16, choices=Treatment.choices)
+    # V1-2b (#213): the code's VAT category, which the VAT return's box rules map (tax module).
+    category = models.CharField(max_length=32, blank=True, default="")
     rate = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
     valid_from = models.DateField(null=True, blank=True, help_text="Null: no lower bound")
     valid_to = models.DateField(null=True, blank=True, help_text="Null: still valid")
@@ -346,6 +348,14 @@ class JournalLine(TenantOwned):
     vat_code = models.ForeignKey(
         VatCode, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
+    # VAT details (V1-2b, #213). The tax point when it differs from the accounting date; on an
+    # input VAT line, the share of the VAT that may be deducted and the VAT that may not. The line's
+    # amount is the deductible VAT; the blocked VAT is recorded for the VAT return's schedules.
+    tax_point = models.DateField(null=True, blank=True)
+    vat_recovery_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    vat_blocked = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
     # Multi-currency (M6F-1, #80): the transaction currency amount and the rate that converted it
     # into the functional amounts above (debit, credit). All four are empty for a transaction in
     # the functional currency, which is the only kind allowed while multi-currency is disabled.
@@ -360,6 +370,15 @@ class JournalLine(TenantOwned):
         db_table = "ledger_journal_line"
         constraints = [
             models.UniqueConstraint(fields=["entry", "line_no"], name="ledger_line_number_unique"),
+            models.CheckConstraint(
+                condition=models.Q(vat_recovery_percent__isnull=True)
+                | models.Q(vat_recovery_percent__gte=0, vat_recovery_percent__lte=100),
+                name="ledger_line_vat_recovery_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(vat_blocked__isnull=True) | models.Q(vat_blocked__gte=0),
+                name="ledger_line_vat_blocked_positive",
+            ),
             # Exactly one side, strictly positive (AC-C1, enforced by the database too).
             models.CheckConstraint(
                 condition=(models.Q(debit__gt=0) & models.Q(credit=0))

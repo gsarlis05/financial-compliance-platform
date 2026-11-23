@@ -52,6 +52,7 @@ class CounterpartyInput:
     vat_no: str = ""
     email: str = ""
     payment_terms_days: int = 30
+    country: str = ""
 
 
 def list_counterparties(
@@ -99,16 +100,26 @@ def create_counterparty(
     counterparty = Counterparty.objects.create(
         tenant=ctx.tenant, legal_entity=entity, code=code, name=data.name.strip(), kind=data.kind,
         vat_no=data.vat_no.strip().upper(), email=data.email.strip().lower(),
-        payment_terms_days=data.payment_terms_days, created_by=ctx.user,
+        payment_terms_days=data.payment_terms_days, country=data.country.strip().upper(),
+        created_by=ctx.user,
     )  # fmt: skip
     _audit(ctx, "counterparty", counterparty.id, entity.id, "registers.counterparty.created",
            {"code": code, "kind": data.kind, "name": counterparty.name,
             "vat_no": counterparty.vat_no, "email": counterparty.email,
-            "payment_terms_days": data.payment_terms_days})  # fmt: skip
+            "payment_terms_days": data.payment_terms_days,
+            "country": counterparty.country})  # fmt: skip
     return counterparty
 
 
-_EDITABLE = ("name", "vat_no", "email", "payment_terms_days", "status", "days_late_override")
+_EDITABLE = (
+    "name",
+    "vat_no",
+    "email",
+    "payment_terms_days",
+    "status",
+    "days_late_override",
+    "country",
+)
 _NULLABLE = frozenset({"days_late_override"})
 
 

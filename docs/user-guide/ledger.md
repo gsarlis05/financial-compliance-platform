@@ -151,14 +151,21 @@ invoice can be flagged as disputed (automatic matching skips it). A reversed inv
 note that cancels it. CSV export is available.
 
 ## 10. VAT codes
-Each line can carry a **VAT code** from the Cyprus catalogue: S19 (standard 19%), R9 and R5
-(reduced), Z0 (zero), EX (exempt), RC (EU reverse charge), OUT (outside the scope) and SETTLE
-(payments to or refunds from the tax authority). Lines on the VAT accounts (**1220** input VAT,
+Each line can carry a **VAT code** from the Cyprus catalogue. The 32 codes are grouped by kind:
+domestic (S19 standard 19%; R9, R5 and R3 reduced), zero-rated (Z0), exempt (EX), outside the
+scope with a right to deduct (OSD), supplies of goods and services to EU businesses (EUGS, EUSS),
+acquisitions of goods from the EU (EUGA19 and so on), reverse charges on EU services, non-EU
+services and domestic supplies (RCEU19, RCNEU19, RCDOM19 and so on), imports (IMP19 and so on),
+not a supply (OUT) and settlements with the tax authority (SETTLE). The older code RC (reverse
+charge) stays for entries already posted. Lines on the VAT accounts (**1220** input VAT,
 **2120** output VAT) must have one, and the code must be valid on the accounting date.
 
-> **All rates are marked "unverified"** until a Cyprus tax professional confirms them (decision
-> #93). The 3% rate is not in the catalogue yet for the same reason. The app does **not** produce or
-> submit VAT returns; that comes with the rules engine (M9), with human sign-off.
+A line with a VAT code can also carry a tax point and, on input VAT, the recoverable part (see
+[VAT](vat.md)).
+
+> **All rates and rules are marked "unverified"** until a Cyprus tax professional confirms them
+> (decision #93). The app prepares a VAT report per period for you to file yourself; it never
+> files anything (see [VAT](vat.md)).
 
 The catalogue is reference data maintained by the platform (versioned by validity dates); the app
 itself can only read it.

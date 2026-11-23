@@ -34,6 +34,9 @@ class Counterparty(TenantOwned):
     # Personal data (GDPR): never logged; masked in audit events (doc 04, doc 07).
     name = models.CharField(max_length=200)
     vat_no = models.CharField(max_length=30, blank=True)
+    # V1-2b (#213): ISO 3166-1 alpha-2 country (blank: not recorded), for the VAT return's EU trade
+    # schedule. Country alone never decides a VAT treatment: the line's VAT code does.
+    country = models.CharField(max_length=2, blank=True, default="")
     email = models.EmailField(max_length=320, blank=True)
     payment_terms_days = models.PositiveSmallIntegerField(default=30)
     days_late_override = models.SmallIntegerField(
@@ -56,6 +59,10 @@ class Counterparty(TenantOwned):
             ),
             models.UniqueConstraint(
                 fields=["legal_entity", "code"], name="registers_counterparty_code_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(country="") | models.Q(country__regex=r"^[A-Z]{2}$"),
+                name="registers_counterparty_country_code",
             ),
         ]
 

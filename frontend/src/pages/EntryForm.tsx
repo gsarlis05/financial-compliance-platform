@@ -11,6 +11,7 @@ import type {
 } from "../api/types";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
+import type { MessageKey } from "../i18n/messages";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
 
 interface LineState {
@@ -24,6 +25,17 @@ interface LineState {
   counterparty_id: string;
   reference: string;
   vat_code_id: string;
+  /** ISO date; "" = the entry date */
+  tax_point: string;
+  /** Input VAT only; "" = fully recoverable */
+  vat_recovery_percent: string;
+  vat_blocked: string;
+}
+
+/** "" stays unset; a decimal comma is accepted. The server checks the number. */
+function normaliseOptional(value: string): string | null {
+  const trimmed = value.trim().replace(",", ".");
+  return trimmed === "" ? null : trimmed;
 }
 
 let nextKey = 1;
@@ -37,6 +49,9 @@ const emptyLine = (): LineState => ({
   counterparty_id: "",
   reference: "",
   vat_code_id: "",
+  tax_point: "",
+  vat_recovery_percent: "",
+  vat_blocked: "",
 });
 
 export function periodFor(
@@ -102,6 +117,9 @@ export function EntryForm({
       counterparty_id: l.counterparty_id ?? "",
       reference: l.reference,
       vat_code_id: l.vat_code_id ?? "",
+      tax_point: l.tax_point ?? "",
+      vat_recovery_percent: l.vat_recovery_percent ?? "",
+      vat_blocked: l.vat_blocked ?? "",
     })) ?? [emptyLine(), emptyLine()],
   );
   // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
@@ -119,6 +137,13 @@ export function EntryForm({
   const hasControl = accounts.some((a) => a.control_type !== "");
   const vatRoleOf = new Map(accounts.map((a) => [a.id, a.vat_role]));
   const showVat = vatCodes.length > 0;
+  // Codes grouped by category, in the order the catalogue lists them.
+  const vatGroups = [...new Set(vatCodes.map((v) => v.category))].map(
+    (category) => ({
+      category,
+      codes: vatCodes.filter((v) => v.category === category),
+    }),
+  );
   const vatLabel = (v: VatCode) =>
     `${v.code} · ${locale === "el" && v.name_el ? v.name_el : v.name}${v.verified ? "" : ` (${t("vat.unverified")})`}`;
   const partiesFor = (control: string, current: string) =>
@@ -158,6 +183,13 @@ export function EntryForm({
         counterparty_id: l.counterparty_id || null,
         reference: l.reference,
         vat_code_id: l.vat_code_id || null,
+        tax_point: (l.vat_code_id && l.tax_point) || null,
+        ...(l.vat_code_id && vatRoleOf.get(l.account_id) === "INPUT"
+          ? {
+              vat_recovery_percent: normaliseOptional(l.vat_recovery_percent),
+              vat_blocked: normaliseOptional(l.vat_blocked),
+            }
+          : { vat_recovery_percent: null, vat_blocked: null }),
       })),
     };
   }
@@ -305,16 +337,103 @@ export function EntryForm({
                       }
                     >
                       <option value="">—</option>
-                      {vatCodes.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {vatLabel(v)}
-                        </option>
-                      ))}
+                      {vatGroups.map((g) =>
+                        g.category ? (
+                          <optgroup
+                            key={g.category}
+                            label={t(
+                              `vat.category.${g.category}` as MessageKey,
+                            )}
+                          >
+                            {g.codes.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {vatLabel(v)}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : (
+                          g.codes.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {vatLabel(v)}
+                            </option>
+                          ))
+                        ),
+                      )}
                     </select>
                     <FieldError
                       error={error}
                       field={`lines.${index}.vat_code_id`}
                     />
+                    {line.vat_code_id ? (
+                      <details
+                        className="vat-details"
+                        open={
+                          !!(
+                            line.tax_point ||
+                            line.vat_recovery_percent ||
+                            line.vat_blocked
+                          )
+                        }
+                      >
+                        <summary>{t("je.vatDetails")}</summary>
+                        <label>
+                          {t("je.taxPoint")}
+                          <input
+                            type="date"
+                            aria-label={`${t("je.taxPoint")} ${index + 1}`}
+                            title={t("je.taxPointHelp")}
+                            value={line.tax_point}
+                            onChange={(e) =>
+                              update(line.key, { tax_point: e.target.value })
+                            }
+                          />
+                        </label>
+                        <FieldError
+                          error={error}
+                          field={`lines.${index}.tax_point`}
+                        />
+                        {vatRoleOf.get(line.account_id) === "INPUT" ? (
+                          <>
+                            <label>
+                              {t("je.recovery")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.recovery")} ${index + 1}`}
+                                placeholder="100"
+                                value={line.vat_recovery_percent}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_recovery_percent: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_recovery_percent`}
+                            />
+                            <label>
+                              {t("je.blocked")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.blocked")} ${index + 1}`}
+                                placeholder="0.00"
+                                value={line.vat_blocked}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_blocked: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_blocked`}
+                            />
+                          </>
+                        ) : null}
+                      </details>
+                    ) : null}
                   </td>
                 ) : null}
                 {hasControl ? (

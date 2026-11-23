@@ -32,6 +32,22 @@ In **Periods**, choose **Prepare report** next to the period. The report shows:
 A VAT code is applied to the entries where you choose it. For a sale, put the code on the income
 line as well as on the VAT line, so that the taxable amount is counted.
 
+### VAT codes and line details
+VAT codes are grouped by kind in the entry form: domestic, zero-rated, exempt, EU goods and
+services, reverse charge (EU services, non-EU services, domestic), imports and so on. Choose the
+code that says what the transaction is, not only its rate: the VAT return puts an EU
+acquisition in different boxes from a domestic purchase at the same rate. The old **RC** code
+does not say which reverse charge applies; use one of the specific codes for new entries.
+
+Once a line has a VAT code, open **VAT details** on it to enter:
+- **Tax point**, only when it differs from the entry date;
+- on an input VAT line, **Recoverable %** and **Non-recoverable VAT**, when only part of the VAT
+  can be claimed. Enter the recoverable VAT as the line's amount. For example, VAT of 19.00 of
+  which half is recoverable is a line of 9.50, with 50 and 9.50.
+
+For EU sales and purchases, give each customer or supplier its **Country** (two letters, such as
+GR) and VAT number under **Customers & suppliers**.
+
 ## 3. Sign off, file, record
 1. **Sign off** after the period has ended. The report is then frozen. In a one-person workspace
    you sign off your own report, and it is marked self-approved.

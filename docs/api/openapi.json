@@ -4025,6 +4025,13 @@
             "title": "Code",
             "type": "string"
           },
+          "country": {
+            "default": "",
+            "description": "ISO 3166-1 alpha-2",
+            "pattern": "^([A-Z]{2})?$",
+            "title": "Country",
+            "type": "string"
+          },
           "email": {
             "default": "",
             "maxLength": 320,
@@ -4066,6 +4073,10 @@
         "properties": {
           "code": {
             "title": "Code",
+            "type": "string"
+          },
+          "country": {
+            "title": "Country",
             "type": "string"
           },
           "days_late_override": {
@@ -4118,13 +4129,26 @@
           "email",
           "payment_terms_days",
           "status",
-          "days_late_override"
+          "days_late_override",
+          "country"
         ],
         "title": "CounterpartyOut",
         "type": "object"
       },
       "CounterpartyPatch": {
         "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^([A-Z]{2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
           "days_late_override": {
             "anyOf": [
               {
@@ -8843,6 +8867,31 @@
             "title": "Reference",
             "type": "string"
           },
+          "tax_point": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it differs from the date",
+            "title": "Tax Point"
+          },
+          "vat_blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Input VAT lines: the VAT that may not be deducted",
+            "title": "Vat Blocked"
+          },
           "vat_code_id": {
             "anyOf": [
               {
@@ -8855,6 +8904,18 @@
             ],
             "description": "VAT code id; required on VAT-account lines",
             "title": "Vat Code Id"
+          },
+          "vat_recovery_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Input VAT lines: the deductible share, 0 to 100",
+            "title": "Vat Recovery Percent"
           }
         },
         "required": [
@@ -8936,6 +8997,29 @@
             "title": "Reference",
             "type": "string"
           },
+          "tax_point": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Point"
+          },
+          "vat_blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Blocked"
+          },
           "vat_code": {
             "anyOf": [
               {
@@ -8957,6 +9041,17 @@
               }
             ],
             "title": "Vat Code Id"
+          },
+          "vat_recovery_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vat Recovery Percent"
           }
         },
         "required": [
@@ -16740,6 +16835,11 @@
       },
       "VatCodeOut": {
         "properties": {
+          "category": {
+            "description": "The VAT return's category of the code (V1-2b)",
+            "title": "Category",
+            "type": "string"
+          },
           "code": {
             "title": "Code",
             "type": "string"
@@ -16810,6 +16910,7 @@
           "name",
           "name_el",
           "treatment",
+          "category",
           "rate",
           "valid_from",
           "valid_to",
