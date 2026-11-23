@@ -387,6 +387,17 @@ button:disabled {
   min-width: 9rem;
   max-width: 14rem;
 }
+.lines .vat-details {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+.lines .vat-details label {
+  display: block;
+  margin-top: 0.25rem;
+}
+.lines .vat-details input {
+  max-width: 10rem;
+}
 
 /* Financial statements (M2-8) */
 .segmented {

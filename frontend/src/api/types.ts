@@ -99,6 +99,9 @@ export interface EntryLine {
   due_date: string | null;
   vat_code_id: string | null;
   vat_code: string | null;
+  tax_point: string | null;
+  vat_recovery_percent: string | null;
+  vat_blocked: string | null;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
@@ -162,6 +165,9 @@ export interface EntryInput {
     counterparty_id?: string | null;
     reference?: string;
     vat_code_id?: string | null;
+    tax_point?: string | null;
+    vat_recovery_percent?: string | null;
+    vat_blocked?: string | null;
   }[];
 }
 
@@ -220,6 +226,7 @@ export interface Counterparty {
   name: string;
   kind: CounterpartyKind;
   vat_no: string;
+  country: string;
   email: string;
   payment_terms_days: number;
   status: "ACTIVE" | "INACTIVE";
@@ -295,6 +302,7 @@ export interface VatCode {
   name: string;
   name_el: string;
   treatment: string;
+  category: string;
   rate: string | null;
   valid_from: string | null;
   valid_to: string | null;
