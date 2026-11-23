@@ -571,6 +571,134 @@
         "title": "AdjustIn",
         "type": "object"
       },
+      "AdjustmentIn": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Signed, in euros",
+            "title": "Amount"
+          },
+          "box": {
+            "description": "1, 2, 4, 6, 7, 8A, 8B, 9, 10, 11A or 11B",
+            "title": "Box",
+            "type": "string"
+          },
+          "evidence": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "box",
+          "amount",
+          "reason",
+          "evidence"
+        ],
+        "title": "AdjustmentIn",
+        "type": "object"
+      },
+      "AdjustmentOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "box": {
+            "title": "Box",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "title": "Created By Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By Id"
+          },
+          "decision_note": {
+            "title": "Decision Note",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "self_approved": {
+            "title": "Self Approved",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "box",
+          "amount",
+          "reason",
+          "evidence",
+          "status",
+          "created_by_id",
+          "created_at",
+          "decided_by_id",
+          "decided_at",
+          "decision_note",
+          "self_approved"
+        ],
+        "title": "AdjustmentOut",
+        "type": "object"
+      },
       "AgeingOut": {
         "properties": {
           "as_of": {
@@ -5182,10 +5310,10 @@
       },
       "DecisionIn": {
         "properties": {
-          "comment": {
+          "note": {
             "default": "",
             "maxLength": 500,
-            "title": "Comment",
+            "title": "Note",
             "type": "string"
           }
         },
@@ -6557,6 +6685,13 @@
       },
       "FiledIn": {
         "properties": {
+          "evidence": {
+            "description": "Where the portal's acknowledgement is kept",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
           "filed_on": {
             "format": "date",
             "title": "Filed On",
@@ -6571,7 +6706,8 @@
         },
         "required": [
           "filed_on",
-          "reference"
+          "reference",
+          "evidence"
         ],
         "title": "FiledIn",
         "type": "object"
@@ -10078,12 +10214,15 @@
       "NoteIn": {
         "properties": {
           "note": {
-            "default": "",
-            "maxLength": 1000,
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Note",
             "type": "string"
           }
         },
+        "required": [
+          "note"
+        ],
         "title": "NoteIn",
         "type": "object"
       },
@@ -12963,18 +13102,43 @@
       },
       "ReportDetailOut": {
         "properties": {
+          "adjustments": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustmentOut"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          },
           "blockers": {
-            "description": "Draft: why it cannot be signed off yet",
+            "description": "Why it cannot take its next step yet",
             "items": {
               "type": "string"
             },
             "title": "Blockers",
             "type": "array"
           },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
           "created_by_id": {
             "format": "uuid",
             "title": "Created By Id",
             "type": "string"
+          },
+          "differences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reviewed or later: lines posted or reversed in the period since it was prepared, and the change to each box",
+            "title": "Differences"
           },
           "due_date": {
             "anyOf": [
@@ -13000,9 +13164,50 @@
             ],
             "title": "Filed On"
           },
+          "filing_evidence": {
+            "title": "Filing Evidence",
+            "type": "string"
+          },
           "filing_reference": {
             "title": "Filing Reference",
             "type": "string"
+          },
+          "final_return": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The return after approved adjustments: original, adjustment, final per box",
+            "title": "Final Return"
+          },
+          "finalised_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised At"
+          },
+          "finalised_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised By Id"
           },
           "generated_at": {
             "format": "date-time",
@@ -13024,8 +13229,50 @@
             "title": "Period Start",
             "type": "string"
           },
+          "previous": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A new version: the version it corrects and the change to each box",
+            "title": "Previous"
+          },
+          "review_note": {
+            "description": "Why it was last sent back to draft",
+            "title": "Review Note",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
           "self_approved": {
-            "description": "Signed off by its preparer (one-person workspace)",
+            "description": "Reviewed or finalised by its preparer (one-person workspace)",
             "title": "Self Approved",
             "type": "boolean"
           },
@@ -13040,30 +13287,6 @@
               }
             ],
             "title": "Settlement Entry Id"
-          },
-          "signed_off_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signed Off At"
-          },
-          "signed_off_by_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signed Off By Id"
           },
           "snapshot": {
             "additionalProperties": true,
@@ -13111,21 +13334,35 @@
           "watermark",
           "generated_at",
           "created_by_id",
+          "created_at",
           "due_date",
-          "signed_off_by_id",
-          "signed_off_at",
+          "reviewed_by_id",
+          "reviewed_at",
+          "review_note",
+          "finalised_by_id",
+          "finalised_at",
           "self_approved",
           "filed_on",
           "filing_reference",
+          "filing_evidence",
           "settlement_entry_id",
           "snapshot",
-          "blockers"
+          "final_return",
+          "adjustments",
+          "blockers",
+          "differences",
+          "previous"
         ],
         "title": "ReportDetailOut",
         "type": "object"
       },
       "ReportOut": {
         "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
           "created_by_id": {
             "format": "uuid",
             "title": "Created By Id",
@@ -13155,9 +13392,37 @@
             ],
             "title": "Filed On"
           },
+          "filing_evidence": {
+            "title": "Filing Evidence",
+            "type": "string"
+          },
           "filing_reference": {
             "title": "Filing Reference",
             "type": "string"
+          },
+          "finalised_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised At"
+          },
+          "finalised_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalised By Id"
           },
           "generated_at": {
             "format": "date-time",
@@ -13179,8 +13444,37 @@
             "title": "Period Start",
             "type": "string"
           },
+          "review_note": {
+            "description": "Why it was last sent back to draft",
+            "title": "Review Note",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
           "self_approved": {
-            "description": "Signed off by its preparer (one-person workspace)",
+            "description": "Reviewed or finalised by its preparer (one-person workspace)",
             "title": "Self Approved",
             "type": "boolean"
           },
@@ -13195,30 +13489,6 @@
               }
             ],
             "title": "Settlement Entry Id"
-          },
-          "signed_off_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signed Off At"
-          },
-          "signed_off_by_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Signed Off By Id"
           },
           "snapshot_hash": {
             "title": "Snapshot Hash",
@@ -13260,12 +13530,17 @@
           "watermark",
           "generated_at",
           "created_by_id",
+          "created_at",
           "due_date",
-          "signed_off_by_id",
-          "signed_off_at",
+          "reviewed_by_id",
+          "reviewed_at",
+          "review_note",
+          "finalised_by_id",
+          "finalised_at",
           "self_approved",
           "filed_on",
           "filing_reference",
+          "filing_evidence",
           "settlement_entry_id"
         ],
         "title": "ReportOut",
@@ -36271,6 +36546,229 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/adjustments": {
+      "post": {
+        "description": "Propose a manual adjustment of one box of a draft, with a reason and evidence.",
+        "operationId": "fcp_modules_tax_api_propose_adjustment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Propose Adjustment",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/adjustments/{adjustment_id}/approve": {
+      "post": {
+        "operationId": "fcp_modules_tax_api_approve_adjustment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Approve Adjustment",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/adjustments/{adjustment_id}/reject": {
+      "post": {
+        "description": "Reject a proposed adjustment (``tax.vat.sign_off``), or withdraw your own.",
+        "operationId": "fcp_modules_tax_api_reject_adjustment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reject Adjustment",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/due-date": {
       "put": {
         "description": "The date the return and any payment are due, as you know it (not computed).",
@@ -36341,7 +36839,7 @@
     },
     "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/export": {
       "get": {
-        "description": "The report as Excel or PDF, from its frozen snapshot; DRAFT until signed off. Audited.",
+        "description": "The report as Excel or PDF, from its frozen snapshot; DRAFT until finalised. Audited.",
         "operationId": "fcp_modules_tax_api_export_report",
         "parameters": [
           {
@@ -36485,6 +36983,64 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/finalise": {
+      "post": {
+        "description": "Finalise a reviewed report for filing; records the inclusion of each of its lines.",
+        "operationId": "fcp_modules_tax_api_finalise",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Finalise",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/new-version": {
       "post": {
         "operationId": "fcp_modules_tax_api_new_version",
@@ -36599,6 +37155,132 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/reopen": {
+      "post": {
+        "description": "Send a reviewed report back to draft, saying why.",
+        "operationId": "fcp_modules_tax_api_reopen",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reopen",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/review": {
+      "post": {
+        "description": "Review a draft and freeze its figures (never your own, except in a one-person\nworkspace).",
+        "operationId": "fcp_modules_tax_api_review",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Review",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/settlement": {
       "post": {
         "description": "A draft entry moving the period's input VAT into the output VAT account.",
@@ -36652,64 +37334,6 @@
           }
         ],
         "summary": "Prepare Settlement",
-        "tags": [
-          "VAT"
-        ]
-      }
-    },
-    "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/sign-off": {
-      "post": {
-        "description": "Freeze the report for filing (never your own, except in a one-person workspace).",
-        "operationId": "fcp_modules_tax_api_sign_off",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "entity_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Entity Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "report_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Report Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReportDetailOut"
-                }
-              }
-            },
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "SessionAuth": []
-          }
-        ],
-        "summary": "Sign Off",
         "tags": [
           "VAT"
         ]

@@ -910,3 +910,12 @@ ul.checklist li {
   color: #fff;
   font-weight: 600;
 }
+
+/* VAT box changes (V1-2d) */
+.inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  list-style: none;
+  padding: 0;
+}

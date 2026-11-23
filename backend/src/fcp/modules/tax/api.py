@@ -51,6 +51,7 @@ class ReportOut(Schema):
     watermark: int
     generated_at: datetime
     created_by_id: UUID
+    created_at: datetime
     due_date: date | None
     reviewed_by_id: UUID | None
     reviewed_at: datetime | None
