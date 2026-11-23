@@ -1,10 +1,16 @@
 // VAT periods and VAT period reports (V1-2): periods chosen per company, a report per period from
-// the posted ledger, sign-off, filing recorded by hand (nothing is sent), versions, settlement.
+// the posted ledger; Draft -> Reviewed -> Finalised -> Filed with adjustments (V1-2d); filing
+// recorded by hand (nothing is sent), versions, differences, settlement.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "./client";
 import { useScope } from "./hooks";
 
-export type VatStatus = "DRAFT" | "SIGNED_OFF" | "FILED" | "SUPERSEDED";
+export type VatStatus =
+  | "DRAFT"
+  | "REVIEWED"
+  | "FINALISED"
+  | "FILED"
+  | "SUPERSEDED";
 
 export interface VatScheme {
   id: string;
@@ -25,12 +31,17 @@ export interface VatReport {
   watermark: number;
   generated_at: string;
   created_by_id: string;
+  created_at: string;
   due_date: string | null;
-  signed_off_by_id: string | null;
-  signed_off_at: string | null;
+  reviewed_by_id: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  finalised_by_id: string | null;
+  finalised_at: string | null;
   self_approved: boolean;
   filed_on: string | null;
   filing_reference: string;
+  filing_evidence: string;
   settlement_entry_id: string | null;
 }
 
@@ -112,9 +123,49 @@ export interface VatSnapshot {
   lines: VatLine[];
 }
 
+export interface VatAdjustment {
+  id: string;
+  box: string;
+  amount: string;
+  reason: string;
+  evidence: string;
+  status: "PROPOSED" | "APPROVED" | "REJECTED";
+  created_by_id: string;
+  created_at: string;
+  decided_by_id: string | null;
+  decided_at: string | null;
+  decision_note: string;
+  self_approved: boolean;
+}
+
+export interface VatFinalBox extends VatBox {
+  original: string;
+  adjustment: string;
+}
+
+export interface VatDifferences {
+  changed: boolean;
+  added: VatLine[];
+  removed: VatLine[];
+  boxes: Record<string, string>;
+}
+
 export interface VatReportDetail extends VatReport {
   snapshot: VatSnapshot;
+  final_return:
+    | (Omit<VatReturn, "boxes"> & { boxes: VatFinalBox[]; adjusted: boolean })
+    | null;
+  adjustments: VatAdjustment[];
   blockers: string[];
+  differences: VatDifferences | null;
+  previous: {
+    id: string;
+    version: number;
+    status: VatStatus;
+    filed_on: string | null;
+    filing_reference: string;
+    boxes: Record<string, string>;
+  } | null;
 }
 
 export interface VatPeriod {
@@ -189,8 +240,9 @@ export function useVatMutations(id: string | null) {
       onSuccess: refresh,
     }),
     act: useMutation({
-      mutationFn: (what: "regenerate" | "sign-off" | "new-version") =>
-        post<VatReportDetail>(what),
+      mutationFn: (
+        what: "regenerate" | "review" | "finalise" | "new-version",
+      ) => post<VatReportDetail>(what),
       onSuccess: refresh,
     }),
     dueDate: useMutation({
@@ -202,8 +254,32 @@ export function useVatMutations(id: string | null) {
       onSuccess: refresh,
     }),
     filed: useMutation({
-      mutationFn: (body: { filed_on: string; reference: string }) =>
-        post<VatReportDetail>("filed", body),
+      mutationFn: (body: {
+        filed_on: string;
+        reference: string;
+        evidence: string;
+      }) => post<VatReportDetail>("filed", body),
+      onSuccess: refresh,
+    }),
+    reopen: useMutation({
+      mutationFn: (note: string) => post<VatReportDetail>("reopen", { note }),
+      onSuccess: refresh,
+    }),
+    propose: useMutation({
+      mutationFn: (body: {
+        box: string;
+        amount: string;
+        reason: string;
+        evidence: string;
+      }) => post<VatAdjustment>("adjustments", body),
+      onSuccess: refresh,
+    }),
+    decide: useMutation({
+      mutationFn: ({ id: adj, approve }: { id: string; approve: boolean }) =>
+        post<VatAdjustment>(
+          `adjustments/${adj}/${approve ? "approve" : "reject"}`,
+          { note: "" },
+        ),
       onSuccess: refresh,
     }),
     settlement: useMutation({

@@ -71,20 +71,46 @@ Once a line has a VAT code, open **VAT details** on it to enter:
 For EU sales and purchases, give each customer or supplier its **Country** (two letters, such as
 GR) and VAT number under **Customers & suppliers**.
 
-## 3. Sign off, file, record
-1. **Sign off** after the period has ended. The report is then frozen. In a one-person workspace
-   you sign off your own report, and it is marked self-approved.
-2. **Download PDF** or **Excel**, and file the return on the Tax Department's portal.
-3. Enter the date you filed and the portal's reference, then choose **Record as filed**.
-4. Optionally, **Prepare settlement entry**. This creates a draft entry that moves the period's
+## 3. Adjust if you must
+If a box needs a change that the books cannot show, add it under **Adjustments** while the report
+is a draft. Each adjustment needs:
+- the box;
+- the amount, with a minus sign to reduce the box;
+- a reason;
+- the evidence, for example "adviser's letter of 3 April, in Documents".
+
+It counts only once someone other than you approves it. In a one-person workspace you approve it
+yourself, and it is marked self-approved. The return then shows, for each box, the amount from the
+books, the adjustment and the final amount. Prefer correcting the entries (by reversal or
+adjustment) over adjusting a box.
+
+## 4. Review, finalise, file, record
+1. **Review**, after the period has ended. The figures are then frozen. If something is wrong,
+   **Send back to draft** with a note saying why. You can then correct the entries, regenerate the
+   report and review it again.
+2. **Finalise.** This fixes the return and records which lines it includes. A line is never in
+   two returns.
+3. **Download PDF** or **Excel**, and file the return on the Tax Department's portal.
+4. Enter the date you filed, the portal's reference, and where you keep the acknowledgement. Then
+   choose **Record as filed**.
+5. Optionally, **Prepare settlement entry**. This creates a draft entry that moves the period's
    input VAT into the output VAT account. Post it like any other entry.
 
-To correct a report that is already signed off or filed, choose **Start a new version**.
+In a one-person workspace you review and finalise your own report, and it is marked self-approved.
+Otherwise someone else does both.
+
+## 5. Entries that arrive later, and corrections
+If entries are posted or reversed in a period after its report was prepared, the report shows
+**Changes since this report was prepared**: the new lines and how each box would change. They
+are never moved into this return or another one automatically.
+
+To correct a finalised or filed return, choose **Start a new version**. It is prepared from the
+books as they are now. It shows which version it corrects and how each box changed, and the
+earlier version's approved adjustments are carried over for approval again. When the new version
+is finalised, the earlier one is marked superseded. File the correction following the Tax
+Department's procedure for corrections, with your adviser.
 
 ## What is still to come
-- Review and finalising in four steps (draft, reviewed, finalised, filed).
-- Manual adjustments with a reason and evidence.
-- A record of which return each line was included in.
 - Schedules (sales, purchases, EU trade, reverse charge, imports) and a reconciliation to the
   VAT accounts.
 - Checks against the VIES statements.

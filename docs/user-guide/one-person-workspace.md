@@ -6,7 +6,7 @@ Some steps normally need a second person:
 - approving a budget;
 - approving a workspace KPI;
 - finalising a report pack;
-- signing off a VAT return.
+- reviewing and finalising a VAT return, and approving its adjustments.
 
 If you are the only person in your workspace, turn on **One-person workspace** in **Workspace
 settings**. You can then approve your own work. Each such approval is recorded and shown as

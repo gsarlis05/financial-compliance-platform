@@ -517,17 +517,23 @@ def _report_pack(owner: "DemoClient", accountant: "DemoClient", base: str,
 
 def _vat(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) -> dict[str, Any]:
     """VAT (V1-2): the owner sets quarterly VAT periods; the accountant prepares the first
-    quarter's report from the posted books; the owner, who did not prepare it, signs it off and
-    records the filing with a made-up portal reference. Nothing is sent anywhere."""
+    quarter's report from the posted books; the owner, who did not prepare it, reviews and
+    finalises it and records the filing with a made-up portal reference. Nothing is sent
+    anywhere."""
     owner.call("POST", f"{base}/vat-period-schemes",
                {"months": 3, "effective_from": f"{year}-01-01",
                 "note": "Demo: quarterly, as if set by the Tax Department"}, 201)  # fmt: skip
     report = accountant.call("POST", f"{base}/vat-reports", {"period_start": f"{year}-01-01"}, 201)
-    signed = owner.call("POST", f"{base}/vat-reports/{report['id']}/sign-off", {})
-    if signed["status"] != "SIGNED_OFF":
-        raise DemoStepError(f"The VAT report could not be signed off: {signed.get('blockers')}")
-    owner.call("POST", f"{base}/vat-reports/{report['id']}/filed",
-               {"filed_on": f"{year}-04-20", "reference": "DEMO-0001"})  # fmt: skip
+    url = f"{base}/vat-reports/{report['id']}"
+    reviewed = owner.call("POST", f"{url}/review", {})
+    if reviewed["status"] != "REVIEWED":
+        raise DemoStepError(f"The VAT report could not be reviewed: {reviewed.get('blockers')}")
+    signed = owner.call("POST", f"{url}/finalise", {})
+    if signed["status"] != "FINALISED":
+        raise DemoStepError(f"The VAT report could not be finalised: {signed.get('blockers')}")
+    owner.call("POST", f"{url}/filed",
+               {"filed_on": f"{year}-04-20", "reference": "DEMO-0001",
+                "evidence": "Demo: acknowledgement kept with the books"})  # fmt: skip
     totals = signed["snapshot"]["totals"]
     boxes = {b["box"]: b["amount"] for b in signed["snapshot"]["return"]["boxes"]}
     return {"boxes": f"Box 1 {boxes['1']}, Box 4 {boxes['4']}, Box 5 {boxes['5']}, "
@@ -949,8 +955,9 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"accountant from the posted books: output VAT {vat['sales_vat']}, input VAT "
          f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}; return "
          f"{vat['boxes']} (box rules unverified), "
-         f"{vat['exceptions']} exception(s); signed off by the owner and recorded as filed "
-         f"(reference {vat['reference']}); nothing was sent to the Tax Department")  # fmt: skip
+         f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and "
+         f"recorded as filed (reference {vat['reference']}); nothing was sent to the Tax "
+         "Department")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "

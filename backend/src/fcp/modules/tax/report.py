@@ -280,36 +280,58 @@ class _Boxes:
                 "boxes": {}}  # fmt: skip
 
     def result(self) -> dict[str, Any]:
-        value = dict(self.exact)
-        value["3"] = value["1"] + value["2"]
-        value["5"] = value["3"] - value["4"]
-        rows = []
-        for spec in self.rules["boxes"]:
-            box = spec["box"]
-            exact = value[box]
-            shown = exact.quantize(CENT if box in VAT_BOXES else EURO, ROUND_HALF_UP)
-            rows.append({"box": box, "label": spec["label"], "kind": spec["kind"],
-                         "amount": money(shown), "exact": money(exact),
-                         "rounding": money(shown - exact)})  # fmt: skip
-        outputs = sum((value[b] for b in ("8A", "8B", "9", "10", "11B")), Decimal(0))
-        inputs = value["11A"] + value["11B"]
-        checks = [
-            {"check": "BOX_3", "ok": value["3"] == value["1"] + value["2"],
-             "detail": "Box 3 is Box 1 plus Box 2."},
-            {"check": "BOX_5", "ok": value["5"] == value["3"] - value["4"],
-             "detail": "Box 5 is Box 3 minus Box 4."},
-            {"check": "BOX_6", "ok": value["6"] >= outputs,
-             "detail": f"Box 6 ({money(value['6'])}) is at least Boxes 8A + 8B + 9 + 10 + 11B "
-                       f"({money(outputs)}). A credit note or correction can explain a shortfall."},
-            {"check": "BOX_7", "ok": value["7"] >= inputs,
-             "detail": f"Box 7 ({money(value['7'])}) is at least Boxes 11A + 11B "
-                       f"({money(inputs)}). A credit note or correction can explain a shortfall."},
-        ]  # fmt: skip
-        net = value["5"]
-        direction = "PAYABLE" if net > 0 else "REFUNDABLE" if net < 0 else "NIL"
         return {"rules": self.version, "status": self.rules["status"],
-                "sources": self.rules["sources"], "boxes": rows, "checks": checks,
-                "direction": direction}  # fmt: skip
+                "sources": self.rules["sources"],
+                **present(dict(self.exact), self.rules)}  # fmt: skip
+
+
+def present(value: dict[str, Decimal], rules: dict[str, Any]) -> dict[str, Any]:
+    """The boxes as shown, from their exact amounts: Box 3 and Box 5 computed, the value boxes
+    rounded to the euro with the rounding kept, the cross-field checks and the direction."""
+    value["3"] = value["1"] + value["2"]
+    value["5"] = value["3"] - value["4"]
+    rows = []
+    for spec in rules["boxes"]:
+        box = spec["box"]
+        exact = value[box]
+        shown = exact.quantize(CENT if box in VAT_BOXES else EURO, ROUND_HALF_UP)
+        rows.append({"box": box, "label": spec["label"], "kind": spec["kind"],
+                     "amount": money(shown), "exact": money(exact),
+                     "rounding": money(shown - exact)})  # fmt: skip
+    outputs = sum((value[b] for b in ("8A", "8B", "9", "10", "11B")), Decimal(0))
+    inputs = value["11A"] + value["11B"]
+    checks = [
+        {"check": "BOX_3", "ok": value["3"] == value["1"] + value["2"],
+         "detail": "Box 3 is Box 1 plus Box 2."},
+        {"check": "BOX_5", "ok": value["5"] == value["3"] - value["4"],
+         "detail": "Box 5 is Box 3 minus Box 4."},
+        {"check": "BOX_6", "ok": value["6"] >= outputs,
+         "detail": f"Box 6 ({money(value['6'])}) is at least Boxes 8A + 8B + 9 + 10 + 11B "
+                   f"({money(outputs)}). A credit note or correction can explain a shortfall."},
+        {"check": "BOX_7", "ok": value["7"] >= inputs,
+         "detail": f"Box 7 ({money(value['7'])}) is at least Boxes 11A + 11B "
+                   f"({money(inputs)}). A credit note or correction can explain a shortfall."},
+    ]  # fmt: skip
+    net = value["5"]
+    direction = "PAYABLE" if net > 0 else "REFUNDABLE" if net < 0 else "NIL"
+    return {"boxes": rows, "checks": checks, "direction": direction}
+
+
+def adjusted(vat_return: dict[str, Any], adjustments: list[tuple[str, Decimal]]) -> dict[str, Any]:
+    """The return after approved manual adjustments (V1-2d): for each box, the amount from the
+    ledger, the adjustments and the final amount; Boxes 3 and 5, the rounding and the checks
+    follow the final amounts. The ledger's figures are never changed."""
+    value = {b["box"]: Decimal(b["exact"]) for b in vat_return["boxes"]}
+    added = {b: Decimal(0) for b in value}
+    for box, amount in adjustments:
+        added[box] += amount
+        value[box] += amount
+    final = present(value, ruleset(vat_return["rules"]))
+    original = {b["box"]: b["amount"] for b in vat_return["boxes"]}
+    for row in final["boxes"]:
+        row["original"] = original[row["box"]]
+        row["adjustment"] = money(added[row["box"]])
+    return {**vat_return, **final, "adjusted": any(added.values())}
 
 
 def _line_checks(lines: list[Line], start: str | None, end: str | None) -> list[dict[str, str]]:

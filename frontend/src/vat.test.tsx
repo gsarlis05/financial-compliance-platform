@@ -1,4 +1,5 @@
-// VAT screen (V1-2): periods set by the company, a report per period, sign-off and filing.
+// VAT screen (V1-2): periods set by the company, a report per period, review, finalisation,
+// adjustments and filing (V1-2d).
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -31,8 +32,17 @@ const report = {
   generated_at: "2026-04-02T10:00:00Z",
   created_by_id: "u1",
   due_date: null,
-  signed_off_by_id: null,
-  signed_off_at: null,
+  created_at: "2026-04-02T09:00:00Z",
+  reviewed_by_id: null,
+  reviewed_at: null,
+  review_note: "",
+  finalised_by_id: null,
+  finalised_at: null,
+  filing_evidence: "",
+  adjustments: [],
+  differences: null,
+  previous: null,
+  final_return: null,
   self_approved: false,
   filed_on: null,
   filing_reference: "",
@@ -106,7 +116,7 @@ const BOXES = [
   ["11A", "VALUE", "1000.00"],
   ["11B", "VALUE", "0.00"],
 ] as const;
-const withReturn = {
+const prepared = {
   ...report,
   snapshot: {
     ...report.snapshot,
@@ -163,6 +173,76 @@ const withReturn = {
   },
 };
 
+const finalBoxes = (adjust: Record<string, string>) =>
+  prepared.snapshot.return.boxes.map((b) => {
+    const change = adjust[b.box] ?? "0.00";
+    const amount = (Number(b.amount) + Number(change)).toFixed(2);
+    return { ...b, original: b.amount, adjustment: change, amount };
+  });
+const withReturn = {
+  ...prepared,
+  final_return: {
+    ...prepared.snapshot.return,
+    adjusted: false,
+    boxes: finalBoxes({}),
+  },
+};
+const adjustment = {
+  id: "a1",
+  box: "4",
+  amount: "10.00",
+  reason: "Late March invoice",
+  evidence: "Adviser's letter",
+  status: "APPROVED",
+  created_by_id: "u1",
+  created_at: "2026-04-03T10:00:00Z",
+  decided_by_id: "u2",
+  decided_at: "2026-04-03T11:00:00Z",
+  decision_note: "",
+  self_approved: false,
+};
+const finalised = {
+  ...withReturn,
+  status: "FINALISED",
+  reviewed_by_id: "u2",
+  reviewed_at: "2026-04-03T12:00:00Z",
+  finalised_by_id: "u2",
+  finalised_at: "2026-04-03T12:30:00Z",
+  final_return: {
+    ...withReturn.final_return,
+    adjusted: true,
+    boxes: finalBoxes({ "4": "10.00", "5": "-10.00" }),
+  },
+  adjustments: [adjustment],
+  differences: {
+    changed: true,
+    added: [
+      {
+        ...prepared.snapshot.lines[0],
+        line_id: "l9",
+        entry_ref: "GJ-9",
+        date: "2026-03-25",
+        amount: "100.00",
+      },
+    ],
+    removed: [],
+    boxes: { "1": "19.00", "6": "100.00" },
+  },
+  previous: {
+    id: "r0",
+    version: 1,
+    status: "FILED",
+    filed_on: "2026-05-05",
+    filing_reference: "TAXIS-9",
+    boxes: { "4": "-10.00" },
+  },
+};
+const drafted = {
+  ...withReturn,
+  adjustments: [{ ...adjustment, id: "a2", status: "PROPOSED" }],
+  blockers: ["Approve or reject every proposed adjustment first."],
+};
+
 type Sent = { url: string; method: string; body?: unknown };
 
 function stub(shown: unknown = report) {
@@ -174,9 +254,9 @@ function stub(shown: unknown = report) {
       const method = init.method ?? "GET";
       if (method !== "GET") {
         sent.push({ url, method, body: JSON.parse(init.body as string) });
-        if (url.endsWith("/sign-off"))
+        if (url.endsWith("/review"))
           return Promise.resolve(
-            respond({ ...report, status: "SIGNED_OFF", self_approved: true }),
+            respond({ ...report, status: "REVIEWED", self_approved: true }),
           );
         return Promise.resolve(respond({}, 201));
       }
@@ -259,10 +339,10 @@ describe("VAT (V1-2)", () => {
       "href",
       "/api/w/ws/entities/e1/vat-reports/r1/export?format=pdf&lang=en",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Sign off" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
     await waitFor(() =>
       expect(sent.at(-1)?.url).toBe(
-        "/api/w/ws/entities/e1/vat-reports/r1/sign-off",
+        "/api/w/ws/entities/e1/vat-reports/r1/review",
       ),
     );
     const results = await axe.run(container, {
@@ -325,5 +405,101 @@ describe("VAT (V1-2)", () => {
       rules: { "color-contrast": { enabled: false } },
     });
     expect(results.violations).toEqual([]);
+  });
+
+  it("shows adjustments, later differences and the version corrected (V1-2d)", async () => {
+    const sent = stub(finalised);
+    const { container } = mount();
+    await screen.findByText(/every 3/);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const table = await screen.findByRole("region", { name: "VAT return" });
+    expect(
+      within(table).getByRole("columnheader", { name: "From the books" }),
+    ).toBeInTheDocument();
+    const box4 = within(table).getByRole("row", { name: /^4 Item 4/ });
+    expect(box4).toHaveTextContent("86.00");
+    expect(box4).toHaveTextContent("76.00");
+    expect(box4).toHaveTextContent("10.00");
+    expect(screen.getByText(/Late March invoice/)).toHaveTextContent(
+      "approved",
+    );
+    const changes = screen.getByRole("region", {
+      name: "Changes since this report was prepared",
+    });
+    expect(changes).toHaveTextContent("1: +19.00");
+    expect(changes).toHaveTextContent("GJ-9");
+    expect(
+      screen.getByText(/This version corrects version 1/),
+    ).toHaveTextContent("filed on 2026-05-05 (reference TAXIS-9)");
+    expect(screen.getByText(/reviewed 2026-04-03 12:00/)).toBeInTheDocument();
+    // Filing needs the date, the portal's reference and the evidence.
+    const record = screen.getByRole("button", { name: "Record as filed" });
+    fireEvent.change(screen.getByLabelText("Filed on"), {
+      target: { value: "2026-05-06" },
+    });
+    fireEvent.change(screen.getByLabelText("Portal reference"), {
+      target: { value: "TAXIS-10" },
+    });
+    expect(record).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Evidence of filing"), {
+      target: { value: "PDF in Documents" },
+    });
+    fireEvent.click(record);
+    await waitFor(() =>
+      expect(sent.at(-1)).toEqual({
+        url: "/api/w/ws/entities/e1/vat-reports/r1/filed",
+        method: "POST",
+        body: {
+          filed_on: "2026-05-06",
+          reference: "TAXIS-10",
+          evidence: "PDF in Documents",
+        },
+      }),
+    );
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations).toEqual([]);
+  });
+
+  it("proposes and decides adjustments on a draft (V1-2d)", async () => {
+    const sent = stub(drafted);
+    mount();
+    await screen.findByText(/every 3/);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(
+      await screen.findByRole("button", { name: "Review" }),
+    ).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() =>
+      expect(sent.at(-1)?.url).toBe(
+        "/api/w/ws/entities/e1/vat-reports/r1/adjustments/a2/approve",
+      ),
+    );
+    fireEvent.change(screen.getByLabelText("Box"), {
+      target: { value: "11A" },
+    });
+    fireEvent.change(screen.getByLabelText("Amount (signed)"), {
+      target: { value: "-12,50" },
+    });
+    fireEvent.change(screen.getByLabelText("Reason"), {
+      target: { value: "Duplicate supplier invoice" },
+    });
+    fireEvent.change(screen.getByLabelText("Evidence"), {
+      target: { value: "Supplier statement" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Propose adjustment" }));
+    await waitFor(() =>
+      expect(sent.at(-1)).toEqual({
+        url: "/api/w/ws/entities/e1/vat-reports/r1/adjustments",
+        method: "POST",
+        body: {
+          box: "11A",
+          amount: "-12.50",
+          reason: "Duplicate supplier invoice",
+          evidence: "Supplier statement",
+        },
+      }),
+    );
   });
 });

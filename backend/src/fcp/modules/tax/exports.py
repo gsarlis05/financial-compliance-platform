@@ -25,7 +25,21 @@ _TEXT: dict[str, dict[str, str]] = {
         "watermark": "ledger posting",
         "draft": "DRAFT",
         "DRAFT": "Draft",
-        "SIGNED_OFF": "Signed off",
+        "REVIEWED": "Reviewed",
+        "FINALISED": "Finalised",
+        "steps": "Prepared {prepared}",
+        "reviewed": "reviewed {at}",
+        "finalised": "finalised {at}",
+        "from_books": "From the books",
+        "adjustment": "Adjustment",
+        "adjustments": "Adjustments",
+        "reason": "Reason",
+        "evidence": "Evidence",
+        "adj_status": "Status",
+        "PROPOSED": "Proposed",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "evidence_filed": "Filing evidence: {evidence}",
         "FILED": "Filed",
         "SUPERSEDED": "Superseded",
         "self": "self-approved (one-person workspace)",
@@ -83,7 +97,21 @@ _TEXT: dict[str, dict[str, str]] = {
         "watermark": "καταχώριση",
         "draft": "ΠΡΟΣΧΕΔΙΟ",
         "DRAFT": "Προσχέδιο",
-        "SIGNED_OFF": "Εγκεκριμένη",
+        "REVIEWED": "Ελέγχθηκε",
+        "FINALISED": "Οριστική",
+        "steps": "Ετοιμάστηκε {prepared}",
+        "reviewed": "ελέγχθηκε {at}",
+        "finalised": "οριστικοποιήθηκε {at}",
+        "from_books": "Από τα βιβλία",
+        "adjustment": "Προσαρμογή",
+        "adjustments": "Προσαρμογές",
+        "reason": "Αιτιολογία",
+        "evidence": "Τεκμήριο",
+        "adj_status": "Κατάσταση",
+        "PROPOSED": "Προτάθηκε",
+        "APPROVED": "Εγκρίθηκε",
+        "REJECTED": "Απορρίφθηκε",
+        "evidence_filed": "Τεκμήριο υποβολής: {evidence}",
         "FILED": "Υποβλήθηκε",
         "SUPERSEDED": "Αντικαταστάθηκε",
         "self": "αυτοέγκριση (χώρος εργασίας ενός ατόμου)",
@@ -150,16 +178,35 @@ def box_amount(row: dict[str, str], lang: Lang) -> str:
     return text.replace(",", ".") if lang == "el" else text
 
 
+def _final(report: Any) -> dict[str, Any] | None:
+    from .services import final_return  # noqa: PLC0415 (exports are read after services load)
+
+    return final_return(report)
+
+
 def return_rows(report: Any, lang: Lang) -> list[list[str]]:
-    """The return as printed: box, item, amount, rounding (also used by tests)."""
-    t, found = _TEXT[lang], report.snapshot.get("return")
+    """The return as printed: box, item, amount, rounding, and, once adjusted, the amount from
+    the books and the adjustment (also used by tests)."""
+    t, found = _TEXT[lang], _final(report)
     if not found:
         return []
-    rows = [[t["box"], t["item"], t["amount"], t["rounding"]]]
+    extra = found["adjusted"]
+    rows = [[t["box"], t["item"], t["amount"], t["rounding"],
+             *([t["from_books"], t["adjustment"]] if extra else [])]]  # fmt: skip
     for b in found["boxes"]:
         rounding = "" if Decimal(b["rounding"]) == 0 else amount(b["rounding"], lang)
-        rows.append([b["box"], b["label"], box_amount(b, lang), rounding])
+        more = [box_amount({**b, "amount": b["original"]}, lang),
+                "" if Decimal(b["adjustment"]) == 0 else amount(b["adjustment"], lang)]  # fmt: skip
+        rows.append([b["box"], b["label"], box_amount(b, lang), rounding, *(more if extra else [])])
     return rows
+
+
+def adjustment_rows(report: Any, lang: Lang) -> list[list[str]]:
+    t = _TEXT[lang]
+    rows = [[t["box"], t["amount"], t["reason"], t["evidence"], t["adj_status"]]]
+    for a in report.adjustments.order_by("created_at"):
+        rows.append([a.box, amount(str(a.amount), lang), a.reason, a.evidence, t[a.status]])
+    return rows if len(rows) > 1 else []
 
 
 def rules_note(report: Any, lang: Lang) -> str:
@@ -187,9 +234,17 @@ def head_lines(report: Any, entity_name: str, lang: Lang) -> list[str]:
              status_line(report, lang),
              f"{t['generated']}: {report.generated_at.isoformat(timespec='seconds')} "
              f"({t['watermark']} #{report.watermark})"]  # fmt: skip
+    steps = [t["steps"].format(prepared=report.created_at.isoformat(timespec="minutes"))]
+    if report.reviewed_at:
+        steps.append(t["reviewed"].format(at=report.reviewed_at.isoformat(timespec="minutes")))
+    if report.finalised_at:
+        steps.append(t["finalised"].format(at=report.finalised_at.isoformat(timespec="minutes")))
+    lines.append("; ".join(steps))
     if report.filed_on:
         lines.append(t["filed"].format(on=report.filed_on.isoformat(),
                                        ref=report.filing_reference))  # fmt: skip
+        if report.filing_evidence:
+            lines.append(t["evidence_filed"].format(evidence=report.filing_evidence))
     if report.due_date:
         lines.append(t["due"].format(due=report.due_date.isoformat()))
     lines.append(t["notice"])
@@ -217,14 +272,24 @@ def to_xlsx(report: Any, entity_name: str, lang: Lang = "en", *, generated: date
     summary.append([f"{generated.isoformat(timespec='seconds')}"])
     summary.append([])
     summary.append([t["return"]])
-    for row in return_rows(report, lang)[1:]:
-        box = next(b for b in snap["return"]["boxes"] if b["box"] == row[0])
-        summary.append([row[0], safe_text(row[1]), Decimal(box["amount"]),
-                        Decimal(box["rounding"])])  # fmt: skip
+    final = _final(report)
+    boxes = final["boxes"] if final else []
+    adjusted = bool(final and final["adjusted"])
+    if final:
+        summary.append([safe_text(c) for c in return_rows(report, lang)[0]])
+    for box in boxes:
+        extra = [Decimal(box["original"]), Decimal(box["adjustment"])] if adjusted else []
+        summary.append([box["box"], safe_text(box["label"]), Decimal(box["amount"]),
+                        Decimal(box["rounding"]), *extra])  # fmt: skip
         summary.cell(row=summary.max_row, column=3).number_format = (
             "#,##0.00" if box["kind"] == "VAT" else "#,##0"
         )
     summary.append([safe_text(rules_note(report, lang))])
+    adjustments = adjustment_rows(report, lang)
+    if adjustments:
+        sheet = book.create_sheet("Adjustments")
+        for row in adjustments:
+            sheet.append([safe_text(c) for c in row])
     summary.append([])
     summary.append([t["totals"]])
     keys = ("sales_base", "sales_vat", "purchase_base", "purchase_vat", "net")
@@ -287,7 +352,7 @@ def to_pdf(report: Any, entity_name: str, lang: Lang = "en", *, generated: datet
     t, snap = _TEXT[lang], report.snapshot
     body = ParagraphStyle("body", fontName=regular, fontSize=9, leading=12)
     heading = ParagraphStyle("heading", fontName=bold, fontSize=12, leading=16)
-    draft = report.status not in ("SIGNED_OFF", "FILED")
+    draft = report.status not in ("FINALISED", "FILED")
 
     def decorate(canvas: Any, doc: Any) -> None:
         width, height = doc.pagesize
@@ -327,6 +392,10 @@ def to_pdf(report: Any, entity_name: str, lang: Lang = "en", *, generated: datet
     if return_rows(report, lang):
         story.append(table(return_rows(report, lang)))
     story.append(Paragraph(escape(rules_note(report, lang)), body))
+    adjustments = adjustment_rows(report, lang)
+    if adjustments:
+        story += [Spacer(1, 4 * mm), Paragraph(escape(t["adjustments"]), heading),
+                  table([[c[:60] for c in r] for r in adjustments])]  # fmt: skip
     story += [Spacer(1, 4 * mm), Paragraph(escape(t["totals"]), heading),
               table([["", ""], *[list(r) for r in total_rows(report, lang)]])]  # fmt: skip
     story += [

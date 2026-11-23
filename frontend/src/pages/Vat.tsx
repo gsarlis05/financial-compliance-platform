@@ -234,6 +234,14 @@ function ReportView({
         {t("vat.taken")} {r.generated_at.slice(0, 16).replace("T", " ")} ·{" "}
         {t("vat.notice")}
       </p>
+      <p className="muted">{steps(t, r)}</p>
+      {r.status === "DRAFT" && r.review_note ? (
+        <p role="note">
+          {t("vat.lastReopened")} {r.review_note}
+        </p>
+      ) : null}
+      <Previous report={r} />
+      <Differences report={r} />
       {s.unverified_codes.length ? (
         <p role="note">
           {t("vat.unverifiedCodes")} {s.unverified_codes.join(", ")}
@@ -241,6 +249,7 @@ function ReportView({
       ) : null}
 
       <ReturnView report={r} onBox={setBox} />
+      <Adjustments report={r} />
 
       <h3>{t("vat.totals")}</h3>
       <table>
@@ -344,7 +353,7 @@ function ReturnView({
   onBox: (box: string) => void;
 }) {
   const { t, locale } = useI18n();
-  const found = report.snapshot.return;
+  const found = report.final_return;
   if (!found) {
     return (
       <>
@@ -369,6 +378,16 @@ function ReturnView({
               <th scope="col" className="amount">
                 {t("vat.rounding")}
               </th>
+              {found.adjusted ? (
+                <>
+                  <th scope="col" className="amount">
+                    {t("vat.fromBooks")}
+                  </th>
+                  <th scope="col" className="amount">
+                    {t("vat.adjustment")}
+                  </th>
+                </>
+              ) : null}
               <th scope="col">
                 <span className="visually-hidden">{t("vat.showLines")}</span>
               </th>
@@ -396,6 +415,18 @@ function ReturnView({
                     ? ""
                     : formatAmount(b.rounding, locale)}
                 </td>
+                {found.adjusted ? (
+                  <>
+                    <td className="amount">
+                      {boxAmount({ ...b, amount: b.original }, locale)}
+                    </td>
+                    <td className="amount">
+                      {new Decimal(b.adjustment).isZero()
+                        ? ""
+                        : formatAmount(b.adjustment, locale)}
+                    </td>
+                  </>
+                ) : null}
                 <td>
                   {b.box === "3" || b.box === "5" ? null : (
                     <button
@@ -509,6 +540,220 @@ function Lines({
   );
 }
 
+function steps(t: (k: MessageKey) => string, r: VatReportDetail): string {
+  const at = (v: string) => v.slice(0, 16).replace("T", " ");
+  const parts = [t("vat.steps").replace("{prepared}", at(r.created_at))];
+  if (r.reviewed_at) {
+    parts.push(t("vat.reviewedAt").replace("{at}", at(r.reviewed_at)));
+  }
+  if (r.finalised_at) {
+    parts.push(t("vat.finalisedAt").replace("{at}", at(r.finalised_at)));
+  }
+  return parts.join(" · ");
+}
+
+function BoxChanges({ boxes }: { boxes: Record<string, string> }) {
+  const { locale } = useI18n();
+  return (
+    <ul className="inline-list">
+      {Object.entries(boxes).map(([box, change]) => (
+        <li key={box}>
+          {box}: {new Decimal(change).isPositive() ? "+" : ""}
+          {formatAmount(change, locale)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Previous({ report }: { report: VatReportDetail }) {
+  const { t } = useI18n();
+  const p = report.previous;
+  if (!p) {
+    return null;
+  }
+  const version = String(p.version);
+  return (
+    <div role="note">
+      <p>
+        {t("vat.amends").replace("{version}", version)}{" "}
+        {p.filed_on
+          ? t("vat.amendsFiled")
+              .replace("{version}", version)
+              .replace("{on}", p.filed_on)
+              .replace("{ref}", p.filing_reference)
+          : ""}
+      </p>
+      {Object.keys(p.boxes).length ? (
+        <>
+          <p>{t("vat.changeFromPrevious").replace("{version}", version)}</p>
+          <BoxChanges boxes={p.boxes} />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function Differences({ report }: { report: VatReportDetail }) {
+  const { t, locale } = useI18n();
+  const d = report.differences;
+  if (!d?.changed) {
+    return null;
+  }
+  const rows = [
+    ...d.added.map((l) => ({ l, key: "vat.added" as const })),
+    ...d.removed.map((l) => ({ l, key: "vat.removed" as const })),
+  ];
+  return (
+    <section aria-labelledby="vat-differences" className="notice">
+      <h3 id="vat-differences">{t("vat.differences")}</h3>
+      <p>{t("vat.differencesHelp")}</p>
+      <p>{t("vat.boxChange")}</p>
+      <BoxChanges boxes={d.boxes} />
+      <ul>
+        {rows.map(({ l, key }) => (
+          <li key={`${key}-${l.line_id}`}>
+            {t(key)}: {l.date} {l.entry_ref} {l.account}{" "}
+            {formatAmount(l.amount, locale)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const ADJUSTABLE = [
+  "1",
+  "2",
+  "4",
+  "6",
+  "7",
+  "8A",
+  "8B",
+  "9",
+  "10",
+  "11A",
+  "11B",
+];
+
+function Adjustments({ report }: { report: VatReportDetail }) {
+  const { t, locale } = useI18n();
+  const m = useVatMutations(report.id);
+  const [box, setBox] = useState("1");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const draft = report.status === "DRAFT";
+  if (!draft && report.adjustments.length === 0) {
+    return null;
+  }
+  function propose(event: SyntheticEvent) {
+    event.preventDefault();
+    m.propose.mutate(
+      { box, amount: amount.trim().replace(",", "."), reason, evidence },
+      {
+        onSuccess: () => {
+          setAmount("");
+          setReason("");
+          setEvidence("");
+        },
+      },
+    );
+  }
+  return (
+    <section aria-labelledby="vat-adjustments">
+      <h3 id="vat-adjustments">{t("vat.adjustments")}</h3>
+      {report.adjustments.length ? (
+        <ul>
+          {report.adjustments.map((a) => (
+            <li key={a.id}>
+              {t("vat.box")} {a.box}: {formatAmount(a.amount, locale)} ·{" "}
+              {a.reason} · {a.evidence} ·{" "}
+              <span className="badge">
+                {t(`vat.adj.${a.status}` as MessageKey)}
+              </span>
+              {a.self_approved ? (
+                <span className="badge">{t("approval.self")}</span>
+              ) : null}
+              {draft && a.status === "PROPOSED" ? (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="link-button"
+                    disabled={m.decide.isPending}
+                    onClick={() => m.decide.mutate({ id: a.id, approve: true })}
+                  >
+                    {t("vat.approve")}
+                  </button>{" "}
+                  <button
+                    type="button"
+                    className="link-button"
+                    disabled={m.decide.isPending}
+                    onClick={() =>
+                      m.decide.mutate({ id: a.id, approve: false })
+                    }
+                  >
+                    {t("vat.reject")}
+                  </button>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">{t("vat.noAdjustments")}</p>
+      )}
+      {draft && report.final_return ? (
+        <form className="form inline" onSubmit={propose}>
+          <p className="muted">{t("vat.adjustmentsHelp")}</p>
+          <label>
+            {t("vat.box")}
+            <select value={box} onChange={(e) => setBox(e.target.value)}>
+              {ADJUSTABLE.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t("vat.adjAmount")}
+            <input
+              inputMode="decimal"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </label>
+          <label>
+            {t("vat.adjReason")}
+            <input
+              required
+              maxLength={500}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+          <label>
+            {t("vat.adjEvidence")}
+            <input
+              required
+              maxLength={500}
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={m.propose.isPending}>
+            {t("vat.propose")}
+          </button>
+        </form>
+      ) : null}
+      <ProblemMessage error={m.propose.error ?? m.decide.error} />
+    </section>
+  );
+}
+
 function Actions({
   report,
   onOpen,
@@ -522,9 +767,15 @@ function Actions({
   const [due, setDue] = useState(report.due_date ?? "");
   const [filedOn, setFiledOn] = useState("");
   const [reference, setReference] = useState("");
-  const done = report.status === "SIGNED_OFF" || report.status === "FILED";
+  const [evidence, setEvidence] = useState("");
+  const [note, setNote] = useState("");
+  const done = report.status === "FINALISED" || report.status === "FILED";
   const error =
-    m.act.error ?? m.dueDate.error ?? m.filed.error ?? m.settlement.error;
+    m.act.error ??
+    m.dueDate.error ??
+    m.filed.error ??
+    m.settlement.error ??
+    m.reopen.error;
   return (
     <section aria-labelledby="vat-actions">
       <h3 id="vat-actions">{t("vat.actions")}</h3>
@@ -549,11 +800,21 @@ function Actions({
               type="button"
               className="primary"
               disabled={m.act.isPending || report.blockers.length > 0}
-              onClick={() => m.act.mutate("sign-off")}
+              onClick={() => m.act.mutate("review")}
             >
-              {t("vat.signOff")}
+              {t("vat.review")}
             </button>
           </>
+        ) : null}
+        {report.status === "REVIEWED" ? (
+          <button
+            type="button"
+            className="primary"
+            disabled={m.act.isPending || report.blockers.length > 0}
+            onClick={() => m.act.mutate("finalise")}
+          >
+            {t("vat.finalise")}
+          </button>
         ) : null}
         {done ? (
           <>
@@ -590,6 +851,25 @@ function Actions({
           {t("vat.xlsx")}
         </a>
       </div>
+      {report.status === "REVIEWED" ? (
+        <div className="form inline">
+          <label>
+            {t("vat.reopenNote")}
+            <input
+              value={note}
+              maxLength={500}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!note.trim() || m.reopen.isPending}
+            onClick={() => m.reopen.mutate(note)}
+          >
+            {t("vat.reopen")}
+          </button>
+        </div>
+      ) : null}
       {report.status !== "SUPERSEDED" ? (
         <div className="form inline">
           <label>
@@ -609,7 +889,7 @@ function Actions({
           </button>
         </div>
       ) : null}
-      {report.status === "SIGNED_OFF" ? (
+      {report.status === "FINALISED" ? (
         <div className="form inline">
           <label>
             {t("vat.filedOn")}
@@ -627,11 +907,27 @@ function Actions({
               onChange={(e) => setReference(e.target.value)}
             />
           </label>
+          <label>
+            {t("vat.evidence")}
+            <input
+              value={evidence}
+              maxLength={500}
+              title={t("vat.evidenceHelp")}
+              onChange={(e) => setEvidence(e.target.value)}
+            />
+          </label>
           <button
             type="button"
             className="primary"
-            disabled={!filedOn || !reference.trim() || m.filed.isPending}
-            onClick={() => m.filed.mutate({ filed_on: filedOn, reference })}
+            disabled={
+              !filedOn ||
+              !reference.trim() ||
+              !evidence.trim() ||
+              m.filed.isPending
+            }
+            onClick={() =>
+              m.filed.mutate({ filed_on: filedOn, reference, evidence })
+            }
           >
             {t("vat.markFiled")}
           </button>
@@ -640,6 +936,7 @@ function Actions({
       {report.filed_on ? (
         <p>
           {t("vat.filedText")} {report.filed_on} · {report.filing_reference}
+          {report.filing_evidence ? ` · ${report.filing_evidence}` : ""}
         </p>
       ) : null}
       {m.settlement.data ? (
