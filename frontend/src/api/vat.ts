@@ -213,6 +213,7 @@ export interface VatReportDetail extends VatReport {
     exceptions: { kind: string; entry: string; detail: string }[];
   };
   reconciliation: VatReconciliation | null;
+  vies: VatVies;
   snapshot: VatSnapshot;
   final_return:
     | (Omit<VatReturn, "boxes"> & { boxes: VatFinalBox[]; adjusted: boolean })
@@ -413,4 +414,97 @@ export function useVatImports(dateFrom: string, dateTo: string) {
     onSuccess: refresh,
   });
   return { list, record, voidRecord };
+}
+
+// --- VIES (V1-2g) --------------------------------------------------------------------------------
+
+export interface VatVies {
+  months: {
+    month: string;
+    statement: string;
+    kind: string;
+    supplies: boolean;
+  }[];
+  missing_months: string[];
+  partners: {
+    country: string;
+    vat_no: string;
+    status:
+      | "MATCH"
+      | "ROUNDING"
+      | "NOT_FILED"
+      | "NOT_IN_BOOKS"
+      | "TRIANGULAR"
+      | "DIFFERENCE";
+    books_goods: string;
+    books_services: string;
+    vies_goods: string;
+    vies_services: string;
+    vies_triangular: string;
+    difference_goods: string;
+    difference_services: string;
+  }[];
+  totals: {
+    kind: "goods" | "services";
+    box: string;
+    vies: string;
+    box_exact: string;
+    box_amount: string;
+    difference: string;
+  }[];
+  triangular: string;
+  agrees: boolean;
+}
+
+export interface VatViesLine {
+  country: string;
+  vat_no: string;
+  goods: string;
+  services: string;
+  triangular: string;
+}
+
+export interface VatViesStatement {
+  id: string;
+  month: string;
+  kind: "ORIGINAL" | "CORRECTION";
+  filed_on: string;
+  reference: string;
+  note: string;
+  voided: boolean;
+  void_reason: string;
+  lines: VatViesLine[];
+}
+
+export function useVatVies(dateFrom: string, dateTo: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const key = ["vat-vies", entityId, dateFrom, dateTo];
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: key });
+    void client.invalidateQueries({ queryKey: ["vat-report", entityId] });
+  };
+  const list = useQuery({
+    queryKey: key,
+    queryFn: () =>
+      api<VatViesStatement[]>(`${base}/vat-vies`, {
+        query: { date_from: dateFrom, date_to: dateTo },
+      }),
+  });
+  const record = useMutation({
+    mutationFn: (body: {
+      month: string;
+      kind: "ORIGINAL" | "CORRECTION";
+      filed_on: string;
+      reference: string;
+      lines: VatViesLine[];
+    }) => api(`${base}/vat-vies`, { method: "POST", body }),
+    onSuccess: refresh,
+  });
+  const voidStatement = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api(`${base}/vat-vies/${id}/void`, { method: "POST", body: { reason } }),
+    onSuccess: refresh,
+  });
+  return { list, record, voidStatement };
 }

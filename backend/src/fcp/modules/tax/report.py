@@ -544,3 +544,106 @@ def import_checks(lines: list[dict[str, Any]], records: list[dict[str, Any]],
                                         f"rate gives {money(expected)}, not the "
                                         f"{money(recorded)} declared."})  # fmt: skip
     return found
+
+
+# --- VIES (V1-2g, #218) -------------------------------------------------------------------------
+
+VIES_KINDS = {"EU_GOODS_SUPPLY": "goods", "EU_SERVICES_SUPPLY": "services"}
+
+
+def vat_key(country: str, vat_no: str) -> tuple[str, str]:
+    """A partner as VIES lists it: its country and its VAT number without spaces, punctuation or
+    the country prefix (Greece's prefix is EL)."""
+    number = "".join(ch for ch in vat_no.upper() if ch.isalnum())
+    for prefix in {country, "EL" if country == "GR" else country}:
+        if prefix and number.startswith(prefix):
+            number = number[len(prefix) :]
+            break
+    return country, number
+
+
+def _months(start: str, end: str) -> list[str]:
+    year, month = int(start[:4]), int(start[5:7])
+    found = []
+    while f"{year:04d}-{month:02d}-01" <= end:
+        found.append(f"{year:04d}-{month:02d}-01")
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return found
+
+
+def _vies_status(in_books: bool, in_vies: bool, filed: dict[str, Decimal],
+                 diff: dict[str, Decimal]) -> str:  # fmt: skip
+    if not in_vies:
+        return "NOT_FILED"
+    if not in_books:
+        # Only triangular amounts: shown apart and compared with no box.
+        return "NOT_IN_BOOKS" if filed["goods"] or filed["services"] else "TRIANGULAR"
+    if not any(diff.values()):
+        return "MATCH"
+    return "ROUNDING" if all(abs(v) < 1 for v in diff.values()) else "DIFFERENCE"
+
+
+def vies_reconcile(
+    snapshot: dict[str, Any], final: dict[str, Any] | None, statements: list[dict[str, Any]],
+    start: str, end: str,
+) -> dict[str, Any]:  # fmt: skip
+    """The EU supplies in the books, per partner, against the VIES statements recorded for the
+    period's months, and their totals against Boxes 8A (goods) and 8B (services).
+
+    For a month, the latest correction recorded replaces the original statement: a correction
+    carries the month's full figures (owner's decision, 2026-11-23). Triangular amounts are
+    shown apart and compared with no box. Differences are classed: a month with no statement, a
+    partner only on one side, rounding (under one euro), or another difference to explain."""
+    zero = Decimal(0)
+    months = _months(start, end)
+    used: dict[str, dict[str, Any]] = {}
+    for st in sorted(statements, key=lambda s: (s["filed_on"], s["kind"] == "CORRECTION")):
+        if st["month"] in months:
+            used[st["month"]] = st  # the latest filed wins; a correction after its original
+    books: dict[tuple[str, str], dict[str, Any]] = {}
+    supplied: set[str] = set()
+    for ln in snapshot["lines"]:
+        kind = VIES_KINDS.get(ln.get("category", ""))
+        if kind and ln["kind"] == "SALE":
+            key = vat_key(ln.get("country", ""), ln.get("vat_no", ""))
+            row = books.setdefault(key, {"goods": zero, "services": zero})
+            row[kind] += Decimal(ln["amount"])
+            supplied.add(ln["date"][:8] + "01")
+    filed: dict[tuple[str, str], dict[str, Decimal]] = {}
+    for st in used.values():
+        for vl in st["lines"]:
+            key = vat_key(vl["country"], vl["vat_no"])
+            row = filed.setdefault(key, {"goods": zero, "services": zero, "triangular": zero})
+            for k in ("goods", "services", "triangular"):
+                row[k] += Decimal(vl[k])
+    partners = []
+    for key in sorted(set(books) | set(filed)):
+        b = books.get(key, {"goods": zero, "services": zero})
+        f = filed.get(key, {"goods": zero, "services": zero, "triangular": zero})
+        diff = {k: f[k] - b[k] for k in ("goods", "services")}
+        status = _vies_status(key in books, key in filed, f, diff)
+        partners.append({"country": key[0], "vat_no": key[1], "status": status,
+                         **{f"books_{k}": money(b[k]) for k in ("goods", "services")},
+                         **{f"vies_{k}": money(f[k]) for k in ("goods", "services",
+                                                                "triangular")},
+                         **{f"difference_{k}": money(v) for k, v in diff.items()}})  # fmt: skip
+    boxes = {b["box"]: b for b in (final or {}).get("boxes", [])}
+    totals = []
+    for kind, box in (("goods", "8A"), ("services", "8B")):
+        reported = sum((f[kind] for f in filed.values()), zero)
+        exact = Decimal(boxes[box]["exact"]) if box in boxes else zero
+        totals.append({"kind": kind, "box": box, "vies": money(reported),
+                       "box_exact": money(exact),
+                       "box_amount": boxes[box]["amount"] if box in boxes else "0.00",
+                       "difference": money(reported - exact)})  # fmt: skip
+    return {
+        "months": [{"month": m, "statement": used[m]["reference"] if m in used else "",
+                    "kind": used[m]["kind"] if m in used else "",
+                    "supplies": m in supplied} for m in months],
+        "missing_months": [m for m in months if m in supplied and m not in used],
+        "partners": partners,
+        "totals": totals,
+        "triangular": money(sum((f["triangular"] for f in filed.values()), zero)),
+        "agrees": all(p["status"] in ("MATCH", "TRIANGULAR") for p in partners)
+                  and not any(m in supplied and m not in used for m in months),
+    }  # fmt: skip

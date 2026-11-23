@@ -101,6 +101,21 @@ the taxable value at the rate gives that VAT. A declaration can be recorded only
 VAT cannot be claimed twice. To correct a record, **Void** it with a reason and record it again.
 This is not possible once its return is finalised; start a new version instead.
 
+### VIES statements
+If you sell goods or services to businesses in other EU member states, record each monthly VIES
+statement as you filed it, under **VIES statements** on the report. For each statement, enter:
+- the month, the date you filed it and the reference you received;
+- each partner: its country, its VAT number, and the goods, services and triangular amounts.
+
+Choose **Correction** for a corrected statement of a month already filed. The platform sends
+nothing.
+
+The report then compares each partner's supplies in the books with the statements. A partner
+is marked as agreeing, as a rounding difference under one euro, as missing from the statements
+or from the books, or as a difference to explain. The report also lists months with EU sales but
+no statement, and compares the totals with Boxes 8A and 8B. Triangular amounts are shown
+separately and compared with no box; ask your adviser how to report them.
+
 ### Downloads
 - **PDF:** every page shows the company, the period, the version and the page number.
 - **Excel:** one sheet each for Summary, Sales, Purchases, EU Trade, Reverse Charge, Imports,
@@ -154,7 +169,6 @@ is finalised, the earlier one is marked superseded. File the correction followin
 Department's procedure for corrections, with your adviser.
 
 ## What is still to come
-- Checks against the VIES statements.
 
 Rates, codes and box rules show that they have not yet been checked by a Cyprus tax
 professional.

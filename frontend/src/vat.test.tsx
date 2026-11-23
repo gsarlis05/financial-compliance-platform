@@ -52,6 +52,18 @@ const report = {
     exceptions: [],
   },
   reconciliation: null,
+  vies: {
+    months: [
+      { month: "2026-01-01", statement: "", kind: "", supplies: false },
+      { month: "2026-02-01", statement: "", kind: "", supplies: false },
+      { month: "2026-03-01", statement: "", kind: "", supplies: false },
+    ],
+    missing_months: [],
+    partners: [],
+    totals: [],
+    triangular: "0.00",
+    agrees: true,
+  },
   self_approved: false,
   filed_on: null,
   filing_reference: "",
@@ -322,6 +334,7 @@ function stub(shown: unknown = report, imports: unknown = noImports) {
           );
         return Promise.resolve(respond({}, 201));
       }
+      if (url.includes("/vat-vies")) return Promise.resolve(respond([]));
       if (url.includes("/vat-imports"))
         return Promise.resolve(respond(imports));
       if (url.includes("/documents"))
@@ -653,6 +666,102 @@ describe("VAT (V1-2)", () => {
           customs_value: "1000",
           import_vat: "190.00",
           document_id: "d1",
+        },
+      }),
+    );
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations).toEqual([]);
+  });
+
+  it("records a VIES statement and compares it with the books (V1-2g)", async () => {
+    const sent = stub({
+      ...withReturn,
+      vies: {
+        months: [
+          { month: "2026-01-01", statement: "", kind: "", supplies: true },
+          { month: "2026-02-01", statement: "", kind: "", supplies: false },
+          { month: "2026-03-01", statement: "", kind: "", supplies: false },
+        ],
+        missing_months: ["2026-01-01"],
+        partners: [
+          {
+            country: "DE",
+            vat_no: "123456789",
+            status: "NOT_FILED",
+            books_goods: "1000.00",
+            books_services: "0.00",
+            vies_goods: "0.00",
+            vies_services: "0.00",
+            vies_triangular: "0.00",
+            difference_goods: "-1000.00",
+            difference_services: "0.00",
+          },
+        ],
+        totals: [
+          {
+            kind: "goods",
+            box: "8A",
+            vies: "0.00",
+            box_exact: "1000.00",
+            box_amount: "1000.00",
+            difference: "-1000.00",
+          },
+        ],
+        triangular: "0.00",
+        agrees: false,
+      },
+    });
+    const { container } = mount();
+    await screen.findByText(/every 3/);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const panel = await screen.findByRole("region", {
+      name: "VIES statements",
+    });
+    expect(panel).toHaveTextContent(
+      "EU sales but no statement recorded for: 2026-01",
+    );
+    expect(
+      within(panel).getByRole("row", { name: /DE 123456789/ }),
+    ).toHaveTextContent("not in a statement");
+    expect(panel).toHaveTextContent("The statements and the books differ");
+    fireEvent.change(within(panel).getByLabelText("Filed on"), {
+      target: { value: "2026-02-12" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Portal reference"), {
+      target: { value: "VIES-JAN" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Country 1"), {
+      target: { value: "de" },
+    });
+    fireEvent.change(within(panel).getByLabelText("VAT number 1"), {
+      target: { value: "123456789" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Goods 1"), {
+      target: { value: "1000,00" },
+    });
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Record statement" }),
+    );
+    await waitFor(() =>
+      expect(sent.at(-1)).toEqual({
+        url: "/api/w/ws/entities/e1/vat-vies",
+        method: "POST",
+        body: {
+          month: "2026-01-01",
+          kind: "ORIGINAL",
+          filed_on: "2026-02-12",
+          reference: "VIES-JAN",
+          lines: [
+            {
+              country: "DE",
+              vat_no: "123456789",
+              goods: "1000.00",
+              services: "0",
+              triangular: "0",
+            },
+          ],
         },
       }),
     );
