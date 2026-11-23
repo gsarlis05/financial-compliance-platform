@@ -58,9 +58,11 @@ export function VatCodePicker({
   const text = typed ?? (chosen ? labelOf(chosen) : "");
   const search = (typed ?? "").trim().toLowerCase();
 
+  // A rate matches from its start ("9%" finds 9%, not 19%); codes and names anywhere.
   const matches = (v: VatCode) =>
     !search ||
-    [v.code, v.name, v.name_el, percent(v.rate), v.id].some((s) =>
+    percent(v.rate).startsWith(search) ||
+    [v.code, v.name, v.name_el, v.id].some((s) =>
       s.toLowerCase().includes(search),
     );
   const option = (v: VatCode) => ({
