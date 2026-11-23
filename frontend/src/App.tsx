@@ -36,6 +36,7 @@ import {
   EntryDetailPage,
   NewEntryPage,
 } from "./pages/Entries";
+import { LedgerSettingsPage } from "./pages/LedgerSettings";
 import { PeriodsPage } from "./pages/Periods";
 import { ReportPacksPage } from "./pages/ReportPacks";
 import { StatementsPage } from "./pages/Statements";
@@ -131,6 +132,10 @@ const router = createBrowserRouter([
       },
       { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
+      {
+        path: "w/:slug/e/:entityId/ledger-settings",
+        element: <LedgerSettingsPage />,
+      },
       {
         path: "w/:slug/e/:entityId/trial-balance",
         element: <TrialBalancePage />,

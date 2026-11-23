@@ -260,11 +260,25 @@ monthly-summarised books and gives you access as finance manager. See [the demo 
 Every amount is recorded in the entity's **functional currency** (EUR by default) and presented in
 its **reporting currency** (the same in this release). Currencies use ISO 4217 codes.
 
-Entries in another currency are **not available yet**: the platform refuses them with a clear
-message until foreign-currency accounting (conversion, period-end revaluation, exchange gains and
-losses) is complete and tested. The database already has a place for each line's transaction
-currency, amount and rate, so turning it on later needs no change to your recorded data.
+### Entries in another currency
+Turn it on in **Bookkeeping → Ledger settings → Foreign currency**, choosing the account that
+exchange differences go to (7020 "Foreign exchange differences" in the default chart).
 
-You can already record **exchange rates** with their source (for example the ECB reference rate
-and the file it came from) through the API (`POST .../exchange-rates`); a recorded rate is never
-changed. Nothing is converted with them yet.
+Then each line of the entry form has a **Foreign currency** section:
+1. Choose the **currency** and type the **amount in that currency**.
+2. Type the **rate** in euros per unit, as on your bank or card statement. The euro amount fills
+   in by itself: amount × rate, rounded to the cent.
+3. Give the **rate's date and time** and its **source** (for example "bank card statement").
+
+Amounts are converted at the rate of the date and time the purchase happened (your decision of
+23 November 2026). **Use the stored rate** offers the latest rate you recorded on or before the
+entry date; you can change it.
+
+### Exchange rates
+**Ledger settings → Exchange rates** lists the rates you recorded and records new ones: the date,
+the pair, the rate, its type (spot, closing, average) and its source. A recorded rate is never
+changed.
+
+Exchange differences when an invoice is paid at another rate, and period-end revaluation, are
+coming next (#230). Until then, a difference stays on the customer's or supplier's account for you
+to clear with an entry.

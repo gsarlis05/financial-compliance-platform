@@ -4501,6 +4501,63 @@
         "title": "CsvMappingIn",
         "type": "object"
       },
+      "CurrencySettingsIn": {
+        "properties": {
+          "fx_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where exchange differences go",
+            "title": "Fx Account Id"
+          },
+          "multi_currency_enabled": {
+            "title": "Multi Currency Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "multi_currency_enabled"
+        ],
+        "title": "CurrencySettingsIn",
+        "type": "object"
+      },
+      "CurrencySettingsOut": {
+        "properties": {
+          "functional_currency": {
+            "title": "Functional Currency",
+            "type": "string"
+          },
+          "fx_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fx Account Id"
+          },
+          "multi_currency_enabled": {
+            "title": "Multi Currency Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "functional_currency",
+          "multi_currency_enabled",
+          "fx_account_id"
+        ],
+        "title": "CurrencySettingsOut",
+        "type": "object"
+      },
       "CustomKpiCreateIn": {
         "properties": {
           "convention": {
@@ -6074,7 +6131,7 @@
             "type": "string"
           },
           "multi_currency_enabled": {
-            "description": "False in this release (#80)",
+            "description": "Foreign currency allowed (V1-2h)",
             "title": "Multi Currency Enabled",
             "type": "boolean"
           },
@@ -8990,10 +9047,42 @@
             ],
             "title": "Due Date"
           },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Functional units per unit, at the transaction's date and time",
+            "title": "Exchange Rate"
+          },
           "memo": {
             "default": "",
             "maxLength": 300,
             "title": "Memo",
+            "type": "string"
+          },
+          "rate_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When that rate applied",
+            "title": "Rate At"
+          },
+          "rate_source": {
+            "default": "",
+            "description": "Bank, invoice, stored rate",
+            "maxLength": 200,
+            "title": "Rate Source",
             "type": "string"
           },
           "reference": {
@@ -9015,6 +9104,31 @@
             ],
             "description": "When it differs from the date",
             "title": "Tax Point"
+          },
+          "txn_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The amount in that currency",
+            "title": "Txn Amount"
+          },
+          "txn_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Foreign currency of the line (V1-2h)",
+            "title": "Txn Currency"
           },
           "vat_blocked": {
             "anyOf": [
@@ -9121,12 +9235,40 @@
             ],
             "title": "Due Date"
           },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
           "line_no": {
             "title": "Line No",
             "type": "integer"
           },
           "memo": {
             "title": "Memo",
+            "type": "string"
+          },
+          "rate_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate At"
+          },
+          "rate_source": {
+            "default": "",
+            "title": "Rate Source",
             "type": "string"
           },
           "reference": {
@@ -9144,6 +9286,28 @@
               }
             ],
             "title": "Tax Point"
+          },
+          "txn_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txn Amount"
+          },
+          "txn_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Txn Currency"
           },
           "vat_blocked": {
             "anyOf": [
@@ -12961,6 +13125,26 @@
         "title": "ProjectionVsActualsOut",
         "type": "object"
       },
+      "RateQuery": {
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "on"
+        ],
+        "title": "RateQuery",
+        "type": "object"
+      },
       "RateType": {
         "enum": [
           "FIXED",
@@ -15923,6 +16107,41 @@
         ],
         "title": "Status",
         "type": "string"
+      },
+      "SuggestedRateOut": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "rate": {
+            "description": "Functional units per one unit of the currency",
+            "title": "Rate",
+            "type": "string"
+          },
+          "rate_date": {
+            "format": "date",
+            "title": "Rate Date",
+            "type": "string"
+          },
+          "rate_type": {
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "rate",
+          "rate_date",
+          "rate_type",
+          "source"
+        ],
+        "title": "SuggestedRateOut",
+        "type": "object"
       },
       "SuggestionOut": {
         "properties": {
@@ -24866,6 +25085,109 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/currency-settings": {
+      "get": {
+        "operationId": "fcp_modules_ledger_api_get_currency_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencySettingsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get Currency Settings",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "put": {
+        "description": "Switch foreign currency on (with the account exchange differences go to) or off.",
+        "operationId": "fcp_modules_ledger_api_put_currency_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurrencySettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencySettingsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Put Currency Settings",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/custom-kpis": {
       "get": {
         "description": "Every version of the workspace KPIs, and your own personal KPIs.",
@@ -26982,7 +27304,7 @@
     },
     "/api/w/{slug}/entities/{entity_id}/exchange-rates": {
       "get": {
-        "description": "Recorded exchange rates (the workspace's), newest first. Nothing converts amounts while\nmulti-currency is disabled.",
+        "description": "Recorded exchange rates (the workspace's), newest first.",
         "operationId": "fcp_modules_ledger_api_list_exchange_rates",
         "parameters": [
           {
@@ -27083,6 +27405,88 @@
           }
         ],
         "summary": "Add Exchange Rate",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/exchange-rates/suggestion": {
+      "get": {
+        "description": "The stored rate to suggest for a currency on a date (latest on or before it, spot rates\nfirst), in functional units per unit. Only a suggestion: record the rate of the transaction\nitself (bank, invoice) on the line.",
+        "operationId": "fcp_modules_ledger_api_suggest_rate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "title": "Currency",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "on",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "On",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedRateOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Suggest Rate",
         "tags": [
           "ledger"
         ]

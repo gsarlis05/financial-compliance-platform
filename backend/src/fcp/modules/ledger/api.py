@@ -241,6 +241,12 @@ class VatLine:
     counterparty_country: str = ""
     counterparty_vat_no: str = ""
     entry_status: str = "POSTED"
+    # V1-2h: the line's foreign amount (signed like net_debit) and its rate, time and source.
+    txn_currency: str = ""
+    txn_net_debit: Decimal | None = None
+    exchange_rate: Decimal | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
 
 
 def entry_vat_lines(ctx: Any, entity_id: UUID, entry_id: UUID) -> list[VatLine]:
@@ -297,6 +303,10 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
             party.name if party else "", ln.reference or (own.reference if own else ""),
             ln.vat_code.category if ln.vat_code else "", ln.tax_point, ln.vat_recovery_percent,
             ln.vat_blocked, party.country if party else "", party.vat_no if party else "",
+            "POSTED", ln.txn_currency or "",
+            None if ln.txn_currency is None
+            else (ln.txn_debit or Decimal(0)) - (ln.txn_credit or Decimal(0)),
+            ln.exchange_rate, ln.rate_at, ln.rate_source,
         ))  # fmt: skip
     return found
 
@@ -765,6 +775,15 @@ class LineIn(Schema):
     vat_blocked: str | None = Field(
         default=None, description="Input VAT lines: the VAT that may not be deducted"
     )
+    txn_currency: str | None = Field(
+        default=None, pattern=r"^[A-Z]{3}$", description="Foreign currency of the line (V1-2h)"
+    )
+    txn_amount: str | None = Field(default=None, description="The amount in that currency")
+    exchange_rate: str | None = Field(
+        default=None, description="Functional units per unit, at the transaction's date and time"
+    )
+    rate_at: datetime | None = Field(default=None, description="When that rate applied")
+    rate_source: str = Field(default="", max_length=200, description="Bank, invoice, stored rate")
 
 
 class EntryIn(Schema):
@@ -806,6 +825,11 @@ class LineOut(Schema):
     tax_point: date | None = None
     vat_recovery_percent: str | None = None
     vat_blocked: str | None = None
+    txn_currency: str | None = None
+    txn_amount: str | None = None
+    exchange_rate: str | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
 
 
 class EntryOut(Schema):
@@ -849,6 +873,30 @@ class SettingsIn(Schema):
 class SettingsOut(Schema):
     approval_policy: str
     approval_threshold: str | None
+
+
+class CurrencySettingsIn(Schema):
+    multi_currency_enabled: bool
+    fx_account_id: UUID | None = Field(default=None, description="Where exchange differences go")
+
+
+class CurrencySettingsOut(Schema):
+    functional_currency: str
+    multi_currency_enabled: bool
+    fx_account_id: UUID | None
+
+
+class SuggestedRateOut(Schema):
+    currency: str
+    rate: str = Field(description="Functional units per one unit of the currency")
+    rate_date: date
+    rate_type: str
+    source: str
+
+
+class RateQuery(Schema):
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+    on: date
 
 
 def entry_out(entry: JournalEntry) -> EntryOut:
@@ -903,6 +951,13 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 due_date=ln.due_date,
                 vat_code_id=ln.vat_code_id,
                 vat_code=ln.vat_code.code if ln.vat_code else None,
+                txn_currency=ln.txn_currency,
+                txn_amount=None
+                if ln.txn_currency is None
+                else f"{(ln.txn_debit or ln.txn_credit):f}",
+                exchange_rate=None if ln.exchange_rate is None else f"{ln.exchange_rate:f}",
+                rate_at=ln.rate_at,
+                rate_source=ln.rate_source,
                 tax_point=ln.tax_point,
                 vat_recovery_percent=None
                 if ln.vat_recovery_percent is None
@@ -936,6 +991,11 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
                 ln.tax_point,
                 ln.vat_recovery_percent,
                 ln.vat_blocked,
+                ln.txn_currency,
+                ln.txn_amount,
+                ln.exchange_rate,
+                ln.rate_at,
+                ln.rate_source,
             )
             for ln in payload.lines
         ],
@@ -1521,10 +1581,53 @@ def _rate_out(r: ExchangeRate) -> ExchangeRateOut:
 @router.get(f"{BASE}/exchange-rates", response=list[ExchangeRateOut])
 @requires("reports.read")
 def list_exchange_rates(request: HttpRequest, slug: str, entity_id: UUID) -> list[ExchangeRateOut]:
-    """Recorded exchange rates (the workspace's), newest first. Nothing converts amounts while
-    multi-currency is disabled."""
+    """Recorded exchange rates (the workspace's), newest first."""
     ctx = workspace_ctx(request, slug, entity_id)
     return [_rate_out(r) for r in fx.rates(ctx, entity_id)]
+
+
+@router.get(
+    f"{BASE}/exchange-rates/suggestion", response={200: SuggestedRateOut, 404: dict[str, str]}
+)
+@requires("ledger.entry.read")
+def suggest_rate(request: HttpRequest, slug: str, entity_id: UUID,
+                 query: Query[RateQuery]) -> Any:  # fmt: skip
+    """The stored rate to suggest for a currency on a date (latest on or before it, spot rates
+    first), in functional units per unit. Only a suggestion: record the rate of the transaction
+    itself (bank, invoice) on the line."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fx.suggested_rate(ctx, entity_id, query.currency, query.on)
+    if found is None:
+        return Status(404, {"detail": f"No stored rate for {query.currency} on or before "
+                                      f"{query.on.isoformat()}."})  # fmt: skip
+    return SuggestedRateOut(currency=query.currency, rate=f"{found.rate:f}",
+                            rate_date=found.rate_date, rate_type=found.rate_type,
+                            source=found.source)  # fmt: skip
+
+
+@router.get(f"{BASE}/currency-settings", response=CurrencySettingsOut)
+@requires("ledger.entry.read")
+def get_currency_settings(request: HttpRequest, slug: str, entity_id: UUID) -> CurrencySettingsOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    entity = get_entity(ctx, entity_id, "ledger.entry.read")
+    found = entries.ledger_settings(ctx, entity_id)
+    return CurrencySettingsOut(functional_currency=entity.functional_currency,
+                               multi_currency_enabled=entity.multi_currency_enabled,
+                               fx_account_id=found.fx_account_id)  # fmt: skip
+
+
+@router.put(f"{BASE}/currency-settings", response=CurrencySettingsOut)
+@requires("ledger.settings.manage")
+def put_currency_settings(request: HttpRequest, slug: str, entity_id: UUID,
+                          payload: CurrencySettingsIn) -> CurrencySettingsOut:  # fmt: skip
+    """Switch foreign currency on (with the account exchange differences go to) or off."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fx.set_currency_settings(ctx, entity_id, enabled=payload.multi_currency_enabled,
+                                     fx_account_id=payload.fx_account_id)  # fmt: skip
+    entity = get_entity(ctx, entity_id, "ledger.entry.read")
+    return CurrencySettingsOut(functional_currency=entity.functional_currency,
+                               multi_currency_enabled=entity.multi_currency_enabled,
+                               fx_account_id=found.fx_account_id)  # fmt: skip
 
 
 @router.post(f"{BASE}/exchange-rates", response={201: ExchangeRateOut})

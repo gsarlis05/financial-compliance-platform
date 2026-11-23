@@ -71,6 +71,19 @@ class Line:
     blocked: Decimal | None = None
     country: str = ""
     vat_no: str = ""
+    # V1-2h: the line's foreign amount (signed like net_debit), its rate, the rate's time, source.
+    txn_currency: str = ""
+    txn_net_debit: Decimal | None = None
+    exchange_rate: Decimal | None = None
+    rate_at: str | None = None
+    rate_source: str = ""
+
+
+CURRENCY_POLICY = (
+    "Amounts in a foreign currency are converted into euros at the exchange rate of the "
+    "transaction's date and time, recorded on each line with its source (owner's decision, "
+    "2026-11-23; to be confirmed by a tax professional, #93)."
+)
 
 
 def money(value: Decimal) -> str:
@@ -151,7 +164,9 @@ def compute(
     vat_return = boxes.result()
     exceptions += [{"kind": "BOX_CHECK", "entry": "", "detail": c["detail"]}
                    for c in vat_return["checks"] if not c["ok"]]  # fmt: skip
+    foreign = any(ln.txn_currency for ln in lines)
     return {
+        **({"currency_policy": CURRENCY_POLICY} if foreign else {}),
         "return": vat_return,
         "codes": rows,
         "totals": {**{k: money(v) for k, v in totals.items()}, "net": money(net),
@@ -215,7 +230,18 @@ def _shown(ln: Line, kind: str, amount: Decimal) -> dict[str, Any]:
             "reference": ln.reference, "category": ln.category, "tax_point": ln.tax_point,
             "recovery_percent": None if ln.recovery_percent is None else str(ln.recovery_percent),
             "blocked": None if ln.blocked is None else money(ln.blocked),
-            "country": ln.country, "vat_no": ln.vat_no}  # fmt: skip
+            "country": ln.country, "vat_no": ln.vat_no, **_foreign(ln, amount)}  # fmt: skip
+
+
+def _foreign(ln: Line, amount: Decimal) -> dict[str, Any]:
+    """The line's foreign amount, signed as the amount shown (V1-2h)."""
+    if not ln.txn_currency or ln.txn_net_debit is None:
+        return {}
+    same = (amount >= 0) == (ln.net_debit >= 0)
+    txn = ln.txn_net_debit if same else -ln.txn_net_debit
+    return {"txn_currency": ln.txn_currency, "txn_amount": money(txn),
+            "exchange_rate": f"{ln.exchange_rate:f}" if ln.exchange_rate is not None else "",
+            "rate_at": ln.rate_at, "rate_source": ln.rate_source}  # fmt: skip
 
 
 def _entry_checks(

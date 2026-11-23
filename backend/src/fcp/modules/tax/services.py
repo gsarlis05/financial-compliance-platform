@@ -175,7 +175,10 @@ def _take(
              v.reference, category=v.category,
              tax_point=v.tax_point.isoformat() if v.tax_point else None,
              recovery_percent=v.vat_recovery_percent, blocked=v.vat_blocked,
-             country=v.counterparty_country, vat_no=v.counterparty_vat_no)
+             country=v.counterparty_country, vat_no=v.counterparty_vat_no,
+             txn_currency=v.txn_currency, txn_net_debit=v.txn_net_debit,
+             exchange_rate=v.exchange_rate,
+             rate_at=v.rate_at.isoformat() if v.rate_at else None, rate_source=v.rate_source)
         for v in vat_lines(ctx, entity_id, date_from=start, date_to=end)
     ]  # fmt: skip
     taken = compute(lines, start.isoformat(), end.isoformat(), rules)

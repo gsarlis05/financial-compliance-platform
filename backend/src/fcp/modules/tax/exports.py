@@ -472,7 +472,8 @@ def _sheet(book: Any, title: str, rows: list[list[Any]]) -> None:
 
 CSV_COLUMNS = ("line_id", "entry_id", "entry_ref", "date", "account", "code", "category",
                "kind", "amount", "counterparty", "country", "vat_no", "reference", "tax_point",
-               "recovery_percent", "blocked", "mapping", "rule", "rules")  # fmt: skip
+               "recovery_percent", "blocked", "mapping", "rule", "rules", "txn_currency",
+               "txn_amount", "exchange_rate", "rate_at", "rate_source")  # fmt: skip
 
 
 def to_csv(report: Any, entity_name: str, lang: Lang = "en", *, generated: datetime) -> bytes:

@@ -102,6 +102,11 @@ export interface EntryLine {
   tax_point: string | null;
   vat_recovery_percent: string | null;
   vat_blocked: string | null;
+  txn_currency?: string | null;
+  txn_amount?: string | null;
+  exchange_rate?: string | null;
+  rate_at?: string | null;
+  rate_source?: string;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
@@ -168,6 +173,11 @@ export interface EntryInput {
     tax_point?: string | null;
     vat_recovery_percent?: string | null;
     vat_blocked?: string | null;
+    txn_currency?: string;
+    txn_amount?: string;
+    exchange_rate?: string;
+    rate_at?: string | null;
+    rate_source?: string;
   }[];
 }
 
