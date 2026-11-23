@@ -309,7 +309,7 @@ def test_exports_and_permissions(v: dict[str, Any], make_user: Make, api_client:
     for row in codes[1:]:
         assert Decimal(str(row[2])) == Decimal(shown[str(row[0])]["sales_base"])
         assert Decimal(str(row[3])) == Decimal(shown[str(row[0])]["sales_vat"])
-    summary = [list(r) for r in book["VAT"].iter_rows(values_only=True)]
+    summary = [list(r) for r in book["Summary"].iter_rows(values_only=True)]
     assert ["Net VAT (payable)", Decimal("140")] in [[r[0], r[1]] for r in summary
                                                       if r[1] is not None]  # fmt: skip
     pdf = v["client"].get(f"{url}?format=pdf&lang=el")

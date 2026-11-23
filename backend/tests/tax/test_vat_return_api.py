@@ -9,7 +9,9 @@ Boxes: 1 = 19 + 190 = 209; 2 = 190; 3 = 399; 4 = 9.50 + 190 = 199.50; 5 = 199.50
        6 = 100 + 1,000 = 1,100; 7 = 100 + 1,000 = 1,100; 11A = 1,000; 11B = 100.
 """
 
+import csv as csv_module
 import io
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -112,7 +114,7 @@ def test_the_return_from_real_entries(v: dict[str, Any]) -> None:
     # Both exports carry the return as the screen shows it.
     url = f"{v['base']}/vat-reports/{report['id']}/export"
     book = load_workbook(io.BytesIO(v["client"].get(f"{url}?format=xlsx").content))
-    summary = [list(r) for r in book["VAT"].iter_rows(values_only=True)]
+    summary = [list(r) for r in book["Summary"].iter_rows(values_only=True)]
     printed = {str(r[0]): r[2] for r in summary if r[0] in boxes and len(r) > 2}
     assert {k: f"{printed[k]:.2f}" for k in boxes} == boxes
     assert any("CY-VAT-BOXES@1: not yet verified" in str(r[0]) for r in summary)
@@ -127,3 +129,79 @@ def test_the_return_from_real_entries(v: dict[str, Any]) -> None:
                                         "11A", "11B"]  # fmt: skip
     assert (rows[1][2], rows[6][2]) == ("209.00", "1,100")
     assert return_rows(VatReport.objects.get(id=report["id"]), "el")[6][2] == "1.100"
+
+
+def test_schedules_reconciliation_and_csv(v: dict[str, Any]) -> None:
+    """V1-2e (#216): the schedules, the reconciliation to the VAT accounts, the named sheets and
+    the CSV of every line's box contributions."""
+    report = v["client"].post_json(f"{v['base']}/vat-reports",
+                                   {"period_start": "2026-01-01"}).json()  # fmt: skip
+    found = report["schedules"]
+    assert [(r["entry_ref"], r["net_sale"], r["output_vat"]) for r in found["sales"]["rows"]] == [
+        ("GJ-3", "1000.00", "190.00")]  # fmt: skip
+    assert found["purchases"]["rows"] == []
+    assert found["imports"] == {"rows": [], "totals": {}}
+    assert [(r["entry_ref"], r["type"], r["country"], r["vat_no"], r["net"])
+            for r in found["eu_trade"]["rows"]] == [
+        ("GJ-1", "SERVICES_RECEIVED", "FR", "FR12345678901", "100.00"),
+        ("GJ-2", "GOODS_ACQUIRED", "DE", "DE123456789", "1000.00"),
+    ]  # fmt: skip
+    charged = found["reverse_charge"]
+    assert [(r["type"], r["net_purchase"], r["output_vat"], r["input_vat"], r["blocked"])
+            for r in charged["rows"]] == [
+        ("RC_EU_SERVICES", "100.00", "19.00", "9.50", "9.50"),
+        ("EU_GOODS_ACQUISITION", "1000.00", "190.00", "190.00", "0.00"),
+    ]  # fmt: skip
+    assert charged["totals"] == {"net_purchase": "1100.00", "output_vat": "209.00",
+                                 "input_vat": "199.50", "blocked": "9.50"}  # fmt: skip
+    assert charged["rows"][0]["boxes"] == {"1": "19.00", "4": "9.50", "6": "100.00",
+                                           "7": "100.00", "11B": "100.00"}  # fmt: skip
+    assert [e["kind"] for e in found["exceptions"]] == ["TAX_POINT_OUTSIDE_PERIOD"] * 2
+
+    # The VAT accounts move from opening to closing by the period's VAT, nothing unexplained;
+    # the return's VAT equals the ledger's.
+    recon = report["reconciliation"]
+    accounts = {a["code"]: a for a in recon["accounts"]}
+    assert (accounts["2120"]["opening"], accounts["2120"]["vat"], accounts["2120"]["closing"]) == (
+        "0.00", "399.00", "399.00")  # fmt: skip
+    assert (accounts["1220"]["vat"], accounts["1220"]["closing"]) == ("199.50", "199.50")
+    assert [(b["side"], b["ledger"], b["return"], b["items"]) for b in recon["bridges"]] == [
+        ("OUTPUT", "399.00", "399.00", []), ("INPUT", "199.50", "199.50", [])]  # fmt: skip
+    assert recon["balanced"] is True
+
+    # An approved adjustment is a reconciling item between the ledger and the return.
+    rid = report["id"]
+    body = {"box": "1", "amount": "5.00", "reason": "Fixture", "evidence": "Fixture letter"}
+    made = v["client"].post_json(f"{v['base']}/vat-reports/{rid}/adjustments", body).json()
+    slug = v["ws"]["slug"]
+    assert v["client"].put_json(f"/api/w/{slug}/one-person", {"enabled": True}).status_code == 200
+    v["client"].post_json(f"{v['base']}/vat-reports/{rid}/adjustments/{made['id']}/approve", {})
+    after = v["client"].get(f"{v['base']}/vat-reports/{rid}").json()
+    output = after["reconciliation"]["bridges"][0]
+    assert (output["items"], output["return"], output["unexplained"]) == (
+        [{"item": "ADJUSTMENTS", "amount": "5.00"}], "404.00", "0.00")  # fmt: skip
+
+    url = f"{v['base']}/vat-reports/{rid}/export"
+    book = load_workbook(io.BytesIO(v["client"].get(f"{url}?format=xlsx").content))
+    assert book.sheetnames == ["Summary", "Sales", "Purchases", "EU Trade", "Reverse Charge",
+                               "Imports", "Adjustments", "Reconciliation", "Exceptions",
+                               "Tax Code Mapping", "Codes", "Lines"]  # fmt: skip
+    eu = [list(r) for r in book["EU Trade"].iter_rows(values_only=True)]
+    assert eu[0][:3] == ["Date", "Entry", "Type"]
+    assert eu[-1][0] == "Total"
+    assert eu[-1][8] == Decimal("1100.00")  # a number, not text
+    assert book["EU Trade"].auto_filter.ref
+    mapping = {r[0]: r for r in book["Tax Code Mapping"].iter_rows(values_only=True)}
+    assert mapping["RCEU19"][1:] == ("RC_EU_SERVICES", "0.1900", "1", "4", "not in a box",
+                                     "6, 7, 11B")  # fmt: skip
+    assert [r[0] for r in book["Adjustments"].iter_rows(values_only=True)] == ["Box", "1"]
+
+    csv = v["client"].get(f"{url}?format=csv")
+    assert csv["Content-Type"] == "text/csv; charset=utf-8"
+    assert csv["Content-Disposition"].endswith('-draft.csv"')
+    rows = list(csv_module.DictReader(io.StringIO(csv.content.decode("utf-8"))))
+    assert len(rows) == len(report["snapshot"]["lines"]) == 8
+    service = next(r for r in rows if r["code"] == "RCEU19" and r["kind"] == "PURCHASE")
+    assert (service["box_6"], service["box_11B"], service["box_4"], service["rules"]) == (
+        "100.00", "100.00", "", "CY-VAT-BOXES@1")  # fmt: skip
+    assert service["line_id"] in {ln["line_id"] for ln in report["snapshot"]["lines"]}

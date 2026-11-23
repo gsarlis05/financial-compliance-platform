@@ -96,6 +96,12 @@ class ReportDetailOut(ReportOut):
     previous: dict[str, Any] | None = Field(
         description="A new version: the version it corrects and the change to each box"
     )
+    schedules: dict[str, Any] = Field(
+        description="Sales, purchases, EU trade, reverse charge, imports, adjustments, exceptions"
+    )
+    reconciliation: dict[str, Any] | None = Field(
+        description="The VAT accounts from opening to closing, and the return bridged to the ledger"
+    )
 
 
 class VatPeriodOut(Schema):
@@ -141,7 +147,7 @@ class SettlementOut(Schema):
 
 
 class VatExportQuery(Schema):
-    format: Literal["xlsx", "pdf"]
+    format: Literal["xlsx", "pdf", "csv"]
     lang: Literal["en", "el"] = "en"
 
 
@@ -156,6 +162,8 @@ def _detail(ctx: Any, r: VatReport) -> ReportDetailOut:
         "blockers": services.blockers(ctx, r) if open_ else [],
         "differences": services.differences(ctx, r) if later else None,
         "previous": services.previous_version(r),
+        "schedules": services.report_schedules(r),
+        "reconciliation": services.report_reconciliation(r),
     })  # fmt: skip
 
 
@@ -312,6 +320,7 @@ def prepare_settlement(request: HttpRequest, slug: str, entity_id: UUID,
 CONTENT_TYPES = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "pdf": "application/pdf",
+    "csv": "text/csv; charset=utf-8",
 }
 
 
@@ -319,11 +328,12 @@ CONTENT_TYPES = {
 @requires("reports.export")
 def export_report(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
                   query: Query[VatExportQuery]) -> HttpResponse:  # fmt: skip
-    """The report as Excel or PDF, from its frozen snapshot; DRAFT until finalised. Audited."""
+    """The report as Excel, PDF or CSV (every line with its box contributions), from its frozen
+    snapshot; DRAFT until finalised. Audited."""
     ctx = workspace_ctx(request, slug, entity_id)
     r = services.get(ctx, entity_id, report_id)
     entity = get_entity(ctx, entity_id, "tax.vat.read")
-    write = exports.to_xlsx if query.format == "xlsx" else exports.to_pdf
+    write = {"xlsx": exports.to_xlsx, "pdf": exports.to_pdf, "csv": exports.to_csv}[query.format]
     content = write(r, entity.legal_name, query.lang, generated=timezone.now())
     draft = "" if r.status in ("FINALISED", "FILED") else "-draft"
     filename = f"vat-report-{r.period_start:%Y-%m}-{r.period_end:%Y-%m}-v{r.version}{draft}"
