@@ -102,7 +102,7 @@ screen.**
 | V1-2h Foreign currency | #232 | Lines at the transaction's rate with its source (ADR-0064) |
 | V1-2i Data entry | #233 | VAT code picker with favourites, typing suggestions (ADR-0065) |
 | V1-2h2 Exchange differences | #234 | Revaluation and realised differences as drafts (ADR-0066) |
-| V1-4 End-to-end check | this PR | The 20 agreement checks, the browser walk-through, the fixes above, this report |
+| V1-4 End-to-end check | #235 | The 20 agreement checks, the browser walk-through, the fixes above, this report |
 | V1-5 Dependencies | — | Next: the 16 dependency-update PRs (#211) |
 
 ## Acceptance (brief §4)
