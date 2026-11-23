@@ -92,6 +92,9 @@ class LineInput:
     exchange_rate: str | None = None
     rate_at: datetime | None = None
     rate_source: str = ""
+    # V1-2h2: an exchange difference on the position in ``txn_currency`` (no foreign amount; the
+    # rate revalued at, none when realised). Set by the exchange-differences service only.
+    fx_difference: str = ""
 
 
 @dataclass(frozen=True)
@@ -290,6 +293,7 @@ def _validated_lines(
                     rate_at=line.rate_at,
                     rate_source=line.rate_source,
                     functional=debit.amount - credit.amount,
+                    difference=line.fx_difference,
                 ),
                 "tags": tags[i],
             }
@@ -461,8 +465,10 @@ def _hash_line(ln: JournalLine) -> list[Any]:
                     f"{ln.vat_blocked:.2f}" if ln.vat_blocked is not None else ""])  # fmt: skip
     if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1; rate's time V1-2h)
         row.append([ln.txn_currency, f"{ln.txn_debit:.4f}", f"{ln.txn_credit:.4f}",
-                    f"{ln.exchange_rate:.10f}",
+                    f"{ln.exchange_rate:.10f}" if ln.exchange_rate is not None else "",
                     ln.rate_at.isoformat() if ln.rate_at else "", ln.rate_source])  # fmt: skip
+        if ln.fx_difference:  # an exchange difference (V1-2h2); other lines hash as before
+            row.append(f"fx={ln.fx_difference}")
     if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
         row.append(
             [

@@ -207,6 +207,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/approvals`, "nav.approvals"],
         [`${base}/bank`, "nav.bank"],
         [`${base}/fixed-assets`, "nav.fixedAssets"],
+        [`${base}/fx-differences`, "nav.fxDifferences"],
       ],
     },
     {

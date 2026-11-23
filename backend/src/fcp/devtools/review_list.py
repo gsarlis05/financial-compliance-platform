@@ -133,6 +133,12 @@ METHODS = [
         "time, with its source (your decision). Does the VAT law require a particular rate for "
         "VAT, for example a published rate on the tax point?",
     ),
+    (
+        "Exchange differences",
+        "Foreign balances are revalued at the closing rate and settled differences recognised, "
+        "both in profit or loss (ADR-0066); no tax adjustment is made. How are realised and "
+        "unrealised exchange differences treated for income tax?",
+    ),
 ]
 
 

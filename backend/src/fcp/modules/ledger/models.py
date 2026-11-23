@@ -374,6 +374,18 @@ class JournalLine(TenantOwned):
     rate_at = models.DateTimeField(null=True, blank=True)
     rate_source = models.CharField(max_length=200, blank=True)
 
+    # V1-2h2 (#230): an exchange difference on a foreign-currency position. The line keeps the
+    # position's currency with no amount in it (the foreign balance does not change), the rate it
+    # was revalued at (none when realised on settlement) and moves only the functional amount.
+    class FxDifference(models.TextChoices):
+        NONE = "", "None"
+        UNREALISED = "UNREALISED"
+        REALISED = "REALISED"
+
+    fx_difference = models.CharField(
+        max_length=10, choices=FxDifference.choices, blank=True, default=""
+    )
+
     class Meta:
         db_table = "ledger_journal_line"
         constraints = [
@@ -400,13 +412,29 @@ class JournalLine(TenantOwned):
                     txn_debit__isnull=True,
                     txn_credit__isnull=True,
                     exchange_rate__isnull=True,
+                    fx_difference="",
                 )
                 | (
-                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0)
+                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0, fx_difference="")
                     & (
                         (models.Q(debit__gt=0, txn_debit__gt=0, txn_credit=0))
                         | (models.Q(credit__gt=0, txn_credit__gt=0, txn_debit=0))
                     )
+                )
+                # An exchange difference: the currency, no foreign amount, a revaluation rate.
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="UNREALISED",
+                    exchange_rate__gt=0,
+                )
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="REALISED",
+                    exchange_rate__isnull=True,
                 ),
                 name="ledger_line_txn_currency_shape",
             ),
