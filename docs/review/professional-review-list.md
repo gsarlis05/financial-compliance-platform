@@ -133,6 +133,7 @@ Labels are shown in English in both languages. Please give the official Greek wo
 | ☐ | Corrections of a filed return | A new version is prepared and compared with the filed one; the procedure for filing a correction is not described by the platform (ADR-0060). |
 | ☐ | Adjustments | Manual adjustments change one box with a reason and evidence, approved by a second person except in a one-person workspace (ADR-0060). |
 | ☐ | Foreign currency | Amounts are converted into euros at the exchange rate of the transaction's date and time, with its source (your decision). Does the VAT law require a particular rate for VAT, for example a published rate on the tax point? |
+| ☐ | Exchange differences | Foreign balances are revalued at the closing rate and settled differences recognised, both in profit or loss (ADR-0066); no tax adjustment is made. How are realised and unrealised exchange differences treated for income tax? |
 
 ## 4. Corporate income tax (projections only)
 

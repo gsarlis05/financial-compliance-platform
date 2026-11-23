@@ -7420,6 +7420,212 @@
         "title": "FormulaIn",
         "type": "object"
       },
+      "FxDraftIn": {
+        "properties": {
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "FxDraftIn",
+        "type": "object"
+      },
+      "FxPositionOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Id"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "euros": {
+            "description": "The balance in euros, including earlier differences",
+            "title": "Euros",
+            "type": "string"
+          },
+          "foreign": {
+            "description": "The balance in the currency, debit positive",
+            "title": "Foreign",
+            "type": "string"
+          },
+          "kind": {
+            "description": "UNREALISED, REALISED, NO_RATE, or empty: nothing to record",
+            "title": "Kind",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The closing rate used, euros per unit",
+            "title": "Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "title": "Rate Source",
+            "type": "string"
+          },
+          "revalued": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The balance at the closing rate, in euros",
+            "title": "Revalued"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "account_name",
+          "counterparty_id",
+          "currency",
+          "foreign",
+          "euros",
+          "rate",
+          "rate_date",
+          "rate_source",
+          "revalued",
+          "difference",
+          "kind"
+        ],
+        "title": "FxPositionOut",
+        "type": "object"
+      },
+      "FxPositionsOut": {
+        "properties": {
+          "fx_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fx Account Id"
+          },
+          "missing_rates": {
+            "description": "Currencies with no stored rate on the date",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Rates",
+            "type": "array"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/FxPositionOut"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "realised": {
+            "title": "Realised",
+            "type": "string"
+          },
+          "unrealised": {
+            "title": "Unrealised",
+            "type": "string"
+          },
+          "waiting_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An exchange-differences draft not posted yet",
+            "title": "Waiting Entry Id"
+          }
+        },
+        "required": [
+          "on",
+          "positions",
+          "unrealised",
+          "realised",
+          "missing_rates",
+          "fx_account_id",
+          "waiting_entry_id"
+        ],
+        "title": "FxPositionsOut",
+        "type": "object"
+      },
+      "FxPositionsQuery": {
+        "properties": {
+          "on": {
+            "description": "The date to revalue on, usually a period's last day",
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "FxPositionsQuery",
+        "type": "object"
+      },
       "GenerateIn": {
         "properties": {
           "period_start": {
@@ -9326,6 +9532,12 @@
               }
             ],
             "title": "Exchange Rate"
+          },
+          "fx_difference": {
+            "default": "",
+            "description": "UNREALISED or REALISED on an exchange-difference line (V1-2h2)",
+            "title": "Fx Difference",
+            "type": "string"
           },
           "line_no": {
             "title": "Line No",
@@ -28404,6 +28616,124 @@
         "summary": "Asset Schedule",
         "tags": [
           "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fx-differences": {
+      "post": {
+        "description": "Prepare one draft entry with the exchange differences on the date. It follows the normal\napproval and posting; refused while an earlier one is waiting.",
+        "operationId": "fcp_modules_ledger_api_fx_differences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxDraftIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Fx Differences",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fx-positions": {
+      "get": {
+        "description": "Foreign-currency positions on a date and their exchange differences (nothing is recorded).",
+        "operationId": "fcp_modules_ledger_api_fx_positions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The date to revalue on, usually a period's last day",
+            "in": "query",
+            "name": "on",
+            "required": true,
+            "schema": {
+              "description": "The date to revalue on, usually a period's last day",
+              "format": "date",
+              "title": "On",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FxPositionsOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Fx Positions",
+        "tags": [
+          "ledger"
         ]
       }
     },

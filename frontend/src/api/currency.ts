@@ -137,3 +137,50 @@ export function useSuggestRate() {
     }
   };
 }
+
+/** A foreign-currency position and its exchange difference (V1-2h2, #230). */
+export interface FxPosition {
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  counterparty_id: string | null;
+  currency: string;
+  foreign: string;
+  euros: string;
+  rate: string | null;
+  rate_date: string | null;
+  rate_source: string;
+  revalued: string | null;
+  difference: string;
+  kind: "UNREALISED" | "REALISED" | "NO_RATE" | "";
+}
+
+export interface FxPositions {
+  on: string;
+  positions: FxPosition[];
+  unrealised: string;
+  realised: string;
+  missing_rates: string[];
+  fx_account_id: string | null;
+  waiting_entry_id: string | null;
+}
+
+export function useFxPositions(on: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const key = ["fx-positions", entityId, on];
+  const list = useQuery({
+    queryKey: key,
+    queryFn: () => api<FxPositions>(`${base}/fx-positions`, { query: { on } }),
+    enabled: !!on,
+  });
+  const prepare = useMutation({
+    mutationFn: () =>
+      api<{ id: string }>(`${base}/fx-differences`, {
+        method: "POST",
+        body: { on },
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: key }),
+  });
+  return { list, prepare };
+}

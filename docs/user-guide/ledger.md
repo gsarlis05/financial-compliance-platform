@@ -291,6 +291,16 @@ entry date; you can change it.
 the pair, the rate, its type (spot, closing, average) and its source. A recorded rate is never
 changed.
 
-Exchange differences when an invoice is paid at another rate, and period-end revaluation, are
-coming next (#230). Until then, a difference stays on the customer's or supplier's account for you
-to clear with an entry.
+### Exchange differences
+**Bookkeeping → Exchange differences** shows, for a date (usually a period's last day), every
+balance in another currency on a customer, supplier or foreign-currency account:
+- **Unrealised:** an open balance is brought to the **closing rate** you recorded for that date
+  (Ledger settings → Exchange rates, type "Closing"). Without a rate the currency is listed as
+  missing; nothing is guessed.
+- **Realised:** a balance paid in full in its currency but with euros left over (paid at another
+  rate) is cleared.
+
+**Prepare the draft entry** makes one draft entry with all the differences against the account
+for exchange differences. Approve and post it as usual. While it waits, no second one can be
+made, so nothing is booked twice. Revalue again next period: only the change since the last
+revaluation is booked.

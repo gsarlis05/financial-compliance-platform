@@ -107,6 +107,7 @@ export interface EntryLine {
   exchange_rate?: string | null;
   rate_at?: string | null;
   rate_source?: string;
+  fx_difference?: string;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
