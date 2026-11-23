@@ -15,6 +15,8 @@ help:
 	@echo "make openapi       regenerate docs/api/openapi.json"
 	@echo "make restore-drill back up the local database, restore it to a scratch copy and verify it"
 	@echo "make synthetic     generate synthetic business + household datasets into var/"
+	@echo "make local-install EMAIL=you@example.com   version 1 on your computer (also local-start,"
+	@echo "                   local-stop, local-backup, local-restore FILE=..., local-upgrade)"
 	@echo "make test | lint | security | prove-gates"
 	@echo "make dev-down      stop services (data kept); make dev-reset deletes local data"
 
@@ -110,6 +112,20 @@ BUILD_FLAGS = $(if $(BUILD_CA),--network host --secret id=extra_ca$(comma)src=$(
 images:
 	docker build $(BUILD_FLAGS) -t fcp-backend:dev backend/
 	docker build $(BUILD_FLAGS) -t fcp-web:dev frontend/
+
+# Version 1 on your own computer (V1-3): docs/user-guide/install-on-your-computer.md
+local-install:
+	scripts/local/fcp.sh install --email $(EMAIL)
+local-start:
+	scripts/local/fcp.sh start
+local-stop:
+	scripts/local/fcp.sh stop
+local-backup:
+	scripts/local/fcp.sh backup
+local-restore:
+	scripts/local/fcp.sh restore $(FILE)
+local-upgrade:
+	scripts/local/fcp.sh upgrade
 
 container-smoke: images
 	scripts/ci/container-smoke.sh fcp-backend:dev fcp-web:dev
