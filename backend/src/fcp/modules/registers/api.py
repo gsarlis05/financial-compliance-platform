@@ -62,6 +62,7 @@ class CounterpartyIn(Schema):
     vat_no: str = Field(default="", max_length=30)
     email: str = Field(default="", max_length=320)
     payment_terms_days: int = Field(default=30, ge=0, le=365)
+    country: str = Field(default="", pattern=r"^([A-Z]{2})?$", description="ISO 3166-1 alpha-2")
 
 
 class CounterpartyPatch(Schema):
@@ -71,6 +72,7 @@ class CounterpartyPatch(Schema):
     email: str | None = Field(default=None, max_length=320)
     payment_terms_days: int | None = Field(default=None, ge=0, le=365)
     status: Counterparty.Status | None = None
+    country: str | None = Field(default=None, pattern=r"^([A-Z]{2})?$")
 
 
 class CounterpartyOut(Schema):
@@ -83,6 +85,7 @@ class CounterpartyOut(Schema):
     payment_terms_days: int
     status: str
     days_late_override: int | None
+    country: str
 
 
 class CounterpartyFilter(Schema):

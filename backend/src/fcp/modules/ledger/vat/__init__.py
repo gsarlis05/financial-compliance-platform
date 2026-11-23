@@ -29,6 +29,7 @@ def catalogue_rows() -> list[dict[str, Any]]:
                     "name": row["name"],
                     "name_el": row.get("name_el", ""),
                     "treatment": row["treatment"],
+                    "category": row.get("category", ""),
                     "rate": row.get("rate"),
                     "valid_from": row.get("valid_from"),
                     "valid_to": row.get("valid_to"),
