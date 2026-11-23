@@ -1662,6 +1662,103 @@
         "title": "AssetOut",
         "type": "object"
       },
+      "AssetReconciliationOut": {
+        "properties": {
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AssetReconciliationRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "unposted_runs": {
+            "description": "Prepared depreciation not posted yet: it explains a difference until it is",
+            "items": {
+              "$ref": "#/components/schemas/DepreciationRunOut"
+            },
+            "title": "Unposted Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "rows",
+          "agrees",
+          "unposted_runs"
+        ],
+        "title": "AssetReconciliationOut",
+        "type": "object"
+      },
+      "AssetReconciliationQuery": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "AssetReconciliationQuery",
+        "type": "object"
+      },
+      "AssetReconciliationRowOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "difference": {
+            "description": "Ledger minus register",
+            "title": "Difference",
+            "type": "string"
+          },
+          "kind": {
+            "description": "COST or ACCUMULATED (depreciation)",
+            "title": "Kind",
+            "type": "string"
+          },
+          "ledger_total": {
+            "title": "Ledger Total",
+            "type": "string"
+          },
+          "register_total": {
+            "description": "What the account should hold: cost a debit, accumulated depreciation a credit",
+            "title": "Register Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "account_name",
+          "kind",
+          "register_total",
+          "ledger_total",
+          "difference"
+        ],
+        "title": "AssetReconciliationRowOut",
+        "type": "object"
+      },
       "AssetsAsOfQuery": {
         "properties": {
           "as_of": {
@@ -13474,99 +13571,41 @@
       },
       "ReconciliationOut": {
         "properties": {
-          "agrees": {
-            "title": "Agrees",
-            "type": "boolean"
-          },
           "as_of": {
             "format": "date",
             "title": "As Of",
             "type": "string"
           },
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/ReconciliationRowOut"
-            },
-            "title": "Rows",
-            "type": "array"
+          "difference": {
+            "title": "Difference",
+            "type": "string"
           },
-          "unposted_runs": {
-            "description": "Prepared depreciation not posted yet: it explains a difference until it is",
-            "items": {
-              "$ref": "#/components/schemas/DepreciationRunOut"
-            },
-            "title": "Unposted Runs",
-            "type": "array"
+          "ledger_balance": {
+            "title": "Ledger Balance",
+            "type": "string"
+          },
+          "reconciled": {
+            "title": "Reconciled",
+            "type": "boolean"
+          },
+          "statement_balance": {
+            "title": "Statement Balance",
+            "type": "string"
+          },
+          "unmatched_lines": {
+            "title": "Unmatched Lines",
+            "type": "integer"
           }
         },
         "required": [
           "as_of",
-          "rows",
-          "agrees",
-          "unposted_runs"
+          "statement_balance",
+          "ledger_balance",
+          "difference",
+          "unmatched_lines",
+          "reconciled"
         ],
         "title": "ReconciliationOut",
-        "type": "object"
-      },
-      "ReconciliationQuery": {
-        "properties": {
-          "as_of": {
-            "format": "date",
-            "title": "As Of",
-            "type": "string"
-          }
-        },
-        "required": [
-          "as_of"
-        ],
-        "title": "ReconciliationQuery",
-        "type": "object"
-      },
-      "ReconciliationRowOut": {
-        "properties": {
-          "account_code": {
-            "title": "Account Code",
-            "type": "string"
-          },
-          "account_id": {
-            "format": "uuid",
-            "title": "Account Id",
-            "type": "string"
-          },
-          "account_name": {
-            "title": "Account Name",
-            "type": "string"
-          },
-          "difference": {
-            "description": "Ledger minus register",
-            "title": "Difference",
-            "type": "string"
-          },
-          "kind": {
-            "description": "COST or ACCUMULATED (depreciation)",
-            "title": "Kind",
-            "type": "string"
-          },
-          "ledger_total": {
-            "title": "Ledger Total",
-            "type": "string"
-          },
-          "register_total": {
-            "description": "What the account should hold: cost a debit, accumulated depreciation a credit",
-            "title": "Register Total",
-            "type": "string"
-          }
-        },
-        "required": [
-          "account_id",
-          "account_code",
-          "account_name",
-          "kind",
-          "register_total",
-          "ledger_total",
-          "difference"
-        ],
-        "title": "ReconciliationRowOut",
         "type": "object"
       },
       "RefreshOut": {
@@ -28456,7 +28495,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReconciliationOut"
+                  "$ref": "#/components/schemas/AssetReconciliationOut"
                 }
               }
             },

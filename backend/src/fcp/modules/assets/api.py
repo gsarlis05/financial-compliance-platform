@@ -342,11 +342,11 @@ def set_allowance_class(request: HttpRequest, slug: str, entity_id: UUID, asset_
 # --- the register against the ledger (V1-4) -----------------------------------------------------
 
 
-class ReconciliationQuery(Schema):
+class AssetReconciliationQuery(Schema):
     as_of: date
 
 
-class ReconciliationRowOut(Schema):
+class AssetReconciliationRowOut(Schema):
     account_id: UUID
     account_code: str
     account_name: str
@@ -357,25 +357,25 @@ class ReconciliationRowOut(Schema):
     difference: str = Field(description="Ledger minus register")
 
 
-class ReconciliationOut(Schema):
+class AssetReconciliationOut(Schema):
     as_of: date
-    rows: list[ReconciliationRowOut]
+    rows: list[AssetReconciliationRowOut]
     agrees: bool
     unposted_runs: list[DepreciationRunOut] = Field(
         description="Prepared depreciation not posted yet: it explains a difference until it is"
     )
 
 
-@router.get(f"{BASE}/fixed-assets/reconciliation", response=ReconciliationOut)
+@router.get(f"{BASE}/fixed-assets/reconciliation", response=AssetReconciliationOut)
 @requires("assets.read")
 def reconciliation(request: HttpRequest, slug: str, entity_id: UUID,
-                   q: Query[ReconciliationQuery]) -> ReconciliationOut:  # fmt: skip
+                   q: Query[AssetReconciliationQuery]) -> AssetReconciliationOut:  # fmt: skip
     """The register's cost and accumulated depreciation against the ledger, per account."""
     ctx = workspace_ctx(request, slug, entity_id)
     found = services.reconcile(ctx, entity_id, q.as_of)
-    return ReconciliationOut(
+    return AssetReconciliationOut(
         as_of=found.as_of,
-        rows=[ReconciliationRowOut(account_id=r.account_id, account_code=r.account_code,
+        rows=[AssetReconciliationRowOut(account_id=r.account_id, account_code=r.account_code,
                                    account_name=r.account_name, kind=r.kind,
                                    register_total=f"{r.register:.2f}",
                                    ledger_total=f"{r.ledger:.2f}",
