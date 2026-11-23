@@ -178,7 +178,7 @@ tests, and the unsupported cases.
 | V1-2b | VAT code catalogue v2 (categories, rates incl. 3%, effective dates, box mapping as versioned rule data) and line tax data (tax point, recovery %, blocked VAT; counterparty country and VAT number) | Done, PR #223 (#213) |
 | V1-2c | The 13-box return from line contributions; rounding; cross-field checks; drill-down per box with reason and rule version; acceptance fixtures | Done, PR #224 (#214) |
 | V1-2d | Workflow Draft → Reviewed → Finalised → Filed; manual adjustments with approval; inclusion history (no double reporting); late-entry difference list; amendments | Done, PR #225 (#215) |
-| V1-2e | Schedules, reconciliation with opening and closing balances, exceptions; PDF, Excel (named sheets), CSV; coverage matrix | PR #226 (#216) |
+| V1-2e | Schedules, reconciliation with opening and closing balances, exceptions; PDF, Excel (named sheets), CSV; coverage matrix | Done, PR #226 (#216) |
 | V1-2f | Imports: customs reference, date and value, import VAT evidence, no duplicate claims | #217 |
 | V1-2g | VIES: the owner records each VIES statement; reconciliation to Boxes 8A and 8B | #218 |
 | V1-2h | Foreign currency on VAT lines | **Owner decision needed** (conflicts with D8; #219) |

@@ -317,7 +317,7 @@ def prepare_settlement(request: HttpRequest, slug: str, entity_id: UUID,
                                                                           report_id)))  # fmt: skip
 
 
-class ImportIn(Schema):
+class VatImportIn(Schema):
     entry_id: UUID = Field(description="The posted entry that claims the import VAT")
     customs_reference: str = Field(min_length=1, max_length=50)
     customs_date: date
@@ -326,7 +326,7 @@ class ImportIn(Schema):
     document_id: UUID = Field(description="The customs declaration, attached to the entry")
 
 
-class ImportOut(Schema):
+class VatImportOut(Schema):
     id: UUID
     entry_id: UUID
     customs_reference: str
@@ -340,7 +340,7 @@ class ImportOut(Schema):
     void_reason: str
 
 
-class ImportsQuery(Schema):
+class VatImportsQuery(Schema):
     date_from: date
     date_to: date
 
@@ -352,23 +352,23 @@ class VoidIn(Schema):
 @router.get(f"{BASE}/vat-imports", response=dict[str, Any])
 @requires("tax.vat.read")
 def list_imports(request: HttpRequest, slug: str, entity_id: UUID,
-                 query: Query[ImportsQuery]) -> dict[str, Any]:  # fmt: skip
+                 query: Query[VatImportsQuery]) -> dict[str, Any]:  # fmt: skip
     """Import records of the entries in the dates, and the import VAT claims without one."""
     ctx = workspace_ctx(request, slug, entity_id)
     return services.imports(ctx, entity_id, date_from=query.date_from, date_to=query.date_to)
 
 
-@router.post(f"{BASE}/vat-imports", response={201: ImportOut})
+@router.post(f"{BASE}/vat-imports", response={201: VatImportOut})
 @requires("tax.vat.prepare")
 def record_import(request: HttpRequest, slug: str, entity_id: UUID,
-                  payload: ImportIn) -> Status[VatImport]:  # fmt: skip
+                  payload: VatImportIn) -> Status[VatImport]:  # fmt: skip
     """Record the customs declaration behind an entry's import VAT; a reference is recorded once."""
     ctx = workspace_ctx(request, slug, entity_id)
     data = services.ImportInput(**payload.dict())
     return Status(201, services.record_import(ctx, entity_id, data))
 
 
-@router.post(f"{BASE}/vat-imports/{{uuid:import_id}}/void", response=ImportOut)
+@router.post(f"{BASE}/vat-imports/{{uuid:import_id}}/void", response=VatImportOut)
 @requires("tax.vat.prepare")
 def void_import(request: HttpRequest, slug: str, entity_id: UUID, import_id: UUID,
                 payload: VoidIn) -> VatImport:  # fmt: skip

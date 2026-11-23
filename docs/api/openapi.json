@@ -8266,99 +8266,46 @@
         "title": "IgnoreIn",
         "type": "object"
       },
-      "ImportIn": {
-        "properties": {
-          "customs_date": {
-            "format": "date",
-            "title": "Customs Date",
-            "type": "string"
-          },
-          "customs_reference": {
-            "maxLength": 50,
-            "minLength": 1,
-            "title": "Customs Reference",
-            "type": "string"
-          },
-          "customs_value": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Customs Value"
-          },
-          "document_id": {
-            "description": "The customs declaration, attached to the entry",
-            "format": "uuid",
-            "title": "Document Id",
-            "type": "string"
-          },
-          "entry_id": {
-            "description": "The posted entry that claims the import VAT",
-            "format": "uuid",
-            "title": "Entry Id",
-            "type": "string"
-          },
-          "import_vat": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Import Vat"
-          }
-        },
-        "required": [
-          "entry_id",
-          "customs_reference",
-          "customs_date",
-          "customs_value",
-          "import_vat",
-          "document_id"
-        ],
-        "title": "ImportIn",
-        "type": "object"
-      },
       "ImportOut": {
         "properties": {
+          "closing_balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Balance"
+          },
+          "closing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Date"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "customs_date": {
-            "format": "date",
-            "title": "Customs Date",
+          "error": {
+            "title": "Error",
             "type": "string"
           },
-          "customs_reference": {
-            "title": "Customs Reference",
+          "filename": {
+            "title": "Filename",
             "type": "string"
           },
-          "customs_value": {
-            "title": "Customs Value",
-            "type": "string"
-          },
-          "document_id": {
-            "format": "uuid",
-            "title": "Document Id",
-            "type": "string"
-          },
-          "document_name": {
-            "title": "Document Name",
-            "type": "string"
-          },
-          "entry_id": {
-            "format": "uuid",
-            "title": "Entry Id",
+          "format": {
+            "title": "Format",
             "type": "string"
           },
           "id": {
@@ -8366,15 +8313,26 @@
             "title": "Id",
             "type": "string"
           },
-          "import_vat": {
-            "title": "Import Vat",
-            "type": "string"
+          "lines_created": {
+            "title": "Lines Created",
+            "type": "integer"
           },
-          "void_reason": {
-            "title": "Void Reason",
-            "type": "string"
+          "lines_duplicate": {
+            "title": "Lines Duplicate",
+            "type": "integer"
           },
-          "voided_at": {
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "processed_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -8384,43 +8342,33 @@
                 "type": "null"
               }
             ],
-            "title": "Voided At"
+            "title": "Processed At"
+          },
+          "statement_id": {
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
           }
         },
         "required": [
           "id",
-          "entry_id",
-          "customs_reference",
-          "customs_date",
-          "customs_value",
-          "import_vat",
-          "document_id",
-          "document_name",
+          "format",
+          "filename",
+          "status",
+          "error",
+          "statement_id",
+          "opening_balance",
+          "closing_balance",
+          "closing_date",
+          "lines_created",
+          "lines_duplicate",
           "created_at",
-          "voided_at",
-          "void_reason"
+          "processed_at"
         ],
         "title": "ImportOut",
-        "type": "object"
-      },
-      "ImportsQuery": {
-        "properties": {
-          "date_from": {
-            "format": "date",
-            "title": "Date From",
-            "type": "string"
-          },
-          "date_to": {
-            "format": "date",
-            "title": "Date To",
-            "type": "string"
-          }
-        },
-        "required": [
-          "date_from",
-          "date_to"
-        ],
-        "title": "ImportsQuery",
         "type": "object"
       },
       "InstalmentOut": {
@@ -17321,6 +17269,163 @@
           "format"
         ],
         "title": "VatExportQuery",
+        "type": "object"
+      },
+      "VatImportIn": {
+        "properties": {
+          "customs_date": {
+            "format": "date",
+            "title": "Customs Date",
+            "type": "string"
+          },
+          "customs_reference": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Customs Reference",
+            "type": "string"
+          },
+          "customs_value": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Customs Value"
+          },
+          "document_id": {
+            "description": "The customs declaration, attached to the entry",
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "entry_id": {
+            "description": "The posted entry that claims the import VAT",
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "import_vat": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Import Vat"
+          }
+        },
+        "required": [
+          "entry_id",
+          "customs_reference",
+          "customs_date",
+          "customs_value",
+          "import_vat",
+          "document_id"
+        ],
+        "title": "VatImportIn",
+        "type": "object"
+      },
+      "VatImportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customs_date": {
+            "format": "date",
+            "title": "Customs Date",
+            "type": "string"
+          },
+          "customs_reference": {
+            "title": "Customs Reference",
+            "type": "string"
+          },
+          "customs_value": {
+            "title": "Customs Value",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_name": {
+            "title": "Document Name",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "import_vat": {
+            "title": "Import Vat",
+            "type": "string"
+          },
+          "void_reason": {
+            "title": "Void Reason",
+            "type": "string"
+          },
+          "voided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voided At"
+          }
+        },
+        "required": [
+          "id",
+          "entry_id",
+          "customs_reference",
+          "customs_date",
+          "customs_value",
+          "import_vat",
+          "document_id",
+          "document_name",
+          "created_at",
+          "voided_at",
+          "void_reason"
+        ],
+        "title": "VatImportOut",
+        "type": "object"
+      },
+      "VatImportsQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "VatImportsQuery",
         "type": "object"
       },
       "VatNoteIn": {
@@ -36481,7 +36586,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportIn"
+                "$ref": "#/components/schemas/VatImportIn"
               }
             }
           },
@@ -36492,7 +36597,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/VatImportOut"
                 }
               }
             },
@@ -36559,7 +36664,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/VatImportOut"
                 }
               }
             },
