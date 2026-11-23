@@ -7,7 +7,19 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Until 2026-11-16 branches were stacked (each PR targeted the previous one); since the
 consolidation every new PR targets `main`.
 
-## Status (updated 2026-11-16)
+## Status (updated 2026-11-22)
+
+**Milestones 7 and 8 are merged into `main`** (2026-11-22; the owner asked the developer to merge
+each PR in order once its checks passed: #183–#189, then #196–#202). Checks on `main` after
+the merge: 1,326 backend tests (96.30% coverage), 74 frontend tests, lint, OpenAPI, security
+(Semgrep 0 findings, no leaks) and the validation package (six scenarios to EUR 0.01) pass.
+**Version 1 in progress**:
+a complete platform for the owner's own use, on the owner's computer, with one-person approvals
+and Cyprus VAT return preparation (brief `docs/planning/24-version-1-brief.md`, approved
+2026-11-22). Gate G is not needed for version 1 and is deferred (brief 23). Nothing is created on
+AWS.
+
+### Earlier status (2026-11-16)
 
 **Repository consolidated (2026-11-16, owner approval).** The 72 pull requests from #1 to #162
 were merged into `main` in dependency order, with merge commits only (no squash, rebase or force
@@ -113,23 +125,25 @@ until validated and signed by a qualified professional; brief
 | M6F-8 Validation package: independent 24-month model, six scenarios (losses, negative cash, early repayments, changing revenues, unexpected expenses), line-by-line comparison at EUR 0.01, reconciliation, discrepancy report, acceptance checklist, reviewer sign-off form; engine stays PENDING_PROFESSIONAL_REVIEW (issue #153) | `claude/m6f-8-validation` | #162 | Merged 2026-11-16 |
 | Owner items: professional review of the validation package (U1), Cyprus tax rules verification (#154) | — | — | Waiting for the owner |
 | **Milestone 7** (epic #82) | | | |
-| M7-1 Scenario model and typed overrides (eight types, lifecycle, isolation), with the M7 brief (`docs/planning/21-milestone-7-brief.md`, approved 2026-11-16) (issue #176) | `claude/m7-1-scenarios` | #183 | Open |
-| M7-2 Scenario runs: comparison with the base, lineage by override, what changed and why, saved runs (never published), promotion to a draft set (issue #177) | `claude/m7-2-scenario-runs` | #184 | Open |
-| M7-3 Sensitivity (one variable) and tornado: cached by input hash, quotas and time limit (issue #178) | `claude/m7-3-sensitivity` | #185 | Open |
-| M7-4 Working-capital view (receivables, stock, payables, days, cash conversion cycle against observed days) and what N days are worth (issue #179) | `claude/m7-4-working-capital` | #186 | Open |
-| M7-5 Goals against up to three shared scenarios, side by side with the base, in memory (goal engine v3: method SCENARIO, nature HYPOTHETICAL) (issue #180) | `claude/m7-5-goals-scenarios` | #187 | Open |
-| M7-6 KPI library CORE@1.1 (net debt / EBITDA, DSCR, receivables and inventory turnover; `ltm_flow`) and KPIs on projected and scenario figures (issue #181) | `claude/m7-6-advanced-kpis` | #188 | Open |
-| M7-7 Screens: Scenarios (builder, comparison, cash chart with dotted scenario line, what changed, liquidity, KPIs), Sensitivity (tornado and one variable), Working capital, goals against scenarios; Excel export of a comparison; demo step; M7 report (`docs/milestone-7-report.md`) (issue #182) | `claude/m7-7-screens` | #189 | Open |
-| Owner items for M7: review and merge #183–#189; ADRs 0049–0052; defaults in the M7 report | — | — | Waiting for the owner |
+| M7-1 Scenario model and typed overrides (eight types, lifecycle, isolation), with the M7 brief (`docs/planning/21-milestone-7-brief.md`, approved 2026-11-16) (issue #176) | `claude/m7-1-scenarios` | #183 | Merged 2026-11-22 |
+| M7-2 Scenario runs: comparison with the base, lineage by override, what changed and why, saved runs (never published), promotion to a draft set (issue #177) | `claude/m7-2-scenario-runs` | #184 | Merged 2026-11-22 |
+| M7-3 Sensitivity (one variable) and tornado: cached by input hash, quotas and time limit (issue #178) | `claude/m7-3-sensitivity` | #185 | Merged 2026-11-22 |
+| M7-4 Working-capital view (receivables, stock, payables, days, cash conversion cycle against observed days) and what N days are worth (issue #179) | `claude/m7-4-working-capital` | #186 | Merged 2026-11-22 |
+| M7-5 Goals against up to three shared scenarios, side by side with the base, in memory (goal engine v3: method SCENARIO, nature HYPOTHETICAL) (issue #180) | `claude/m7-5-goals-scenarios` | #187 | Merged 2026-11-22 |
+| M7-6 KPI library CORE@1.1 (net debt / EBITDA, DSCR, receivables and inventory turnover; `ltm_flow`) and KPIs on projected and scenario figures (issue #181) | `claude/m7-6-advanced-kpis` | #188 | Merged 2026-11-22 |
+| M7-7 Screens: Scenarios (builder, comparison, cash chart with dotted scenario line, what changed, liquidity, KPIs), Sensitivity (tornado and one variable), Working capital, goals against scenarios; Excel export of a comparison; demo step; M7 report (`docs/milestone-7-report.md`) (issue #182) | `claude/m7-7-screens` | #189 | Merged 2026-11-22 |
+| Owner items for M7: review and merge #183–#189; ADRs 0049–0052; defaults in the M7 report | — | — | Merged 2026-11-22 (owner asked the developer to merge) |
 | **Milestone 8** (epic #83) | | | |
-| M8 brief (`docs/planning/22-milestone-8-brief.md`): report packs, dashboard v2, email alerts; issues #190–#195; approved 2026-11-17 ("Continue"), defaults taken | `claude/m8-0-brief` | #196 | Open |
-| M8-1 Report packs: frozen snapshot of statements, budget variance (with explanations), KPIs, cash, published projection and goals under the preparer's permissions; DRAFT → IN_REVIEW → FINAL with a reviewer who is not the preparer; finalising blocked by missing explanations or changed figures; new versions supersede (issue #190) | `claude/m8-1-packs` | #197 | Open |
-| M8-2 Pack sections from the snapshot (ten, chosen and ordered), comparison columns (actual, budget, original budget, prior year, variance, full-year outlook), human commentary and risks (append-only, draft-only), golden budget variance pack (issue #191) | `claude/m8-2-sections` | #198 | Open |
-| M8-3 Report pack exports: Excel (cover with scope, provenance and legend; a sheet per section with a Nature row; formula-safe) and PDF (A4 landscape, provenance footer and page numbers, DRAFT watermark until final), both from the same sections as the API; audited (issue #192) | `claude/m8-3-exports` | #199 | Open |
-| M8-4 Dashboard v2: widget widths (full or half), waterfall (budget to actual) and scenario comparison widgets, only the shown widgets built, last-twelve-months preset, personal saved views (issue #193) | `claude/m8-4-dashboard` | #200 | Open |
-| M8-5 Alert emails: per-user preference (immediate, daily digest, off by default), titles and links only, outbox with one email per alert and user, retries, hourly limit, one-click unsubscribe, scheduled sender (issue #194) | `claude/m8-5-email` | #201 | Open |
-| M8-6 Screens: report packs (generate, sections with natures, commentary, risks, review, finalise, versions, Excel/PDF), dashboard v2 controls (widths, waterfall, scenario, saved views, LTM), alert email preference; demo step; Milestone 8 report (`docs/milestone-8-report.md`) (issue #195) | `claude/m8-6-screens` | #202 | Open |
-| Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Waiting for the owner |
+| M8 brief (`docs/planning/22-milestone-8-brief.md`): report packs, dashboard v2, email alerts; issues #190–#195; approved 2026-11-17 ("Continue"), defaults taken | `claude/m8-0-brief` | #196 | Merged 2026-11-22 |
+| M8-1 Report packs: frozen snapshot of statements, budget variance (with explanations), KPIs, cash, published projection and goals under the preparer's permissions; DRAFT → IN_REVIEW → FINAL with a reviewer who is not the preparer; finalising blocked by missing explanations or changed figures; new versions supersede (issue #190) | `claude/m8-1-packs` | #197 | Merged 2026-11-22 |
+| M8-2 Pack sections from the snapshot (ten, chosen and ordered), comparison columns (actual, budget, original budget, prior year, variance, full-year outlook), human commentary and risks (append-only, draft-only), golden budget variance pack (issue #191) | `claude/m8-2-sections` | #198 | Merged 2026-11-22 |
+| M8-3 Report pack exports: Excel (cover with scope, provenance and legend; a sheet per section with a Nature row; formula-safe) and PDF (A4 landscape, provenance footer and page numbers, DRAFT watermark until final), both from the same sections as the API; audited (issue #192) | `claude/m8-3-exports` | #199 | Merged 2026-11-22 |
+| M8-4 Dashboard v2: widget widths (full or half), waterfall (budget to actual) and scenario comparison widgets, only the shown widgets built, last-twelve-months preset, personal saved views (issue #193) | `claude/m8-4-dashboard` | #200 | Merged 2026-11-22 |
+| M8-5 Alert emails: per-user preference (immediate, daily digest, off by default), titles and links only, outbox with one email per alert and user, retries, hourly limit, one-click unsubscribe, scheduled sender (issue #194) | `claude/m8-5-email` | #201 | Merged 2026-11-22 |
+| M8-6 Screens: report packs (generate, sections with natures, commentary, risks, review, finalise, versions, Excel/PDF), dashboard v2 controls (widths, waterfall, scenario, saved views, LTM), alert email preference; demo step; Milestone 8 report (`docs/milestone-8-report.md`) (issue #195) | `claude/m8-6-screens` | #202 | Merged 2026-11-22 |
+| Owner items for M8: review and merge #196–#202; ADRs 0053–0054; Gate G before any external customer | — | — | Merged 2026-11-22 (owner asked the developer to merge) |
+| **Version 1** (owner's own use; brief `docs/planning/24-version-1-brief.md`, approved 2026-11-22) | | | |
+| Version 1 brief: one-person workspace, Cyprus VAT return preparation, local install, end-to-end check, dependencies (issues #207–#211); Gate G brief (`docs/planning/23-gate-g-brief.md`, first proposed in #205) kept as deferred | `claude/v1-0-brief` | #206 | Open |
 
 ## Open questions for the product owner
 - Does your business use any currency other than EUR? (needed before M2)

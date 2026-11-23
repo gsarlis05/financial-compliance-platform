@@ -4,7 +4,7 @@ one-click unsubscribe; retries, then failure recorded; an hourly limit."""
 
 import io
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -98,8 +98,10 @@ def test_daily_digest(g: dict[str, Any]) -> None:
     off_track(g)
     off_track(g, "Revenue 13k")
     assert send(g).sent == 0  # no immediate email in digest mode
-    tomorrow = datetime.now(UTC) + timedelta(days=1)
-    morning = tomorrow.replace(hour=6, minute=30)  # 08:30 or 09:30 in Cyprus
+    # Days are Cyprus days: the preference was set "today" in Cyprus, which is already tomorrow
+    # in UTC between 22:00 and 24:00 UTC.
+    tomorrow = datetime.now(emails.NICOSIA).date() + timedelta(days=1)
+    morning = datetime.combine(tomorrow, time(8, 30), tzinfo=emails.NICOSIA)
     report = send(g, morning)
     assert (report.digests, report.sent) == (1, 1)
     message = mail.outbox[0]
@@ -107,7 +109,7 @@ def test_daily_digest(g: dict[str, Any]) -> None:
     assert "- Goal Revenue 12k is off track" in message.body
     assert "- Goal Revenue 13k is off track" in message.body
     assert send(g, morning + timedelta(hours=2)).digests == 0  # once a day
-    early = (tomorrow + timedelta(days=1)).replace(hour=4, minute=0)  # 06:00/07:00 in Cyprus
+    early = datetime.combine(tomorrow + timedelta(days=1), time(6, 0), tzinfo=emails.NICOSIA)
     assert send(g, early).digests == 0  # not before 08:00
 
 
