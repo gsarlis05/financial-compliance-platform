@@ -682,3 +682,20 @@ class ExchangeRate(TenantOwned):
                 name="ledger_exchange_rate_pair",
             ),
         ]
+
+
+class VatFavourite(TenantOwned):
+    """A VAT code a user starred for a legal entity (V1-2i, #231): listed first in the entry form's
+    VAT code picker. A personal preference; it changes nothing in the books."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    vat_code = models.ForeignKey(VatCode, on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        db_table = "ledger_vat_favourite"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "user", "vat_code"], name="ledger_vat_favourite_once"
+            ),
+        ]
