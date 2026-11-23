@@ -117,6 +117,18 @@ correct entry. An entry can be reversed only once.
 
 **Bookkeeping → Approvals** lists entries waiting for you.
 
+### Faster data entry
+- **VAT code.** Click the VAT field or start typing a code, a name or a rate (for example `S19`,
+  `reduced` or `9%`). Your **★ Favourites** come first, then the codes this company uses most,
+  then every code by category. Use the arrow keys and Enter, or click. The **☆** beside the field
+  adds the chosen code to your favourites; **★** removes it. Favourites are yours alone, for
+  this company.
+- **The usual code.** When you choose an account that usually has a VAT code, the form offers
+  "Use S19, the usual code for this account". It never fills it in for you.
+- **Suggestions while you type.** The description, memo and invoice number fields offer what was
+  typed before in this company's entries: those that start with your text first, then the most
+  used and the most recent. Choose one with the arrow keys and Enter, or keep typing.
+
 ## 7. Period unlocks (exceptional)
 To correct a locked period, an accountant requests an unlock with a reason and a time window
 (5 minutes to 8 hours). Two different approvers (not the requester) approve it, each having

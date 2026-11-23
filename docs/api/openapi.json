@@ -349,6 +349,31 @@
         "title": "AccountPatch",
         "type": "object"
       },
+      "AccountVatCodeOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          },
+          "vat_code_id": {
+            "description": "The code most used with the account",
+            "title": "Vat Code Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "vat_code_id",
+          "uses"
+        ],
+        "title": "AccountVatCodeOut",
+        "type": "object"
+      },
       "AccuracyMonthOut": {
         "properties": {
           "actual": {
@@ -6514,6 +6539,62 @@
           "lines"
         ],
         "title": "EntryOut",
+        "type": "object"
+      },
+      "EntrySuggestionOut": {
+        "properties": {
+          "last_used": {
+            "format": "date-time",
+            "title": "Last Used",
+            "type": "string"
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "uses",
+          "last_used"
+        ],
+        "title": "EntrySuggestionOut",
+        "type": "object"
+      },
+      "EntrySuggestionsQuery": {
+        "properties": {
+          "field": {
+            "enum": [
+              "description",
+              "memo",
+              "reference"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "limit": {
+            "default": 8,
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "q": {
+            "default": "",
+            "description": "What the user has typed so far",
+            "maxLength": 100,
+            "title": "Q",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "EntrySuggestionsQuery",
         "type": "object"
       },
       "ExchangeRateIn": {
@@ -17458,6 +17539,24 @@
         "title": "VatCodeQuery",
         "type": "object"
       },
+      "VatCodeUseOut": {
+        "properties": {
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          },
+          "vat_code_id": {
+            "title": "Vat Code Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vat_code_id",
+          "uses"
+        ],
+        "title": "VatCodeUseOut",
+        "type": "object"
+      },
       "VatDecisionIn": {
         "properties": {
           "note": {
@@ -17495,6 +17594,23 @@
           "format"
         ],
         "title": "VatExportQuery",
+        "type": "object"
+      },
+      "VatFavouritesOut": {
+        "properties": {
+          "vat_code_ids": {
+            "description": "The VAT codes this user starred, oldest first",
+            "items": {
+              "type": "string"
+            },
+            "title": "Vat Code Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "vat_code_ids"
+        ],
+        "title": "VatFavouritesOut",
         "type": "object"
       },
       "VatImportIn": {
@@ -17708,6 +17824,30 @@
           "report"
         ],
         "title": "VatPeriodOut",
+        "type": "object"
+      },
+      "VatUsageOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountVatCodeOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "codes": {
+            "items": {
+              "$ref": "#/components/schemas/VatCodeUseOut"
+            },
+            "title": "Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "codes",
+          "accounts"
+        ],
+        "title": "VatUsageOut",
         "type": "object"
       },
       "VerifyOut": {
@@ -27299,6 +27439,97 @@
         "summary": "Link Document",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/entry-suggestions": {
+      "get": {
+        "description": "What was typed before in this company's entries, for the field being typed: matches that\nstart with the text first, then the most used and the most recent.",
+        "operationId": "fcp_modules_ledger_api_entry_suggestions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": true,
+            "schema": {
+              "enum": [
+                "description",
+                "memo",
+                "reference"
+              ],
+              "title": "Field",
+              "type": "string"
+            }
+          },
+          {
+            "description": "What the user has typed so far",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "What the user has typed so far",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EntrySuggestionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Entry Suggestions",
+        "tags": [
+          "ledger"
         ]
       }
     },
@@ -37010,6 +37241,164 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/vat-favourites": {
+      "get": {
+        "operationId": "fcp_modules_ledger_api_list_vat_favourites",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatFavouritesOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Vat Favourites",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-favourites/{vat_code_id}": {
+      "delete": {
+        "operationId": "fcp_modules_ledger_api_unstar_vat_code",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "vat_code_id",
+            "required": true,
+            "schema": {
+              "title": "Vat Code Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatFavouritesOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Unstar Vat Code",
+        "tags": [
+          "ledger"
+        ]
+      },
+      "put": {
+        "description": "Star a VAT code for yourself in this company (a personal preference).",
+        "operationId": "fcp_modules_ledger_api_star_vat_code",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "vat_code_id",
+            "required": true,
+            "schema": {
+              "title": "Vat Code Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatFavouritesOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Star Vat Code",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/vat-imports": {
       "get": {
         "description": "Import records of the entries in the dates, and the import VAT claims without one.",
@@ -38269,6 +38658,54 @@
         "summary": "Prepare Settlement",
         "tags": [
           "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-usage": {
+      "get": {
+        "description": "How often each VAT code was used in this company, and each account's usual code.",
+        "operationId": "fcp_modules_ledger_api_vat_usage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatUsageOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Vat Usage",
+        "tags": [
+          "ledger"
         ]
       }
     },
