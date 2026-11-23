@@ -1,12 +1,13 @@
 """The VAT return's box rules (V1-2b, #213): the owner's specification's mapping matrix (brief 25
 §2) as versioned data, every catalogue category accounted for, nothing guessed."""
 
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
 from fcp.modules.ledger.vat import catalogue_rows
-from fcp.modules.tax.boxes import ALL_BOXES, mapping, ruleset
+from fcp.modules.tax.boxes import ALL_BOXES, LineKind, mapping, ruleset
 
 pytestmark = pytest.mark.django_db
 KINDS = ("OUTPUT_VAT", "INPUT_VAT", "NET_SALE", "NET_PURCHASE")
@@ -71,3 +72,25 @@ def test_the_data_is_complete_and_sourced() -> None:
     )
     assert codes["R3"]["rate"] == "0.03"
     assert all(not row["verified"] for row in codes.values())
+
+
+def test_the_coverage_matrix_matches_the_rules() -> None:
+    """``docs/vat/coverage.md`` (V1-2e) shows each category's boxes exactly as the rules do, and
+    names every category as supported, excluded or not supported."""
+    page = (Path(__file__).parents[3] / "docs" / "vat" / "coverage.md").read_text()
+    kinds: tuple[LineKind, ...] = ("OUTPUT_VAT", "INPUT_VAT", "NET_SALE", "NET_PURCHASE")
+    shown: dict[str, list[str]] = {}
+    for line in page.splitlines():
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) == 6 and cells[0].isupper() and cells[0].replace("_", "").isalpha():
+            shown[cells[0]] = cells[1:5]
+    for category, cells in shown.items():
+        for kind, cell in zip(kinds, cells, strict=True):
+            found = mapping(category, kind)
+            expected = ", ".join(found.boxes) if found.status == "MAPPED" else "not in a box"
+            assert cell == expected, (category, kind)
+    rules = ruleset()
+    mapped = {r["category"] for r in rules["rules"]}
+    assert set(shown) == mapped
+    for rule in rules["excluded"] + rules["unsupported"]:
+        assert rule["category"] in page
