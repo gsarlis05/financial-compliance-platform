@@ -162,12 +162,13 @@ def budget(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
 
 def _kpi_set(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> KpiSet:
     """The current KPI set for the period, calculated if there is none or it is out of date."""
+    found: KpiSet | None
     try:
         found = latest_kpi_set(ctx, entity_id, date_from=p.start, date_to=p.end)
-        if not found.out_of_date:
-            return found
     except NotFoundError:
-        pass
+        found = None  # none calculated for this period yet: calculated below
+    if found is not None and not found.out_of_date:
+        return found
     try:
         return run_kpi_set(ctx, entity_id, date_from=p.start, date_to=p.end)
     except PermissionDeniedError:
