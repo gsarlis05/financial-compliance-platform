@@ -8,6 +8,7 @@ test fails when the file is out of date.
 
 import json
 import sys
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +26,7 @@ def _json(path: Path) -> Any:
 def _pct(rate: str | None) -> str:
     if rate is None:
         return "no rate"
-    value = f"{float(rate) * 100:.2f}".rstrip("0").rstrip(".")  # fcp-lint: allow-float (display)
+    value = f"{(Decimal(rate) * 100).quantize(Decimal('0.01')):f}".rstrip("0").rstrip(".")
     return f"{value}%"
 
 
