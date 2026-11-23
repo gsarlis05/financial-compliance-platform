@@ -176,7 +176,7 @@ tests, and the unsupported cases.
 |---|---|---|
 | V1-2a | VAT periods per company; a period report from the ledger (by code, VAT accounts, checks, lines); sign-off, filing record, versions, settlement draft; PDF/Excel | Built (#208, PR #221) |
 | V1-2b | VAT code catalogue v2 (categories, rates incl. 3%, effective dates, box mapping as versioned rule data) and line tax data (tax point, recovery %, blocked VAT; counterparty country and VAT number) | Done, PR #223 (#213) |
-| V1-2c | The 13-box return from line contributions; rounding; cross-field checks; drill-down per box with reason and rule version; acceptance fixtures | PR #224 (#214) |
+| V1-2c | The 13-box return from line contributions; rounding; cross-field checks; drill-down per box with reason and rule version; acceptance fixtures | Done, PR #224 (#214) |
 | V1-2d | Workflow Draft → Reviewed → Finalised → Filed; manual adjustments with approval; inclusion history (no double reporting); late-entry difference list; amendments | #215 |
 | V1-2e | Schedules, reconciliation with opening and closing balances, exceptions; PDF, Excel (named sheets), CSV; coverage matrix | #216 |
 | V1-2f | Imports: customs reference, date and value, import VAT evidence, no duplicate claims | #217 |
