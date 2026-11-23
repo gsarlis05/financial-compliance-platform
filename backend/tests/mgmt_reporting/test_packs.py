@@ -5,6 +5,7 @@ for the year to date, both above the default thresholds (1,000 and 10%), so both
 explanation before a March pack can be final."""
 
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from fcp.core.db.rls import set_context
 from fcp.core.errors import ConflictError, NotFoundError, PermissionDeniedError
 from fcp.core.ids import uuid7
 from fcp.modules.audit_log.models import AuditEvent
+from fcp.modules.mgmt_reporting import snapshot
 from fcp.modules.mgmt_reporting.models import ReportPack
 from fcp.modules.mgmt_reporting.snapshot import _block, missing_explanations
 
@@ -81,10 +83,14 @@ def test_a_pack_freezes_its_figures(g: dict[str, Any]) -> None:
     assert (pack["status"], pack["version"], pack["title"]) == (
         "DRAFT", 1, "Management pack, March 2026")  # fmt: skip
     assert (pack["period_start"], pack["period_end"]) == ("2026-03-01", "2026-03-31")
-    assert pack["blocks"] == {"statements": "ok", "budget": "ok", "kpis": "empty",
+    assert pack["blocks"] == {"statements": "ok", "budget": "ok", "kpis": "ok",
                               "cash": "empty", "projection": "empty", "goals": "ok"}  # fmt: skip
     blocks = pack["snapshot"]["blocks"]
-    assert blocks["kpis"]["reason"] == "No KPI set for this period yet."
+    # V1-4: with no KPI set for March yet, generating the pack calculated one (a stored run).
+    kpis = blocks["kpis"]["data"]
+    assert kpis["run_id"]
+    assert not kpis["stale"]
+    assert "GROSS_MARGIN" in {v["key"] for v in kpis["values"]}
     assert blocks["projection"]["reason"] == (
         "No published projection covers the months after this period.")  # fmt: skip
     # The variance report, by hand: sales 0 against 1,000 in March, 1,000 against 3,000 to date.
@@ -300,3 +306,23 @@ def test_kpis_cash_and_projection_blocks(hist: dict[str, Any]) -> None:
         "cash": cash.json()["run_id"],
         "projection": run["id"],
     }
+
+
+def test_kpis_say_why_when_the_preparer_may_not_calculate_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """V1-4: with no current KPI set, the pack calculates one; a preparer who may not run
+    calculations gets an empty section that says why, not a silent gap."""
+
+    def nothing(*_args: Any, **_kw: Any) -> Any:
+        raise NotFoundError("No KPI set for this period yet.")
+
+    def refused(*_args: Any, **_kw: Any) -> Any:
+        raise PermissionDeniedError("no")
+
+    monkeypatch.setattr(snapshot, "latest_kpi_set", nothing)
+    monkeypatch.setattr(snapshot, "run_kpi_set", refused)
+    march = snapshot.Period("MONTH", date(2026, 3, 1), date(2026, 3, 31))
+    block = _block(lambda: snapshot.kpis(Any, uuid7(), march), "x")  # type: ignore[arg-type]
+    assert block["status"] == "empty"
+    assert block["reason"].startswith("No KPI set for this period yet, and you may not")

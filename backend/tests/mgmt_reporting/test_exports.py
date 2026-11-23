@@ -33,6 +33,18 @@ def export(g: dict[str, Any], pack_id: str, fmt: str, lang: str = "en",
     )
 
 
+def _same(want: Any, got: Any) -> bool:
+    """A cell as Excel holds it: amounts (two decimals) exactly; a long ratio (a KPI) as the
+    nearest binary float, which keeps about 16 significant digits."""
+    if isinstance(got, (int, float, Decimal)):
+        got = Decimal(str(got))
+        if isinstance(want, Decimal) and want != got:
+            places = want.as_tuple().exponent
+            return isinstance(places, int) and places < -2 and (
+                abs(want - got) <= abs(want) * Decimal("1e-15"))  # fmt: skip
+    return bool(want == got)
+
+
 def _expected(cell: dict[str, Any]) -> Any:
     value = cell["value"]
     if value is None:
@@ -78,9 +90,9 @@ def test_excel_equals_the_api_cell_by_cell(g: dict[str, Any]) -> None:
             assert rows[at + 2][0] == "Nature"
             for offset, row in enumerate(table["rows"], start=at + 3):
                 got_row = rows[offset][1 : 1 + len(row["cells"])]
-                assert [_expected(c) for c in row["cells"]] == [
-                    Decimal(str(v)) if isinstance(v, (int, float, Decimal)) else v
-                    for v in got_row], (section["key"], row["key"])  # fmt: skip
+                wanted = [_expected(c) for c in row["cells"]]
+                assert all(_same(w, v) for w, v in zip(wanted, got_row, strict=True)), (
+                    section["key"], row["key"], wanted, got_row)  # fmt: skip
                 checked += len(row["cells"])
     assert checked > 100
     budget_sheet = [list(r) for r in book["05 budget"].iter_rows(values_only=True)]
@@ -116,7 +128,9 @@ def test_pdf_lines_equal_the_api_and_say_draft(g: dict[str, Any], make_user: Mak
                     if row.get("display") == "percent":
                         continue
                     if cell["value"] and text and text[0].isdigit() | text.startswith("-"):
-                        assert Decimal(text.replace(",", "")) == Decimal(cell["value"])
+                        # Printed to the cent: amounts exactly, a ratio (KPI) rounded.
+                        shown_value = Decimal(f"{Decimal(cell['value']):.2f}")
+                        assert Decimal(text.replace(",", "")) == shown_value
     month = next(s for s in shown if s["key"] == "budget")["tables"][0]
     where = [r["key"] for r in month["rows"]].index("REV.SALES")
     sales = pdf_lines(month, "en")[2 + where]

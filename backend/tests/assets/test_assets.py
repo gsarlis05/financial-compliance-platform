@@ -179,3 +179,43 @@ def test_validation_permissions_and_history(reg: dict[str, Any], make_user: Make
     # Disposal is still allowed on a locked asset (once).
     FixedAsset.objects.filter(id=asset.id).update(disposed_on=date(2026, 9, 1),
                                                   disposal_proceeds=Decimal("0"))  # fmt: skip
+
+
+def test_the_register_reconciles_to_the_ledger(reg: dict[str, Any]) -> None:
+    """V1-4: the register's cost and accumulated depreciation against the ledger, per account."""
+    c, base, acc = reg["client"], reg["base"], reg["accounts"]
+
+    def rec(on: str) -> dict[str, Any]:
+        commit_point()  # balances are maintained when a posting commits
+        got = c.get(f"{base}/fixed-assets/reconciliation?as_of={on}")
+        assert got.status_code == 200, got.content
+        return dict(got.json())
+
+    def rows(found: dict[str, Any]) -> list[tuple[str, str, str, str, str]]:
+        return [(r["account_code"], r["kind"], r["register"], r["ledger"], r["difference"])
+                for r in found["rows"]]  # fmt: skip
+
+    # The van is in the register but its purchase is not booked: the difference says so.
+    before = rec("2026-01-31")
+    assert rows(before) == [("1010", "COST", "24000.00", "0.00", "-24000.00"),
+                            ("1019", "ACCUMULATED", "0.00", "0.00", "0.00")]  # fmt: skip
+    assert before["agrees"] is False
+    bought = c.post_json(f"{base}/journal-entries", {
+        "accounting_date": "2026-01-15", "description": "Delivery van (Demo)", "lines": [
+            {"account_id": acc["1010"]["id"], "debit": "24000.00"},
+            {"account_id": acc["1300"]["id"], "credit": "24000.00"}]}).json()  # fmt: skip
+    assert act(reg, bought["id"], "post").status_code == 200
+    # February's depreciation prepared, not posted yet: it explains the difference.
+    run = c.post_json(f"{base}/depreciation-runs", {"month": "2026-02-01"}).json()
+    waiting = rec("2026-02-28")
+    assert rows(waiting) == [("1010", "COST", "24000.00", "24000.00", "0.00"),
+                             ("1019", "ACCUMULATED", "0.00", "0.00", "0.00")]  # fmt: skip
+    assert [r["id"] for r in waiting["unposted_runs"]] == [run["id"]]
+    assert act(reg, run["entry_id"], "post").status_code == 200
+    after = rec("2026-02-28")
+    assert rows(after) == [("1010", "COST", "24000.00", "24000.00", "0.00"),
+                           ("1019", "ACCUMULATED", "500.00", "500.00", "0.00")]  # fmt: skip
+    assert (after["agrees"], after["unposted_runs"]) == (True, [])
+    # Before the acquisition there is nothing to reconcile.
+    assert rec("2025-12-31") == {"as_of": "2025-12-31", "rows": [], "agrees": True,
+                                 "unposted_runs": []}  # fmt: skip

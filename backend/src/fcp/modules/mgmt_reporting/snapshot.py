@@ -15,7 +15,9 @@ Blocks:
 - ``budget``: the variance report (M4-3) of the current approved annual budget for month,
   quarter to date, year to date and full year, against the budget, the original budget and the
   prior year, with each variance's explanation;
-- ``kpis``: the latest KPI set for the period;
+- ``kpis``: the latest KPI set for the period, calculated now (a stored, reproducible run) when
+  there is none or it is out of date (V1-4: a pack no longer depends on someone having opened
+  the dashboard for that period first);
 - ``cash``: the latest 13-week cash forecast;
 - ``projection``: the latest published projection covering the months after the period (its
   engine is pending professional review, and the block says so);
@@ -34,7 +36,7 @@ from fcp.modules.budgeting.api import VarianceComparison, compute_variance, list
 from fcp.modules.calendar.api import add_months, month_end, month_start
 from fcp.modules.cashflow.api import forecast_freshness, latest_cash_forecast
 from fcp.modules.goals.api import goal_views
-from fcp.modules.kpi.api import latest_kpi_set
+from fcp.modules.kpi.api import KpiSet, latest_kpi_set, run_kpi_set
 from fcp.modules.metrics.api import canonical_digest, entity_statements
 from fcp.modules.projections.api import forecast_values, published_projections
 from fcp.modules.reporting.api import current_watermark, fiscal_year_start, unposted_count
@@ -158,8 +160,25 @@ def budget(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
     }  # fmt: skip
 
 
+def _kpi_set(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> KpiSet:
+    """The current KPI set for the period, calculated if there is none or it is out of date."""
+    try:
+        found = latest_kpi_set(ctx, entity_id, date_from=p.start, date_to=p.end)
+        if not found.out_of_date:
+            return found
+    except NotFoundError:
+        pass
+    try:
+        return run_kpi_set(ctx, entity_id, date_from=p.start, date_to=p.end)
+    except PermissionDeniedError:
+        raise NotFoundError(
+            "No KPI set for this period yet, and you may not calculate one: ask someone who "
+            "runs the planning calculations."
+        ) from None
+
+
 def kpis(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, Any]:
-    found = latest_kpi_set(ctx, entity_id, date_from=p.start, date_to=p.end)
+    found = _kpi_set(ctx, entity_id, p)
     values = []
     for r in found.values:
         meta = found.definitions.get(r.series_key)

@@ -337,3 +337,48 @@ def set_allowance_class(request: HttpRequest, slug: str, entity_id: UUID, asset_
     ctx = workspace_ctx(request, slug, entity_id)
     services.set_allowance_class(ctx, entity_id, asset_id, payload.allowance_class_code)
     return _one(request, slug, entity_id, asset_id)
+
+
+# --- the register against the ledger (V1-4) -----------------------------------------------------
+
+
+class ReconciliationQuery(Schema):
+    as_of: date
+
+
+class ReconciliationRowOut(Schema):
+    account_id: UUID
+    account_code: str
+    account_name: str
+    kind: str = Field(description="COST or ACCUMULATED (depreciation)")
+    register: str = Field(description="What the account should hold: cost a debit, accumulated "
+                                      "depreciation a credit")  # fmt: skip
+    ledger: str
+    difference: str = Field(description="Ledger minus register")
+
+
+class ReconciliationOut(Schema):
+    as_of: date
+    rows: list[ReconciliationRowOut]
+    agrees: bool
+    unposted_runs: list[DepreciationRunOut] = Field(
+        description="Prepared depreciation not posted yet: it explains a difference until it is"
+    )
+
+
+@router.get(f"{BASE}/fixed-assets/reconciliation", response=ReconciliationOut)
+@requires("assets.read")
+def reconciliation(request: HttpRequest, slug: str, entity_id: UUID,
+                   q: Query[ReconciliationQuery]) -> ReconciliationOut:  # fmt: skip
+    """The register's cost and accumulated depreciation against the ledger, per account."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = services.reconcile(ctx, entity_id, q.as_of)
+    return ReconciliationOut(
+        as_of=found.as_of,
+        rows=[ReconciliationRowOut(account_id=r.account_id, account_code=r.account_code,
+                                   account_name=r.account_name, kind=r.kind,
+                                   register=f"{r.register:.2f}", ledger=f"{r.ledger:.2f}",
+                                   difference=f"{r.difference:.2f}") for r in found.rows],
+        agrees=found.agrees,
+        unposted_runs=[_run_out(v) for v in found.unposted_runs],
+    )  # fmt: skip
