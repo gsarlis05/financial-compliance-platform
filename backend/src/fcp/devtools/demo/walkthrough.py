@@ -955,8 +955,9 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"accountant from the posted books: output VAT {vat['sales_vat']}, input VAT "
          f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}; return "
          f"{vat['boxes']} (box rules unverified), "
-         f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and recorded as "
-         f"filed (reference {vat['reference']}); nothing was sent to the Tax Department")  # fmt: skip
+         f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and "
+         f"recorded as filed (reference {vat['reference']}); nothing was sent to the Tax "
+         "Department")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "
