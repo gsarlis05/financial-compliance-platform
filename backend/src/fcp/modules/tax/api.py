@@ -121,7 +121,7 @@ class FiledIn(Schema):
                           description="Where the portal's acknowledgement is kept")  # fmt: skip
 
 
-class NoteIn(Schema):
+class VatNoteIn(Schema):
     note: str = Field(min_length=1, max_length=500)
 
 
@@ -132,7 +132,7 @@ class AdjustmentIn(Schema):
     evidence: str = Field(min_length=1, max_length=500)
 
 
-class DecisionIn(Schema):
+class VatDecisionIn(Schema):
     note: str = Field(default="", max_length=500)
 
 
@@ -231,7 +231,7 @@ def review(request: HttpRequest, slug: str, entity_id: UUID,
 @router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/reopen", response=ReportDetailOut)
 @requires("tax.vat.sign_off")
 def reopen(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
-           payload: NoteIn) -> ReportDetailOut:  # fmt: skip
+           payload: VatNoteIn) -> ReportDetailOut:  # fmt: skip
     """Send a reviewed report back to draft, saying why."""
     ctx = workspace_ctx(request, slug, entity_id)
     return _detail(ctx, services.reopen(ctx, entity_id, report_id, payload.note))
@@ -262,7 +262,7 @@ def propose_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_
              response=AdjustmentOut)  # fmt: skip
 @requires("tax.vat.sign_off")
 def approve_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
-                       adjustment_id: UUID, payload: DecisionIn) -> VatAdjustment:  # fmt: skip
+                       adjustment_id: UUID, payload: VatDecisionIn) -> VatAdjustment:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     return services.decide_adjustment(ctx, entity_id, report_id, adjustment_id, approve=True,
                                       note=payload.note)  # fmt: skip
@@ -272,7 +272,7 @@ def approve_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_
              response=AdjustmentOut)  # fmt: skip
 @requires("tax.vat.prepare")
 def reject_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
-                      adjustment_id: UUID, payload: DecisionIn) -> VatAdjustment:  # fmt: skip
+                      adjustment_id: UUID, payload: VatDecisionIn) -> VatAdjustment:  # fmt: skip
     """Reject a proposed adjustment (``tax.vat.sign_off``), or withdraw your own."""
     ctx = workspace_ctx(request, slug, entity_id)
     return services.decide_adjustment(ctx, entity_id, report_id, adjustment_id, approve=False,

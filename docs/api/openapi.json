@@ -5310,10 +5310,10 @@
       },
       "DecisionIn": {
         "properties": {
-          "note": {
+          "comment": {
             "default": "",
             "maxLength": 500,
-            "title": "Note",
+            "title": "Comment",
             "type": "string"
           }
         },
@@ -10214,15 +10214,12 @@
       "NoteIn": {
         "properties": {
           "note": {
-            "maxLength": 500,
-            "minLength": 1,
+            "default": "",
+            "maxLength": 1000,
             "title": "Note",
             "type": "string"
           }
         },
-        "required": [
-          "note"
-        ],
         "title": "NoteIn",
         "type": "object"
       },
@@ -17214,6 +17211,18 @@
         "title": "VatCodeQuery",
         "type": "object"
       },
+      "VatDecisionIn": {
+        "properties": {
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "VatDecisionIn",
+        "type": "object"
+      },
       "VatExportQuery": {
         "properties": {
           "format": {
@@ -17238,6 +17247,21 @@
           "format"
         ],
         "title": "VatExportQuery",
+        "type": "object"
+      },
+      "VatNoteIn": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "VatNoteIn",
         "type": "object"
       },
       "VatPeriodOut": {
@@ -36662,7 +36686,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecisionIn"
+                "$ref": "#/components/schemas/VatDecisionIn"
               }
             }
           },
@@ -36740,7 +36764,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecisionIn"
+                "$ref": "#/components/schemas/VatDecisionIn"
               }
             }
           },
@@ -37194,7 +37218,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NoteIn"
+                "$ref": "#/components/schemas/VatNoteIn"
               }
             }
           },
