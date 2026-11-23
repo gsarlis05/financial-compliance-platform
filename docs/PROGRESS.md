@@ -155,9 +155,20 @@ until validated and signed by a qualified professional; brief
 | V1-2g VIES statements recorded as filed (month, kind, filing date, reference, partners with goods, services and triangular amounts; never submitted), voided only with a reason (database guards); reconciliation per partner to the EU supplies in the books, months without a statement, totals against Boxes 8A and 8B, triangular amounts apart; a correction carries the month's full figures and replaces the original (owner's decision, 2026-11-23); VIES panel on the VAT screen (ADR-0063, issue #218) | `claude/v1-2g-vies` | — | Open |
 
 ## Open questions for the product owner
-- Does your business use any currency other than EUR? (needed before M2)
 - Bank used and statement export formats (CSV / CAMT.053)? Any current accounting software? (before M2)
-- Cyprus tax professional for rule verification (before Phase 4)
+- **Professional review (#93):** go through `docs/review/professional-review-list.md` with a
+  Cyprus tax professional; corrections become new versions of the data.
+
+## Reminders (decided to do later)
+- **The Tax Department's XML file for the VAT return (#220):** left for later by the owner on
+  2026-11-23. Needs the official XSD and its guide. Keep #220 open; raise it again before the
+  first return is filed with the platform.
+
+## Owner decisions of 2026-11-23 (VAT)
+- A VIES correction carries the month's full figures and replaces the original (ADR-0063).
+- Purchases in a foreign currency are converted to euros at the exchange rate of the date and
+  time of the purchase (#219, V1-2h).
+- The XML file is deferred (#220, above).
 
 ## How to resume work in a new session
 Say "Resume the Financial Compliance Platform. Follow CLAUDE.md." The full procedure is in
