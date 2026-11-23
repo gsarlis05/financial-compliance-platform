@@ -8266,46 +8266,99 @@
         "title": "IgnoreIn",
         "type": "object"
       },
+      "ImportIn": {
+        "properties": {
+          "customs_date": {
+            "format": "date",
+            "title": "Customs Date",
+            "type": "string"
+          },
+          "customs_reference": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Customs Reference",
+            "type": "string"
+          },
+          "customs_value": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Customs Value"
+          },
+          "document_id": {
+            "description": "The customs declaration, attached to the entry",
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "entry_id": {
+            "description": "The posted entry that claims the import VAT",
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "import_vat": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Import Vat"
+          }
+        },
+        "required": [
+          "entry_id",
+          "customs_reference",
+          "customs_date",
+          "customs_value",
+          "import_vat",
+          "document_id"
+        ],
+        "title": "ImportIn",
+        "type": "object"
+      },
       "ImportOut": {
         "properties": {
-          "closing_balance": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Closing Balance"
-          },
-          "closing_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Closing Date"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "error": {
-            "title": "Error",
+          "customs_date": {
+            "format": "date",
+            "title": "Customs Date",
             "type": "string"
           },
-          "filename": {
-            "title": "Filename",
+          "customs_reference": {
+            "title": "Customs Reference",
             "type": "string"
           },
-          "format": {
-            "title": "Format",
+          "customs_value": {
+            "title": "Customs Value",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_name": {
+            "title": "Document Name",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
             "type": "string"
           },
           "id": {
@@ -8313,26 +8366,15 @@
             "title": "Id",
             "type": "string"
           },
-          "lines_created": {
-            "title": "Lines Created",
-            "type": "integer"
+          "import_vat": {
+            "title": "Import Vat",
+            "type": "string"
           },
-          "lines_duplicate": {
-            "title": "Lines Duplicate",
-            "type": "integer"
+          "void_reason": {
+            "title": "Void Reason",
+            "type": "string"
           },
-          "opening_balance": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Opening Balance"
-          },
-          "processed_at": {
+          "voided_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -8342,33 +8384,43 @@
                 "type": "null"
               }
             ],
-            "title": "Processed At"
-          },
-          "statement_id": {
-            "title": "Statement Id",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
+            "title": "Voided At"
           }
         },
         "required": [
           "id",
-          "format",
-          "filename",
-          "status",
-          "error",
-          "statement_id",
-          "opening_balance",
-          "closing_balance",
-          "closing_date",
-          "lines_created",
-          "lines_duplicate",
+          "entry_id",
+          "customs_reference",
+          "customs_date",
+          "customs_value",
+          "import_vat",
+          "document_id",
+          "document_name",
           "created_at",
-          "processed_at"
+          "voided_at",
+          "void_reason"
         ],
         "title": "ImportOut",
+        "type": "object"
+      },
+      "ImportsQuery": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "ImportsQuery",
         "type": "object"
       },
       "InstalmentOut": {
@@ -17433,6 +17485,21 @@
           "id"
         ],
         "title": "ViewOut",
+        "type": "object"
+      },
+      "VoidIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidIn",
         "type": "object"
       },
       "WeekOut": {
@@ -36314,6 +36381,199 @@
         "summary": "List Vat Codes",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-imports": {
+      "get": {
+        "description": "Import records of the entries in the dates, and the import VAT claims without one.",
+        "operationId": "fcp_modules_tax_api_list_imports",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Imports",
+        "tags": [
+          "VAT"
+        ]
+      },
+      "post": {
+        "description": "Record the customs declaration behind an entry's import VAT; a reference is recorded once.",
+        "operationId": "fcp_modules_tax_api_record_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Record Import",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-imports/{import_id}/void": {
+      "post": {
+        "operationId": "fcp_modules_tax_api_void_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Void Import",
+        "tags": [
+          "VAT"
         ]
       }
     },

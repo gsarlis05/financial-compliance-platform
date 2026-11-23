@@ -85,6 +85,10 @@ _TEXT: dict[str, dict[str, str]] = {
         "schedule_eu_trade": "EU trade",
         "schedule_reverse_charge": "Reverse charge",
         "schedule_imports": "Imports",
+        "customs_reference": "Customs reference",
+        "customs_date": "Customs date",
+        "customs_value": "Taxable value (customs)",
+        "document_name": "Evidence",
         "FILED": "Filed",
         "SUPERSEDED": "Superseded",
         "self": "self-approved (one-person workspace)",
@@ -202,6 +206,10 @@ _TEXT: dict[str, dict[str, str]] = {
         "schedule_eu_trade": "Ενδοκοινοτικές συναλλαγές",
         "schedule_reverse_charge": "Αντίστροφη χρέωση",
         "schedule_imports": "Εισαγωγές",
+        "customs_reference": "Αριθμός τελωνειακής διασάφησης",
+        "customs_date": "Ημερομηνία τελωνείου",
+        "customs_value": "Φορολογητέα αξία (τελωνείο)",
+        "document_name": "Τεκμήριο",
         "FILED": "Υποβλήθηκε",
         "SUPERSEDED": "Αντικαταστάθηκε",
         "self": "αυτοέγκριση (χώρος εργασίας ενός ατόμου)",
@@ -360,10 +368,11 @@ COLUMNS = {
                  "net", "boxes"),
     "reverse_charge": ("date", "entry", "type", "party", "country", "vat_no", "reference", "code",
                        "net_purchase", "output_vat", "input_vat", "blocked", "boxes"),
-    "imports": ("date", "entry", "reference", "party", "code", "net_purchase", "input_vat",
-                "blocked", "boxes"),
+    "imports": ("date", "entry", "customs_reference", "customs_date", "party", "code",
+                "customs_value", "net_purchase", "input_vat", "blocked", "document_name"),
 }  # fmt: skip
-AMOUNTS = frozenset(("net_sale", "output_vat", "net_purchase", "input_vat", "blocked", "net"))
+AMOUNTS = frozenset(("net_sale", "output_vat", "net_purchase", "input_vat", "blocked", "net",
+                     "customs_value"))  # fmt: skip
 FIELD = {"entry": "entry_ref", "party": "counterparty"}
 
 

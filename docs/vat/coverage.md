@@ -65,3 +65,4 @@ specification does not map that kind of line for that category.
 | EU party data: country, VAT number, member state | `test_vat_return.py` party checks |
 | The ledger's VAT accounts reconcile to the return | `test_vat_return_api.py` schedules and reconciliation |
 | A line in one return only | `test_vat_workflow.py` inclusions |
+| Import VAT has its customs record; VAT and value agree; a declaration claimed once | `test_vat_imports.py` |

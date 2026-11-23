@@ -212,3 +212,53 @@ class VatInclusion(TenantOwned):
                 name="tax_vat_inclusion_one_return",
             ),
         ]
+
+
+class VatImport(TenantOwned):
+    """An import of goods (V1-2f): the customs declaration behind the import VAT one posted entry
+    claims. A record is never edited; a wrong one is voided (with a reason) and recorded again,
+    and it cannot be voided once its entry is in a finalised return."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    entry_id = models.UUIDField()  # the posted entry with the import VAT (ledger)
+    customs_reference = models.CharField(max_length=50)  # e.g. the declaration's MRN
+    customs_date = models.DateField()
+    customs_value = models.DecimalField(max_digits=19, decimal_places=2)  # the taxable value
+    import_vat = models.DecimalField(max_digits=19, decimal_places=2)  # as on the declaration
+    document_id = models.UUIDField()  # the evidence, attached to the entry (documents)
+    document_name = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    voided_at = models.DateTimeField(null=True, blank=True)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    void_reason = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "tax_vat_import"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "customs_reference"],
+                condition=models.Q(voided_at__isnull=True),
+                name="tax_vat_import_reference_once",
+            ),
+            models.UniqueConstraint(
+                fields=["legal_entity", "entry_id"],
+                condition=models.Q(voided_at__isnull=True),
+                name="tax_vat_import_entry_once",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(customs_value__gt=0, import_vat__gt=0),
+                name="tax_vat_import_amounts",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(customs_reference=""), name="tax_vat_import_reference"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(voided_at__isnull=True)
+                | (models.Q(voided_by__isnull=False) & ~models.Q(void_reason="")),
+                name="tax_vat_import_voided",
+            ),
+        ]

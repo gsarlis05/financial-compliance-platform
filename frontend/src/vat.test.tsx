@@ -305,7 +305,9 @@ const drafted = {
 
 type Sent = { url: string; method: string; body?: unknown };
 
-function stub(shown: unknown = report) {
+const noImports = { records: [], missing: [] };
+
+function stub(shown: unknown = report, imports: unknown = noImports) {
   const sent: Sent[] = [];
   document.cookie = "__Host-fcp_csrftoken=test";
   vi.stubGlobal(
@@ -320,6 +322,23 @@ function stub(shown: unknown = report) {
           );
         return Promise.resolve(respond({}, 201));
       }
+      if (url.includes("/vat-imports"))
+        return Promise.resolve(respond(imports));
+      if (url.includes("/documents"))
+        return Promise.resolve(
+          respond([
+            {
+              id: "d1",
+              filename: "declaration.pdf",
+              content_type: "application/pdf",
+              size: 10,
+              sha256: "x",
+              created_at: "2026-02-10T10:00:00Z",
+              uploaded_by_id: "u1",
+              links: [{ id: "k1", entry_id: "e8", line_id: null }],
+            },
+          ]),
+        );
       if (url.endsWith("/vat-period-schemes"))
         return Promise.resolve(
           respond([
@@ -577,5 +596,69 @@ describe("VAT (V1-2)", () => {
         },
       }),
     );
+  });
+
+  it("records the customs declaration behind an import VAT claim (V1-2f)", async () => {
+    const sent = stub(withReturn, {
+      records: [],
+      missing: [
+        {
+          entry_id: "e8",
+          entry_ref: "GJ-8",
+          date: "2026-02-10",
+          description: "Import of goods",
+          claimed_vat: "190.00",
+        },
+      ],
+    });
+    const { container } = mount();
+    await screen.findByText(/every 3/);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const panel = await screen.findByRole("region", { name: "Imports" });
+    expect(panel).toHaveTextContent(
+      "Import VAT claimed without a customs record: GJ-8 (2026-02-10): 190.00",
+    );
+    fireEvent.change(within(panel).getByLabelText("Entry"), {
+      target: { value: "e8" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Customs reference"), {
+      target: { value: "26CY12" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Customs date"), {
+      target: { value: "2026-02-09" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Taxable value"), {
+      target: { value: "1000" },
+    });
+    fireEvent.change(within(panel).getByLabelText("Import VAT"), {
+      target: { value: "190,00" },
+    });
+    const choice = await within(panel).findByRole("option", {
+      name: "declaration.pdf",
+    });
+    fireEvent.change(within(panel).getByLabelText("Customs declaration"), {
+      target: { value: (choice as HTMLOptionElement).value },
+    });
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Record import" }),
+    );
+    await waitFor(() =>
+      expect(sent.at(-1)).toEqual({
+        url: "/api/w/ws/entities/e1/vat-imports",
+        method: "POST",
+        body: {
+          entry_id: "e8",
+          customs_reference: "26CY12",
+          customs_date: "2026-02-09",
+          customs_value: "1000",
+          import_vat: "190.00",
+          document_id: "d1",
+        },
+      }),
+    );
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations).toEqual([]);
   });
 });

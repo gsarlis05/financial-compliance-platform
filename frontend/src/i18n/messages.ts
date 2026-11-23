@@ -1232,6 +1232,21 @@ export const en = {
   "vat.reconApart":
     "Payments, refunds and settlements in the period, kept apart from Box 5:",
   "vat.csv": "Download CSV",
+  "vat.imp.title": "Imports",
+  "vat.imp.help":
+    "Each import VAT claim needs its customs declaration: reference, date, taxable value, import VAT, and the declaration attached to the entry (under Entries). A declaration is recorded once, so its VAT cannot be claimed twice.",
+  "vat.imp.missing": "Import VAT claimed without a customs record:",
+  "vat.imp.reference": "Customs reference",
+  "vat.imp.date": "Customs date",
+  "vat.imp.value": "Taxable value",
+  "vat.imp.vat": "Import VAT",
+  "vat.imp.document": "Customs declaration",
+  "vat.imp.noDocument":
+    "Attach the declaration to the entry first, under Entries.",
+  "vat.imp.record": "Record import",
+  "vat.imp.void": "Void",
+  "vat.imp.voidReason": "Why it is void",
+  "vat.imp.voided": "void",
   "vat.return": "VAT return",
   "vat.box": "Box",
   "vat.item": "Item",
@@ -3259,6 +3274,21 @@ export const el: Record<MessageKey, string> = {
   "vat.reconApart":
     "Πληρωμές, επιστροφές και εκκαθαρίσεις της περιόδου, χωριστά από τη θυρίδα 5:",
   "vat.csv": "Λήψη CSV",
+  "vat.imp.title": "Εισαγωγές",
+  "vat.imp.help":
+    "Κάθε έκπτωση ΦΠΑ εισαγωγής χρειάζεται την τελωνειακή διασάφηση: αριθμό, ημερομηνία, φορολογητέα αξία, ΦΠΑ εισαγωγής και τη διασάφηση συνημμένη στην εγγραφή (στις Εγγραφές). Μια διασάφηση καταχωρίζεται μία φορά, ώστε ο ΦΠΑ της να μην εκπίπτει δύο φορές.",
+  "vat.imp.missing": "ΦΠΑ εισαγωγής χωρίς τελωνειακή καταχώριση:",
+  "vat.imp.reference": "Αριθμός διασάφησης",
+  "vat.imp.date": "Ημερομηνία τελωνείου",
+  "vat.imp.value": "Φορολογητέα αξία",
+  "vat.imp.vat": "ΦΠΑ εισαγωγής",
+  "vat.imp.document": "Τελωνειακή διασάφηση",
+  "vat.imp.noDocument":
+    "Επισυνάψτε πρώτα τη διασάφηση στην εγγραφή, στις Εγγραφές.",
+  "vat.imp.record": "Καταχώριση εισαγωγής",
+  "vat.imp.void": "Ακύρωση",
+  "vat.imp.voidReason": "Λόγος ακύρωσης",
+  "vat.imp.voided": "ακυρώθηκε",
   "vat.return": "Δήλωση ΦΠΑ",
   "vat.box": "Θυρίδα",
   "vat.item": "Στοιχείο",
