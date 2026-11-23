@@ -19,6 +19,7 @@ import {
   vatExportUrl,
 } from "../api/vat";
 import { VatImports } from "../components/VatImports";
+import { VatVies } from "../components/VatVies";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
@@ -259,6 +260,7 @@ function ReportView({
         periodEnd={r.period_end}
         editable={r.status === "DRAFT"}
       />
+      <VatVies report={r} />
       <Schedules report={r} />
       <Reconciliation report={r} />
 

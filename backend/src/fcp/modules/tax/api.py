@@ -99,6 +99,9 @@ class ReportDetailOut(ReportOut):
     schedules: dict[str, Any] = Field(
         description="Sales, purchases, EU trade, reverse charge, imports, adjustments, exceptions"
     )
+    vies: dict[str, Any] = Field(
+        description="EU supplies against the VIES statements recorded, and Boxes 8A and 8B"
+    )
     reconciliation: dict[str, Any] | None = Field(
         description="The VAT accounts from opening to closing, and the return bridged to the ledger"
     )
@@ -164,6 +167,7 @@ def _detail(ctx: Any, r: VatReport) -> ReportDetailOut:
         "previous": services.previous_version(r),
         "schedules": services.report_schedules(r),
         "reconciliation": services.report_reconciliation(r),
+        "vies": services.report_vies(r),
     })  # fmt: skip
 
 
@@ -374,6 +378,55 @@ def void_import(request: HttpRequest, slug: str, entity_id: UUID, import_id: UUI
                 payload: VoidIn) -> VatImport:  # fmt: skip
     ctx = workspace_ctx(request, slug, entity_id)
     return services.void_import(ctx, entity_id, import_id, payload.reason)
+
+
+class ViesLineIn(Schema):
+    country: str = Field(pattern=r"^[A-Za-z]{2}$")
+    vat_no: str = Field(min_length=1, max_length=30)
+    goods: Decimal = Field(default=Decimal(0), max_digits=19, decimal_places=2)
+    services: Decimal = Field(default=Decimal(0), max_digits=19, decimal_places=2)
+    triangular: Decimal = Field(default=Decimal(0), max_digits=19, decimal_places=2)
+
+
+class ViesIn(Schema):
+    month: date = Field(description="The first day of the month it reports")
+    kind: Literal["ORIGINAL", "CORRECTION"] = "ORIGINAL"
+    filed_on: date
+    reference: str = Field(min_length=1, max_length=100)
+    note: str = Field(default="", max_length=500)
+    lines: list[ViesLineIn] = Field(min_length=1, max_length=500)
+
+
+@router.get(f"{BASE}/vat-vies", response=list[dict[str, Any]])
+@requires("tax.vat.read")
+def list_vies(request: HttpRequest, slug: str, entity_id: UUID,
+              query: Query[ImportsQuery]) -> list[dict[str, Any]]:  # fmt: skip
+    """The VIES statements recorded for the months in the dates."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.vies_statements(ctx, entity_id, date_from=query.date_from,
+                                    date_to=query.date_to)  # fmt: skip
+
+
+@router.post(f"{BASE}/vat-vies", response={201: dict[str, Any]})
+@requires("tax.vat.prepare")
+def record_vies(request: HttpRequest, slug: str, entity_id: UUID,
+                payload: ViesIn) -> Status[dict[str, Any]]:  # fmt: skip
+    """Record a VIES statement as you filed it. Nothing is sent to VIES."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = services.ViesInput(
+        month=payload.month, kind=payload.kind, filed_on=payload.filed_on,
+        reference=payload.reference, note=payload.note,
+        lines=[services.ViesLineInput(**ln.dict()) for ln in payload.lines],
+    )  # fmt: skip
+    return Status(201, services.vies_out(services.record_vies(ctx, entity_id, data)))
+
+
+@router.post(f"{BASE}/vat-vies/{{uuid:statement_id}}/void", response=dict[str, Any])
+@requires("tax.vat.prepare")
+def void_vies(request: HttpRequest, slug: str, entity_id: UUID, statement_id: UUID,
+              payload: VoidIn) -> dict[str, Any]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.vies_out(services.void_vies(ctx, entity_id, statement_id, payload.reason))
 
 
 CONTENT_TYPES = {

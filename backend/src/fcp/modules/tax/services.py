@@ -52,7 +52,16 @@ from fcp.modules.ledger.api import (
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import periods as P
-from .models import BOXES, VatAdjustment, VatImport, VatInclusion, VatPeriodScheme, VatReport
+from .models import (
+    BOXES,
+    VatAdjustment,
+    VatImport,
+    VatInclusion,
+    VatPeriodScheme,
+    VatReport,
+    VatViesLine,
+    VatViesStatement,
+)
 from .report import (
     Line,
     adjusted,
@@ -62,6 +71,8 @@ from .report import (
     import_checks,
     reconcile,
     schedules,
+    vat_key,
+    vies_reconcile,
 )
 
 READ, PREPARE, SIGN_OFF = "tax.vat.read", "tax.vat.prepare", "tax.vat.sign_off"
@@ -741,3 +752,125 @@ def void_import(ctx: WorkspaceContext, entity_id: UUID, import_id: UUID, reason:
     _audit(ctx, "import_voided", "vat_import", found.id, entity.id,
            customs_reference=found.customs_reference, reason=found.void_reason)  # fmt: skip
     return found
+
+
+# --- VIES statements (V1-2g) ---------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ViesLineInput:
+    country: str
+    vat_no: str
+    goods: Decimal = Decimal(0)
+    services: Decimal = Decimal(0)
+    triangular: Decimal = Decimal(0)
+
+
+@dataclass(frozen=True)
+class ViesInput:
+    month: date
+    kind: str
+    filed_on: date
+    reference: str
+    note: str
+    lines: list[ViesLineInput]
+
+
+def vies_out(st: VatViesStatement) -> dict[str, Any]:
+    return {"id": str(st.id), "month": st.month.isoformat(), "kind": st.kind,
+            "filed_on": st.filed_on.isoformat(), "reference": st.reference, "note": st.note,
+            "voided": st.voided_at is not None, "void_reason": st.void_reason,
+            "lines": [{"country": ln.country, "vat_no": ln.vat_no, "goods": f"{ln.goods:.2f}",
+                       "services": f"{ln.services:.2f}",
+                       "triangular": f"{ln.triangular:.2f}"}
+                      for ln in st.lines.order_by("country", "vat_no")]}  # fmt: skip
+
+
+def vies_statements(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,
+                    date_to: date) -> list[dict[str, Any]]:  # fmt: skip
+    """The VIES statements recorded for the months in the dates, voided ones included."""
+    entity = get_entity(ctx, entity_id, READ)
+    found = VatViesStatement.objects.filter(
+        legal_entity=entity, month__gte=date_from.replace(day=1), month__lte=date_to
+    ).order_by("month", "filed_on", "created_at")
+    return [vies_out(st) for st in found]
+
+
+@transaction.atomic
+def record_vies(ctx: WorkspaceContext, entity_id: UUID, data: ViesInput) -> VatViesStatement:
+    """Record a VIES statement as filed; nothing is sent anywhere."""
+    entity = get_entity(ctx, entity_id, PREPARE)
+    if data.month.day != 1:
+        raise _invalid("month", "Choose the first day of the month the statement reports.")
+    if data.kind not in VatViesStatement.Kind.values:
+        raise _invalid("kind", "Choose original or correction.")
+    if data.filed_on > timezone.localdate() or data.filed_on < data.month:
+        raise _invalid("filed_on", "Enter the date you filed the statement.")
+    reference = data.reference.strip()
+    if not reference:
+        raise _invalid("reference", "Enter the reference you received when filing.")
+    if not data.lines:
+        raise _invalid("lines", "Enter at least one partner.")
+    seen = set()
+    for i, ln in enumerate(data.lines):
+        country = ln.country.strip().upper()
+        if len(country) != 2 or not country.isalpha() or not ln.vat_no.strip():
+            raise _invalid(f"lines.{i}", f"Partner {i + 1}: enter its country (two letters) and "
+                           "VAT number.")  # fmt: skip
+        if not (ln.goods or ln.services or ln.triangular):
+            raise _invalid(f"lines.{i}", f"Partner {i + 1}: enter an amount.")
+        key = vat_key(country, ln.vat_no)
+        if key in seen:
+            raise _invalid(f"lines.{i}", f"Partner {i + 1} is listed twice.")
+        seen.add(key)
+    if data.kind == VatViesStatement.Kind.ORIGINAL and VatViesStatement.objects.select_for_update(
+    ).filter(legal_entity=entity, month=data.month, kind=data.kind,
+             voided_at__isnull=True).exists():  # fmt: skip
+        raise ConflictError("This month already has a statement. Record a correction, or void "
+                            "the wrong one first.")  # fmt: skip
+    made = VatViesStatement.objects.create(
+        tenant=ctx.tenant, legal_entity=entity, month=data.month, kind=data.kind,
+        filed_on=data.filed_on, reference=reference[:100], note=data.note.strip()[:500],
+        created_by=ctx.user,
+    )  # fmt: skip
+    VatViesLine.objects.bulk_create([
+        VatViesLine(tenant=ctx.tenant, statement=made, country=ln.country.strip().upper(),
+                    vat_no=ln.vat_no.strip()[:30], goods=ln.goods, services=ln.services,
+                    triangular=ln.triangular)
+        for ln in data.lines
+    ])  # fmt: skip
+    _audit(ctx, "vies_recorded", "vat_vies_statement", made.id, entity.id,
+           month=made.month.isoformat(), kind=made.kind, reference=made.reference,
+           partners=len(data.lines))  # fmt: skip
+    return made
+
+
+@transaction.atomic
+def void_vies(ctx: WorkspaceContext, entity_id: UUID, statement_id: UUID,
+              reason: str) -> VatViesStatement:  # fmt: skip
+    entity = get_entity(ctx, entity_id, PREPARE)
+    found = VatViesStatement.objects.select_for_update().filter(legal_entity=entity,
+                                                                id=statement_id).first()  # fmt: skip
+    if found is None:
+        raise NotFoundError("VIES statement not found.")
+    if found.voided_at is not None:
+        raise ConflictError("This statement is already void.")
+    reason = reason.strip()
+    if not reason:
+        raise _invalid("reason", "Say why the statement is void.")
+    found.voided_at, found.voided_by, found.void_reason = timezone.now(), ctx.user, reason[:500]
+    found.save(update_fields=["voided_at", "voided_by", "void_reason"])
+    _audit(ctx, "vies_voided", "vat_vies_statement", found.id, entity.id,
+           month=found.month.isoformat(), reason=found.void_reason)  # fmt: skip
+    return found
+
+
+def report_vies(report: VatReport) -> dict[str, Any]:
+    """The period's EU supplies against the VIES statements recorded now (V1-2g)."""
+    found = VatViesStatement.objects.filter(
+        legal_entity_id=report.legal_entity_id, month__gte=report.period_start,
+        month__lte=report.period_end, voided_at__isnull=True,
+    ).prefetch_related("lines")  # fmt: skip
+    statements = [vies_out(st) for st in found]
+    return vies_reconcile(report.snapshot, final_return(report), statements,
+                          report.period_start.isoformat(), report.period_end.isoformat())  # fmt: skip

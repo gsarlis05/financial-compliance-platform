@@ -262,3 +262,75 @@ class VatImport(TenantOwned):
                 name="tax_vat_import_voided",
             ),
         ]
+
+
+class VatViesStatement(TenantOwned):
+    """A recapitulative (VIES) statement for one month, as the owner filed it (V1-2g). The
+    platform never submits it. A correction filed later is a statement of kind CORRECTION for
+    the same month. A statement is never edited; a wrong one is voided with a reason."""
+
+    class Kind(models.TextChoices):
+        ORIGINAL = "ORIGINAL"
+        CORRECTION = "CORRECTION"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    month = models.DateField()  # the first day of the month it reports
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.ORIGINAL)
+    filed_on = models.DateField()
+    reference = models.CharField(max_length=100)  # the submission's reference
+    note = models.CharField(max_length=500, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    voided_at = models.DateTimeField(null=True, blank=True)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    void_reason = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "tax_vat_vies_statement"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "month"],
+                condition=models.Q(voided_at__isnull=True, kind="ORIGINAL"),
+                name="tax_vies_one_original",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(month__day=1), name="tax_vies_month_start"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(reference=""), name="tax_vies_reference"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(voided_at__isnull=True)
+                | (models.Q(voided_by__isnull=False) & ~models.Q(void_reason="")),
+                name="tax_vies_voided",
+            ),
+        ]
+
+
+class VatViesLine(TenantOwned):
+    """One partner on a VIES statement: its country and VAT number and the values reported."""
+
+    statement = models.ForeignKey(VatViesStatement, on_delete=models.PROTECT, related_name="lines")
+    country = models.CharField(max_length=2)
+    vat_no = models.CharField(max_length=30)
+    goods = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    services = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    triangular = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = "tax_vat_vies_line"
+        constraints = [
+            models.UniqueConstraint(fields=["statement", "country", "vat_no"],
+                                    name="tax_vies_line_once"),  # fmt: skip
+            models.CheckConstraint(
+                condition=models.Q(country__regex=r"^[A-Z]{2}$") & ~models.Q(vat_no=""),
+                name="tax_vies_line_party",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(goods=0, services=0, triangular=0),
+                name="tax_vies_line_amount",
+            ),
+        ]
