@@ -5,6 +5,9 @@ from decimal import Decimal
 
 from fcp.modules.tax.report import Line, compute, digest, figures
 
+CATEGORY = {"S19": "DOMESTIC", "Z0": "ZERO_RATED", "RC": "LEGACY_REVERSE_CHARGE",
+            "SETTLE": "SETTLEMENT"}  # fmt: skip
+
 
 def line(*fields: str | None) -> Line:
     """(entry, account, account type, VAT role, code, treatment, rate, net debit)."""
@@ -18,7 +21,7 @@ def line(*fields: str | None) -> Line:
     return Line(f"{entry}-{account}", entry, f"GJ-{entry}", "2026-01-10", "test", account,
                 f"Account {account}", kind, role or "", code, treatment,
                 Decimal(rate) if rate is not None else None, False, Decimal(net_debit),
-                "", "")  # fmt: skip
+                "", "", category=CATEGORY[code])  # fmt: skip
 
 
 def test_reverse_charge_settlements_and_exceptions() -> None:
@@ -44,8 +47,14 @@ def test_reverse_charge_settlements_and_exceptions() -> None:
     assert found["settlements"] == "100.00"
     assert [a["settled"] for a in found["accounts"] if a["code"] == "2120"] == ["100.00"]
     kinds = sorted(e["kind"] for e in found["exceptions"])
-    assert kinds == ["BASE_WITHOUT_VAT", "RATE_MISMATCH", "VAT_ON_NO_VAT_CODE",
-                     "VAT_WITHOUT_BASE"]  # fmt: skip
+    assert [k for k in kinds if k != "UNSUPPORTED"] == [
+        "BASE_WITHOUT_VAT", "RATE_MISMATCH", "VAT_ON_NO_VAT_CODE", "VAT_WITHOUT_BASE"]  # fmt: skip
+    # The old RC code does not say which reverse charge applies: each kind of its lines is
+    # unsupported, once per entry, and feeds no box; output VAT on a zero-rated code has no box.
+    unsupported = [e["detail"] for e in found["exceptions"] if e["kind"] == "UNSUPPORTED"]
+    assert [d[:9] for d in unsupported] == ["GJ-1 (RC)"] * 3 + ["GJ-2 (Z0)"]
+    assert all("The old code RC" in d for d in unsupported[:3])
+    assert all(not ln["boxes"] for ln in found["lines"] if ln["code"] == "RC")
     # Totals: output 190 + 5 + 19 = 214; input 190; net 24 payable.
     assert (found["totals"]["sales_vat"], found["totals"]["purchase_vat"],
             found["totals"]["net"], found["totals"]["direction"]) == (

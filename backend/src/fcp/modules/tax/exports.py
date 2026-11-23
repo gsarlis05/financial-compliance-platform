@@ -1,8 +1,8 @@
 """Excel and PDF of a VAT period report (V1-2), from its frozen snapshot only.
 
-Both show the same figures as the screen: the totals, the figures by VAT code, the VAT accounts,
-the checks and every line. A report that is not signed off says DRAFT. Text from the books is made
-formula-safe in Excel (threat T9).
+Both show the same figures as the screen: the return's boxes (V1-2c), the totals, the figures by
+VAT code, the VAT accounts, the checks and every line with its box contributions. A report that
+is not signed off says DRAFT. Text from the books is made formula-safe in Excel (threat T9).
 """
 
 import io
@@ -60,9 +60,16 @@ _TEXT: dict[str, dict[str, str]] = {
         "description": "Description",
         "counterparty": "Counterparty",
         "reference": "Reference",
-        "law": "What the law requires",
-        "law_pending": "The items of the VAT return as the law sets them out are added from the "
-        "official sources when they are supplied; they are not invented.",
+        "return": "VAT return",
+        "box": "Box",
+        "item": "Item",
+        "rounding": "Rounding",
+        "rules": "Box rules {rules}: not yet verified by a Cyprus tax professional. "
+        "Sources: {src}.",
+        "no_return": "This report was prepared before the boxes were added. Regenerate it, or "
+        "start a new version, to see them.",
+        "boxes": "Boxes",
+        "rule": "Rule",
         "notice": "Prepared from the posted ledger for the owner to file on the Tax Department's "
         "portal. The platform does not file returns and is not tax advice.",
         "page": "Page {n}",
@@ -111,9 +118,16 @@ _TEXT: dict[str, dict[str, str]] = {
         "description": "Περιγραφή",
         "counterparty": "Αντισυμβαλλόμενος",
         "reference": "Αναφορά",
-        "law": "Απαιτήσεις νόμου",
-        "law_pending": "Στοιχεία δήλωσης ΦΠΑ σύμφωνα με τον νόμο: προστίθενται από επίσημες "
-        "πηγές όταν δοθούν· δεν επινοούνται.",
+        "return": "Δήλωση ΦΠΑ",
+        "box": "Θυρίδα",
+        "item": "Στοιχείο",
+        "rounding": "Στρογγυλοποίηση",
+        "rules": "Κανόνες θυρίδων {rules}: δεν έχουν ακόμη επαληθευτεί από φοροτεχνικό στην "
+        "Κύπρο. Πηγές: {src}.",
+        "no_return": "Αναφορά χωρίς θυρίδες (παλαιότερη μορφή). Ενημερώστε την ή ξεκινήστε "
+        "νέα έκδοση.",
+        "boxes": "Θυρίδες",
+        "rule": "Κανόνας",
         "notice": "Ετοιμάστηκε από καθολικό λογιστικό, προς υποβολή από τον ιδιοκτήτη στην πύλη "
         "Τμήματος Φορολογίας. Πλατφόρμα χωρίς υποβολή δηλώσεων και χωρίς φορολογικές "
         "συμβουλές.",
@@ -126,6 +140,38 @@ def amount(value: str, lang: Lang) -> str:
     """ "1234.5" as "1,234.50" (English) or "1.234,50" (Greek)."""
     text = f"{Decimal(value):,.2f}"
     return text.translate(str.maketrans(",.", ".,")) if lang == "el" else text
+
+
+def box_amount(row: dict[str, str], lang: Lang) -> str:
+    """Boxes 1-5 to the cent; Boxes 6-11B to the nearest euro."""
+    if row["kind"] == "VAT":
+        return amount(row["amount"], lang)
+    text = f"{Decimal(row['amount']):,.0f}"
+    return text.replace(",", ".") if lang == "el" else text
+
+
+def return_rows(report: Any, lang: Lang) -> list[list[str]]:
+    """The return as printed: box, item, amount, rounding (also used by tests)."""
+    t, found = _TEXT[lang], report.snapshot.get("return")
+    if not found:
+        return []
+    rows = [[t["box"], t["item"], t["amount"], t["rounding"]]]
+    for b in found["boxes"]:
+        rounding = "" if Decimal(b["rounding"]) == 0 else amount(b["rounding"], lang)
+        rows.append([b["box"], b["label"], box_amount(b, lang), rounding])
+    return rows
+
+
+def rules_note(report: Any, lang: Lang) -> str:
+    t, found = _TEXT[lang], report.snapshot.get("return")
+    if not found:
+        return t["no_return"]
+    sources = "; ".join(s["title"] for s in found["sources"])
+    return t["rules"].format(rules=found["rules"], src=sources)
+
+
+def line_boxes(line: dict[str, Any]) -> str:
+    return "; ".join(f"{b}: {v}" for b, v in line.get("boxes", {}).items())
 
 
 def status_line(report: Any, lang: Lang) -> str:
@@ -170,6 +216,16 @@ def to_xlsx(report: Any, entity_name: str, lang: Lang = "en", *, generated: date
         summary.append([safe_text(line)])
     summary.append([f"{generated.isoformat(timespec='seconds')}"])
     summary.append([])
+    summary.append([t["return"]])
+    for row in return_rows(report, lang)[1:]:
+        box = next(b for b in snap["return"]["boxes"] if b["box"] == row[0])
+        summary.append([row[0], safe_text(row[1]), Decimal(box["amount"]),
+                        Decimal(box["rounding"])])  # fmt: skip
+        summary.cell(row=summary.max_row, column=3).number_format = (
+            "#,##0.00" if box["kind"] == "VAT" else "#,##0"
+        )
+    summary.append([safe_text(rules_note(report, lang))])
+    summary.append([])
     summary.append([t["totals"]])
     keys = ("sales_base", "sales_vat", "purchase_base", "purchase_vat", "net")
     for (label, _), key in zip(total_rows(report, lang), keys, strict=True):
@@ -177,9 +233,6 @@ def to_xlsx(report: Any, entity_name: str, lang: Lang = "en", *, generated: date
         summary.cell(row=summary.max_row, column=2).number_format = "#,##0.00"
     if snap["unverified_codes"]:
         summary.append([t["unverified"].format(codes=", ".join(snap["unverified_codes"]))])
-    summary.append([])
-    summary.append([t["law"]])
-    summary.append([t["law_pending"] if not snap["law"]["items"] else ""])
 
     codes = book.create_sheet("Codes")
     codes.append([t["code"], t["rate"], t["sales_base"], t["sales_vat"], t["expected"],
@@ -199,11 +252,14 @@ def to_xlsx(report: Any, entity_name: str, lang: Lang = "en", *, generated: date
         checks.append([e["kind"], safe_text(e["detail"])])
     lines = book.create_sheet("Lines")
     lines.append([t["date"], t["entry"], t["description"], t["account"], t["code"], t["kind"],
-                  t["amount"], t["counterparty"], t["reference"]])  # fmt: skip
+                  t["amount"], t["boxes"], t["rule"], t["counterparty"],
+                  t["reference"]])  # fmt: skip
     for ln in snap["lines"]:
         lines.append([ln["date"], ln["entry_ref"], safe_text(ln["description"]),
                       safe_text(ln["account"]), ln["code"], ln["kind"], Decimal(ln["amount"]),
+                      line_boxes(ln), safe_text(ln.get("rule", "")),
                       safe_text(ln["counterparty"]), safe_text(ln["reference"])])  # fmt: skip
+    lines.auto_filter.ref = lines.dimensions
     buffer = io.BytesIO()
     book.save(buffer)
     return buffer.getvalue()
@@ -267,6 +323,10 @@ def to_pdf(report: Any, entity_name: str, lang: Lang = "en", *, generated: datet
     head = head_lines(report, entity_name, lang)
     story: list[Any] = [Paragraph(escape(line), heading if i < 2 else body)
                         for i, line in enumerate(head)]  # fmt: skip
+    story += [Spacer(1, 4 * mm), Paragraph(escape(t["return"]), heading)]
+    if return_rows(report, lang):
+        story.append(table(return_rows(report, lang)))
+    story.append(Paragraph(escape(rules_note(report, lang)), body))
     story += [Spacer(1, 4 * mm), Paragraph(escape(t["totals"]), heading),
               table([["", ""], *[list(r) for r in total_rows(report, lang)]])]  # fmt: skip
     story += [
@@ -280,14 +340,9 @@ def to_pdf(report: Any, entity_name: str, lang: Lang = "en", *, generated: datet
     story += [Spacer(1, 4 * mm), Paragraph(escape(t["checks"]), heading)]
     story += [Paragraph(escape(e["detail"]), body) for e in snap["exceptions"]] or [
         Paragraph(escape(t["none"]), body)]  # fmt: skip
-    story += [
-        Spacer(1, 4 * mm),
-        Paragraph(escape(t["law"]), heading),
-        Paragraph(escape(t["law_pending"]) if not snap["law"]["items"] else "", body),
-    ]
-    rows = [[t["date"], t["entry"], t["account"], t["code"], t["kind"], t["amount"]]]
-    rows += [[ln["date"], ln["entry_ref"], ln["account"][:40], ln["code"], ln["kind"],
-              amount(ln["amount"], lang)] for ln in snap["lines"]]  # fmt: skip
+    rows = [[t["date"], t["entry"], t["account"], t["code"], t["kind"], t["amount"], t["boxes"]]]
+    rows += [[ln["date"], ln["entry_ref"], ln["account"][:36], ln["code"], ln["kind"],
+              amount(ln["amount"], lang), line_boxes(ln)] for ln in snap["lines"]]  # fmt: skip
     story += [Spacer(1, 4 * mm), Paragraph(escape(t["lines"]), heading), table(rows)]
     doc.build(story, onFirstPage=decorate, onLaterPages=decorate)
     return buffer.getvalue()

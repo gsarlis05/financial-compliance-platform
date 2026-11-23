@@ -244,9 +244,13 @@ class VatLine:
 
 def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> list[VatLine]:
     """Posted lines dated in the range that carry a VAT code or sit on a VAT account, closing
-    entries excluded (requires ``reports.read``)."""
+    entries excluded (requires ``reports.read``).
+
+    A line without its own customer or supplier takes its entry's (V1-2c): the party and the
+    invoice number sit on the receivable or payable line, which carries no VAT code.
+    """
     entity = get_entity(ctx, entity_id, "reports.read")
-    rows = (
+    rows = list(
         JournalLine.objects.filter(
             _operating("entry__"),
             Q(vat_code__isnull=False) | ~Q(account__vat_role=""),
@@ -256,8 +260,20 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
         .select_related("entry__journal", "account", "vat_code", "counterparty")
         .order_by("entry__accounting_date", "entry__posting_seq", "line_no")
     )  # fmt: skip
-    return [
-        VatLine(
+    parties: dict[UUID, JournalLine] = {}
+    for party_line in (
+        JournalLine.objects.filter(
+            entry_id__in={ln.entry_id for ln in rows}, counterparty__isnull=False
+        )
+        .select_related("counterparty")
+        .order_by("-line_no")
+    ):
+        parties[party_line.entry_id] = party_line  # the entry's first line with a party wins
+    found = []
+    for ln in rows:
+        own = ln if ln.counterparty_id else parties.get(ln.entry_id)
+        party = own.counterparty if own else None
+        found.append(VatLine(
             ln.id, ln.entry_id, f"{ln.entry.journal.code}-{ln.entry.entry_no}",
             ln.entry.posting_seq or 0, ln.entry.accounting_date, ln.entry.description,
             ln.account.code, ln.account.name, ln.account.type, ln.account.vat_role,
@@ -265,13 +281,11 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
             ln.vat_code.treatment if ln.vat_code else "",
             ln.vat_code.rate if ln.vat_code else None,
             bool(ln.vat_code and ln.vat_code.verified), ln.debit - ln.credit,
-            ln.counterparty.name if ln.counterparty else "", ln.reference,
+            party.name if party else "", ln.reference or (own.reference if own else ""),
             ln.vat_code.category if ln.vat_code else "", ln.tax_point, ln.vat_recovery_percent,
-            ln.vat_blocked, ln.counterparty.country if ln.counterparty else "",
-            ln.counterparty.vat_no if ln.counterparty else "",
-        )
-        for ln in rows
-    ]  # fmt: skip
+            ln.vat_blocked, party.country if party else "", party.vat_no if party else "",
+        ))  # fmt: skip
+    return found
 
 
 def posting_watermark(ctx: Any, entity_id: UUID) -> int:

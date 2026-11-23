@@ -14,10 +14,8 @@
 Every change is audited.
 """
 
-import json
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -47,7 +45,6 @@ from .report import Line, compute, digest, figures
 
 READ, PREPARE, SIGN_OFF = "tax.vat.read", "tax.vat.prepare", "tax.vat.sign_off"
 Status = VatReport.Status
-LAW = Path(__file__).parent / "data"
 
 
 class NotSignableError(ConflictError):
@@ -126,23 +123,27 @@ def period_list(ctx: WorkspaceContext, entity_id: UUID, today: date | None = Non
 # --- reports -------------------------------------------------------------------------------------
 
 
-def legal_items(jurisdiction: str) -> dict[str, Any]:
-    path = LAW / f"{jurisdiction.lower()}_vat_report.json"
-    if not path.exists():
-        return {"status": "NO_SOURCES", "items": [], "sources": [], "note": ""}
-    data: dict[str, Any] = json.loads(path.read_text())
-    return data
+# The return's box rules for each jurisdiction (versioned data, ``boxes``).
+BOX_RULES = {"CY": "CY-VAT-BOXES@1"}
 
 
-def _take(ctx: WorkspaceContext, entity_id: UUID, start: date, end: date) -> dict[str, Any]:
+def _take(
+    ctx: WorkspaceContext, entity_id: UUID, start: date, end: date, jurisdiction: str = "CY"
+) -> dict[str, Any]:
+    rules = BOX_RULES.get(jurisdiction)
+    if rules is None:
+        raise _invalid("period_start", "VAT returns can be prepared for Cyprus entities only.")
     lines = [
         Line(str(v.line_id), str(v.entry_id), v.entry_ref, v.accounting_date.isoformat(),
              v.description, v.account_code, v.account_name, v.account_type, v.vat_role,
              v.vat_code, v.treatment, v.rate, v.verified, v.net_debit, v.counterparty,
-             v.reference)
+             v.reference, category=v.category,
+             tax_point=v.tax_point.isoformat() if v.tax_point else None,
+             recovery_percent=v.vat_recovery_percent, blocked=v.vat_blocked,
+             country=v.counterparty_country, vat_no=v.counterparty_vat_no)
         for v in vat_lines(ctx, entity_id, date_from=start, date_to=end)
     ]  # fmt: skip
-    return compute(lines)
+    return compute(lines, start.isoformat(), end.isoformat(), rules)
 
 
 def _get(ctx: WorkspaceContext, entity_id: UUID, report_id: UUID, permission: str,
@@ -167,8 +168,8 @@ def _period(entity_id: UUID, start: date) -> P.Period:
 
 
 def _snapshot(ctx: WorkspaceContext, report: VatReport, jurisdiction: str) -> None:
-    taken = _take(ctx, report.legal_entity_id, report.period_start, report.period_end)
-    taken["law"] = legal_items(jurisdiction)
+    taken = _take(ctx, report.legal_entity_id, report.period_start, report.period_end,
+                  jurisdiction)  # fmt: skip
     report.snapshot = taken
     report.snapshot_hash = digest(figures(taken))
     report.watermark = posting_watermark(ctx, report.legal_entity_id)
@@ -227,7 +228,8 @@ def blockers(ctx: WorkspaceContext, report: VatReport, today: date | None = None
     if report.period_end >= today:
         found.append(f"The VAT period ends on {report.period_end.isoformat()}; sign the report "
                      "off after that.")  # fmt: skip
-    now = _take(ctx, report.legal_entity_id, report.period_start, report.period_end)
+    jurisdiction = get_entity(ctx, report.legal_entity_id).jurisdiction
+    now = _take(ctx, report.legal_entity_id, report.period_start, report.period_end, jurisdiction)
     if digest(figures(now)) != report.snapshot_hash:
         found.append("Entries in this period were posted, reversed or changed since the report "
                      "was generated. Regenerate it.")  # fmt: skip
