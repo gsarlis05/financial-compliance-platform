@@ -59,9 +59,37 @@ export interface VatLine {
   amount: string;
   counterparty: string;
   reference: string;
+  // V1-2c (absent on reports prepared before the return's boxes were added)
+  boxes?: Record<string, string>;
+  mapping?: "MAPPED" | "EXCLUDED" | "UNSUPPORTED";
+  rule?: string;
+  country?: string;
+  vat_no?: string;
+  tax_point?: string | null;
+  recovery_percent?: string | null;
+  blocked?: string | null;
+}
+
+export interface VatBox {
+  box: string;
+  label: string;
+  kind: "VAT" | "VALUE";
+  amount: string;
+  exact: string;
+  rounding: string;
+}
+
+export interface VatReturn {
+  rules: string;
+  status: string;
+  sources: { key: string; title: string; url?: string }[];
+  boxes: VatBox[];
+  checks: { check: string; ok: boolean; detail: string }[];
+  direction: "PAYABLE" | "REFUNDABLE" | "NIL";
 }
 
 export interface VatSnapshot {
+  return?: VatReturn;
   codes: VatCodeRow[];
   totals: {
     sales_base: string;
@@ -82,7 +110,6 @@ export interface VatSnapshot {
   unverified_codes: string[];
   exceptions: { kind: string; entry: string; detail: string }[];
   lines: VatLine[];
-  law: { status: string; note: string; items: unknown[] };
 }
 
 export interface VatReportDetail extends VatReport {

@@ -529,7 +529,10 @@ def _vat(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) ->
     owner.call("POST", f"{base}/vat-reports/{report['id']}/filed",
                {"filed_on": f"{year}-04-20", "reference": "DEMO-0001"})  # fmt: skip
     totals = signed["snapshot"]["totals"]
-    return {"sales_vat": totals["sales_vat"], "purchase_vat": totals["purchase_vat"],
+    boxes = {b["box"]: b["amount"] for b in signed["snapshot"]["return"]["boxes"]}
+    return {"boxes": f"Box 1 {boxes['1']}, Box 4 {boxes['4']}, Box 5 {boxes['5']}, "
+                     f"Box 6 {boxes['6']}, Box 7 {boxes['7']}",
+            "sales_vat": totals["sales_vat"], "purchase_vat": totals["purchase_vat"],
             "net": totals["net"], "direction": totals["direction"],
             "exceptions": len(signed["snapshot"]["exceptions"]),
             "reference": "DEMO-0001"}  # fmt: skip
@@ -944,7 +947,8 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     vat = _vat(owner, accountant, base, year)
     step(f"VAT: quarterly periods from {year}-01-01; the first quarter's report prepared by the "
          f"accountant from the posted books: output VAT {vat['sales_vat']}, input VAT "
-         f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}, "
+         f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}; return "
+         f"{vat['boxes']} (box rules unverified), "
          f"{vat['exceptions']} exception(s); signed off by the owner and recorded as filed "
          f"(reference {vat['reference']}); nothing was sent to the Tax Department")  # fmt: skip
     exported = _export_and_deletion(owner, slug)

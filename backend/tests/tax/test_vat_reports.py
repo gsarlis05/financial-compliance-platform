@@ -138,9 +138,23 @@ def test_the_golden_quarter(v: dict[str, Any]) -> None:
         ("1220", "INPUT", "76.00"),
         ("2120", "OUTPUT", "216.00"),
     ]
-    assert snap["exceptions"] == []
+    # The specification does not map exempt purchases: shown as an exception, never guessed.
+    assert [(e["kind"], e["entry"]) for e in snap["exceptions"]] == [("UNSUPPORTED", "GJ-6")]
     assert snap["unverified_codes"] == ["EX", "R9", "S19", "Z0"]  # verified by nobody yet (#93)
-    assert snap["law"]["status"] == "AWAITING_SOURCES"
+    # The return (V1-2c): each box from the lines' contributions, under unverified rules.
+    vat_return = snap["return"]
+    assert (vat_return["rules"], vat_return["status"]) == (
+        "CY-VAT-BOXES@1",
+        "PENDING_PROFESSIONAL_VERIFICATION",
+    )
+    boxes = {b["box"]: b["amount"] for b in vat_return["boxes"]}
+    assert boxes == {"1": "216.00", "2": "0.00", "3": "216.00", "4": "76.00", "5": "140.00",
+                     "6": "1700.00", "7": "400.00", "8A": "0.00", "8B": "0.00", "9": "300.00",
+                     "10": "0.00", "11A": "0.00", "11B": "0.00"}  # fmt: skip
+    assert vat_return["direction"] == "PAYABLE"
+    assert all(c["ok"] for c in vat_return["checks"])
+    exempt = next(ln for ln in snap["lines"] if ln["code"] == "EX")
+    assert (exempt["mapping"], exempt["boxes"]) == ("UNSUPPORTED", {})
     # Every figure can be traced to its lines, and they add up.
     sales = sum(Decimal(ln["amount"]) for ln in snap["lines"] if ln["kind"] == "SALE")
     assert (sales, len(snap["lines"])) == (Decimal("1700.00"), 10)
@@ -168,10 +182,10 @@ def test_sign_off_filing_versions_and_settlement(
     again = act(v, report["id"], "regenerate").json()
     assert again["snapshot"]["totals"]["sales_vat"] == "236.00"
     kinds = [e["kind"] for e in again["snapshot"]["exceptions"]]
-    assert kinds == ["RATE_MISMATCH"]  # 20 recorded on 100 at 19%: one euro too much
-    assert (
-        "S19 (sales): VAT recorded 191.00, 190.00" in again["snapshot"]["exceptions"][0]["detail"]
-    )
+    # 20 recorded on 100 at 19%: one euro too much; the exempt purchase is unsupported.
+    assert sorted(kinds) == ["RATE_MISMATCH", "UNSUPPORTED"]
+    details = " ".join(e["detail"] for e in again["snapshot"]["exceptions"])
+    assert "S19 (sales): VAT recorded 191.00, 190.00" in details
     # The owner corrects it by reversal, regenerates and the manager signs off.
     rev = v["client"].post_json(f"{v['base']}/journal-entries/{late}/reverse",
                                 {"reason": "Wrong VAT amount",

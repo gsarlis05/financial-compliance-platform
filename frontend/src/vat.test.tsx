@@ -1,6 +1,12 @@
 // VAT screen (V1-2): periods set by the company, a report per period, sign-off and filing.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import axe from "axe-core";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { I18nProvider } from "./i18n/I18n";
@@ -82,13 +88,84 @@ const report = {
         reference: "",
       },
     ],
-    law: { status: "AWAITING_SOURCES", note: "", items: [] },
+  },
+};
+
+const BOXES = [
+  ["1", "VAT", "171.00"],
+  ["2", "VAT", "0.00"],
+  ["3", "VAT", "171.00"],
+  ["4", "VAT", "76.00"],
+  ["5", "VAT", "95.00"],
+  ["6", "VALUE", "900.00"],
+  ["7", "VALUE", "1400.00"],
+  ["8A", "VALUE", "0.00"],
+  ["8B", "VALUE", "0.00"],
+  ["9", "VALUE", "0.00"],
+  ["10", "VALUE", "0.00"],
+  ["11A", "VALUE", "1000.00"],
+  ["11B", "VALUE", "0.00"],
+] as const;
+const withReturn = {
+  ...report,
+  snapshot: {
+    ...report.snapshot,
+    return: {
+      rules: "CY-VAT-BOXES@1",
+      status: "PENDING_PROFESSIONAL_VERIFICATION",
+      sources: [{ key: "spec", title: "Owner's specification" }],
+      boxes: BOXES.map(([box, kind, amount]) => ({
+        box,
+        label: `Item ${box}`,
+        kind,
+        amount,
+        exact: box === "7" ? "1399.60" : amount,
+        rounding: box === "7" ? "0.40" : "0.00",
+      })),
+      checks: [],
+      direction: "PAYABLE",
+    },
+    lines: [
+      {
+        ...report.snapshot.lines[0],
+        boxes: { "6": "900.00" },
+        mapping: "MAPPED",
+        rule: "spec §2: domestic taxable sale",
+        country: "",
+      },
+      {
+        ...report.snapshot.lines[0],
+        line_id: "l2",
+        entry_ref: "GJ-2",
+        account: "5000 Purchases",
+        code: "EUGA19",
+        kind: "PURCHASE",
+        amount: "1000.00",
+        boxes: { "7": "1000.00", "11A": "1000.00" },
+        mapping: "MAPPED",
+        rule: "spec §2: EU goods acquisition",
+        country: "DE",
+      },
+      {
+        ...report.snapshot.lines[0],
+        line_id: "l3",
+        entry_ref: "GJ-3",
+        account: "6100 Insurance",
+        code: "EX",
+        kind: "PURCHASE",
+        amount: "400.00",
+        boxes: {},
+        mapping: "UNSUPPORTED",
+        rule: "Exempt supplies and purchases are not mapped.",
+        country: "",
+      },
+    ],
   },
 };
 
 type Sent = { url: string; method: string; body?: unknown };
 
-function stub() {
+function stub(shown: unknown = report) {
   const sent: Sent[] = [];
   document.cookie = "__Host-fcp_csrftoken=test";
   vi.stubGlobal(
@@ -134,7 +211,7 @@ function stub() {
             },
           ]),
         );
-      return Promise.resolve(respond(report));
+      return Promise.resolve(respond(shown));
     }),
   );
   return sent;
@@ -170,6 +247,10 @@ describe("VAT (V1-2)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
     expect(await screen.findByText("Net VAT (payable)")).toBeInTheDocument();
     expect(screen.getByText("95.00")).toBeInTheDocument();
+    // A report prepared before the boxes were added says so.
+    expect(
+      screen.getByText(/prepared before the return's boxes were added/),
+    ).toBeInTheDocument();
     expect(screen.getByText("19.00%")).toBeInTheDocument();
     expect(
       screen.getByText(/VAT codes not yet verified by a tax professional/),
@@ -210,5 +291,39 @@ describe("VAT (V1-2)", () => {
         note: "",
       }),
     );
+  });
+
+  it("shows the return's boxes and the lines behind each box (V1-2c)", async () => {
+    stub(withReturn);
+    const { container } = mount();
+    await screen.findByText(/every 3/);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const table = await screen.findByRole("region", { name: "VAT return" });
+    const row = (box: string) =>
+      within(table).getByRole("row", {
+        name: new RegExp(`^${box} Item ${box}`),
+      });
+    expect(row("5")).toHaveTextContent("Item 5 (payable)95.00");
+    // Boxes 6-11B in whole euros, with the rounding shown.
+    expect(row("7")).toHaveTextContent("1,400");
+    expect(row("7")).toHaveTextContent("0.40");
+    expect(row("11A")).toHaveTextContent("1,000");
+    expect(
+      within(table).getByText(
+        /CY-VAT-BOXES@1 are taken from your specification/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lines Box 11A" }));
+    expect(
+      await screen.findByText(/Lines feeding box 11A: 1 · 1,000.00/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("GJ-2")).toBeInTheDocument();
+    expect(screen.queryByText("GJ-1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show all lines" }));
+    expect(await screen.findByText("not in any box")).toBeInTheDocument();
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations).toEqual([]);
   });
 });

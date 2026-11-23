@@ -7,6 +7,7 @@ import Decimal from "decimal.js";
 import { type SyntheticEvent, useState } from "react";
 import { useScope } from "../api/hooks";
 import {
+  type VatBox,
   type VatReportDetail,
   type VatStatus,
   useVatMutations,
@@ -208,6 +209,7 @@ function ReportView({
 }) {
   const { t, locale } = useI18n();
   const report = useVatReport(id);
+  const [shownBox, setShownBox] = useState("");
   if (report.isPending) {
     return <Loading />;
   }
@@ -217,6 +219,7 @@ function ReportView({
   const r = report.data;
   const s = r.snapshot;
   const money = (v: string) => formatAmount(v, locale);
+  const setBox = setShownBox;
   return (
     <section className="card" aria-labelledby="vat-report">
       <h2 id="vat-report">
@@ -236,6 +239,8 @@ function ReportView({
           {t("vat.unverifiedCodes")} {s.unverified_codes.join(", ")}
         </p>
       ) : null}
+
+      <ReturnView report={r} onBox={setBox} />
 
       <h3>{t("vat.totals")}</h3>
       <table>
@@ -319,24 +324,140 @@ function ReportView({
         <p>{t("vat.noExceptions")}</p>
       )}
 
-      <h3>{t("vat.law")}</h3>
-      <p className="muted">{s.law.items.length ? "" : t("vat.lawPending")}</p>
-
-      <Lines report={r} />
+      <Lines report={r} box={shownBox} onBox={setShownBox} />
       <Actions report={r} onOpen={onOpen} />
     </section>
   );
 }
 
-function Lines({ report }: { report: VatReportDetail }) {
+/** Boxes 1-5 to the cent; Boxes 6-11B to the nearest euro (the server rounds them). */
+export function boxAmount(b: VatBox, locale: string): string {
+  const shown = formatAmount(b.amount, locale);
+  return b.kind === "VAT" ? shown : shown.slice(0, -3);
+}
+
+function ReturnView({
+  report,
+  onBox,
+}: {
+  report: VatReportDetail;
+  onBox: (box: string) => void;
+}) {
+  const { t, locale } = useI18n();
+  const found = report.snapshot.return;
+  if (!found) {
+    return (
+      <>
+        <h3>{t("vat.return")}</h3>
+        <p role="note">{t("vat.noReturn")}</p>
+      </>
+    );
+  }
+  return (
+    <section aria-labelledby="vat-return">
+      <h3 id="vat-return">{t("vat.return")}</h3>
+      <p role="note">{t("vat.rules").replace("{rules}", found.rules)}</p>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t("vat.box")}</th>
+              <th scope="col">{t("vat.item")}</th>
+              <th scope="col" className="amount">
+                {t("vat.amount")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.rounding")}
+              </th>
+              <th scope="col">
+                <span className="visually-hidden">{t("vat.showLines")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {found.boxes.map((b) => (
+              <tr key={b.box} className={b.box === "5" ? "total" : undefined}>
+                <th scope="row">{b.box}</th>
+                <td>
+                  {b.label}
+                  {b.box === "5"
+                    ? ` (${t(`vat.${found.direction}` as MessageKey)})`
+                    : ""}
+                </td>
+                <td className="amount">
+                  {b.box === "5" ? (
+                    <strong>{boxAmount(b, locale)}</strong>
+                  ) : (
+                    boxAmount(b, locale)
+                  )}
+                </td>
+                <td className="amount">
+                  {new Decimal(b.rounding).isZero()
+                    ? ""
+                    : formatAmount(b.rounding, locale)}
+                </td>
+                <td>
+                  {b.box === "3" || b.box === "5" ? null : (
+                    <button
+                      type="button"
+                      className="link-button"
+                      aria-label={`${t("vat.showLines")} ${t("vat.box")} ${b.box}`}
+                      onClick={() => onBox(b.box)}
+                    >
+                      {t("vat.showLines")}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted">{t("vat.wholeEuros")}</p>
+    </section>
+  );
+}
+
+function Lines({
+  report,
+  box,
+  onBox,
+}: {
+  report: VatReportDetail;
+  box: string;
+  onBox: (box: string) => void;
+}) {
   const { t, locale } = useI18n();
   const [code, setCode] = useState("");
-  const lines = report.snapshot.lines.filter((l) => !code || l.code === code);
+  const lines = report.snapshot.lines.filter(
+    (l) =>
+      (!code || l.code === code) &&
+      (!box || (l.boxes ?? {})[box] !== undefined),
+  );
+  const boxTotal = box
+    ? lines.reduce(
+        (acc, l) => acc.plus(new Decimal((l.boxes ?? {})[box] ?? "0")),
+        new Decimal(0),
+      )
+    : null;
   return (
-    <details>
+    <details id="vat-lines" open={box ? true : undefined}>
       <summary>
         {t("vat.lines")} ({report.snapshot.lines.length})
       </summary>
+      {box && boxTotal ? (
+        <p role="status">
+          {t("vat.boxLines")} {box}: {lines.length} ·{" "}
+          {formatAmount(boxTotal, locale)}{" "}
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => onBox("")}
+          >
+            {t("vat.allLines")}
+          </button>
+        </p>
+      ) : null}
       <label>
         {t("vat.code")}
         <select value={code} onChange={(e) => setCode(e.target.value)}>
@@ -357,6 +478,7 @@ function Lines({ report }: { report: VatReportDetail }) {
               <th scope="col">{t("vat.account")}</th>
               <th scope="col">{t("vat.kind")}</th>
               <th scope="col">{t("vat.amount")}</th>
+              <th scope="col">{t("vat.boxes")}</th>
             </tr>
           </thead>
           <tbody>
@@ -370,6 +492,14 @@ function Lines({ report }: { report: VatReportDetail }) {
                 <td>{l.account}</td>
                 <td>{t(`vat.kind.${l.kind}` as MessageKey)}</td>
                 <td className="amount">{formatAmount(l.amount, locale)}</td>
+                <td title={l.rule}>
+                  {l.mapping && l.mapping !== "MAPPED"
+                    ? t(`vat.mapping.${l.mapping}` as MessageKey)
+                    : Object.keys(l.boxes ?? {}).join(", ")}
+                  {l.country ? (
+                    <span className="muted"> {l.country}</span>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
