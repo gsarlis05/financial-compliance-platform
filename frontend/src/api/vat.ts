@@ -150,7 +150,69 @@ export interface VatDifferences {
   boxes: Record<string, string>;
 }
 
+export interface VatScheduleRow {
+  entry_id: string;
+  entry_ref: string;
+  date: string;
+  description: string;
+  code: string;
+  category: string;
+  counterparty: string;
+  country: string;
+  vat_no: string;
+  reference: string;
+  type?: string;
+  net?: string;
+  net_sale?: string;
+  output_vat?: string;
+  net_purchase?: string;
+  input_vat?: string;
+  blocked?: string;
+  boxes: Record<string, string>;
+  lines: string[];
+}
+
+export interface VatSchedule {
+  rows: VatScheduleRow[];
+  totals: Record<string, string>;
+}
+
+export type VatScheduleName =
+  | "sales"
+  | "purchases"
+  | "eu_trade"
+  | "reverse_charge"
+  | "imports";
+
+export interface VatReconciliation {
+  accounts: {
+    code: string;
+    name: string;
+    role: string;
+    opening: string;
+    vat: string;
+    settled: string;
+    closing: string;
+    unexplained: string;
+  }[];
+  bridges: {
+    side: "OUTPUT" | "INPUT";
+    boxes: string;
+    ledger: string;
+    items: { item: "NOT_IN_A_BOX" | "ADJUSTMENTS"; amount: string }[];
+    return: string;
+    unexplained: string;
+  }[];
+  settlements: string;
+  box_5: string;
+  balanced: boolean;
+}
+
 export interface VatReportDetail extends VatReport {
+  schedules: Record<VatScheduleName, VatSchedule> & {
+    exceptions: { kind: string; entry: string; detail: string }[];
+  };
+  reconciliation: VatReconciliation | null;
   snapshot: VatSnapshot;
   final_return:
     | (Omit<VatReturn, "boxes"> & { boxes: VatFinalBox[]; adjusted: boolean })
@@ -204,7 +266,7 @@ export function useVatReport(id: string | null) {
 export function vatExportUrl(
   base: string,
   id: string,
-  format: "xlsx" | "pdf",
+  format: "xlsx" | "pdf" | "csv",
   lang: string,
 ): string {
   return apiUrl(`${base}/vat-reports/${id}/export`, { format, lang });

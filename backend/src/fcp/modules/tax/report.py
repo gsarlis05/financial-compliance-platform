@@ -74,7 +74,7 @@ class Line:
 
 
 def money(value: Decimal) -> str:
-    return str(value.quantize(CENT, rounding=ROUND_HALF_UP))
+    return str((value + 0).quantize(CENT, rounding=ROUND_HALF_UP))  # + 0: never "-0.00"
 
 
 def _kind(line: Line, roles: set[str]) -> str:
@@ -365,3 +365,130 @@ def _party_problem(ln: Line) -> str:
     if ln.category == "RC_DOMESTIC" and ln.country not in ("", "CY"):
         return f"a domestic reverse charge with a party in {ln.country}."
     return ""
+
+
+# --- schedules and reconciliation (V1-2e, #216) -------------------------------------------------
+
+REVERSE_CHARGE = frozenset(("EU_GOODS_ACQUISITION", "RC_EU_SERVICES", "RC_NON_EU_SERVICES",
+                            "RC_DOMESTIC", "LEGACY_REVERSE_CHARGE"))  # fmt: skip
+EU_KIND = {
+    "EU_GOODS_SUPPLY": "GOODS_SUPPLIED", "EU_SERVICES_SUPPLY": "SERVICES_SUPPLIED",
+    "EU_GOODS_ACQUISITION": "GOODS_ACQUIRED", "RC_EU_SERVICES": "SERVICES_RECEIVED",
+}  # fmt: skip
+SHOWN = ("entry_id", "entry_ref", "date", "description", "code", "category", "counterparty",
+         "country", "vat_no", "reference")  # fmt: skip
+SCHEDULES = ("sales", "purchases", "eu_trade", "reverse_charge", "imports")
+
+
+def _groups(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The report's lines (settlements left out) as one row per entry and VAT code."""
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    zero = Decimal(0)
+    for ln in lines:
+        if ln["kind"] == "SETTLEMENT":
+            continue
+        row = rows.setdefault((ln["entry_id"], ln["code"]), {
+            "entry_id": ln["entry_id"], "entry_ref": ln["entry_ref"], "date": ln["date"],
+            "description": ln["description"], "code": ln["code"],
+            "category": ln.get("category", ""), "counterparty": "", "country": "", "vat_no": "",
+            "reference": "", "net_sale": zero, "output_vat": zero, "net_purchase": zero,
+            "input_vat": zero, "blocked": zero, "boxes": {}, "lines": [],
+        })  # fmt: skip
+        for key in ("counterparty", "country", "vat_no", "reference"):
+            row[key] = row[key] or ln.get(key) or ""
+        amount = Decimal(ln["amount"])
+        field = {"SALE": "net_sale", "SALE_VAT": "output_vat", "PURCHASE": "net_purchase",
+                 "PURCHASE_VAT": "input_vat"}[ln["kind"]]  # fmt: skip
+        row[field] += amount
+        if ln["kind"] == "PURCHASE_VAT" and ln.get("blocked"):
+            row["blocked"] += Decimal(ln["blocked"]) if amount >= 0 else -Decimal(ln["blocked"])
+        for box, value in ln.get("boxes", {}).items():
+            row["boxes"][box] = row["boxes"].get(box, zero) + Decimal(value)
+        row["lines"].append(ln["line_id"])
+    return list(rows.values())
+
+
+def _out(row: dict[str, Any], *keys: str) -> dict[str, Any]:
+    shown = {k: row[k] for k in SHOWN}
+    shown.update({k: money(row[k]) for k in keys})
+    shown["boxes"] = {b: money(v) for b, v in row["boxes"].items()}
+    shown["lines"] = row["lines"]
+    return shown
+
+
+def schedules(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Sales, purchases, EU trade, reverse charge and imports, each with its rows (one per entry
+    and VAT code) and totals, from the report's frozen lines."""
+    found: dict[str, list[dict[str, Any]]] = {k: [] for k in SCHEDULES}
+    for row in _groups(snapshot["lines"]):
+        category = row["category"]
+        if category == "IMPORT":
+            found["imports"].append(_out(row, "net_purchase", "input_vat", "blocked"))
+        elif category in REVERSE_CHARGE:
+            found["reverse_charge"].append({**_out(row, "net_purchase", "output_vat", "input_vat",
+                                                   "blocked"), "type": category})  # fmt: skip
+        else:
+            if row["net_sale"] or row["output_vat"]:
+                found["sales"].append(_out(row, "net_sale", "output_vat"))
+            if row["net_purchase"] or row["input_vat"]:
+                found["purchases"].append(_out(row, "net_purchase", "input_vat", "blocked"))
+        if category in EU_KIND:
+            net = row["net_sale"] if category.endswith("SUPPLY") else row["net_purchase"]
+            found["eu_trade"].append({**_out(row), "type": EU_KIND[category], "net": money(net)})
+    result: dict[str, Any] = {}
+    for name, rows in found.items():
+        keys = [k for k in ("net_sale", "output_vat", "net_purchase", "input_vat", "blocked", "net")
+                if rows and k in rows[0]]  # fmt: skip
+        totals = {k: money(sum((Decimal(r[k]) for r in rows), Decimal(0))) for k in keys}
+        result[name] = {"rows": rows, "totals": totals}
+    return result
+
+
+def reconcile(snapshot: dict[str, Any], final: dict[str, Any] | None,
+              adjustments: list[tuple[str, Decimal]]) -> dict[str, Any] | None:  # fmt: skip
+    """The VAT control accounts from their opening to their closing balance, and the return
+    bridged to the ledger with every reconciling item. Balances are shown as the role reads
+    them: output VAT credit positive, input VAT debit positive. Payments, refunds and the
+    settlement entry stay apart from Box 5."""
+    balances = snapshot.get("balances")
+    if balances is None or final is None:
+        return None
+    period = {a["code"]: a for a in snapshot["accounts"]}
+    rows, ledger = [], {"OUTPUT": Decimal(0), "INPUT": Decimal(0)}
+    for code in sorted(balances):
+        b = balances[code]
+        sign = Decimal(-1) if b["role"] == "OUTPUT" else Decimal(1)
+        opening, closing = sign * Decimal(b["opening"]), sign * Decimal(b["closing"])
+        vat = Decimal(period.get(code, {}).get("vat", "0"))
+        settled = sign * Decimal(period.get(code, {}).get("settled", "0"))
+        ledger[b["role"]] += vat
+        rows.append({"code": code, "name": b["name"], "role": b["role"],
+                     "opening": money(opening), "vat": money(vat), "settled": money(settled),
+                     "closing": money(closing),
+                     "unexplained": money(closing - opening - vat - settled)})  # fmt: skip
+    exact = {x["box"]: Decimal(x["exact"]) for x in final["boxes"]}
+    adjusted: dict[str, Decimal] = {}
+    for box, amount in adjustments:
+        adjusted[box] = adjusted.get(box, Decimal(0)) + amount
+    unmapped = {"SALE_VAT": Decimal(0), "PURCHASE_VAT": Decimal(0)}
+    for ln in snapshot["lines"]:
+        if ln["kind"] in unmapped and not ln.get("boxes"):
+            unmapped[ln["kind"]] += Decimal(ln["amount"])
+
+    def bridge(side: str, role: str, boxes: tuple[str, ...], kind: str) -> dict[str, Any]:
+        returned = sum((exact[b] for b in boxes), Decimal(0))
+        adjust = sum((adjusted.get(b, Decimal(0)) for b in boxes), Decimal(0))
+        items = [
+            {"item": "NOT_IN_A_BOX", "amount": money(-unmapped[kind])},
+            {"item": "ADJUSTMENTS", "amount": money(adjust)},
+        ]
+        explained = ledger[role] - unmapped[kind] + adjust
+        return {"side": side, "boxes": "+".join(boxes), "ledger": money(ledger[role]),
+                "items": [i for i in items if Decimal(i["amount"])],
+                "return": money(returned), "unexplained": money(returned - explained)}  # fmt: skip
+
+    bridges = [bridge("OUTPUT", "OUTPUT", ("1", "2"), "SALE_VAT"),
+               bridge("INPUT", "INPUT", ("4",), "PURCHASE_VAT")]  # fmt: skip
+    return {"accounts": rows, "bridges": bridges, "settlements": snapshot["settlements"],
+            "box_5": money(exact["5"]),
+            "balanced": all(Decimal(r["unexplained"]) == 0 for r in rows + bridges)}  # fmt: skip

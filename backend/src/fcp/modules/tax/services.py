@@ -23,7 +23,7 @@ Every change is audited.
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -41,6 +41,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.ledger.api import (
     EntryInput,
     LineInput,
+    account_balance,
     account_list,
     create_system_draft,
     posting_watermark,
@@ -50,7 +51,7 @@ from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_
 
 from . import periods as P
 from .models import BOXES, VatAdjustment, VatInclusion, VatPeriodScheme, VatReport
-from .report import Line, adjusted, compute, digest, figures
+from .report import Line, adjusted, compute, digest, figures, reconcile, schedules
 
 READ, PREPARE, SIGN_OFF = "tax.vat.read", "tax.vat.prepare", "tax.vat.sign_off"
 Status = VatReport.Status
@@ -172,6 +173,39 @@ def get(ctx: WorkspaceContext, entity_id: UUID, report_id: UUID) -> VatReport:
     return _get(ctx, entity_id, report_id, READ)
 
 
+def _balances(ctx: WorkspaceContext, entity_id: UUID, start: date,
+              end: date) -> dict[str, dict[str, str]]:  # fmt: skip
+    """The VAT control accounts' balances (net debit) before and at the end of the period, for
+    the reconciliation (V1-2e). Not part of the figures' fingerprint: a posting in an earlier
+    period changes them without changing this period's return."""
+    found = {}
+    for account in account_list(ctx, entity_id):
+        if account.vat_role and account.is_postable:
+            found[account.code] = {
+                "name": account.name, "role": account.vat_role,
+                "opening": f"{account_balance(ctx, entity_id, account.id,
+                                              as_of=start - timedelta(days=1)):.2f}",
+                "closing": f"{account_balance(ctx, entity_id, account.id, as_of=end):.2f}",
+            }  # fmt: skip
+    return found
+
+
+def report_schedules(report: VatReport) -> dict[str, Any]:
+    found = schedules(report.snapshot)
+    found["adjustments"] = [
+        {"id": str(a.id), "box": a.box, "amount": f"{a.amount:.2f}", "reason": a.reason,
+         "evidence": a.evidence, "status": a.status, "self_approved": a.self_approved}
+        for a in report.adjustments.order_by("created_at")
+    ]  # fmt: skip
+    found["exceptions"] = report.snapshot["exceptions"]
+    return found
+
+
+def report_reconciliation(report: VatReport) -> dict[str, Any] | None:
+    approved = report.adjustments.filter(status=VatAdjustment.Status.APPROVED)
+    return reconcile(report.snapshot, final_return(report), [(a.box, a.amount) for a in approved])
+
+
 def _period(entity_id: UUID, start: date) -> P.Period:
     found = P.period_of(_schemes(entity_id), start)
     if found is None or found.start != start:
@@ -182,6 +216,8 @@ def _period(entity_id: UUID, start: date) -> P.Period:
 def _snapshot(ctx: WorkspaceContext, report: VatReport, jurisdiction: str) -> None:
     taken = _take(ctx, report.legal_entity_id, report.period_start, report.period_end,
                   jurisdiction)  # fmt: skip
+    taken["balances"] = _balances(ctx, report.legal_entity_id, report.period_start,
+                                  report.period_end)  # fmt: skip
     report.snapshot = taken
     report.snapshot_hash = digest(figures(taken))
     report.watermark = posting_watermark(ctx, report.legal_entity_id)

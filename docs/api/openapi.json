@@ -13239,6 +13239,19 @@
             "description": "A new version: the version it corrects and the change to each box",
             "title": "Previous"
           },
+          "reconciliation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The VAT accounts from opening to closing, and the return bridged to the ledger",
+            "title": "Reconciliation"
+          },
           "review_note": {
             "description": "Why it was last sent back to draft",
             "title": "Review Note",
@@ -13267,6 +13280,12 @@
               }
             ],
             "title": "Reviewed By Id"
+          },
+          "schedules": {
+            "additionalProperties": true,
+            "description": "Sales, purchases, EU trade, reverse charge, imports, adjustments, exceptions",
+            "title": "Schedules",
+            "type": "object"
           },
           "self_approved": {
             "description": "Reviewed or finalised by its preparer (one-person workspace)",
@@ -13348,7 +13367,9 @@
           "adjustments",
           "blockers",
           "differences",
-          "previous"
+          "previous",
+          "schedules",
+          "reconciliation"
         ],
         "title": "ReportDetailOut",
         "type": "object"
@@ -17228,7 +17249,8 @@
           "format": {
             "enum": [
               "xlsx",
-              "pdf"
+              "pdf",
+              "csv"
             ],
             "title": "Format",
             "type": "string"
@@ -36863,7 +36885,7 @@
     },
     "/api/w/{slug}/entities/{entity_id}/vat-reports/{report_id}/export": {
       "get": {
-        "description": "The report as Excel or PDF, from its frozen snapshot; DRAFT until finalised. Audited.",
+        "description": "The report as Excel, PDF or CSV (every line with its box contributions), from its frozen\nsnapshot; DRAFT until finalised. Audited.",
         "operationId": "fcp_modules_tax_api_export_report",
         "parameters": [
           {
@@ -36902,7 +36924,8 @@
             "schema": {
               "enum": [
                 "xlsx",
-                "pdf"
+                "pdf",
+                "csv"
               ],
               "title": "Format",
               "type": "string"
