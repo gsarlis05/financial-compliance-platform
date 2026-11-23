@@ -1,4 +1,7 @@
 import Decimal from "decimal.js";
+import type { EntryHelpers } from "../api/entryHelpers";
+import { SuggestInput } from "../components/SuggestInput";
+import { VatCodePicker } from "../components/VatCodePicker";
 import { type SyntheticEvent, useState } from "react";
 import type {
   Account,
@@ -13,7 +16,6 @@ import type {
 import { CURRENCIES, type SuggestedRate } from "../api/currency";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
-import type { MessageKey } from "../i18n/messages";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
 
 interface LineState {
@@ -121,6 +123,8 @@ interface Props {
   saving: boolean;
   error: unknown;
   onSave: (body: EntryInput, submit: boolean) => void;
+  /** Favourite VAT codes, usage and typing suggestions (V1-2i); optional. */
+  helpers?: EntryHelpers | undefined;
   /** Set when the entity has foreign currency switched on (V1-2h). */
   foreign?:
     | {
@@ -144,6 +148,7 @@ export function EntryForm({
   error,
   onSave,
   foreign,
+  helpers,
 }: Props) {
   const { t, locale } = useI18n();
   const [date, setDate] = useState(
@@ -191,15 +196,6 @@ export function EntryForm({
   const hasControl = accounts.some((a) => a.control_type !== "");
   const vatRoleOf = new Map(accounts.map((a) => [a.id, a.vat_role]));
   const showVat = vatCodes.length > 0;
-  // Codes grouped by category, in the order the catalogue lists them.
-  const vatGroups = [...new Set(vatCodes.map((v) => v.category))].map(
-    (category) => ({
-      category,
-      codes: vatCodes.filter((v) => v.category === category),
-    }),
-  );
-  const vatLabel = (v: VatCode) =>
-    `${v.code} · ${locale === "el" && v.name_el ? v.name_el : v.name}${v.verified ? "" : ` (${t("vat.unverified")})`}`;
   const partiesFor = (control: string, current: string) =>
     counterparties.filter(
       (c) =>
@@ -307,9 +303,12 @@ export function EntryForm({
         </label>
         <label className="grow">
           {t("je.description")}
-          <input
+          <SuggestInput
+            label={t("je.description")}
+            field="description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            suggest={helpers?.suggest}
             required
             maxLength={500}
           />
@@ -505,11 +504,13 @@ export function EntryForm({
                   <FieldError error={error} field={`lines.${index}`} />
                 </td>
                 <td>
-                  <input
-                    aria-label={`${t("je.memo")} ${index + 1}`}
+                  <SuggestInput
+                    label={`${t("je.memo")} ${index + 1}`}
+                    field="memo"
                     value={line.memo}
                     maxLength={300}
-                    onChange={(e) => update(line.key, { memo: e.target.value })}
+                    suggest={helpers?.suggest}
+                    onChange={(memo) => update(line.key, { memo })}
                   />
                   <FieldError
                     error={error}
@@ -518,39 +519,19 @@ export function EntryForm({
                 </td>
                 {showVat ? (
                   <td>
-                    <select
-                      className="dimension-picker"
-                      aria-label={`${t("je.vat")} ${index + 1}`}
+                    <VatCodePicker
+                      index={index}
+                      codes={vatCodes}
                       value={line.vat_code_id}
                       required={!!vatRoleOf.get(line.account_id)}
-                      onChange={(e) =>
-                        update(line.key, { vat_code_id: e.target.value })
+                      onChange={(vat_code_id) =>
+                        update(line.key, { vat_code_id })
                       }
-                    >
-                      <option value="">—</option>
-                      {vatGroups.map((g) =>
-                        g.category ? (
-                          <optgroup
-                            key={g.category}
-                            label={t(
-                              `vat.category.${g.category}` as MessageKey,
-                            )}
-                          >
-                            {g.codes.map((v) => (
-                              <option key={v.id} value={v.id}>
-                                {vatLabel(v)}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ) : (
-                          g.codes.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {vatLabel(v)}
-                            </option>
-                          ))
-                        ),
-                      )}
-                    </select>
+                      favourites={helpers?.favourites ?? []}
+                      onFavourite={helpers?.toggleFavourite}
+                      uses={helpers?.uses ?? {}}
+                      usual={helpers?.usual[line.account_id]}
+                    />
                     <FieldError
                       error={error}
                       field={`lines.${index}.vat_code_id`}
@@ -652,14 +633,16 @@ export function EntryForm({
                             </option>
                           ))}
                         </select>
-                        <input
+                        <SuggestInput
                           className="dimension-picker"
-                          aria-label={`${t("je.reference")} ${index + 1}`}
+                          label={`${t("je.reference")} ${index + 1}`}
+                          field="reference"
                           placeholder={t("je.reference")}
                           value={line.reference}
                           maxLength={50}
-                          onChange={(e) =>
-                            update(line.key, { reference: e.target.value })
+                          suggest={helpers?.suggest}
+                          onChange={(reference) =>
+                            update(line.key, { reference })
                           }
                         />
                         <FieldError

@@ -491,14 +491,20 @@ describe("EntryForm VAT codes (M2-3)", () => {
     fill("Debit 1", "19.00");
     fill("Account 2", "vat");
     fill("Credit 2", "19.00");
-    const picker = screen.getByLabelText<HTMLSelectElement>("VAT 2");
+    const picker = screen.getByRole<HTMLInputElement>("combobox", {
+      name: "VAT 2",
+    });
     expect(picker.required).toBe(true);
-    expect(screen.getByLabelText<HTMLSelectElement>("VAT 1").required).toBe(
-      false,
-    );
-    expect(Array.from(picker.options).map((o) => o.text)).toContain(
-      "S19 · Standard rate 19% (unverified)",
-    );
+    expect(
+      screen.getByRole<HTMLInputElement>("combobox", { name: "VAT 1" })
+        .required,
+    ).toBe(false);
+    fireEvent.focus(picker);
+    expect(
+      screen.getByRole("option", {
+        name: "S19 · Standard rate 19% (unverified)",
+      }),
+    ).toBeInTheDocument();
     fill("VAT 2", "CY:S19:open");
     expect(
       screen.getByText(/not yet verified by a Cyprus tax professional/),
@@ -532,7 +538,10 @@ describe("EntryForm VAT codes (M2-3)", () => {
     fill("Credit 2", "9.50");
     expect(screen.queryByLabelText("Tax point 1")).not.toBeInTheDocument();
     fill("VAT 1", "CY:S19:open");
-    expect(screen.getAllByRole("group", { name: "Domestic" })).toHaveLength(2);
+    fireEvent.blur(screen.getByRole("combobox", { name: "VAT 1" }));
+    fireEvent.focus(screen.getByRole("combobox", { name: "VAT 2" }));
+    expect(screen.getByRole("group", { name: "Domestic" })).toBeInTheDocument();
+    fireEvent.blur(screen.getByRole("combobox", { name: "VAT 2" }));
     fill("Tax point 1", "2026-03-31");
     fill("Recoverable % 1", "50");
     fill("Non-recoverable VAT 1", "9,50");

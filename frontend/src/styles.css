@@ -919,3 +919,79 @@ ul.checklist li {
   list-style: none;
   padding: 0;
 }
+
+/* Combobox: VAT code picker and typing suggestions (V1-2i) */
+.combobox {
+  position: relative;
+}
+.combobox input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.combobox-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: 100%;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(28rem, 90vw);
+  max-height: 18rem;
+  overflow-y: auto;
+  margin: 2px 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.15);
+}
+.combobox-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.combobox-group {
+  display: block;
+  padding: 0.35rem 0.6rem 0.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.combobox-options li,
+.combobox-empty {
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combobox-options li.active {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.combobox-options li.active .combobox-hint {
+  color: inherit;
+}
+.vat-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.vat-pick .combobox {
+  flex: 1;
+  min-width: 9rem;
+  max-width: 14rem;
+}
+.star {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--warn);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.3rem;
+}
+.star:disabled {
+  color: var(--muted);
+}

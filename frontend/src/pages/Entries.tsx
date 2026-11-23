@@ -26,6 +26,7 @@ import { DocumentsPanel } from "../components/Documents";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount } from "../money";
 import { EntryForm } from "./EntryForm";
+import { useEntryHelpers } from "../api/entryHelpers";
 
 function EntryTable({ entries }: { entries: JournalEntry[] }) {
   const { t, locale } = useI18n();
@@ -123,6 +124,7 @@ export function NewEntryPage() {
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
   const foreign = useForeign();
+  const helpers = useEntryHelpers();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -155,6 +157,7 @@ export function NewEntryPage() {
         vatCodes={vatCodes.data ?? []}
         fiscalYears={years.data ?? []}
         foreign={foreign}
+        helpers={helpers}
         saving={save.isPending || act.isPending}
         error={save.error}
         onSave={onSave}
@@ -272,6 +275,7 @@ export function EntryDetailPage() {
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
   const foreign = useForeign();
+  const helpers = useEntryHelpers();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -349,6 +353,7 @@ export function EntryDetailPage() {
           vatCodes={vatCodes.data ?? []}
           fiscalYears={years.data ?? []}
           foreign={foreign}
+          helpers={helpers}
           initial={e}
           saving={save.isPending}
           error={save.error}
