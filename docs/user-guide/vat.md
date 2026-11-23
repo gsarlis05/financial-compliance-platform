@@ -116,6 +116,12 @@ or from the books, or as a difference to explain. The report also lists months w
 no statement, and compares the totals with Boxes 8A and 8B. Triangular amounts are shown
 separately and compared with no box; ask your adviser how to report them.
 
+### Purchases and sales in another currency
+The return is in euros. Lines in another currency are converted at the rate you entered on the
+line, the rate of the date and time of the purchase. The report states this, and each line keeps
+its currency, original amount, rate, the rate's date and time and its source; the CSV download
+has them too.
+
 ### Downloads
 - **PDF:** every page shows the company, the period, the version and the page number.
 - **Excel:** one sheet each for Summary, Sales, Purchases, EU Trade, Reverse Charge, Imports,

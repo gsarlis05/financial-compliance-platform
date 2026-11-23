@@ -241,6 +241,12 @@ class VatLine:
     counterparty_country: str = ""
     counterparty_vat_no: str = ""
     entry_status: str = "POSTED"
+    # V1-2h: the line's foreign amount (signed like net_debit) and its rate, time and source.
+    txn_currency: str = ""
+    txn_net_debit: Decimal | None = None
+    exchange_rate: Decimal | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
 
 
 def entry_vat_lines(ctx: Any, entity_id: UUID, entry_id: UUID) -> list[VatLine]:
@@ -297,6 +303,10 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
             party.name if party else "", ln.reference or (own.reference if own else ""),
             ln.vat_code.category if ln.vat_code else "", ln.tax_point, ln.vat_recovery_percent,
             ln.vat_blocked, party.country if party else "", party.vat_no if party else "",
+            "POSTED", ln.txn_currency or "",
+            None if ln.txn_currency is None
+            else (ln.txn_debit or Decimal(0)) - (ln.txn_credit or Decimal(0)),
+            ln.exchange_rate, ln.rate_at, ln.rate_source,
         ))  # fmt: skip
     return found
 

@@ -126,6 +126,12 @@ METHODS = [
         "Manual adjustments change one box with a reason and evidence, approved by "
         "a second person except in a one-person workspace (ADR-0060).",
     ),
+    (
+        "Foreign currency",
+        "Amounts are converted into euros at the exchange rate of the transaction's date and "
+        "time, with its source (your decision). Does the VAT law require a particular rate for "
+        "VAT, for example a published rate on the tax point?",
+    ),
 ]
 
 

@@ -14,6 +14,7 @@ import {
   useVatCodes,
   useWorkspace,
 } from "../api/hooks";
+import { useCurrencySettings, useSuggestRate } from "../api/currency";
 import type { EntryInput, JournalEntry } from "../api/types";
 import {
   Loading,
@@ -121,6 +122,7 @@ export function NewEntryPage() {
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
+  const foreign = useForeign();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -152,12 +154,22 @@ export function NewEntryPage() {
         counterparties={counterparties.data ?? []}
         vatCodes={vatCodes.data ?? []}
         fiscalYears={years.data ?? []}
+        foreign={foreign}
         saving={save.isPending || act.isPending}
         error={save.error}
         onSave={onSave}
       />
     </Page>
   );
+}
+
+/** The entry form's foreign-currency support, when the entity has it switched on (V1-2h). */
+function useForeign() {
+  const { get } = useCurrencySettings();
+  const suggest = useSuggestRate();
+  return get.data?.multi_currency_enabled
+    ? { functional: get.data.functional_currency, suggest }
+    : undefined;
 }
 
 /** Read-only view with the workflow actions allowed for the entry's status. A posted entry is
@@ -259,6 +271,7 @@ export function EntryDetailPage() {
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
+  const foreign = useForeign();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -335,6 +348,7 @@ export function EntryDetailPage() {
           counterparties={counterparties.data ?? []}
           vatCodes={vatCodes.data ?? []}
           fiscalYears={years.data ?? []}
+          foreign={foreign}
           initial={e}
           saving={save.isPending}
           error={save.error}
