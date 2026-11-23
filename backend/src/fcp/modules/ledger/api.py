@@ -705,6 +705,7 @@ class EntryOut(Schema):
     correction_reason: str
     prepared_by_id: UUID
     approved_by_id: UUID | None
+    self_approved: bool = Field(description="Approved by its preparer (one-person workspace)")
     posted_by_id: UUID | None
     rejection_reason: str
     unlock_request_id: UUID | None
@@ -749,6 +750,7 @@ def entry_out(entry: JournalEntry) -> EntryOut:
         correction_reason=entry.correction_reason,
         prepared_by_id=entry.prepared_by_id,
         approved_by_id=entry.approved_by_id,
+        self_approved=entry.self_approved,
         posted_by_id=entry.posted_by_id,
         rejection_reason=entry.rejection_reason,
         unlock_request_id=entry.unlock_request_id,
@@ -980,6 +982,7 @@ class UnlockOut(Schema):
     requested_by_id: UUID
     first_approver_id: UUID | None
     second_approver_id: UUID | None
+    self_approved: bool = Field(description="Opened on the requester's own approval (one-person)")
     active_from: datetime | None
     active_until: datetime | None
     closed_at: datetime | None

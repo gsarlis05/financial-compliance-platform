@@ -2958,6 +2958,10 @@
             "title": "Reason",
             "type": "string"
           },
+          "self_approved": {
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "sod_applied": {
             "anyOf": [
               {
@@ -3039,6 +3043,7 @@
           "approved_by_id",
           "approved_at",
           "sod_applied",
+          "self_approved",
           "locked_at",
           "superseded_at",
           "budget_id",
@@ -3109,6 +3114,10 @@
           "reason": {
             "title": "Reason",
             "type": "string"
+          },
+          "self_approved": {
+            "title": "Self Approved",
+            "type": "boolean"
           },
           "sod_applied": {
             "anyOf": [
@@ -3187,6 +3196,7 @@
           "approved_by_id",
           "approved_at",
           "sod_applied",
+          "self_approved",
           "locked_at",
           "superseded_at"
         ],
@@ -4522,6 +4532,10 @@
             "title": "Scope",
             "type": "string"
           },
+          "self_approved": {
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -4564,6 +4578,7 @@
           "decided_by_name",
           "decided_at",
           "decision_comment",
+          "self_approved",
           "created_at"
         ],
         "title": "CustomKpiOut",
@@ -6209,6 +6224,11 @@
             ],
             "title": "Reverses Entry Id"
           },
+          "self_approved": {
+            "description": "Approved by its preparer (one-person workspace)",
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -6257,6 +6277,7 @@
           "correction_reason",
           "prepared_by_id",
           "approved_by_id",
+          "self_approved",
           "posted_by_id",
           "rejection_reason",
           "unlock_request_id",
@@ -10177,6 +10198,48 @@
         "title": "ObligationOut",
         "type": "object"
       },
+      "OnePersonIn": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "OnePersonIn",
+        "type": "object"
+      },
+      "OnePersonOut": {
+        "properties": {
+          "active": {
+            "description": "In force now: the person who prepares may also approve",
+            "title": "Active",
+            "type": "boolean"
+          },
+          "blockers": {
+            "description": "Why it cannot be turned on yet",
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "enabled": {
+            "description": "The setting",
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "active",
+          "blockers"
+        ],
+        "title": "OnePersonOut",
+        "type": "object"
+      },
       "OneVariableIn": {
         "properties": {
           "base_set_id": {
@@ -10714,6 +10777,11 @@
             "title": "Sections",
             "type": "array"
           },
+          "self_approved": {
+            "description": "Finalised by its preparer (one-person workspace)",
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "snapshot": {
             "additionalProperties": true,
             "description": "Every frozen figure, with its nature",
@@ -10797,6 +10865,7 @@
           "created_at",
           "submitted_at",
           "reviewed_by_id",
+          "self_approved",
           "review_note",
           "finalised_at",
           "superseded_at",
@@ -10957,6 +11026,11 @@
             "title": "Sections",
             "type": "array"
           },
+          "self_approved": {
+            "description": "Finalised by its preparer (one-person workspace)",
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "snapshot_hash": {
             "title": "Snapshot Hash",
             "type": "string"
@@ -11034,6 +11108,7 @@
           "created_at",
           "submitted_at",
           "reviewed_by_id",
+          "self_approved",
           "review_note",
           "finalised_at",
           "superseded_at",
@@ -15815,6 +15890,11 @@
             ],
             "title": "Second Approver Id"
           },
+          "self_approved": {
+            "description": "Opened on the requester's own approval (one-person)",
+            "title": "Self Approved",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -15833,6 +15913,7 @@
           "requested_by_id",
           "first_approver_id",
           "second_approver_id",
+          "self_approved",
           "active_from",
           "active_until",
           "closed_at",
@@ -16900,6 +16981,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "one_person": {
+            "default": false,
+            "description": "One-person workspace in force: whoever prepares may also approve (V1-1)",
+            "title": "One Person",
+            "type": "boolean"
           },
           "roles": {
             "items": {
@@ -35728,6 +35815,89 @@
           }
         ],
         "summary": "Grant Role",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/w/{slug}/one-person": {
+      "get": {
+        "operationId": "fcp_modules_tenancy_api_get_one_person",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnePersonOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Get One Person",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "put": {
+        "description": "Turn the one-person setting on or off. Needs a recent sign-in.",
+        "operationId": "fcp_modules_tenancy_api_set_one_person",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnePersonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnePersonOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Set One Person",
         "tags": [
           "workspaces"
         ]

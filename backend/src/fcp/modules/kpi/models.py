@@ -85,6 +85,8 @@ class CustomKpi(TenantOwned):
     )
     decided_at = models.DateTimeField(null=True, blank=True)
     decision_comment = models.CharField(max_length=500, blank=True)
+    # V1-1 (#207): decided by its author, in a one-person workspace (database-checked).
+    self_approved = models.BooleanField(default=False)
 
     class Meta:
         db_table = "kpi_custom"
@@ -99,8 +101,14 @@ class CustomKpi(TenantOwned):
             # A workspace KPI is never decided by its author (segregation of duties).
             models.CheckConstraint(
                 condition=~models.Q(scope="WORKSPACE", status__in=["APPROVED", "REJECTED"])
-                | ~models.Q(decided_by=models.F("owner")),
+                | ~models.Q(decided_by=models.F("owner"))
+                | models.Q(self_approved=True),
                 name="kpi_custom_sod",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(decided_by=models.F("owner"), scope="WORKSPACE"),
+                name="kpi_custom_self_approved",
             ),
             models.CheckConstraint(
                 condition=models.Q(scope="PERSONAL", status__in=["ACTIVE", "SUPERSEDED", "RETIRED"])

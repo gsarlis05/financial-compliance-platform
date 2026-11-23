@@ -1,9 +1,12 @@
-// Export and delete (M5-6). Owners download everything the workspace holds, and can delete the
+// Workspace settings. The one-person setting (V1-1): in a workspace used by one person, whoever
+// prepares something may also approve it, and each such approval is recorded as self-approved.
+// Export and delete (M5-6): owners download everything the workspace holds, and can delete the
 // workspace in two steps with a grace period. The server enforces every rule.
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useWorkspace } from "../api/hooks";
 import { useDeletion, useLifecycleMutations } from "../api/lifecycle";
+import { useOnePerson, useSetOnePerson } from "../api/onePerson";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 
@@ -17,6 +20,7 @@ export function WorkspaceDataPage() {
   const state = deletion.data;
   return (
     <Page title={t("data.title")}>
+      <OnePersonSetting slug={slug} />
       <section className="card" aria-labelledby="data-export">
         <h2 id="data-export">{t("data.export")}</h2>
         <p className="muted">{t("data.exportText")}</p>
@@ -113,5 +117,50 @@ export function WorkspaceDataPage() {
         ) : null}
       </section>
     </Page>
+  );
+}
+
+function OnePersonSetting({ slug }: { slug: string }) {
+  const { t } = useI18n();
+  const state = useOnePerson(slug);
+  const change = useSetOnePerson(slug);
+  if (!state.data || !Array.isArray(state.data.blockers)) {
+    // Only people who manage members may see or change it; others see nothing here.
+    return null;
+  }
+  const { enabled, active, blockers } = state.data;
+  return (
+    <section className="card" aria-labelledby="one-person">
+      <h2 id="one-person">{t("op.title")}</h2>
+      <p className="muted">{t("op.text")}</p>
+      <p role="status">
+        <strong>
+          {enabled
+            ? active
+              ? t("op.active")
+              : t("op.notActive")
+            : t("op.off")}
+        </strong>
+      </p>
+      {!enabled && blockers.length ? (
+        <>
+          <p>{t("op.blockers")}</p>
+          <ul>
+            {blockers.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      <button
+        type="button"
+        className={enabled ? undefined : "primary"}
+        disabled={change.isPending || (!enabled && blockers.length > 0)}
+        onClick={() => change.mutate(!enabled)}
+      >
+        {enabled ? t("op.turnOff") : t("op.turnOn")}
+      </button>
+      <ProblemMessage error={change.error} />
+    </section>
   );
 }

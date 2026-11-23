@@ -21,7 +21,13 @@ from django.utils import timezone
 from fcp.core.errors import NotFoundError, ValidationFailedError
 from fcp.core.money import Money, MoneyError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import LegalEntity, Tenant, WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import (
+    LegalEntity,
+    Tenant,
+    WorkspaceContext,
+    get_entity,
+    self_approval_allowed,
+)
 
 from . import dimensions
 from .errors import (
@@ -608,6 +614,7 @@ def update_draft(
     entry.journal = _journal(ctx, entity.id, data.journal_code)
     entry.status = Status.DRAFT
     entry.approved_by, entry.approved_at, entry.approved_hash = None, None, ""
+    entry.self_approved = False
     entry.content_hash = ""
     entry.save()
     _write_lines(ctx, entry, lines)
@@ -667,7 +674,8 @@ def approve(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEn
     entry = get_entry(ctx, entity_id, entry_id, lock=True)
     if entry.status != Status.SUBMITTED:
         raise InvalidStateError("Only submitted entries can be approved.")
-    if entry.prepared_by_id == ctx.user.id:
+    own = entry.prepared_by_id == ctx.user.id
+    if own and not self_approval_allowed(ctx):
         raise SegregationOfDutiesError(
             "You prepared this entry, so someone else must approve it (segregation of duties)."
         )
@@ -675,7 +683,9 @@ def approve(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEn
     if current != entry.content_hash:
         raise ApprovalStaleError("The entry changed after it was submitted. Submit it again.")
     entry.approved_by, entry.approved_at, entry.approved_hash = ctx.user, timezone.now(), current
-    _transition(ctx, entry, Status.APPROVED, "ledger.entry.approved", approved_hash=current)
+    entry.self_approved = own
+    _transition(ctx, entry, Status.APPROVED, "ledger.entry.approved", approved_hash=current,
+                self_approved=own)  # fmt: skip
     return entry
 
 
@@ -687,6 +697,7 @@ def reject(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, reason: str) 
         raise InvalidStateError("Only submitted or approved entries can be rejected.")
     entry.rejection_reason = reason.strip()
     entry.approved_by, entry.approved_at, entry.approved_hash = None, None, ""
+    entry.self_approved = False
     _transition(ctx, entry, Status.REJECTED, "ledger.entry.rejected", reason=entry.rejection_reason)
     return entry
 

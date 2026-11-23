@@ -103,7 +103,7 @@ describe("Grouped navigation (M2-11)", () => {
     expect(screen.getByRole("link", { name: "Dimensions" })).toHaveFocus();
     fireEvent.keyDown(document.activeElement as Element, { key: "End" });
     expect(
-      screen.getByRole("link", { name: "Export and delete" }),
+      screen.getByRole("link", { name: "Workspace settings" }),
     ).toHaveFocus();
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowDown" });
     expect(

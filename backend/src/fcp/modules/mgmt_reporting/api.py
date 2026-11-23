@@ -63,6 +63,7 @@ class PackOut(Schema):
     created_at: datetime
     submitted_at: datetime | None
     reviewed_by_id: UUID | None
+    self_approved: bool = Field(description="Finalised by its preparer (one-person workspace)")
     review_note: str
     finalised_at: datetime | None
     superseded_at: datetime | None
@@ -83,6 +84,7 @@ def _out(p: ReportPack) -> dict[str, Any]:
         "watermark": p.watermark, "generated_at": p.generated_at,
         "created_by_id": p.created_by_id, "created_at": p.created_at,
         "submitted_at": p.submitted_at, "reviewed_by_id": p.reviewed_by_id,
+        "self_approved": p.self_approved,
         "review_note": p.review_note, "finalised_at": p.finalised_at,
         "superseded_at": p.superseded_at, "blocks": services.summary(p),
     }  # fmt: skip

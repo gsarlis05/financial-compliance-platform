@@ -19,7 +19,7 @@ from fcp.core.api.permissions import AUTHENTICATED, required_permission, require
 from fcp.core.errors import PermissionDeniedError
 from fcp.modules.identity.api import User, require_recent_auth
 
-from . import engagements, lifecycle, services
+from . import engagements, lifecycle, one_person, services
 from .entitlements import Feature, Role, has_feature, require_feature
 from .models import LegalEntity, Membership, Tenant, WorkspaceDeletion
 from .services import WorkspaceContext, enter_workspace, get_entity, visible_entities
@@ -35,6 +35,12 @@ def permitted_entities(ctx: WorkspaceContext, permission: str) -> list[LegalEnti
 def engaged_clients(ctx: WorkspaceContext) -> list[Tenant]:
     """Client workspaces that granted this firm an engagement the user is staffed on (M5-4)."""
     return engagements.engaged_workspaces(ctx.tenant.id)
+
+
+def self_approval_allowed(ctx: WorkspaceContext) -> bool:
+    """True in a one-person workspace (V1-1): the person who prepared something may approve it.
+    Callers record the approval as self-approved; the database checks the same rule."""
+    return one_person.self_approval_allowed(ctx.tenant.id)
 
 
 on_workspace_export = lifecycle.on_export
@@ -57,6 +63,7 @@ __all__ = [
     "permitted_entities",
     "require_feature",
     "router",
+    "self_approval_allowed",
     "workspace_ctx",
 ]
 
@@ -127,6 +134,10 @@ class WorkspaceOut(Schema):
     deletion_due: datetime | None = Field(
         default=None, description="When a confirmed deletion will purge the workspace (M5-6)"
     )
+    one_person: bool = Field(
+        default=False,
+        description="One-person workspace in force: whoever prepares may also approve (V1-1)",
+    )
 
 
 class EntityIn(Schema):
@@ -170,7 +181,8 @@ def _workspace_out(ctx: WorkspaceContext) -> WorkspaceOut:
     pending = lifecycle.deletion(t.id)
     return WorkspaceOut(id=t.id, slug=t.slug, name=t.name, kind=t.kind, roles=sorted(ctx.roles),
                         via_engagement=ctx.engagement,
-                        deletion_due=pending.purge_after if pending else None)  # fmt: skip
+                        deletion_due=pending.purge_after if pending else None,
+                        one_person=one_person.self_approval_allowed(t.id))  # fmt: skip
 
 
 @router.post("/workspaces", response={201: WorkspaceOut})
@@ -316,6 +328,35 @@ def revoke_role(request: HttpRequest, slug: str, assignment_id: UUID) -> Status[
     require_recent_auth(request.session, request.path)
     services.revoke_role(ctx, assignment_id)
     return Status(204, None)
+
+
+class OnePersonOut(Schema):
+    enabled: bool = Field(description="The setting")
+    active: bool = Field(description="In force now: the person who prepares may also approve")
+    blockers: list[str] = Field(description="Why it cannot be turned on yet")
+
+
+class OnePersonIn(Schema):
+    enabled: bool
+
+
+def _one_person_out(found: one_person.OnePerson) -> OnePersonOut:
+    return OnePersonOut(enabled=found.enabled, active=found.active, blockers=found.blockers)
+
+
+@router.get("/w/{slug}/one-person", response=OnePersonOut)
+@requires("tenancy.members.manage")
+def get_one_person(request: HttpRequest, slug: str) -> OnePersonOut:
+    return _one_person_out(one_person.status(workspace_ctx(request, slug)))
+
+
+@router.put("/w/{slug}/one-person", response=OnePersonOut)
+@requires("tenancy.members.manage")
+def set_one_person(request: HttpRequest, slug: str, payload: OnePersonIn) -> OnePersonOut:
+    """Turn the one-person setting on or off. Needs a recent sign-in."""
+    ctx = workspace_ctx(request, slug)
+    require_recent_auth(request.session, request.path)
+    return _one_person_out(one_person.set_enabled(ctx, payload.enabled))
 
 
 @router.get("/w/{slug}/features", response=dict[str, bool])

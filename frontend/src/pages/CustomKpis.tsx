@@ -485,6 +485,7 @@ export function CustomKpisPage() {
                         {" "}
                         · {k.decided_by_name}
                         {k.decision_comment ? `: “${k.decision_comment}”` : ""}
+                        {k.self_approved ? ` · ${t("approval.self")}` : ""}
                       </span>
                     ) : null}
                   </td>

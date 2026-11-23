@@ -12,6 +12,7 @@ import {
   useMe,
   useScope,
   useVatCodes,
+  useWorkspace,
 } from "../api/hooks";
 import type { EntryInput, JournalEntry } from "../api/types";
 import {
@@ -165,10 +166,13 @@ export function EntryActions({
   entry,
   myId,
   onAct,
+  onePerson = false,
 }: {
   entry: JournalEntry;
   myId: string | undefined;
   onAct: (action: EntryAction, reason?: string) => void;
+  /** One-person workspace (V1-1): the preparer may approve their own entry. */
+  onePerson?: boolean;
 }) {
   const { t } = useI18n();
   const [reason, setReason] = useState("");
@@ -190,7 +194,7 @@ export function EntryActions({
         <div className="actions">
           <button
             className="primary"
-            disabled={myId === entry.prepared_by_id}
+            disabled={!onePerson && myId === entry.prepared_by_id}
             onClick={() => onAct("approve")}
           >
             {t("je.approve")}
@@ -250,6 +254,7 @@ export function EntryDetailPage() {
   const { slug, entityId } = useScope();
   const entry = useEntry(entryId);
   const me = useMe();
+  const workspace = useWorkspace(slug);
   const accounts = useAccounts();
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
@@ -294,6 +299,9 @@ export function EntryDetailPage() {
     >
       <p>
         <StatusBadge prefix="je.status" status={e.status} /> {e.accounting_date}
+        {e.self_approved ? (
+          <span className="badge"> {t("approval.self")}</span>
+        ) : null}
         {e.entry_no ? ` · ${e.journal}-${e.entry_no}` : ""}
         {e.unlock_request_id ? (
           <span className="badge badge-warn"> {t("je.restated")}</span>
@@ -412,7 +420,12 @@ export function EntryDetailPage() {
               </tr>
             </tfoot>
           </table>
-          <EntryActions entry={e} myId={me.data?.id} onAct={onAct} />
+          <EntryActions
+            entry={e}
+            myId={me.data?.id}
+            onAct={onAct}
+            onePerson={workspace.data?.one_person ?? false}
+          />
         </>
       )}
       <ProblemMessage error={act.error} />

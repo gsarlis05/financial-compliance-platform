@@ -53,6 +53,8 @@ class ReportPack(TenantOwned):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
                                     on_delete=models.PROTECT, related_name="+")  # fmt: skip
     review_note = models.CharField(max_length=1000, blank=True)
+    # V1-1 (#207): finalised by its preparer, in a one-person workspace (database-checked).
+    self_approved = models.BooleanField(default=False)
     finalised_at = models.DateTimeField(null=True, blank=True)
     superseded_at = models.DateTimeField(null=True, blank=True)
 
@@ -61,6 +63,11 @@ class ReportPack(TenantOwned):
         constraints = [
             models.UniqueConstraint(
                 fields=["family_id", "version"], name="mgmt_reporting_pack_version"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(reviewed_by=models.F("created_by")),
+                name="mgmt_reporting_pack_self_approved",
             ),
             # At most one open (draft or in review) version of a pack at a time.
             models.UniqueConstraint(

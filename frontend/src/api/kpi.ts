@@ -113,6 +113,7 @@ export interface CustomKpi {
   owner_name: string;
   supersedes_id: string | null;
   decided_by_name: string;
+  self_approved?: boolean; // decided by its author in a one-person workspace (V1-1)
   decided_at: string | null;
   decision_comment: string;
   created_at: string;
