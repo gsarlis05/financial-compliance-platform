@@ -8,6 +8,8 @@ import { type SyntheticEvent, useState } from "react";
 import { useScope } from "../api/hooks";
 import {
   type VatBox,
+  type VatScheduleName,
+  type VatScheduleRow,
   type VatReportDetail,
   type VatStatus,
   useVatMutations,
@@ -250,6 +252,9 @@ function ReportView({
 
       <ReturnView report={r} onBox={setBox} />
       <Adjustments report={r} />
+
+      <Schedules report={r} />
+      <Reconciliation report={r} />
 
       <h3>{t("vat.totals")}</h3>
       <table>
@@ -537,6 +542,286 @@ function Lines({
         </table>
       </div>
     </details>
+  );
+}
+
+type Column = Exclude<keyof VatScheduleRow, "boxes" | "lines">;
+const SCHEDULES: {
+  name: VatScheduleName;
+  columns: Column[];
+}[] = [
+  {
+    name: "sales",
+    columns: [
+      "date",
+      "entry_ref",
+      "counterparty",
+      "country",
+      "code",
+      "net_sale",
+      "output_vat",
+    ],
+  },
+  {
+    name: "purchases",
+    columns: [
+      "date",
+      "entry_ref",
+      "counterparty",
+      "country",
+      "code",
+      "net_purchase",
+      "input_vat",
+      "blocked",
+    ],
+  },
+  {
+    name: "eu_trade",
+    columns: [
+      "date",
+      "entry_ref",
+      "type",
+      "counterparty",
+      "country",
+      "vat_no",
+      "net",
+    ],
+  },
+  {
+    name: "reverse_charge",
+    columns: [
+      "date",
+      "entry_ref",
+      "type",
+      "counterparty",
+      "country",
+      "net_purchase",
+      "output_vat",
+      "input_vat",
+      "blocked",
+    ],
+  },
+  {
+    name: "imports",
+    columns: [
+      "date",
+      "entry_ref",
+      "reference",
+      "counterparty",
+      "net_purchase",
+      "input_vat",
+      "blocked",
+    ],
+  },
+];
+const HEADINGS: Partial<Record<Column, MessageKey>> = {
+  date: "vat.date",
+  entry_ref: "vat.entry",
+  counterparty: "vat.party",
+  country: "vat.country",
+  vat_no: "vat.vatNo",
+  code: "vat.code",
+  reference: "vat.reference",
+  type: "vat.type",
+  net: "vat.netValue",
+  net_sale: "vat.netValue",
+  net_purchase: "vat.netValue",
+  output_vat: "vat.outputVat",
+  input_vat: "vat.inputVat",
+  blocked: "vat.blocked",
+};
+const MONEY = new Set<Column>([
+  "net",
+  "net_sale",
+  "net_purchase",
+  "output_vat",
+  "input_vat",
+  "blocked",
+]);
+
+function Schedules({ report }: { report: VatReportDetail }) {
+  const { t, locale } = useI18n();
+  const typeText = (v: string) =>
+    t((v in EU_TYPES ? `vat.eu.${v}` : `vat.category.${v}`) as MessageKey);
+  return (
+    <section aria-labelledby="vat-schedules">
+      <h3 id="vat-schedules">{t("vat.schedules")}</h3>
+      {SCHEDULES.map(({ name, columns }) => {
+        const found = report.schedules[name];
+        const label = t(`vat.schedule.${name}` as MessageKey);
+        return (
+          <details key={name}>
+            <summary>
+              {label} ({found.rows.length})
+            </summary>
+            {found.rows.length ? (
+              <div className="table-scroll">
+                <table aria-label={label}>
+                  <thead>
+                    <tr>
+                      {columns.map((c) => (
+                        <th
+                          scope="col"
+                          key={c}
+                          className={MONEY.has(c) ? "amount" : undefined}
+                        >
+                          {t(HEADINGS[c] ?? "vat.amount")}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {found.rows.map((row) => (
+                      <tr key={`${row.entry_id}-${row.code}`}>
+                        {columns.map((c) => {
+                          const value = row[c];
+                          if (MONEY.has(c)) {
+                            return (
+                              <td className="amount" key={c}>
+                                {formatAmount(value ?? "0", locale)}
+                              </td>
+                            );
+                          }
+                          return (
+                            <td key={c}>
+                              {c === "type" ? typeText(value ?? "") : value}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      {columns.map((c, i) => (
+                        <td
+                          key={c}
+                          className={MONEY.has(c) ? "amount" : undefined}
+                        >
+                          {i === 0
+                            ? t("vat.total")
+                            : MONEY.has(c)
+                              ? formatAmount(found.totals[c] ?? "0", locale)
+                              : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <p className="muted">{t("vat.scheduleEmpty")}</p>
+            )}
+          </details>
+        );
+      })}
+    </section>
+  );
+}
+
+const EU_TYPES = {
+  GOODS_SUPPLIED: 1,
+  SERVICES_SUPPLIED: 1,
+  GOODS_ACQUIRED: 1,
+  SERVICES_RECEIVED: 1,
+};
+
+function Reconciliation({ report }: { report: VatReportDetail }) {
+  const { t, locale } = useI18n();
+  const r = report.reconciliation;
+  if (!r) {
+    return null;
+  }
+  const money = (v: string) => formatAmount(v, locale);
+  return (
+    <section aria-labelledby="vat-reconciliation">
+      <h3 id="vat-reconciliation">{t("vat.reconciliation")}</h3>
+      <p className="muted">{t("vat.reconHelp")}</p>
+      <div className="table-scroll">
+        <table aria-label={t("vat.accounts")}>
+          <thead>
+            <tr>
+              <th scope="col">{t("vat.account")}</th>
+              <th scope="col" className="amount">
+                {t("vat.opening")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.periodVat")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.settled")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.closing")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.unexplained")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.accounts.map((a) => (
+              <tr key={a.code}>
+                <th scope="row">
+                  {a.code} {a.name} ({a.role})
+                </th>
+                <td className="amount">{money(a.opening)}</td>
+                <td className="amount">{money(a.vat)}</td>
+                <td className="amount">{money(a.settled)}</td>
+                <td className="amount">{money(a.closing)}</td>
+                <td className="amount">{money(a.unexplained)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-scroll">
+        <table aria-label={t("vat.inReturn")}>
+          <thead>
+            <tr>
+              <th scope="col">{t("vat.box")}</th>
+              <th scope="col" className="amount">
+                {t("vat.ledger")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.notInBox")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.adjustments")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.inReturn")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.unexplained")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.bridges.map((b) => {
+              const item = (k: string) =>
+                b.items.find((i) => i.item === k)?.amount ?? "0";
+              return (
+                <tr key={b.side}>
+                  <th scope="row">{t(`vat.side.${b.side}` as MessageKey)}</th>
+                  <td className="amount">{money(b.ledger)}</td>
+                  <td className="amount">{money(item("NOT_IN_A_BOX"))}</td>
+                  <td className="amount">{money(item("ADJUSTMENTS"))}</td>
+                  <td className="amount">{money(b.return)}</td>
+                  <td className="amount">{money(b.unexplained)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p role="status">
+        {r.balanced ? t("vat.reconciled") : t("vat.notReconciled")}
+      </p>
+      <p className="muted">
+        {t("vat.reconApart")} {money(r.settlements)}
+      </p>
+    </section>
   );
 }
 
@@ -849,6 +1134,12 @@ function Actions({
           href={vatExportUrl(base, report.id, "xlsx", locale)}
         >
           {t("vat.xlsx")}
+        </a>
+        <a
+          className="button"
+          href={vatExportUrl(base, report.id, "csv", locale)}
+        >
+          {t("vat.csv")}
         </a>
       </div>
       {report.status === "REVIEWED" ? (

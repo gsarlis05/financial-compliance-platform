@@ -71,6 +71,33 @@ Once a line has a VAT code, open **VAT details** on it to enter:
 For EU sales and purchases, give each customer or supplier its **Country** (two letters, such as
 GR) and VAT number under **Customers & suppliers**.
 
+### Schedules and reconciliation
+Under **Schedules** the report lists the transactions behind the return, one row per entry and
+VAT code, with the customer or supplier, country and VAT number:
+- **Sales** and **Purchases**;
+- **EU trade:** goods and services supplied to, or received from, other member states;
+- **Reverse charge:** EU acquisitions and reverse-charge services;
+- **Imports**.
+
+**Reconciliation** takes each VAT account from its opening to its closing balance. It then
+compares the return with the ledger: Boxes 1 + 2 with output VAT, and Box 4 with input VAT. The
+differences come from VAT lines that are in no box and from adjustments. If something is left
+unexplained, the report says so. Payments, refunds and the settlement entry are shown separately
+from Box 5.
+
+### Downloads
+- **PDF:** every page shows the company, the period, the version and the page number.
+- **Excel:** one sheet each for Summary, Sales, Purchases, EU Trade, Reverse Charge, Imports,
+  Adjustments, Reconciliation, Exceptions and Tax Code Mapping, plus Codes and Lines. Amounts are
+  numbers, and every sheet has filters.
+- **CSV:** one row per line of the report, in UTF-8. The columns are `line_id`, `entry_id`,
+  `entry_ref`, `date`, `account`, `code`, `category`, `kind`, `amount`, `counterparty`, `country`,
+  `vat_no`, `reference`, `tax_point`, `recovery_percent`, `blocked`, `mapping`, `rule` and
+  `rules`, then `box_1` to `box_11B` with the line's contribution to each box.
+
+What the return covers, and what it does not, is listed in the
+[coverage matrix](../vat/coverage.md).
+
 ## 3. Adjust if you must
 If a box needs a change that the books cannot show, add it under **Adjustments** while the report
 is a draft. Each adjustment needs:
@@ -111,8 +138,7 @@ is finalised, the earlier one is marked superseded. File the correction followin
 Department's procedure for corrections, with your adviser.
 
 ## What is still to come
-- Schedules (sales, purchases, EU trade, reverse charge, imports) and a reconciliation to the
-  VAT accounts.
+- Imports with customs references and checks for duplicate claims.
 - Checks against the VIES statements.
 
 Rates, codes and box rules show that they have not yet been checked by a Cyprus tax

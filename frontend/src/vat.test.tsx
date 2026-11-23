@@ -43,6 +43,15 @@ const report = {
   differences: null,
   previous: null,
   final_return: null,
+  schedules: {
+    sales: { rows: [], totals: {} },
+    purchases: { rows: [], totals: {} },
+    eu_trade: { rows: [], totals: {} },
+    reverse_charge: { rows: [], totals: {} },
+    imports: { rows: [], totals: {} },
+    exceptions: [],
+  },
+  reconciliation: null,
   self_approved: false,
   filed_on: null,
   filing_reference: "",
@@ -227,6 +236,57 @@ const finalised = {
     ],
     removed: [],
     boxes: { "1": "19.00", "6": "100.00" },
+  },
+  schedules: {
+    ...withReturn.schedules,
+    eu_trade: {
+      rows: [
+        {
+          entry_id: "e2",
+          entry_ref: "GJ-2",
+          date: "2026-02-20",
+          description: "Goods from Germany",
+          code: "EUGA19",
+          category: "EU_GOODS_ACQUISITION",
+          counterparty: "Supplier DE (Demo)",
+          country: "DE",
+          vat_no: "DE123456789",
+          reference: "DE-12",
+          type: "GOODS_ACQUIRED",
+          net: "1000.00",
+          boxes: { "7": "1000.00", "11A": "1000.00" },
+          lines: ["l2"],
+        },
+      ],
+      totals: { net: "1000.00" },
+    },
+  },
+  reconciliation: {
+    accounts: [
+      {
+        code: "1220",
+        name: "VAT recoverable",
+        role: "INPUT",
+        opening: "0.00",
+        vat: "76.00",
+        settled: "0.00",
+        closing: "76.00",
+        unexplained: "0.00",
+      },
+    ],
+    bridges: [
+      {
+        side: "INPUT",
+        boxes: "4",
+        ledger: "76.00",
+        items: [{ item: "ADJUSTMENTS", amount: "10.00" }],
+        return: "86.00",
+        unexplained: "0.00",
+      },
+    ],
+    settlements: "0.00",
+    box_5: "85.00",
+    balanced: true,
   },
   previous: {
     id: "r0",
@@ -432,6 +492,22 @@ describe("VAT (V1-2)", () => {
       screen.getByText(/This version corrects version 1/),
     ).toHaveTextContent("filed on 2026-05-05 (reference TAXIS-9)");
     expect(screen.getByText(/reviewed 2026-04-03 12:00/)).toBeInTheDocument();
+    // The schedules and the reconciliation (V1-2e).
+    expect(screen.getByText("EU trade (1)")).toBeInTheDocument();
+    const eu = screen.getByRole("table", { name: "EU trade" });
+    expect(eu).toHaveTextContent("Goods acquired");
+    expect(eu).toHaveTextContent("DE123456789");
+    expect(screen.getByText("Sales (0)")).toBeInTheDocument();
+    const bridge = screen.getByRole("row", { name: /Input VAT \(Box 4\)/ });
+    expect(bridge).toHaveTextContent("76.00");
+    expect(bridge).toHaveTextContent("86.00");
+    expect(
+      screen.getByText(/The ledger and the return agree/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Download CSV" })).toHaveAttribute(
+      "href",
+      "/api/w/ws/entities/e1/vat-reports/r1/export?format=csv&lang=en",
+    );
     // Filing needs the date, the portal's reference and the evidence.
     const record = screen.getByRole("button", { name: "Record as filed" });
     fireEvent.change(screen.getByLabelText("Filed on"), {

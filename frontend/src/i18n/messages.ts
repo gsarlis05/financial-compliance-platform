@@ -1204,7 +1204,7 @@ export const en = {
   "vat.country": "Country",
   "vat.vatNo": "VAT number",
   "vat.type": "Type",
-  "vat.net": "Net",
+  "vat.netValue": "Net",
   "vat.outputVat": "Output VAT",
   "vat.inputVat": "Input VAT (recoverable)",
   "vat.blocked": "Non-recoverable VAT",
@@ -1214,7 +1214,8 @@ export const en = {
   "vat.eu.GOODS_ACQUIRED": "Goods acquired",
   "vat.eu.SERVICES_RECEIVED": "Services received",
   "vat.reconciliation": "Reconciliation",
-  "vat.reconHelp": "The VAT accounts from their opening to their closing balance, and the return compared with the ledger.",
+  "vat.reconHelp":
+    "The VAT accounts from their opening to their closing balance, and the return compared with the ledger.",
   "vat.opening": "Opening",
   "vat.periodVat": "Period VAT",
   "vat.closing": "Closing",
@@ -1224,9 +1225,12 @@ export const en = {
   "vat.ledger": "Ledger",
   "vat.notInBox": "VAT lines in no box",
   "vat.inReturn": "Return",
-  "vat.reconciled": "The ledger and the return agree; every difference is explained.",
-  "vat.notReconciled": "There is a difference the reconciliation cannot explain. Check the VAT accounts.",
-  "vat.reconApart": "Payments, refunds and settlements in the period, kept apart from Box 5:",
+  "vat.reconciled":
+    "The ledger and the return agree; every difference is explained.",
+  "vat.notReconciled":
+    "There is a difference the reconciliation cannot explain. Check the VAT accounts.",
+  "vat.reconApart":
+    "Payments, refunds and settlements in the period, kept apart from Box 5:",
   "vat.csv": "Download CSV",
   "vat.return": "VAT return",
   "vat.box": "Box",
@@ -3227,7 +3231,7 @@ export const el: Record<MessageKey, string> = {
   "vat.country": "Χώρα",
   "vat.vatNo": "Αριθμός ΦΠΑ",
   "vat.type": "Είδος",
-  "vat.net": "Καθαρή αξία",
+  "vat.netValue": "Καθαρή αξία",
   "vat.outputVat": "ΦΠΑ εκροών",
   "vat.inputVat": "ΦΠΑ εισροών (ανακτήσιμος)",
   "vat.blocked": "Μη ανακτήσιμος ΦΠΑ",
@@ -3237,7 +3241,8 @@ export const el: Record<MessageKey, string> = {
   "vat.eu.GOODS_ACQUIRED": "Απόκτηση αγαθών",
   "vat.eu.SERVICES_RECEIVED": "Λήψη υπηρεσιών",
   "vat.reconciliation": "Συμφωνία",
-  "vat.reconHelp": "Οι λογαριασμοί ΦΠΑ από το υπόλοιπο έναρξης στο υπόλοιπο λήξης, και η δήλωση σε σύγκριση με το καθολικό.",
+  "vat.reconHelp":
+    "Οι λογαριασμοί ΦΠΑ από το υπόλοιπο έναρξης στο υπόλοιπο λήξης, και η δήλωση σε σύγκριση με το καθολικό.",
   "vat.opening": "Έναρξη",
   "vat.periodVat": "ΦΠΑ περιόδου",
   "vat.closing": "Λήξη",
@@ -3247,9 +3252,12 @@ export const el: Record<MessageKey, string> = {
   "vat.ledger": "Καθολικό",
   "vat.notInBox": "Γραμμές ΦΠΑ εκτός θυρίδων",
   "vat.inReturn": "Δήλωση",
-  "vat.reconciled": "Το καθολικό και η δήλωση συμφωνούν· κάθε διαφορά εξηγείται.",
-  "vat.notReconciled": "Υπάρχει διαφορά που η συμφωνία δεν εξηγεί. Ελέγξτε τους λογαριασμούς ΦΠΑ.",
-  "vat.reconApart": "Πληρωμές, επιστροφές και εκκαθαρίσεις της περιόδου, χωριστά από τη θυρίδα 5:",
+  "vat.reconciled":
+    "Το καθολικό και η δήλωση συμφωνούν· κάθε διαφορά εξηγείται.",
+  "vat.notReconciled":
+    "Υπάρχει διαφορά που η συμφωνία δεν εξηγεί. Ελέγξτε τους λογαριασμούς ΦΠΑ.",
+  "vat.reconApart":
+    "Πληρωμές, επιστροφές και εκκαθαρίσεις της περιόδου, χωριστά από τη θυρίδα 5:",
   "vat.csv": "Λήψη CSV",
   "vat.return": "Δήλωση ΦΠΑ",
   "vat.box": "Θυρίδα",
