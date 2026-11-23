@@ -592,8 +592,8 @@ def vies_reconcile(
 
     For a month, the latest correction recorded replaces the original statement: a correction
     carries the month's full figures (owner's decision, 2026-11-23). Triangular amounts are
-    shown apart and compared with no box. Differences are classed: a month with no statement, a partner only on one side,
-    rounding (under one euro), or another difference to explain."""
+    shown apart and compared with no box. Differences are classed: a month with no statement, a
+    partner only on one side, rounding (under one euro), or another difference to explain."""
     zero = Decimal(0)
     months = _months(start, end)
     used: dict[str, dict[str, Any]] = {}
