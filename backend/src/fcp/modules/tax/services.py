@@ -38,20 +38,31 @@ from fcp.core.errors import (
     ValidationFailedError,
 )
 from fcp.modules.audit_log.api import record as audit
+from fcp.modules.documents.api import entry_document
 from fcp.modules.ledger.api import (
     EntryInput,
     LineInput,
     account_balance,
     account_list,
     create_system_draft,
+    entry_vat_lines,
     posting_watermark,
     vat_lines,
 )
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import periods as P
-from .models import BOXES, VatAdjustment, VatInclusion, VatPeriodScheme, VatReport
-from .report import Line, adjusted, compute, digest, figures, reconcile, schedules
+from .models import BOXES, VatAdjustment, VatImport, VatInclusion, VatPeriodScheme, VatReport
+from .report import (
+    Line,
+    adjusted,
+    compute,
+    digest,
+    figures,
+    import_checks,
+    reconcile,
+    schedules,
+)
 
 READ, PREPARE, SIGN_OFF = "tax.vat.read", "tax.vat.prepare", "tax.vat.sign_off"
 Status = VatReport.Status
@@ -156,7 +167,13 @@ def _take(
              country=v.counterparty_country, vat_no=v.counterparty_vat_no)
         for v in vat_lines(ctx, entity_id, date_from=start, date_to=end)
     ]  # fmt: skip
-    return compute(lines, start.isoformat(), end.isoformat(), rules)
+    taken = compute(lines, start.isoformat(), end.isoformat(), rules)
+    entries = {ln.entry_id for ln in lines if ln.category == "IMPORT"}
+    records = VatImport.objects.filter(legal_entity_id=entity_id, entry_id__in=entries,
+                                       voided_at__isnull=True).order_by("customs_date")  # fmt: skip
+    taken["imports"] = [_import_out(r) for r in records]
+    taken["exceptions"] += import_checks(taken["lines"], taken["imports"], taken["codes"])
+    return taken
 
 
 def _get(ctx: WorkspaceContext, entity_id: UUID, report_id: UUID, permission: str,
@@ -620,3 +637,107 @@ def prepare_settlement(ctx: WorkspaceContext, entity_id: UUID, report_id: UUID) 
     _audit(ctx, "settlement_prepared", "vat_report", report.id, report.legal_entity_id,
            entry_id=str(entry.id), input_vat=str(total))  # fmt: skip
     return entry.id
+
+
+# --- imports (V1-2f) -----------------------------------------------------------------------------
+
+
+def _import_out(r: VatImport) -> dict[str, Any]:
+    return {"id": str(r.id), "entry_id": str(r.entry_id), "customs_reference": r.customs_reference,
+            "customs_date": r.customs_date.isoformat(), "customs_value": f"{r.customs_value:.2f}",
+            "import_vat": f"{r.import_vat:.2f}", "document_id": str(r.document_id),
+            "document_name": r.document_name}  # fmt: skip
+
+
+@dataclass(frozen=True)
+class ImportInput:
+    entry_id: UUID
+    customs_reference: str
+    customs_date: date
+    customs_value: Decimal
+    import_vat: Decimal
+    document_id: UUID
+
+
+def imports(ctx: WorkspaceContext, entity_id: UUID, *, date_from: date,
+            date_to: date) -> dict[str, Any]:  # fmt: skip
+    """The import records of the entries in a date range, and the entries there that claim
+    import VAT without one."""
+    entity = get_entity(ctx, entity_id, READ)
+    claims: dict[str, dict[str, Any]] = {}
+    for ln in vat_lines(ctx, entity.id, date_from=date_from, date_to=date_to):
+        if ln.category == "IMPORT" and ln.vat_role == "INPUT":
+            row = claims.setdefault(str(ln.entry_id), {
+                "entry_id": str(ln.entry_id), "entry_ref": ln.entry_ref,
+                "date": ln.accounting_date.isoformat(), "description": ln.description,
+                "claimed_vat": Decimal(0),
+            })  # fmt: skip
+            row["claimed_vat"] += ln.net_debit + (ln.vat_blocked or 0)
+    records = VatImport.objects.filter(legal_entity=entity, entry_id__in=list(claims)).order_by(
+        "customs_date", "created_at"
+    )
+    active = {str(r.entry_id) for r in records if r.voided_at is None}
+    return {
+        "records": [{**_import_out(r), "entry_ref": claims[str(r.entry_id)]["entry_ref"],
+                     "voided": r.voided_at is not None, "void_reason": r.void_reason}
+                    for r in records],
+        "missing": [{**c, "claimed_vat": f"{c['claimed_vat']:.2f}"}
+                    for key, c in claims.items() if key not in active],
+    }  # fmt: skip
+
+
+@transaction.atomic
+def record_import(ctx: WorkspaceContext, entity_id: UUID, data: ImportInput) -> VatImport:
+    entity = get_entity(ctx, entity_id, PREPARE)
+    claims = [ln for ln in entry_vat_lines(ctx, entity.id, data.entry_id)
+              if ln.category == "IMPORT" and ln.vat_role == "INPUT"]  # fmt: skip
+    if not claims:
+        raise _invalid("entry_id", "Choose a posted entry that claims import VAT (an import "
+                       "code on the input VAT account).")  # fmt: skip
+    reference = data.customs_reference.strip()
+    if not reference:
+        raise _invalid("customs_reference", "Enter the customs declaration's reference.")
+    if data.customs_value <= 0 or data.import_vat <= 0:
+        raise _invalid("customs_value", "Enter the taxable value and the import VAT as positive "
+                       "amounts.")  # fmt: skip
+    found = VatImport.objects.select_for_update().filter(legal_entity=entity,
+                                                         voided_at__isnull=True)  # fmt: skip
+    if found.filter(customs_reference=reference).exists():
+        raise ConflictError(f"Customs reference {reference} is already recorded: the same import "
+                            "VAT cannot be claimed twice.")  # fmt: skip
+    if found.filter(entry_id=data.entry_id).exists():
+        raise ConflictError("This entry already has an import record. Void it first.")
+    document = entry_document(ctx, entity.id, data.document_id, data.entry_id)
+    made = VatImport.objects.create(
+        tenant=ctx.tenant, legal_entity=entity, entry_id=data.entry_id,
+        customs_reference=reference[:50], customs_date=data.customs_date,
+        customs_value=data.customs_value, import_vat=data.import_vat, document_id=document.id,
+        document_name=document.filename[:200], created_by=ctx.user,
+    )  # fmt: skip
+    _audit(ctx, "import_recorded", "vat_import", made.id, entity.id,
+           entry_id=str(data.entry_id), customs_reference=made.customs_reference,
+           customs_value=str(made.customs_value), import_vat=str(made.import_vat),
+           document=document.filename, sha256=document.sha256)  # fmt: skip
+    return made
+
+
+@transaction.atomic
+def void_import(ctx: WorkspaceContext, entity_id: UUID, import_id: UUID, reason: str) -> VatImport:
+    entity = get_entity(ctx, entity_id, PREPARE)
+    found = VatImport.objects.select_for_update().filter(legal_entity=entity,
+                                                         id=import_id).first()  # fmt: skip
+    if found is None:
+        raise NotFoundError("Import record not found.")
+    if found.voided_at is not None:
+        raise ConflictError("This import record is already void.")
+    if VatInclusion.objects.filter(entry_id=found.entry_id, active=True).exists():
+        raise ConflictError("This import is in a finalised return. Start a new version of that "
+                            "return to correct it.")  # fmt: skip
+    reason = reason.strip()
+    if not reason:
+        raise _invalid("reason", "Say why the record is void.")
+    found.voided_at, found.voided_by, found.void_reason = timezone.now(), ctx.user, reason[:500]
+    found.save(update_fields=["voided_at", "voided_by", "void_reason"])
+    _audit(ctx, "import_voided", "vat_import", found.id, entity.id,
+           customs_reference=found.customs_reference, reason=found.void_reason)  # fmt: skip
+    return found

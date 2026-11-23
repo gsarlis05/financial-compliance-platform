@@ -18,7 +18,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
 from . import exports, services
-from .models import VatAdjustment, VatPeriodScheme, VatReport
+from .models import VatAdjustment, VatImport, VatPeriodScheme, VatReport
 
 __all__ = ["router"]
 
@@ -315,6 +315,65 @@ def prepare_settlement(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     return Status(201, SettlementOut(entry_id=services.prepare_settlement(ctx, entity_id,
                                                                           report_id)))  # fmt: skip
+
+
+class VatImportIn(Schema):
+    entry_id: UUID = Field(description="The posted entry that claims the import VAT")
+    customs_reference: str = Field(min_length=1, max_length=50)
+    customs_date: date
+    customs_value: Decimal = Field(gt=0, max_digits=19, decimal_places=2)
+    import_vat: Decimal = Field(gt=0, max_digits=19, decimal_places=2)
+    document_id: UUID = Field(description="The customs declaration, attached to the entry")
+
+
+class VatImportOut(Schema):
+    id: UUID
+    entry_id: UUID
+    customs_reference: str
+    customs_date: date
+    customs_value: Decimal
+    import_vat: Decimal
+    document_id: UUID
+    document_name: str
+    created_at: datetime
+    voided_at: datetime | None
+    void_reason: str
+
+
+class VatImportsQuery(Schema):
+    date_from: date
+    date_to: date
+
+
+class VoidIn(Schema):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+@router.get(f"{BASE}/vat-imports", response=dict[str, Any])
+@requires("tax.vat.read")
+def list_imports(request: HttpRequest, slug: str, entity_id: UUID,
+                 query: Query[VatImportsQuery]) -> dict[str, Any]:  # fmt: skip
+    """Import records of the entries in the dates, and the import VAT claims without one."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.imports(ctx, entity_id, date_from=query.date_from, date_to=query.date_to)
+
+
+@router.post(f"{BASE}/vat-imports", response={201: VatImportOut})
+@requires("tax.vat.prepare")
+def record_import(request: HttpRequest, slug: str, entity_id: UUID,
+                  payload: VatImportIn) -> Status[VatImport]:  # fmt: skip
+    """Record the customs declaration behind an entry's import VAT; a reference is recorded once."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = services.ImportInput(**payload.dict())
+    return Status(201, services.record_import(ctx, entity_id, data))
+
+
+@router.post(f"{BASE}/vat-imports/{{uuid:import_id}}/void", response=VatImportOut)
+@requires("tax.vat.prepare")
+def void_import(request: HttpRequest, slug: str, entity_id: UUID, import_id: UUID,
+                payload: VoidIn) -> VatImport:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.void_import(ctx, entity_id, import_id, payload.reason)
 
 
 CONTENT_TYPES = {

@@ -18,6 +18,7 @@ import {
   useVatSchemes,
   vatExportUrl,
 } from "../api/vat";
+import { VatImports } from "../components/VatImports";
 import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
@@ -253,6 +254,11 @@ function ReportView({
       <ReturnView report={r} onBox={setBox} />
       <Adjustments report={r} />
 
+      <VatImports
+        periodStart={r.period_start}
+        periodEnd={r.period_end}
+        editable={r.status === "DRAFT"}
+      />
       <Schedules report={r} />
       <Reconciliation report={r} />
 

@@ -72,6 +72,7 @@ __all__ = [
     "create_entry_draft",
     "create_system_draft",
     "dimension_list",
+    "entry_vat_lines",
     "fiscal_year_list",
     "posted_dimension_totals",
     "posted_entries",
@@ -240,6 +241,18 @@ class VatLine:
     counterparty_country: str = ""
     counterparty_vat_no: str = ""
     entry_status: str = "POSTED"
+
+
+def entry_vat_lines(ctx: Any, entity_id: UUID, entry_id: UUID) -> list[VatLine]:
+    """The VAT lines of one posted entry (V1-2f), as ``vat_lines`` gives them."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    entry = JournalEntry.objects.filter(legal_entity_id=entity.id, id=entry_id,
+                                        status=JournalEntry.Status.POSTED).first()  # fmt: skip
+    if entry is None:
+        return []
+    found = vat_lines(ctx, entity.id, date_from=entry.accounting_date,
+                      date_to=entry.accounting_date)  # fmt: skip
+    return [ln for ln in found if ln.entry_id == entry.id]
 
 
 def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> list[VatLine]:

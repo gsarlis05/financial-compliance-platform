@@ -244,7 +244,7 @@ def _entry_checks(
 
 def figures(report: dict[str, Any]) -> dict[str, Any]:
     """The part of a report that must not change once it is signed off (lines and figures)."""
-    keys = ("return", "codes", "totals", "accounts", "settlements", "lines")
+    keys = ("return", "codes", "totals", "accounts", "settlements", "lines", "imports")
     return {k: report[k] for k in keys if k in report}
 
 
@@ -420,10 +420,18 @@ def schedules(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Sales, purchases, EU trade, reverse charge and imports, each with its rows (one per entry
     and VAT code) and totals, from the report's frozen lines."""
     found: dict[str, list[dict[str, Any]]] = {k: [] for k in SCHEDULES}
+    records = {r["entry_id"]: r for r in snapshot.get("imports", [])}
     for row in _groups(snapshot["lines"]):
         category = row["category"]
         if category == "IMPORT":
-            found["imports"].append(_out(row, "net_purchase", "input_vat", "blocked"))
+            record = records.get(row["entry_id"], {})
+            found["imports"].append({
+                **_out(row, "net_purchase", "input_vat", "blocked"),
+                "customs_reference": record.get("customs_reference", ""),
+                "customs_date": record.get("customs_date", ""),
+                "customs_value": record.get("customs_value", "0.00"),
+                "document_name": record.get("document_name", ""),
+            })  # fmt: skip
         elif category in REVERSE_CHARGE:
             found["reverse_charge"].append({**_out(row, "net_purchase", "output_vat", "input_vat",
                                                    "blocked"), "type": category})  # fmt: skip
@@ -437,8 +445,8 @@ def schedules(snapshot: dict[str, Any]) -> dict[str, Any]:
             found["eu_trade"].append({**_out(row), "type": EU_KIND[category], "net": money(net)})
     result: dict[str, Any] = {}
     for name, rows in found.items():
-        keys = [k for k in ("net_sale", "output_vat", "net_purchase", "input_vat", "blocked", "net")
-                if rows and k in rows[0]]  # fmt: skip
+        keys = [k for k in ("net_sale", "output_vat", "net_purchase", "input_vat", "blocked", "net",
+                            "customs_value") if rows and k in rows[0]]  # fmt: skip
         totals = {k: money(sum((Decimal(r[k]) for r in rows), Decimal(0))) for k in keys}
         result[name] = {"rows": rows, "totals": totals}
     return result
@@ -492,3 +500,47 @@ def reconcile(snapshot: dict[str, Any], final: dict[str, Any] | None,
     return {"accounts": rows, "bridges": bridges, "settlements": snapshot["settlements"],
             "box_5": money(exact["5"]),
             "balanced": all(Decimal(r["unexplained"]) == 0 for r in rows + bridges)}  # fmt: skip
+
+
+# --- imports (V1-2f, #217) ----------------------------------------------------------------------
+
+
+def import_checks(lines: list[dict[str, Any]], records: list[dict[str, Any]],
+                  codes: list[dict[str, Any]]) -> list[dict[str, str]]:  # fmt: skip
+    """Each import VAT claim has its customs record; the record's import VAT is the VAT claimed
+    (recoverable and not); and its taxable value at the code's rate gives that VAT."""
+    claims: dict[str, dict[str, Any]] = {}
+    for ln in lines:
+        if ln.get("category") == "IMPORT" and ln["kind"] == "PURCHASE_VAT":
+            row = claims.setdefault(ln["entry_id"], {"ref": ln["entry_ref"], "vat": Decimal(0),
+                                                     "code": ln["code"]})  # fmt: skip
+            amount = Decimal(ln["amount"])
+            blocked = Decimal(ln.get("blocked") or 0)
+            row["vat"] += amount + (blocked if amount >= 0 else -blocked)
+    by_entry = {r["entry_id"]: r for r in records}
+    rates = {c["code"]: Decimal(c["rate"]) for c in codes if c["rate"] is not None}
+    found = []
+    for entry_id, claim in claims.items():
+        record = by_entry.get(entry_id)
+        if record is None:
+            found.append({"kind": "IMPORT_WITHOUT_RECORD", "entry": claim["ref"],
+                          "detail": f"{claim['ref']}: import VAT of {money(claim['vat'])} is "
+                                    "claimed without its customs record (reference, value and "
+                                    "evidence)."})  # fmt: skip
+            continue
+        recorded = Decimal(record["import_vat"])
+        if abs(recorded - claim["vat"]) > CENT:
+            detail = (f"{claim['ref']}: the entry claims import VAT of {money(claim['vat'])}, the "
+                      f"customs declaration {record['customs_reference']} shows "
+                      f"{money(recorded)}.")  # fmt: skip
+            found.append({"kind": "IMPORT_VAT_MISMATCH", "entry": claim["ref"], "detail": detail})
+        rate = rates.get(claim["code"])
+        if rate is not None:
+            expected = (Decimal(record["customs_value"]) * rate).quantize(CENT, ROUND_HALF_UP)
+            if abs(expected - recorded) > CENT:
+                found.append({"kind": "IMPORT_VALUE_MISMATCH", "entry": claim["ref"],
+                              "detail": f"{claim['ref']}: the taxable value "
+                                        f"{money(Decimal(record['customs_value']))} at the code's "
+                                        f"rate gives {money(expected)}, not the "
+                                        f"{money(recorded)} declared."})  # fmt: skip
+    return found

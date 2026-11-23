@@ -350,3 +350,67 @@ export function useVatMutations(id: string | null) {
     }),
   };
 }
+
+// --- imports (V1-2f) ---------------------------------------------------------------------------
+
+export interface VatImportRecord {
+  id: string;
+  entry_id: string;
+  entry_ref: string;
+  customs_reference: string;
+  customs_date: string;
+  customs_value: string;
+  import_vat: string;
+  document_id: string;
+  document_name: string;
+  voided: boolean;
+  void_reason: string;
+}
+
+export interface VatImports {
+  records: VatImportRecord[];
+  missing: {
+    entry_id: string;
+    entry_ref: string;
+    date: string;
+    description: string;
+    claimed_vat: string;
+  }[];
+}
+
+export function useVatImports(dateFrom: string, dateTo: string) {
+  const { base, entityId } = useScope();
+  const client = useQueryClient();
+  const key = ["vat-imports", entityId, dateFrom, dateTo];
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: key });
+    void client.invalidateQueries({ queryKey: ["vat-report", entityId] });
+  };
+  const list = useQuery({
+    queryKey: key,
+    queryFn: () =>
+      api<VatImports>(`${base}/vat-imports`, {
+        query: { date_from: dateFrom, date_to: dateTo },
+      }),
+  });
+  const record = useMutation({
+    mutationFn: (body: {
+      entry_id: string;
+      customs_reference: string;
+      customs_date: string;
+      customs_value: string;
+      import_vat: string;
+      document_id: string;
+    }) => api(`${base}/vat-imports`, { method: "POST", body }),
+    onSuccess: refresh,
+  });
+  const voidRecord = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api(`${base}/vat-imports/${id}/void`, {
+        method: "POST",
+        body: { reason },
+      }),
+    onSuccess: refresh,
+  });
+  return { list, record, voidRecord };
+}

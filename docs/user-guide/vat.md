@@ -85,6 +85,22 @@ differences come from VAT lines that are in no box and from adjustments. If some
 unexplained, the report says so. Payments, refunds and the settlement entry are shown separately
 from Box 5.
 
+### Imports
+Import VAT paid at customs is claimed with an import code (IMP19, IMP9 and so on) on the input
+VAT account. Each such entry needs its customs declaration:
+1. Under **Entries**, attach the declaration (PDF or image) to the import entry.
+2. On the VAT report, under **Imports**, choose the entry and enter:
+   - the declaration's reference and date;
+   - the taxable value and the import VAT it shows;
+   - the attached declaration.
+
+Then choose **Record import**, and **Regenerate** the draft.
+
+The report checks that every import VAT claim has its record, that the VAT matches, and that
+the taxable value at the rate gives that VAT. A declaration can be recorded only once, so its
+VAT cannot be claimed twice. To correct a record, **Void** it with a reason and record it again.
+This is not possible once its return is finalised; start a new version instead.
+
 ### Downloads
 - **PDF:** every page shows the company, the period, the version and the page number.
 - **Excel:** one sheet each for Summary, Sales, Purchases, EU Trade, Reverse Charge, Imports,
@@ -138,7 +154,6 @@ is finalised, the earlier one is marked superseded. File the correction followin
 Department's procedure for corrections, with your adviser.
 
 ## What is still to come
-- Imports with customs references and checks for duplicate claims.
 - Checks against the VIES statements.
 
 Rates, codes and box rules show that they have not yet been checked by a Cyprus tax
