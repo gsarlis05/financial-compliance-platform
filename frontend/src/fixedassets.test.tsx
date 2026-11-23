@@ -115,6 +115,37 @@ describe("Fixed assets (M6-1)", () => {
               },
             ]),
           );
+        if (url.includes("/fixed-assets/reconciliation"))
+          return Promise.resolve(
+            respond({
+              as_of: "2026-06-30",
+              rows: [
+                {
+                  account_id: "c1",
+                  account_code: "1010",
+                  account_name: "Vehicles at cost",
+                  kind: "COST",
+                  register_total: "24000.00",
+                  ledger_total: "0.00",
+                  difference: "-24000.00",
+                },
+              ],
+              agrees: false,
+              unposted_runs: [
+                {
+                  id: "r1",
+                  month: "2026-02-01",
+                  total: "500.00",
+                  assets: 1,
+                  entry_id: "e1",
+                  entry_ref: "",
+                  entry_status: "DRAFT",
+                  cancelled: false,
+                  created_at: "2026-11-12T00:00:00Z",
+                },
+              ],
+            }),
+          );
         if (url.includes("/depreciation-runs"))
           return Promise.resolve(
             respond([
@@ -172,6 +203,16 @@ describe("Fixed assets (M6-1)", () => {
       screen.getByRole("table", { name: "Capital allowance classes" }),
     ).toHaveTextContent("Entered for the test");
 
+    // V1-4: the register against the ledger, with what explains a difference.
+    const rec = await screen.findByRole("region", {
+      name: "Register and ledger",
+    });
+    expect(rec).toHaveTextContent("The register and the ledger differ");
+    expect(rec).toHaveTextContent("1010 · Vehicles at cost");
+    expect(rec).toHaveTextContent("-24,000.00");
+    expect(rec).toHaveTextContent(
+      "Depreciation prepared but not posted yet: 2026-02.",
+    );
     const runs = await screen.findByRole("table", { name: "Prepared months" });
     expect(runs).toHaveTextContent("Draft · draft");
     fireEvent.change(screen.getByLabelText("Month"), {

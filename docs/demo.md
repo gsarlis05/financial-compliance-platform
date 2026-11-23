@@ -10,6 +10,7 @@ synthetic books, and walks through the whole M1 workflow:
 ```sh
 make dev                 # services, dependencies, migrations (once)
 make demo                # or: make demo SHARE_WITH=you@example.com
+make e2e-walkthrough     # V1-4: the same year walked in a real browser, figures checked
 ```
 `SHARE_WITH` invites an existing user (anyone who has signed in to the web app once) as
 **finance manager**, so you can open the workspace in the UI at the printed link.
@@ -47,6 +48,7 @@ Expected output (about 45 seconds; the slug and numbers depend on the seed, 42 b
 ✔ three-statement projection 2027-2028: VALID, 6 invariants hold, published; 2028: revenue 1452000.00, net income 196572.33, closing cash 550508.64
 ✔ full-year outlook 2027: 0 actual and 12 forecast months from the published projection; revenue 1320000.00
 ✔ rolling forecast: the next 12 months from the approved assumptions, VALID, current; re-run hourly when the books move
+✔ the numbers agree from screen to screen: 20 checks from the ledger through the statements, budget variance, KPIs, cash forecast, fixed assets, projection and report pack to the VAT return
 ✔ full export of the workspace: 76 tables and 1 document file(s), every file matching its count and hash in the manifest; a spare workspace's deletion confirmed with 30 days' grace, then cancelled
 ✔ shared with you@example.com as finance_manager
 ```

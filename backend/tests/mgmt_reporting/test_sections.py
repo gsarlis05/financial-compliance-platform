@@ -105,7 +105,7 @@ def test_golden_budget_variance_pack(g: dict[str, Any]) -> None:
     assert {c["key"] for c in profit["columns"]} == {"line", "actual", "prior_year", "change"}
     assert all(cell["nature"] == "ACTUAL" for r in profit["rows"] for cell in r["cells"])
     assert section(found, "forecast")["status"] == "empty"
-    assert section(found, "kpis")["reason"] == "No KPI set for this period yet."
+    assert section(found, "kpis")["status"] == "ok"  # calculated for the pack (V1-4)
 
 
 def test_columns_commentary_and_risks(g: dict[str, Any], make_user: Make,

@@ -1662,6 +1662,103 @@
         "title": "AssetOut",
         "type": "object"
       },
+      "AssetReconciliationOut": {
+        "properties": {
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AssetReconciliationRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "unposted_runs": {
+            "description": "Prepared depreciation not posted yet: it explains a difference until it is",
+            "items": {
+              "$ref": "#/components/schemas/DepreciationRunOut"
+            },
+            "title": "Unposted Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "rows",
+          "agrees",
+          "unposted_runs"
+        ],
+        "title": "AssetReconciliationOut",
+        "type": "object"
+      },
+      "AssetReconciliationQuery": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of"
+        ],
+        "title": "AssetReconciliationQuery",
+        "type": "object"
+      },
+      "AssetReconciliationRowOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "difference": {
+            "description": "Ledger minus register",
+            "title": "Difference",
+            "type": "string"
+          },
+          "kind": {
+            "description": "COST or ACCUMULATED (depreciation)",
+            "title": "Kind",
+            "type": "string"
+          },
+          "ledger_total": {
+            "title": "Ledger Total",
+            "type": "string"
+          },
+          "register_total": {
+            "description": "What the account should hold: cost a debit, accumulated depreciation a credit",
+            "title": "Register Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_code",
+          "account_name",
+          "kind",
+          "register_total",
+          "ledger_total",
+          "difference"
+        ],
+        "title": "AssetReconciliationRowOut",
+        "type": "object"
+      },
       "AssetsAsOfQuery": {
         "properties": {
           "as_of": {
@@ -28353,6 +28450,64 @@
           }
         ],
         "summary": "Create Asset",
+        "tags": [
+          "fixed assets"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/fixed-assets/reconciliation": {
+      "get": {
+        "description": "The register's cost and accumulated depreciation against the ledger, per account.",
+        "operationId": "fcp_modules_assets_api_reconciliation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetReconciliationOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Reconciliation",
         "tags": [
           "fixed assets"
         ]

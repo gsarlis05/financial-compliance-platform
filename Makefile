@@ -3,13 +3,14 @@
 export
 
 .PHONY: help install dev-env dev dev-down dev-reset migrate run-backend run-frontend \
-	services synthetic iac-check restore-drill e2e-login e2e-ui demo images container-smoke openapi openapi-check review-list ops-checks validation test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
+	services synthetic iac-check restore-drill e2e-login e2e-ui e2e-walkthrough demo images container-smoke openapi openapi-check review-list ops-checks validation test lint backend-test frontend-test backend-lint frontend-lint security prove-gates
 
 help:
 	@echo "make dev           start local services (creates .env, installs deps, migrates)"
 	@echo "make run-backend   Django dev server on http://localhost:8000"
 	@echo "make run-frontend  Vite dev server on http://localhost:5173"
 	@echo "make demo          load the Demo Trading workspace via the API (SHARE_WITH=email to see it in the UI)"
+	@echo "make e2e-walkthrough  walk the demo year in a real browser and check the figures agree (V1-4)"
 	@echo "make images        build the API and web container images (local only, never pushed)"
 	@echo "make container-smoke  run the images production-like (TLS DB, migration task, read-only)"
 	@echo "make openapi       regenerate docs/api/openapi.json"
@@ -100,6 +101,11 @@ e2e-login:
 # Browser smoke test of the web UI (needs make services, run-backend and run-frontend; resets nothing).
 e2e-ui:
 	node scripts/e2e/ui-smoke.js
+
+# V1-4: the full demo year walked in a real browser, figures checked from screen to screen
+# (needs make services, run-backend and run-frontend; loads a new demo workspace).
+e2e-walkthrough:
+	scripts/e2e/walkthrough.sh
 
 # AC-G5 demo: a new "Demo Trading" workspace with one synthetic year (local dev only).
 demo:

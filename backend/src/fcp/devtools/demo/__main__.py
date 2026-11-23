@@ -10,6 +10,7 @@ books, and prints every step of the AC-G5 demo script.
 """
 
 import argparse
+import json
 import os
 import sys
 
@@ -19,6 +20,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--share-with", metavar="EMAIL", help="existing user to invite")
     parser.add_argument("--share-role", default="finance_manager")
+    parser.add_argument(
+        "--json",
+        metavar="PATH",
+        help="also write the workspace, its year-end figures and the agreement checks (V1-4) "
+        "to this file, for the browser walk-through",
+    )
     args = parser.parse_args(argv)
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fcp.settings.dev")
@@ -38,6 +45,17 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout.write(
         f"\nDemo workspace: {result.slug}  (open http://localhost:5173/w/{result.slug})\n"
     )
+    if args.json:
+        statements = {key: {r["code"]: r["current"] for r in result.statements[key]["rows"]
+                            if r["current"] is not None}
+                      for key in ("profit_and_loss", "balance_sheet", "cash_flow")}  # fmt: skip
+        with open(args.json, "w", encoding="utf-8") as out:
+            json.dump({"slug": result.slug, "entity_id": result.entity_id,
+                       "bank_balance": result.bank_balance, "statements": statements,
+                       "forecast_opening": result.forecast.get("opening_cash"),
+                       "agreements": [{"name": a.name, "left": a.left, "right": a.right,
+                                       "ok": a.ok} for a in result.agreements]},
+                      out, indent=1)  # fmt: skip
     return 0
 
 
