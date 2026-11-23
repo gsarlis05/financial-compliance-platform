@@ -116,6 +116,13 @@ def create_reversal(
             if line.vat_recovery_percent is None
             else str(line.vat_recovery_percent),
             vat_blocked=None if line.vat_blocked is None else f"{line.vat_blocked:.2f}",
+            txn_currency=line.txn_currency,
+            txn_amount=None
+            if line.txn_currency is None
+            else str(line.txn_debit or line.txn_credit),
+            exchange_rate=None if line.exchange_rate is None else str(line.exchange_rate),
+            rate_at=line.rate_at,
+            rate_source=line.rate_source,
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
@@ -153,7 +160,12 @@ def link_reversal(entry: JournalEntry) -> None:
 
     def tags(ln: JournalLine) -> tuple[str, ...]:
         dims = sorted(str(t.value_id) for t in ln.dimension_tags.all())
-        return (*dims, f"counterparty={ln.counterparty_id}", f"vat={ln.vat_code_id}")
+        return (
+            *dims,
+            f"counterparty={ln.counterparty_id}",
+            f"vat={ln.vat_code_id}",
+            f"fx={ln.txn_currency}:{ln.exchange_rate}",
+        )
 
     expected = sorted((ln.account_id, ln.credit, ln.debit, tags(ln)) for ln in original.lines.all())
     actual = sorted((ln.account_id, ln.debit, ln.credit, tags(ln)) for ln in entry.lines.all())

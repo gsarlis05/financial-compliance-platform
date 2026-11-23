@@ -201,6 +201,10 @@ class LedgerSettings(TenantOwned):
     legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
     approval_policy = models.CharField(max_length=16, choices=Approval.choices)
     approval_threshold = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    # V1-2h: where exchange differences go (an account mapped to FX.DIFF; 7020 in the template).
+    fx_account = models.ForeignKey(
+        "Account", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
@@ -365,6 +369,10 @@ class JournalLine(TenantOwned):
     exchange_rate = models.DecimalField(  # functional units per one transaction unit
         max_digits=20, decimal_places=10, null=True, blank=True
     )
+    # V1-2h (#219; owner decision 2026-11-23): the rate is the one of the transaction's date and
+    # time, recorded with when it applied and where it came from (bank, invoice, stored rate).
+    rate_at = models.DateTimeField(null=True, blank=True)
+    rate_source = models.CharField(max_length=200, blank=True)
 
     class Meta:
         db_table = "ledger_journal_line"
@@ -401,6 +409,11 @@ class JournalLine(TenantOwned):
                     )
                 ),
                 name="ledger_line_txn_currency_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(txn_currency__isnull=True)
+                | (models.Q(rate_at__isnull=False) & ~models.Q(rate_source="")),
+                name="ledger_line_txn_rate_source",
             ),
         ]
 

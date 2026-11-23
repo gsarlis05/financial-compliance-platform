@@ -9,7 +9,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -29,7 +29,7 @@ from fcp.modules.tenancy.api import (
     self_approval_allowed,
 )
 
-from . import dimensions
+from . import dimensions, fx
 from .errors import (
     AccountNotPostableError,
     ApprovalRequiredError,
@@ -84,6 +84,14 @@ class LineInput:
     tax_point: date | None = None
     vat_recovery_percent: str | None = None
     vat_blocked: str | None = None
+    # Foreign currency (V1-2h): the line's amount in its currency, the rate (functional units per
+    # unit) of the transaction's date and time, when that rate applied and where it comes from.
+    # The debit or credit above is then that amount converted, rounded half up to the cent.
+    txn_currency: str | None = None
+    txn_amount: str | None = None
+    exchange_rate: str | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -213,22 +221,23 @@ def _amount(value: str, currency: str, field: str) -> Money:
 
 
 def _check_currency(entity: Any, currency: str | None) -> None:
-    """Only the functional currency while multi-currency is disabled (M6F-1, #80; owner decision
-    D8): foreign-currency transactions need translation, revaluation and FX gains and losses,
-    which are not implemented yet."""
+    """Entries are recorded in the functional currency (M6F-1, #80); a foreign currency is given
+    per line, with its amount and rate (V1-2h)."""
     if currency is None or currency == entity.functional_currency:
         return
     message = (
-        f"Transactions in {currency} are not available yet: this entity records "
-        f"{entity.functional_currency} only (multi-currency is disabled in this release)."
+        f"Entries are recorded in {entity.functional_currency}. For an amount in {currency}, "
+        "give it on the line with its rate."
     )
     raise ValidationFailedError(message, field_errors={"currency": [message]})
 
 
 def _validated_lines(
-    entity_id: UUID, currency: str, lines: Sequence[LineInput], *, mirror: bool = False
+    entity: Any, lines: Sequence[LineInput], *, mirror: bool = False
 ) -> list[dict[str, Any]]:
-    """Structural checks that apply to drafts too (each line: one side, positive, rounded)."""
+    """Structural checks that apply to drafts too (each line: one side, positive, rounded; a
+    foreign-currency line converted at its rate)."""
+    entity_id, currency = entity.id, entity.functional_currency
     accounts = {
         a.id: a
         for a in Account.objects.filter(
@@ -272,6 +281,16 @@ def _validated_lines(
                 "due_date": line.due_date,
                 "vat_code_id": line.vat_code_id,
                 **_vat_details(line, account, i, debit.amount - credit.amount),
+                **fx.foreign_line(
+                    entity,
+                    i,
+                    currency=line.txn_currency,
+                    amount=line.txn_amount,
+                    rate=line.exchange_rate,
+                    rate_at=line.rate_at,
+                    rate_source=line.rate_source,
+                    functional=debit.amount - credit.amount,
+                ),
                 "tags": tags[i],
             }
         )
@@ -440,9 +459,10 @@ def _hash_line(ln: JournalLine) -> list[Any]:
         row.append([ln.tax_point.isoformat() if ln.tax_point else "",
                     f"{ln.vat_recovery_percent:.2f}" if ln.vat_recovery_percent is not None else "",
                     f"{ln.vat_blocked:.2f}" if ln.vat_blocked is not None else ""])  # fmt: skip
-    if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1)
+    if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1; rate's time V1-2h)
         row.append([ln.txn_currency, f"{ln.txn_debit:.4f}", f"{ln.txn_credit:.4f}",
-                    f"{ln.exchange_rate:.10f}"])  # fmt: skip
+                    f"{ln.exchange_rate:.10f}",
+                    ln.rate_at.isoformat() if ln.rate_at else "", ln.rate_source])  # fmt: skip
     if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
         row.append(
             [
@@ -598,7 +618,7 @@ def create_draft(  # noqa: PLR0913 - keyword-only options
     deactivated since, which must not prevent correcting the books."""
     entity = get_entity(ctx, entity_id, "ledger.entry.create")
     _check_currency(entity, data.currency)
-    lines = _validated_lines(entity.id, entity.functional_currency, data.lines, mirror=mirror)
+    lines = _validated_lines(entity, data.lines, mirror=mirror)
     entry = JournalEntry.objects.create(
         tenant=ctx.tenant,
         legal_entity=entity,
@@ -646,7 +666,7 @@ def update_draft(
             "generate it again."
         )
     _check_currency(entity, data.currency)
-    lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
+    lines = _validated_lines(entity, data.lines)
     before = {
         "accounting_date": entry.accounting_date,
         "description": entry.description,

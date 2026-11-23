@@ -64,8 +64,9 @@ class LegalEntity(TenantOwned):
     # M6F-1 (#80): statements may be presented in another currency later (IAS 21 translation at
     # report time); EUR = functional in this release.
     reporting_currency = models.CharField(max_length=3, default="EUR")  # ISO 4217
-    # Foreign-currency transactions stay off until their full accounting treatment exists (owner
-    # decision D8, 2026-11-15); the database refuses switching it on in this release.
+    # Foreign-currency transactions (owner decisions D8, 2026-11-15, and V1-2h, 2026-11-23): off
+    # by default, switched on per entity in its ledger settings once an exchange-differences
+    # account is chosen.
     multi_currency_enabled = models.BooleanField(default=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     created_by = models.ForeignKey(
@@ -74,12 +75,6 @@ class LegalEntity(TenantOwned):
 
     class Meta:
         db_table = "tenancy_legal_entity"
-        constraints = [
-            models.CheckConstraint(
-                condition=models.Q(multi_currency_enabled=False),
-                name="tenancy_entity_multi_currency_off",
-            ),
-        ]
 
     def __str__(self) -> str:
         return str(self.id)

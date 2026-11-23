@@ -43,6 +43,15 @@ def self_approval_allowed(ctx: WorkspaceContext) -> bool:
     return one_person.self_approval_allowed(ctx.tenant.id)
 
 
+def set_multi_currency(ctx: WorkspaceContext, entity: LegalEntity, enabled: bool) -> None:
+    """Switch foreign-currency transactions on or off for an entity (V1-2h). The caller checks
+    the permission (``ledger.settings.manage``) and the conditions (an exchange-differences
+    account)."""
+    if entity.multi_currency_enabled != enabled:
+        entity.multi_currency_enabled = enabled
+        entity.save(update_fields=["multi_currency_enabled"])
+
+
 on_workspace_export = lifecycle.on_export
 on_workspace_purge = lifecycle.on_purge
 
@@ -64,6 +73,7 @@ __all__ = [
     "require_feature",
     "router",
     "self_approval_allowed",
+    "set_multi_currency",
     "workspace_ctx",
 ]
 
@@ -154,7 +164,7 @@ class EntityOut(Schema):
     jurisdiction: str
     functional_currency: str = Field(description="ISO 4217")
     reporting_currency: str = Field(description="ISO 4217; equal to functional in this release")
-    multi_currency_enabled: bool = Field(description="False in this release (#80)")
+    multi_currency_enabled: bool = Field(description="Foreign currency allowed (V1-2h)")
     status: str
 
 
