@@ -1,9 +1,11 @@
-"""Public interface of the ``tax`` module: VAT periods and VAT period reports (V1-2).
+"""Public interface of the ``tax`` module: VAT periods and VAT period reports (V1-2; four steps,
+adjustments and differences V1-2d).
 
 This is the only part of ``fcp.modules.tax`` that other modules may import.
 """
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -16,7 +18,7 @@ from fcp.modules.audit_log.api import record as audit
 from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
 from . import exports, services
-from .models import VatPeriodScheme, VatReport
+from .models import VatAdjustment, VatPeriodScheme, VatReport
 
 __all__ = ["router"]
 
@@ -50,17 +52,49 @@ class ReportOut(Schema):
     generated_at: datetime
     created_by_id: UUID
     due_date: date | None
-    signed_off_by_id: UUID | None
-    signed_off_at: datetime | None
-    self_approved: bool = Field(description="Signed off by its preparer (one-person workspace)")
+    reviewed_by_id: UUID | None
+    reviewed_at: datetime | None
+    review_note: str = Field(description="Why it was last sent back to draft")
+    finalised_by_id: UUID | None
+    finalised_at: datetime | None
+    self_approved: bool = Field(
+        description="Reviewed or finalised by its preparer (one-person workspace)"
+    )
     filed_on: date | None
     filing_reference: str
+    filing_evidence: str
     settlement_entry_id: UUID | None
+
+
+class AdjustmentOut(Schema):
+    id: UUID
+    box: str
+    amount: Decimal
+    reason: str
+    evidence: str
+    status: str
+    created_by_id: UUID
+    created_at: datetime
+    decided_by_id: UUID | None
+    decided_at: datetime | None
+    decision_note: str
+    self_approved: bool
 
 
 class ReportDetailOut(ReportOut):
     snapshot: dict[str, Any] = Field(description="Every figure, check and line, frozen")
-    blockers: list[str] = Field(description="Draft: why it cannot be signed off yet")
+    final_return: dict[str, Any] | None = Field(
+        description="The return after approved adjustments: original, adjustment, final per box"
+    )
+    adjustments: list[AdjustmentOut]
+    blockers: list[str] = Field(description="Why it cannot take its next step yet")
+    differences: dict[str, Any] | None = Field(
+        description="Reviewed or later: lines posted or reversed in the period since it was "
+        "prepared, and the change to each box"
+    )
+    previous: dict[str, Any] | None = Field(
+        description="A new version: the version it corrects and the change to each box"
+    )
 
 
 class VatPeriodOut(Schema):
@@ -82,6 +116,23 @@ class DueIn(Schema):
 class FiledIn(Schema):
     filed_on: date
     reference: str = Field(min_length=1, max_length=100)
+    evidence: str = Field(min_length=1, max_length=500,
+                          description="Where the portal's acknowledgement is kept")  # fmt: skip
+
+
+class NoteIn(Schema):
+    note: str = Field(min_length=1, max_length=500)
+
+
+class AdjustmentIn(Schema):
+    box: str = Field(description="1, 2, 4, 6, 7, 8A, 8B, 9, 10, 11A or 11B")
+    amount: Decimal = Field(max_digits=19, decimal_places=2, description="Signed, in euros")
+    reason: str = Field(min_length=1, max_length=500)
+    evidence: str = Field(min_length=1, max_length=500)
+
+
+class DecisionIn(Schema):
+    note: str = Field(default="", max_length=500)
 
 
 class SettlementOut(Schema):
@@ -94,9 +145,17 @@ class VatExportQuery(Schema):
 
 
 def _detail(ctx: Any, r: VatReport) -> ReportDetailOut:
-    blockers = services.blockers(ctx, r) if r.status == VatReport.Status.DRAFT else []
+    open_ = r.status in (VatReport.Status.DRAFT, VatReport.Status.REVIEWED)
+    later = r.status in (VatReport.Status.REVIEWED, VatReport.Status.FINALISED,
+                         VatReport.Status.FILED)  # fmt: skip
     base = ReportOut.from_orm(r).model_dump()
-    return ReportDetailOut.model_validate({**base, "snapshot": r.snapshot, "blockers": blockers})
+    return ReportDetailOut.model_validate({
+        **base, "snapshot": r.snapshot, "final_return": services.final_return(r),
+        "adjustments": [AdjustmentOut.from_orm(a) for a in r.adjustments.order_by("created_at")],
+        "blockers": services.blockers(ctx, r) if open_ else [],
+        "differences": services.differences(ctx, r) if later else None,
+        "previous": services.previous_version(r),
+    })  # fmt: skip
 
 
 @router.get(f"{BASE}/vat-period-schemes", response=list[SchemeOut])
@@ -158,13 +217,65 @@ def set_due_date(request: HttpRequest, slug: str, entity_id: UUID, report_id: UU
     return _detail(ctx, services.set_due_date(ctx, entity_id, report_id, payload.due_date))
 
 
-@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/sign-off", response=ReportDetailOut)
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/review", response=ReportDetailOut)
 @requires("tax.vat.sign_off")
-def sign_off(request: HttpRequest, slug: str, entity_id: UUID,
-             report_id: UUID) -> ReportDetailOut:  # fmt: skip
-    """Freeze the report for filing (never your own, except in a one-person workspace)."""
+def review(request: HttpRequest, slug: str, entity_id: UUID,
+           report_id: UUID) -> ReportDetailOut:  # fmt: skip
+    """Review a draft and freeze its figures (never your own, except in a one-person
+    workspace)."""
     ctx = workspace_ctx(request, slug, entity_id)
-    return _detail(ctx, services.sign_off(ctx, entity_id, report_id))
+    return _detail(ctx, services.review(ctx, entity_id, report_id))
+
+
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/reopen", response=ReportDetailOut)
+@requires("tax.vat.sign_off")
+def reopen(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
+           payload: NoteIn) -> ReportDetailOut:  # fmt: skip
+    """Send a reviewed report back to draft, saying why."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _detail(ctx, services.reopen(ctx, entity_id, report_id, payload.note))
+
+
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/finalise", response=ReportDetailOut)
+@requires("tax.vat.sign_off")
+def finalise(request: HttpRequest, slug: str, entity_id: UUID,
+             report_id: UUID) -> ReportDetailOut:  # fmt: skip
+    """Finalise a reviewed report for filing; records the inclusion of each of its lines."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _detail(ctx, services.finalise(ctx, entity_id, report_id))
+
+
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/adjustments",
+             response={201: AdjustmentOut})  # fmt: skip
+@requires("tax.vat.prepare")
+def propose_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
+                       payload: AdjustmentIn) -> Status[VatAdjustment]:  # fmt: skip
+    """Propose a manual adjustment of one box of a draft, with a reason and evidence."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = services.AdjustmentInput(box=payload.box, amount=payload.amount,
+                                    reason=payload.reason, evidence=payload.evidence)  # fmt: skip
+    return Status(201, services.propose_adjustment(ctx, entity_id, report_id, data))
+
+
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/adjustments/{{uuid:adjustment_id}}/approve",
+             response=AdjustmentOut)  # fmt: skip
+@requires("tax.vat.sign_off")
+def approve_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
+                       adjustment_id: UUID, payload: DecisionIn) -> VatAdjustment:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.decide_adjustment(ctx, entity_id, report_id, adjustment_id, approve=True,
+                                      note=payload.note)  # fmt: skip
+
+
+@router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/adjustments/{{uuid:adjustment_id}}/reject",
+             response=AdjustmentOut)  # fmt: skip
+@requires("tax.vat.prepare")
+def reject_adjustment(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
+                      adjustment_id: UUID, payload: DecisionIn) -> VatAdjustment:  # fmt: skip
+    """Reject a proposed adjustment (``tax.vat.sign_off``), or withdraw your own."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return services.decide_adjustment(ctx, entity_id, report_id, adjustment_id, approve=False,
+                                      note=payload.note)  # fmt: skip
 
 
 @router.post(f"{BASE}/vat-reports/{{uuid:report_id}}/filed", response=ReportDetailOut)
@@ -174,7 +285,8 @@ def mark_filed(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID
     """Record that you filed the return on the Tax Department's portal. Nothing is sent."""
     ctx = workspace_ctx(request, slug, entity_id)
     found = services.mark_filed(ctx, entity_id, report_id, filed_on=payload.filed_on,
-                                reference=payload.reference)  # fmt: skip
+                                reference=payload.reference,
+                                evidence=payload.evidence)  # fmt: skip
     return _detail(ctx, found)
 
 
@@ -206,13 +318,13 @@ CONTENT_TYPES = {
 @requires("reports.export")
 def export_report(request: HttpRequest, slug: str, entity_id: UUID, report_id: UUID,
                   query: Query[VatExportQuery]) -> HttpResponse:  # fmt: skip
-    """The report as Excel or PDF, from its frozen snapshot; DRAFT until signed off. Audited."""
+    """The report as Excel or PDF, from its frozen snapshot; DRAFT until finalised. Audited."""
     ctx = workspace_ctx(request, slug, entity_id)
     r = services.get(ctx, entity_id, report_id)
     entity = get_entity(ctx, entity_id, "tax.vat.read")
     write = exports.to_xlsx if query.format == "xlsx" else exports.to_pdf
     content = write(r, entity.legal_name, query.lang, generated=timezone.now())
-    draft = "" if r.status in ("SIGNED_OFF", "FILED") else "-draft"
+    draft = "" if r.status in ("FINALISED", "FILED") else "-draft"
     filename = f"vat-report-{r.period_start:%Y-%m}-{r.period_end:%Y-%m}-v{r.version}{draft}"
     filename += f".{query.format}"
     audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="reports.exported",

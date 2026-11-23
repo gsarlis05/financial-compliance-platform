@@ -5,11 +5,16 @@
   new one takes effect from the first day of a period, and earlier periods keep the scheme they
   had.
 - ``VatReport``: the report of one VAT period, computed from the posted ledger and frozen in a
-  snapshot. ``DRAFT → SIGNED_OFF → FILED``; a signed-off or filed report becomes ``SUPERSEDED``
-  when a newer version of it is signed off. The person who signs off is not the preparer, except
-  in a one-person workspace (V1-1). The platform never files a return: "filed" records that the
-  owner filed it on the Tax Department's portal, with the portal's reference. Nothing is deleted
-  and a signed-off report never changes (database triggers).
+  snapshot. ``DRAFT → REVIEWED → FINALISED → FILED`` (V1-2d); a reviewed report can go back to
+  draft; a finalised or filed report becomes ``SUPERSEDED`` when a newer version of it is
+  finalised. The reviewer and the finaliser are not the preparer, except in a one-person
+  workspace (V1-1). The platform never files a return: "filed" records that the owner filed it on
+  the Tax Department's portal, with the portal's reference and evidence. Nothing is deleted and a
+  finalised report never changes (database triggers).
+- ``VatAdjustment``: a manual change to one box of a draft, with a reason and evidence, applied
+  only once approved; the figures from the ledger stay as they were.
+- ``VatInclusion``: which return each ledger line was reported in. A line is in at most one active
+  (finalised or filed, not superseded) return.
 """
 
 from django.conf import settings
@@ -44,7 +49,8 @@ class VatPeriodScheme(TenantOwned):
 class VatReport(TenantOwned):
     class Status(models.TextChoices):
         DRAFT = "DRAFT"
-        SIGNED_OFF = "SIGNED_OFF"
+        REVIEWED = "REVIEWED"
+        FINALISED = "FINALISED"
         FILED = "FILED"
         SUPERSEDED = "SUPERSEDED"
 
@@ -64,16 +70,23 @@ class VatReport(TenantOwned):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
     due_date = models.DateField(null=True, blank=True)  # entered by the owner
-    signed_off_by = models.ForeignKey(
+    reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
-    signed_off_at = models.DateTimeField(null=True, blank=True)
-    self_approved = models.BooleanField(default=False)  # signed off by its preparer (V1-1)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=500, blank=True)  # why it went back to draft
+    finalised_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    finalised_at = models.DateTimeField(null=True, blank=True)
+    # Reviewed or finalised by its preparer, in a one-person workspace (V1-1).
+    self_approved = models.BooleanField(default=False)
     filed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     filed_on = models.DateField(null=True, blank=True)  # the date the owner filed it
     filing_reference = models.CharField(max_length=100, blank=True)
+    filing_evidence = models.CharField(max_length=500, blank=True)  # e.g. the acknowledgement
     superseded_at = models.DateTimeField(null=True, blank=True)
     settlement_entry_id = models.UUIDField(null=True, blank=True)  # the prepared VAT settlement
 
@@ -83,11 +96,11 @@ class VatReport(TenantOwned):
             models.UniqueConstraint(
                 fields=["legal_entity", "period_start", "version"], name="tax_vat_report_version"
             ),
-            # At most one report per period that is not superseded and not a draft beside it.
+            # At most one report per period being prepared (draft or reviewed).
             models.UniqueConstraint(
                 fields=["legal_entity", "period_start"],
-                condition=models.Q(status="DRAFT"),
-                name="tax_vat_report_one_draft",
+                condition=models.Q(status__in=["DRAFT", "REVIEWED"]),
+                name="tax_vat_report_one_open",
             ),
             models.CheckConstraint(
                 condition=models.Q(period_end__gte=models.F("period_start")),
@@ -95,8 +108,13 @@ class VatReport(TenantOwned):
             ),
             models.CheckConstraint(
                 condition=models.Q(status="DRAFT")
-                | models.Q(signed_off_by__isnull=False, signed_off_at__isnull=False),
-                name="tax_vat_report_signed",
+                | models.Q(reviewed_by__isnull=False, reviewed_at__isnull=False),
+                name="tax_vat_report_reviewed",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=["DRAFT", "REVIEWED"])
+                | models.Q(finalised_by__isnull=False, finalised_at__isnull=False),
+                name="tax_vat_report_finalised",
             ),
             models.CheckConstraint(
                 condition=~models.Q(status="FILED")
@@ -104,14 +122,93 @@ class VatReport(TenantOwned):
                 name="tax_vat_report_filed",
             ),
             models.CheckConstraint(
-                condition=models.Q(signed_off_by__isnull=True)
-                | ~models.Q(signed_off_by=models.F("created_by"))
-                | models.Q(self_approved=True),
+                condition=(
+                    models.Q(reviewed_by__isnull=True)
+                    | ~models.Q(reviewed_by=models.F("created_by"))
+                    | models.Q(self_approved=True)
+                )
+                & (
+                    models.Q(finalised_by__isnull=True)
+                    | ~models.Q(finalised_by=models.F("created_by"))
+                    | models.Q(self_approved=True)
+                ),
                 name="tax_vat_report_sod",
             ),
             models.CheckConstraint(
                 condition=models.Q(self_approved=False)
-                | models.Q(signed_off_by=models.F("created_by")),
+                | models.Q(reviewed_by=models.F("created_by"))
+                | models.Q(finalised_by=models.F("created_by")),
                 name="tax_vat_report_self_approved",
+            ),
+        ]
+
+
+BOXES = ("1", "2", "4", "6", "7", "8A", "8B", "9", "10", "11A", "11B")  # 3 and 5 are computed
+
+
+class VatAdjustment(TenantOwned):
+    class Status(models.TextChoices):
+        PROPOSED = "PROPOSED"
+        APPROVED = "APPROVED"
+        REJECTED = "REJECTED"  # rejected by an approver, or withdrawn by its author
+
+    report = models.ForeignKey(VatReport, on_delete=models.PROTECT, related_name="adjustments")
+    box = models.CharField(max_length=3)
+    amount = models.DecimalField(max_digits=19, decimal_places=2)
+    reason = models.CharField(max_length=500)
+    evidence = models.CharField(max_length=500)  # e.g. "adviser's letter of 3 April, in Documents"
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.PROPOSED)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+    self_approved = models.BooleanField(default=False)  # approved by its author (V1-1)
+
+    class Meta:
+        db_table = "tax_vat_adjustment"
+        constraints = [
+            models.CheckConstraint(condition=models.Q(box__in=BOXES), name="tax_vat_adj_box"),
+            models.CheckConstraint(condition=~models.Q(amount=0), name="tax_vat_adj_amount"),
+            models.CheckConstraint(
+                condition=~models.Q(reason="") & ~models.Q(evidence=""),
+                name="tax_vat_adj_reasoned",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status="PROPOSED")
+                | models.Q(decided_by__isnull=False, decided_at__isnull=False),
+                name="tax_vat_adj_decided",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(status="APPROVED")
+                | ~models.Q(decided_by=models.F("created_by"))
+                | models.Q(self_approved=True),
+                name="tax_vat_adj_sod",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(status="APPROVED", decided_by=models.F("created_by")),
+                name="tax_vat_adj_self_approved",
+            ),
+        ]
+
+
+class VatInclusion(TenantOwned):
+    report = models.ForeignKey(VatReport, on_delete=models.PROTECT, related_name="+")
+    line_id = models.UUIDField()
+    entry_id = models.UUIDField()
+    active = models.BooleanField(default=True)  # false once its report is superseded
+
+    class Meta:
+        db_table = "tax_vat_inclusion"
+        constraints = [
+            models.UniqueConstraint(fields=["report", "line_id"], name="tax_vat_inclusion_once"),
+            models.UniqueConstraint(
+                fields=["tenant", "line_id"],
+                condition=models.Q(active=True),
+                name="tax_vat_inclusion_one_return",
             ),
         ]

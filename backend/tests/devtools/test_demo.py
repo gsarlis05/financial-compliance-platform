@@ -54,7 +54,7 @@ def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkt
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
     assert len(result.steps) == 36
     vat_step = next(s for s in result.steps if s.startswith("VAT: quarterly periods"))
-    assert "0 exception(s); signed off by the owner" in vat_step, vat_step
+    assert "0 exception(s); reviewed and finalised by the owner" in vat_step, vat_step
     # The report's VAT equals the VAT the synthetic invoices of the first quarter carry.
     q1 = [e for e in books.entries if e.accounting_date < date(2026, 4, 1)]
     output = sum((e.lines["2120"][1] - e.lines["2120"][0] for e in q1 if "2120" in e.lines),

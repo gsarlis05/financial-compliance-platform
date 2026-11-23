@@ -1,6 +1,7 @@
 """VAT periods and VAT period reports (V1-2, #208): periods chosen per company and changed from
 the start of a later period; a report per period from the posted ledger, worked by hand below;
-sign-off (never by the preparer, except in a one-person workspace), filing recorded by hand,
+review and finalisation (never by the preparer, except in a one-person workspace), filing recorded
+by hand,
 versions, the settlement entry, exports and the database's rules.
 
 Golden quarter (Q1 2026), Cyprus template accounts:
@@ -162,20 +163,20 @@ def test_the_golden_quarter(v: dict[str, Any]) -> None:
     assert report["blockers"] == []  # the quarter has ended and nothing changed
 
 
-def test_sign_off_filing_versions_and_settlement(
+def test_review_finalise_filing_versions_and_settlement(
     v: dict[str, Any], make_user: Make, api_client: Make
 ) -> None:
     scheme(v, 3, Q1)
     report = generate(v).json()
-    own = act(v, report["id"], "sign-off")
+    own = act(v, report["id"], "review")
     assert own.status_code == 403  # the preparer, in a workspace of more than one is possible
     assert generate(v).status_code == 409  # one report per period
-    # Posting into the period after generating blocks sign-off until regenerated.
+    # Posting into the period after generating blocks the review until regenerated.
     late = post(v, "2026-03-20", ("1300", "120", "0", None), ("4000", "0", "100", S19),
                 ("2120", "0", "20", S19))  # fmt: skip
-    boss = join(v["client"], v["ws"]["slug"], make_user("fm@example.test"), api_client,
-                "finance_manager")  # fmt: skip
-    stale = act(v, report["id"], "sign-off", boss)
+    manager = make_user("fm@example.test")
+    boss = join(v["client"], v["ws"]["slug"], manager, api_client, "finance_manager")
+    stale = act(v, report["id"], "review", boss)
     assert stale.status_code == 409
     assert stale.json()["code"] == "tax.vat.not_signable"
     assert "Regenerate it" in stale.json()["detail"]
@@ -186,20 +187,30 @@ def test_sign_off_filing_versions_and_settlement(
     assert sorted(kinds) == ["RATE_MISMATCH", "UNSUPPORTED"]
     details = " ".join(e["detail"] for e in again["snapshot"]["exceptions"])
     assert "S19 (sales): VAT recorded 191.00, 190.00" in details
-    # The owner corrects it by reversal, regenerates and the manager signs off.
+    # The owner corrects it by reversal, regenerates; the manager reviews and finalises it.
     rev = v["client"].post_json(f"{v['base']}/journal-entries/{late}/reverse",
                                 {"reason": "Wrong VAT amount",
                                  "reversal_date": "2026-03-20"}).json()  # fmt: skip
     reversed_ = v["client"].post_json(f"{v['base']}/journal-entries/{rev['id']}/post", {})
     assert reversed_.status_code == 200, reversed_.content
     act(v, report["id"], "regenerate")
-    signed = act(v, report["id"], "sign-off", boss)
+    assert act(v, report["id"], "finalise", boss).status_code == 409  # review comes first
+    reviewed = act(v, report["id"], "review", boss)
+    assert reviewed.status_code == 200, reviewed.content
+    assert act(v, report["id"], "regenerate").status_code == 409  # frozen once reviewed
+    assert act(v, report["id"], "settlement").status_code == 409  # after finalising
+    signed = act(v, report["id"], "finalise", boss)
     assert signed.status_code == 200, signed.content
     body = signed.json()
-    assert (body["status"], body["self_approved"]) == ("SIGNED_OFF", False)
+    assert (body["status"], body["self_approved"]) == ("FINALISED", False)
+    assert body["reviewed_by_id"] == body["finalised_by_id"] == str(manager.id)
     assert body["snapshot"]["totals"]["net"] == "140.00"
-    assert act(v, report["id"], "regenerate").status_code == 409  # frozen
+    assert body["differences"] == {"changed": False, "added": [], "removed": [], "boxes": {}}
 
+    _settle_file_and_correct(v, report, boss)
+
+
+def _settle_file_and_correct(v: dict[str, Any], report: dict[str, Any], boss: Any) -> None:
     # The settlement entry moves the input VAT into the output VAT account, as a draft.
     settled = act(v, report["id"], "settlement")
     assert settled.status_code == 201, settled.content
@@ -212,18 +223,24 @@ def test_sign_off_filing_versions_and_settlement(
     assert act(v, report["id"], "settlement").status_code == 409  # once only
 
     # Filing is recorded by hand with the portal's reference; nothing is sent anywhere.
-    assert act(v, report["id"], "filed", boss, filed_on="2026-05-05",
-               reference=" ").status_code == 422  # fmt: skip
-    filed = act(v, report["id"], "filed", boss, filed_on="2026-05-05", reference="TAXIS-123")
+    proof = "Portal acknowledgement saved in Documents"
+    assert act(v, report["id"], "filed", boss, filed_on="2026-05-05", reference=" ",
+               evidence=proof).status_code == 422  # fmt: skip
+    assert act(v, report["id"], "filed", boss, filed_on="2026-05-05", reference="TAXIS-123",
+               evidence=" ").status_code == 422  # fmt: skip
+    filed = act(v, report["id"], "filed", boss, filed_on="2026-05-05", reference="TAXIS-123",
+                evidence=proof)  # fmt: skip
     assert filed.status_code == 200, filed.content
-    assert (filed.json()["status"], filed.json()["filing_reference"]) == ("FILED", "TAXIS-123")
+    assert (filed.json()["status"], filed.json()["filing_reference"],
+            filed.json()["filing_evidence"]) == ("FILED", "TAXIS-123", proof)  # fmt: skip
 
-    # A correction is a new version; signing it off supersedes the filed one.
+    # A correction is a new version; finalising it supersedes the filed one.
     v2 = act(v, report["id"], "new-version")
     assert v2.status_code == 201, v2.content
     assert (v2.json()["version"], v2.json()["supersedes_id"]) == (2, report["id"])
     assert act(v, report["id"], "new-version").status_code == 409
-    assert act(v, v2.json()["id"], "sign-off", boss).status_code == 200
+    assert act(v, v2.json()["id"], "review", boss).status_code == 200
+    assert act(v, v2.json()["id"], "finalise", boss).status_code == 200
     first = v["client"].get(f"{v['base']}/vat-reports/{report['id']}").json()
     assert first["status"] == "SUPERSEDED"
     listed = v["client"].get(f"{v['base']}/vat-periods").json()
@@ -231,25 +248,26 @@ def test_sign_off_filing_versions_and_settlement(
 
     set_context(tenant_id=UUID(v["ws"]["id"]))
     actions = [e.action for e in AuditEvent.objects.filter(action__startswith="tax.vat.")]
-    for action in ("tax.vat.periods_set", "tax.vat.report_generated", "tax.vat.report_signed_off",
-                   "tax.vat.settlement_prepared", "tax.vat.report_filed",
-                   "tax.vat.report_superseded"):  # fmt: skip
+    for action in ("tax.vat.periods_set", "tax.vat.report_generated", "tax.vat.report_reviewed",
+                   "tax.vat.report_finalised", "tax.vat.settlement_prepared",
+                   "tax.vat.report_filed", "tax.vat.report_superseded"):  # fmt: skip
         assert action in actions
 
 
-def test_one_person_self_sign_off_and_rules(v: dict[str, Any]) -> None:
+def test_one_person_self_approval_and_rules(v: dict[str, Any]) -> None:
     scheme(v, 3, Q1)
-    # A period that has not ended cannot be signed off.
+    # A period that has not ended cannot be reviewed.
     assert scheme(v, 3, "2026-10-01").status_code == 201  # same length, from Q4: allowed
     q4 = generate(v, "2026-10-01").json()
     assert "ends on 2026-12-31" in q4["blockers"][0]
     report = generate(v).json()
     slug = v["ws"]["slug"]
     assert v["client"].put_json(f"/api/w/{slug}/one-person", {"enabled": True}).status_code == 200
-    signed = act(v, report["id"], "sign-off")
+    assert act(v, report["id"], "review").json()["self_approved"] is True
+    signed = act(v, report["id"], "finalise")
     assert signed.status_code == 200, signed.content
     assert signed.json()["self_approved"] is True
-    # Periods cannot change under a signed-off report.
+    # Periods cannot change under a finalised report.
     refused = scheme(v, 1, "2026-01-01")
     assert refused.status_code == 422
 
@@ -264,7 +282,15 @@ def test_database_rules(v: dict[str, Any]) -> None:
         VatReport.objects.filter(id=report["id"]).delete()
     with pytest.raises(DatabaseError, match="cannot be its preparer"), transaction.atomic():
         VatReport.objects.filter(id=report["id"]).update(
-            status="SIGNED_OFF", signed_off_by=v["owner"], signed_off_at="2026-04-02T00:00Z"
+            status="REVIEWED", reviewed_by=v["owner"], reviewed_at="2026-04-02T00:00Z"
+        )
+    with pytest.raises(DatabaseError, match="not allowed"), transaction.atomic():
+        VatReport.objects.filter(id=report["id"]).update(  # no skipping the review
+            status="FINALISED",
+            finalised_by=v["owner"],
+            finalised_at="2026-04-02T00:00Z",
+            reviewed_by=v["owner"],
+            reviewed_at="2026-04-02T00:00Z",
         )
     VatReport.objects.filter(id=report["id"]).update(snapshot={"forged": True})  # a draft may
     act(v, report["id"], "regenerate")
