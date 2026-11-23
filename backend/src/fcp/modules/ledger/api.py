@@ -31,6 +31,7 @@ from . import (
     integrity,
     periods,
     reports,
+    suggestions,
 )
 from .models import (
     Account,
@@ -1638,3 +1639,90 @@ def add_exchange_rate(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     made = fx.add_rate(ctx, entity_id, fx.NewRate(**payload.model_dump()))
     return Status(201, _rate_out(made))
+
+
+# --- Help for data entry (V1-2i, #231) -----------------------------------------------------------
+
+
+class VatFavouritesOut(Schema):
+    vat_code_ids: list[str] = Field(description="The VAT codes this user starred, oldest first")
+
+
+class VatCodeUseOut(Schema):
+    vat_code_id: str
+    uses: int
+
+
+class AccountVatCodeOut(Schema):
+    account_id: UUID
+    vat_code_id: str = Field(description="The code most used with the account")
+    uses: int
+
+
+class VatUsageOut(Schema):
+    codes: list[VatCodeUseOut]
+    accounts: list[AccountVatCodeOut]
+
+
+class EntrySuggestionsQuery(Schema):
+    field: Literal["description", "memo", "reference"]
+    q: str = Field(default="", max_length=100, description="What the user has typed so far")
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class EntrySuggestionOut(Schema):
+    value: str
+    uses: int
+    last_used: datetime
+
+
+@router.get(f"{BASE}/vat-favourites", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def list_vat_favourites(request: HttpRequest, slug: str, entity_id: UUID) -> VatFavouritesOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.put(f"{BASE}/vat-favourites/{{vat_code_id}}", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def star_vat_code(request: HttpRequest, slug: str, entity_id: UUID,
+                  vat_code_id: str) -> VatFavouritesOut:  # fmt: skip
+    """Star a VAT code for yourself in this company (a personal preference)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    suggestions.set_favourite(ctx, entity_id, vat_code_id, on=True)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.delete(f"{BASE}/vat-favourites/{{vat_code_id}}", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def unstar_vat_code(request: HttpRequest, slug: str, entity_id: UUID,
+                    vat_code_id: str) -> VatFavouritesOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    suggestions.set_favourite(ctx, entity_id, vat_code_id, on=False)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.get(f"{BASE}/vat-usage", response=VatUsageOut)
+@requires("ledger.entry.read")
+def vat_usage(request: HttpRequest, slug: str, entity_id: UUID) -> VatUsageOut:
+    """How often each VAT code was used in this company, and each account's usual code."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = suggestions.usage(ctx, entity_id)
+    return VatUsageOut(
+        codes=[VatCodeUseOut(vat_code_id=c.vat_code_id, uses=c.uses) for c in found.codes],
+        accounts=[
+            AccountVatCodeOut(account_id=a.account_id, vat_code_id=a.vat_code_id, uses=a.uses)
+            for a in found.accounts
+        ],
+    )
+
+
+@router.get(f"{BASE}/entry-suggestions", response=list[EntrySuggestionOut])
+@requires("ledger.entry.read")
+def entry_suggestions(request: HttpRequest, slug: str, entity_id: UUID,
+                      q: Query[EntrySuggestionsQuery]) -> list[EntrySuggestionOut]:  # fmt: skip
+    """What was typed before in this company's entries, for the field being typed: matches that
+    start with the text first, then the most used and the most recent."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [EntrySuggestionOut(value=s.value, uses=s.uses, last_used=s.last_used)
+            for s in suggestions.suggest(ctx, entity_id, q.field, q.q, q.limit)]  # fmt: skip
