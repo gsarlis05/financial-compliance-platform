@@ -849,8 +849,8 @@ def record_vies(ctx: WorkspaceContext, entity_id: UUID, data: ViesInput) -> VatV
 def void_vies(ctx: WorkspaceContext, entity_id: UUID, statement_id: UUID,
               reason: str) -> VatViesStatement:  # fmt: skip
     entity = get_entity(ctx, entity_id, PREPARE)
-    found = VatViesStatement.objects.select_for_update().filter(legal_entity=entity,
-                                                                id=statement_id).first()  # fmt: skip
+    rows = VatViesStatement.objects.select_for_update()
+    found = rows.filter(legal_entity=entity, id=statement_id).first()
     if found is None:
         raise NotFoundError("VIES statement not found.")
     if found.voided_at is not None:
@@ -872,5 +872,5 @@ def report_vies(report: VatReport) -> dict[str, Any]:
         month__lte=report.period_end, voided_at__isnull=True,
     ).prefetch_related("lines")  # fmt: skip
     statements = [vies_out(st) for st in found]
-    return vies_reconcile(report.snapshot, final_return(report), statements,
-                          report.period_start.isoformat(), report.period_end.isoformat())  # fmt: skip
+    start, end = report.period_start.isoformat(), report.period_end.isoformat()
+    return vies_reconcile(report.snapshot, final_return(report), statements, start, end)

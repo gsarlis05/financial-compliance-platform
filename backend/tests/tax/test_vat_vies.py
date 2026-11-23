@@ -13,7 +13,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, connection, transaction
 
 from fcp.core.db.rls import set_context
 from fcp.modules.tax.models import VatViesLine, VatViesStatement
@@ -106,14 +106,22 @@ def test_reconciliation_to_8a_and_8b(eu: dict[str, Any]) -> None:
     by_country = {p["country"]: p for p in found["partners"]}
     assert by_country["DE"]["status"] == "MATCH"
     assert (by_country["FR"]["status"], by_country["FR"]["difference_services"]) == (
-        "ROUNDING", "0.40")
+        "ROUNDING",
+        "0.40",
+    )
     assert by_country["IT"]["status"] == "TRIANGULAR"
     assert found["triangular"] == "500.00"
     totals = {t["box"]: t for t in found["totals"]}
     assert (totals["8A"]["vies"], totals["8A"]["box_exact"], totals["8A"]["difference"]) == (
-        "1000.00", "1000.00", "0.00")
+        "1000.00",
+        "1000.00",
+        "0.00",
+    )
     assert (totals["8B"]["vies"], totals["8B"]["box_exact"], totals["8B"]["difference"]) == (
-        "300.40", "300.00", "0.40")
+        "300.40",
+        "300.00",
+        "0.40",
+    )
     assert found["agrees"] is False  # the rounding is shown, not hidden
 
     # A correction for February replaces the original: everything agrees.
@@ -125,7 +133,10 @@ def test_reconciliation_to_8a_and_8b(eu: dict[str, Any]) -> None:
     final = vies(eu)
     assert final["agrees"] is True
     assert [(m["month"], m["kind"]) for m in final["months"]] == [
-        ("2026-01-01", "ORIGINAL"), ("2026-02-01", "CORRECTION"), ("2026-03-01", "")]
+        ("2026-01-01", "ORIGINAL"),
+        ("2026-02-01", "CORRECTION"),
+        ("2026-03-01", ""),
+    ]
     listed = eu["client"].get(f"{eu['base']}/vat-vies", query_params={
         "date_from": "2026-01-01", "date_to": "2026-03-31"}).json()  # fmt: skip
     assert [s["reference"] for s in listed] == ["VIES-1", "VIES-2", "VIES-2C"]
@@ -142,8 +153,12 @@ def test_statements_are_kept(eu: dict[str, Any]) -> None:
     rows = VatViesStatement.objects.filter(id=made["id"])
     with pytest.raises(DatabaseError, match="never changed"), transaction.atomic():
         rows.update(reference="EDITED")
-    with pytest.raises(DatabaseError, match="are kept"), transaction.atomic():
-        rows.delete()
+    with (
+        pytest.raises(DatabaseError, match="are kept"),
+        transaction.atomic(),
+        connection.cursor() as cursor,
+    ):  # past Django's PROTECT, to the database itself
+        cursor.execute("DELETE FROM tax_vat_vies_statement WHERE id = %s", [made["id"]])
     with pytest.raises(DatabaseError, match="never changed"), transaction.atomic():
         VatViesLine.objects.filter(statement_id=made["id"]).update(goods=Decimal(1))
     with pytest.raises(DatabaseError, match="active VIES statement"), transaction.atomic():

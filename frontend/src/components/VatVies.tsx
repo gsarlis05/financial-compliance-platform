@@ -1,11 +1,7 @@
 // VIES statements for a VAT period (V1-2g): recorded as the owner filed them (nothing is sent),
 // and reconciled to the EU supplies in the books and to Boxes 8A and 8B.
 import { type SyntheticEvent, useState } from "react";
-import {
-  type VatReportDetail,
-  type VatViesLine,
-  useVatVies,
-} from "../api/vat";
+import { type VatReportDetail, type VatViesLine, useVatVies } from "../api/vat";
 import { ProblemMessage } from "./common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
@@ -34,7 +30,9 @@ export function VatVies({ report }: { report: VatReportDetail }) {
   const [reason, setReason] = useState("");
   const money = (x: string) => formatAmount(x, locale);
   const relevant =
-    v.partners.length > 0 || (list.data?.length ?? 0) > 0 || v.months.some((m) => m.supplies);
+    v.partners.length > 0 ||
+    (list.data?.length ?? 0) > 0 ||
+    v.months.some((m) => m.supplies);
   if (!relevant) {
     return null;
   }
@@ -71,7 +69,8 @@ export function VatVies({ report }: { report: VatReportDetail }) {
       <p className="muted">{t("vat.vies.help")}</p>
       {v.missing_months.length ? (
         <p className="notice warn">
-          {t("vat.vies.missing")} {v.missing_months.map((m) => m.slice(0, 7)).join(", ")}
+          {t("vat.vies.missing")}{" "}
+          {v.missing_months.map((m) => m.slice(0, 7)).join(", ")}
         </p>
       ) : null}
       <div className="table-scroll">
@@ -80,11 +79,21 @@ export function VatVies({ report }: { report: VatReportDetail }) {
             <tr>
               <th scope="col">{t("vat.country")}</th>
               <th scope="col">{t("vat.vatNo")}</th>
-              <th scope="col" className="amount">{t("vat.vies.booksGoods")}</th>
-              <th scope="col" className="amount">{t("vat.vies.viesGoods")}</th>
-              <th scope="col" className="amount">{t("vat.vies.booksServices")}</th>
-              <th scope="col" className="amount">{t("vat.vies.viesServices")}</th>
-              <th scope="col" className="amount">{t("vat.vies.triangular")}</th>
+              <th scope="col" className="amount">
+                {t("vat.vies.booksGoods")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.vies.viesGoods")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.vies.booksServices")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.vies.viesServices")}
+              </th>
+              <th scope="col" className="amount">
+                {t("vat.vies.triangular")}
+              </th>
               <th scope="col">{t("vat.vies.status")}</th>
             </tr>
           </thead>
@@ -107,21 +116,24 @@ export function VatVies({ report }: { report: VatReportDetail }) {
       <ul>
         {v.totals.map((x) => (
           <li key={x.box}>
-            {t("vat.box")} {x.box}: {money(x.box_exact)} · VIES {money(x.vies)} ·{" "}
-            {t("vat.vies.difference")} {money(x.difference)}
+            {t("vat.box")} {x.box}: {money(x.box_exact)} · VIES {money(x.vies)}{" "}
+            · {t("vat.vies.difference")} {money(x.difference)}
           </li>
         ))}
         <li>
           {t("vat.vies.triangularTotal")} {money(v.triangular)}
         </li>
       </ul>
-      <p role="status">{v.agrees ? t("vat.vies.agrees") : t("vat.vies.differs")}</p>
+      <p role="status">
+        {v.agrees ? t("vat.vies.agrees") : t("vat.vies.differs")}
+      </p>
       {list.data?.length ? (
         <ul>
           {list.data.map((s) => (
             <li key={s.id} className={s.voided ? "muted" : undefined}>
-              {s.month.slice(0, 7)} · {t(`vat.vies.kind.${s.kind}` as MessageKey)} ·{" "}
-              {s.filed_on} · {s.reference} · {s.lines.length} {t("vat.vies.partnersCount")}
+              {s.month.slice(0, 7)} ·{" "}
+              {t(`vat.vies.kind.${s.kind}` as MessageKey)} · {s.filed_on} ·{" "}
+              {s.reference} · {s.lines.length} {t("vat.vies.partnersCount")}
               {s.voided ? ` · ${t("vat.imp.voided")}: ${s.void_reason}` : ""}
               {!s.voided ? (
                 <>
@@ -168,7 +180,9 @@ export function VatVies({ report }: { report: VatReportDetail }) {
               }
             >
               <option value="ORIGINAL">{t("vat.vies.kind.ORIGINAL")}</option>
-              <option value="CORRECTION">{t("vat.vies.kind.CORRECTION")}</option>
+              <option value="CORRECTION">
+                {t("vat.vies.kind.CORRECTION")}
+              </option>
             </select>
           </label>
           <label>
@@ -198,7 +212,9 @@ export function VatVies({ report }: { report: VatReportDetail }) {
                 required
                 maxLength={2}
                 value={l.country}
-                onChange={(e) => update(i, { country: e.target.value.toUpperCase() })}
+                onChange={(e) =>
+                  update(i, { country: e.target.value.toUpperCase() })
+                }
               />
             </label>
             <label>

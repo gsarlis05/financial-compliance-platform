@@ -296,12 +296,8 @@ class VatViesStatement(TenantOwned):
                 condition=models.Q(voided_at__isnull=True, kind="ORIGINAL"),
                 name="tax_vies_one_original",
             ),
-            models.CheckConstraint(
-                condition=models.Q(month__day=1), name="tax_vies_month_start"
-            ),
-            models.CheckConstraint(
-                condition=~models.Q(reference=""), name="tax_vies_reference"
-            ),
+            models.CheckConstraint(condition=models.Q(month__day=1), name="tax_vies_month_start"),
+            models.CheckConstraint(condition=~models.Q(reference=""), name="tax_vies_reference"),
             models.CheckConstraint(
                 condition=models.Q(voided_at__isnull=True)
                 | (models.Q(voided_by__isnull=False) & ~models.Q(void_reason="")),
@@ -323,8 +319,9 @@ class VatViesLine(TenantOwned):
     class Meta:
         db_table = "tax_vat_vies_line"
         constraints = [
-            models.UniqueConstraint(fields=["statement", "country", "vat_no"],
-                                    name="tax_vies_line_once"),  # fmt: skip
+            models.UniqueConstraint(
+                fields=["statement", "country", "vat_no"], name="tax_vies_line_once"
+            ),
             models.CheckConstraint(
                 condition=models.Q(country__regex=r"^[A-Z]{2}$") & ~models.Q(vat_no=""),
                 name="tax_vies_line_party",

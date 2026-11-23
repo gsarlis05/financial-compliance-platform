@@ -1248,7 +1248,8 @@ export const en = {
   "vat.imp.voidReason": "Why it is void",
   "vat.imp.voided": "void",
   "vat.vies.title": "VIES statements",
-  "vat.vies.help": "Record each monthly VIES statement as you filed it; nothing is sent from here. The statements are compared with the EU sales in the books and with Boxes 8A (goods) and 8B (services).",
+  "vat.vies.help":
+    "Record each monthly VIES statement as you filed it; nothing is sent from here. The statements are compared with the EU sales in the books and with Boxes 8A (goods) and 8B (services).",
   "vat.vies.missing": "EU sales but no statement recorded for:",
   "vat.vies.partners": "Partners",
   "vat.vies.booksGoods": "Goods (books)",
@@ -1264,7 +1265,8 @@ export const en = {
   "vat.vies.status.TRIANGULAR": "triangular only",
   "vat.vies.status.DIFFERENCE": "difference to explain",
   "vat.vies.difference": "difference",
-  "vat.vies.triangularTotal": "Triangular, kept apart and compared with no box:",
+  "vat.vies.triangularTotal":
+    "Triangular, kept apart and compared with no box:",
   "vat.vies.agrees": "The statements agree with the books.",
   "vat.vies.differs": "The statements and the books differ: see each partner.",
   "vat.vies.kind": "Kind",
@@ -3320,7 +3322,8 @@ export const el: Record<MessageKey, string> = {
   "vat.imp.voidReason": "Λόγος ακύρωσης",
   "vat.imp.voided": "ακυρώθηκε",
   "vat.vies.title": "Ανακεφαλαιωτικοί πίνακες VIES",
-  "vat.vies.help": "Καταχωρίστε κάθε μηνιαίο πίνακα VIES όπως τον υποβάλατε· τίποτα δεν αποστέλλεται από εδώ. Οι πίνακες συγκρίνονται με τις ενδοκοινοτικές πωλήσεις στα βιβλία και με τις θυρίδες 8A (αγαθά) και 8B (υπηρεσίες).",
+  "vat.vies.help":
+    "Καταχωρίστε κάθε μηνιαίο πίνακα VIES όπως τον υποβάλατε· τίποτα δεν αποστέλλεται από εδώ. Οι πίνακες συγκρίνονται με τις ενδοκοινοτικές πωλήσεις στα βιβλία και με τις θυρίδες 8A (αγαθά) και 8B (υπηρεσίες).",
   "vat.vies.missing": "Ενδοκοινοτικές πωλήσεις χωρίς καταχωρισμένο πίνακα για:",
   "vat.vies.partners": "Συναλλασσόμενοι",
   "vat.vies.booksGoods": "Αγαθά (βιβλία)",
@@ -3336,9 +3339,11 @@ export const el: Record<MessageKey, string> = {
   "vat.vies.status.TRIANGULAR": "μόνο τριγωνικές",
   "vat.vies.status.DIFFERENCE": "διαφορά προς εξήγηση",
   "vat.vies.difference": "διαφορά",
-  "vat.vies.triangularTotal": "Τριγωνικές, χωριστά και χωρίς σύγκριση με θυρίδα:",
+  "vat.vies.triangularTotal":
+    "Τριγωνικές, χωριστά και χωρίς σύγκριση με θυρίδα:",
   "vat.vies.agrees": "Οι πίνακες συμφωνούν με τα βιβλία.",
-  "vat.vies.differs": "Οι πίνακες και τα βιβλία διαφέρουν: δείτε κάθε συναλλασσόμενο.",
+  "vat.vies.differs":
+    "Οι πίνακες και τα βιβλία διαφέρουν: δείτε κάθε συναλλασσόμενο.",
   "vat.vies.kind": "Είδος",
   "vat.vies.kind.ORIGINAL": "Αρχικός",
   "vat.vies.kind.CORRECTION": "Διορθωτικός",

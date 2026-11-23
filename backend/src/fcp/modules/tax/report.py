@@ -557,7 +557,7 @@ def vat_key(country: str, vat_no: str) -> tuple[str, str]:
     number = "".join(ch for ch in vat_no.upper() if ch.isalnum())
     for prefix in {country, "EL" if country == "GR" else country}:
         if prefix and number.startswith(prefix):
-            number = number[len(prefix):]
+            number = number[len(prefix) :]
             break
     return country, number
 
@@ -571,8 +571,22 @@ def _months(start: str, end: str) -> list[str]:
     return found
 
 
-def vies_reconcile(snapshot: dict[str, Any], final: dict[str, Any] | None,
-                   statements: list[dict[str, Any]], start: str, end: str) -> dict[str, Any]:  # fmt: skip
+def _vies_status(in_books: bool, in_vies: bool, filed: dict[str, Decimal],
+                 diff: dict[str, Decimal]) -> str:  # fmt: skip
+    if not in_vies:
+        return "NOT_FILED"
+    if not in_books:
+        # Only triangular amounts: shown apart and compared with no box.
+        return "NOT_IN_BOOKS" if filed["goods"] or filed["services"] else "TRIANGULAR"
+    if not any(diff.values()):
+        return "MATCH"
+    return "ROUNDING" if all(abs(v) < 1 for v in diff.values()) else "DIFFERENCE"
+
+
+def vies_reconcile(
+    snapshot: dict[str, Any], final: dict[str, Any] | None, statements: list[dict[str, Any]],
+    start: str, end: str,
+) -> dict[str, Any]:  # fmt: skip
     """The EU supplies in the books, per partner, against the VIES statements recorded for the
     period's months, and their totals against Boxes 8A (goods) and 8B (services).
 
@@ -607,18 +621,7 @@ def vies_reconcile(snapshot: dict[str, Any], final: dict[str, Any] | None,
         b = books.get(key, {"goods": zero, "services": zero})
         f = filed.get(key, {"goods": zero, "services": zero, "triangular": zero})
         diff = {k: f[k] - b[k] for k in ("goods", "services")}
-        if key not in filed:
-            status = "NOT_FILED"
-        elif key not in books and not (f["goods"] or f["services"]):
-            status = "TRIANGULAR"  # only triangular amounts: shown apart, compared with no box
-        elif key not in books:
-            status = "NOT_IN_BOOKS"
-        elif not any(diff.values()):
-            status = "MATCH"
-        elif all(abs(v) < 1 for v in diff.values()):
-            status = "ROUNDING"
-        else:
-            status = "DIFFERENCE"
+        status = _vies_status(key in books, key in filed, f, diff)
         partners.append({"country": key[0], "vat_no": key[1], "status": status,
                          **{f"books_{k}": money(b[k]) for k in ("goods", "services")},
                          **{f"vies_{k}": money(f[k]) for k in ("goods", "services",

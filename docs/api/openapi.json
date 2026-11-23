@@ -13334,6 +13334,12 @@
             "title": "Version",
             "type": "integer"
           },
+          "vies": {
+            "additionalProperties": true,
+            "description": "EU supplies against the VIES statements recorded, and Boxes 8A and 8B",
+            "title": "Vies",
+            "type": "object"
+          },
           "watermark": {
             "title": "Watermark",
             "type": "integer"
@@ -13369,6 +13375,7 @@
           "differences",
           "previous",
           "schedules",
+          "vies",
           "reconciliation"
         ],
         "title": "ReportDetailOut",
@@ -17514,6 +17521,116 @@
           "drifts"
         ],
         "title": "VerifyOut",
+        "type": "object"
+      },
+      "ViesIn": {
+        "properties": {
+          "filed_on": {
+            "format": "date",
+            "title": "Filed On",
+            "type": "string"
+          },
+          "kind": {
+            "default": "ORIGINAL",
+            "enum": [
+              "ORIGINAL",
+              "CORRECTION"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ViesLineIn"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          },
+          "month": {
+            "description": "The first day of the month it reports",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "reference": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "filed_on",
+          "reference",
+          "lines"
+        ],
+        "title": "ViesIn",
+        "type": "object"
+      },
+      "ViesLineIn": {
+        "properties": {
+          "country": {
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country",
+            "type": "string"
+          },
+          "goods": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Goods"
+          },
+          "services": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Services"
+          },
+          "triangular": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Triangular"
+          },
+          "vat_no": {
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Vat No",
+            "type": "string"
+          }
+        },
+        "required": [
+          "country",
+          "vat_no"
+        ],
+        "title": "ViesLineIn",
         "type": "object"
       },
       "ViewIn": {
@@ -37746,6 +37863,206 @@
           }
         ],
         "summary": "Prepare Settlement",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-vies": {
+      "get": {
+        "description": "The VIES statements recorded for the months in the dates.",
+        "operationId": "fcp_modules_tax_api_list_vies",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Vies",
+        "tags": [
+          "VAT"
+        ]
+      },
+      "post": {
+        "description": "Record a VIES statement as you filed it. Nothing is sent to VIES.",
+        "operationId": "fcp_modules_tax_api_record_vies",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Record Vies",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-vies/{statement_id}/void": {
+      "post": {
+        "operationId": "fcp_modules_tax_api_void_vies",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Void Vies",
         "tags": [
           "VAT"
         ]

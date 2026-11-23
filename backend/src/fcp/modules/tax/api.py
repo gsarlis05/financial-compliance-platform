@@ -400,7 +400,7 @@ class ViesIn(Schema):
 @router.get(f"{BASE}/vat-vies", response=list[dict[str, Any]])
 @requires("tax.vat.read")
 def list_vies(request: HttpRequest, slug: str, entity_id: UUID,
-              query: Query[ImportsQuery]) -> list[dict[str, Any]]:  # fmt: skip
+              query: Query[VatImportsQuery]) -> list[dict[str, Any]]:  # fmt: skip
     """The VIES statements recorded for the months in the dates."""
     ctx = workspace_ctx(request, slug, entity_id)
     return services.vies_statements(ctx, entity_id, date_from=query.date_from,

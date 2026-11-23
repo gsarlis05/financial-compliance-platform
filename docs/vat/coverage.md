@@ -50,6 +50,8 @@ specification does not map that kind of line for that category.
 | The value of imports (IMPORT, net purchase) | Ask your tax adviser; import VAT itself goes to Box 4. |
 | LEGACY_REVERSE_CHARGE (the old code RC) | Use a specific reverse-charge or acquisition code. |
 | Special schemes (margin, travel agents, flat rate) | Not modelled; never treated as zero-rated. |
+| Triangular transactions | Recorded on VIES statements, kept apart and compared with no box; ask your adviser. |
+| VIES corrections carrying only the changes | Corrections are taken as full replacement values (to be confirmed, #93). |
 | Foreign-currency invoices | Waiting on the owner's decision (#219). |
 | The Tax Department's XML format | Waiting for the official XSD (#220). |
 | Bad-debt relief, capital goods and partial exemption | Enter them as adjustments with evidence. |
@@ -66,3 +68,4 @@ specification does not map that kind of line for that category.
 | The ledger's VAT accounts reconcile to the return | `test_vat_return_api.py` schedules and reconciliation |
 | A line in one return only | `test_vat_workflow.py` inclusions |
 | Import VAT has its customs record; VAT and value agree; a declaration claimed once | `test_vat_imports.py` |
+| Boxes 8A and 8B against the VIES statements, per partner and in total | `test_vat_vies.py` |

@@ -419,12 +419,23 @@ export function useVatImports(dateFrom: string, dateTo: string) {
 // --- VIES (V1-2g) --------------------------------------------------------------------------------
 
 export interface VatVies {
-  months: { month: string; statement: string; kind: string; supplies: boolean }[];
+  months: {
+    month: string;
+    statement: string;
+    kind: string;
+    supplies: boolean;
+  }[];
   missing_months: string[];
   partners: {
     country: string;
     vat_no: string;
-    status: "MATCH" | "ROUNDING" | "NOT_FILED" | "NOT_IN_BOOKS" | "TRIANGULAR" | "DIFFERENCE";
+    status:
+      | "MATCH"
+      | "ROUNDING"
+      | "NOT_FILED"
+      | "NOT_IN_BOOKS"
+      | "TRIANGULAR"
+      | "DIFFERENCE";
     books_goods: string;
     books_services: string;
     vies_goods: string;
