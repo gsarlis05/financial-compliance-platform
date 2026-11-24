@@ -28,6 +28,7 @@ from fcp.modules.identity.api import User
 
 from .entitlements import Feature, Role, allowed_roles, require_feature
 from .models import Engagement, EngagementStaff, LegalEntity, Membership, Tenant
+from .one_person import refuse_people
 
 __all__ = ["Engagement", "EngagementStaff"]
 
@@ -152,6 +153,7 @@ def _client_admin(ctx: "WorkspaceContext") -> None:
 @transaction.atomic
 def grant(ctx: "WorkspaceContext", data: GrantInput) -> Engagement:
     _client_admin(ctx)
+    refuse_people(ctx.tenant)
     scope = sorted(set(data.scope_roles))
     possible = set(ENGAGEABLE) & set(allowed_roles(ctx.tenant.kind))
     if not scope or not set(scope) <= possible:

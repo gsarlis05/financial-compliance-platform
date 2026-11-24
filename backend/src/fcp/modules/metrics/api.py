@@ -51,6 +51,8 @@ from .hashing import digest as canonical_digest
 from .models import CalcResult, CalcRun, TaxonomyLine
 from .nature import ActualSeries, BlendedSeries, Nature, NatureMixError, PlanSeries, Point, blend
 from .services import Completeness, completeness, current_mapping, taxonomy_lines
+from .statements import Statements
+from .statements import build as entity_statements
 from .taxonomy import DEFAULT_TAXONOMY
 
 __all__ = [
@@ -74,6 +76,7 @@ __all__ = [
     "Reproduction",
     "RunInputs",
     "Source",
+    "Statements",
     "TaxonomyLine",
     "Value",
     "blend",
@@ -83,6 +86,7 @@ __all__ = [
     "compile_expression",
     "completeness",
     "current_mapping",
+    "entity_statements",
     "evaluate",
     "execute",
     "formula_value",

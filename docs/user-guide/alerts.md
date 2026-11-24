@@ -18,3 +18,15 @@ the last complete month is checked.
 Once you have dealt with an alert, select **Acknowledge**, optionally with a note. The
 acknowledgement is shared with everyone who sees the alert and records who made it. Acknowledged
 alerts are kept: select **Show acknowledged alerts** to see them.
+
+## Alerts by email
+In each workspace you can also get alerts by email (**Alerts → Email**):
+- **Immediately:** one email per new alert you may see.
+- **Daily digest:** one email at 08:00 Cyprus time listing the alerts since the last digest.
+- **Off** (the default): no email.
+
+Emails are in English or Greek, as you choose. They give the alert's **title** and a link to the
+app, **never amounts or details**: the figures stay behind sign-in. Every email has a link that
+turns these emails off at once, without signing in. If more than 20 alerts reach you within an
+hour, further emails wait in the app instead.
+

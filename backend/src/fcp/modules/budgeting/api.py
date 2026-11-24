@@ -91,6 +91,7 @@ class BudgetVersionOut(Schema):
     approved_by_id: UUID | None
     approved_at: datetime | None
     sod_applied: bool | None
+    self_approved: bool
     locked_at: datetime | None
     superseded_at: datetime | None
 
@@ -123,6 +124,7 @@ def _version_out(v: BudgetVersion) -> BudgetVersionOut:
         approved_by_id=v.approved_by_id,
         approved_at=v.approved_at,
         sod_applied=v.sod_applied,
+        self_approved=v.self_approved,
         locked_at=v.locked_at,
         superseded_at=v.superseded_at,
     )

@@ -17,6 +17,7 @@ const party = {
   name: "Alpha (Demo)",
   kind: "CUSTOMER",
   vat_no: "",
+  country: "CY",
   email: "",
   payment_terms_days: 30,
   status: "ACTIVE",
@@ -114,5 +115,49 @@ describe("Payment behaviour (M3-6)", () => {
       rules: { "color-contrast": { enabled: false } },
     });
     expect(results.violations.map((v) => v.id)).toEqual([]);
+  });
+
+  it("records the country of a customer or supplier, in capitals (V1-2b)", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nProvider locale="en">
+          <MemoryRouter initialEntries={["/w/demo/e/ent/counterparties"]}>
+            <Routes>
+              <Route
+                path="/w/:slug/e/:entityId/counterparties"
+                element={<CounterpartiesPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </QueryClientProvider>,
+    );
+    const header = await screen.findByRole("columnheader", {
+      name: "Country",
+    });
+    const table = header.closest("table");
+    if (!table) throw new Error("no table");
+    expect(within(table).getByRole("row", { name: /C1/ })).toHaveTextContent(
+      "CY",
+    );
+    fireEvent.change(screen.getByLabelText("Code"), {
+      target: { value: "S9" },
+    });
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Gamma (Demo)" },
+    });
+    const country = screen.getByLabelText<HTMLInputElement>(/^Country/);
+    fireEvent.change(country, { target: { value: "gr" } });
+    expect(country.value).toBe("GR");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add customer or supplier" }),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "POST")).toBe(true),
+    );
+    expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({
+      code: "S9",
+      country: "GR",
+    });
   });
 });

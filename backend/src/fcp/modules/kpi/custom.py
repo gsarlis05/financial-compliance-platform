@@ -44,7 +44,7 @@ from fcp.modules.metrics.api import (
     get_calc_run,
 )
 from fcp.modules.reporting.api import current_watermark
-from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from .engine import ENGINE, KIND, reference_functions
 from .models import CustomKpi, KpiDefinition, OperationalMetric, OperationalValue
@@ -53,7 +53,7 @@ READ, MANAGE, APPROVE = "planning.read", "kpi.definition.manage", "kpi.definitio
 OPERATIONAL = "kpi.operational.manage"
 KEY = re.compile(r"^[A-Z][A-Z0-9_]{1,39}$")
 CALL = re.compile(r'([a-z_]+)\(\s*"([^"]*)"')
-TAXONOMY_FUNCTIONS = {"flow", "prior_flow", "balance", "opening", "avg_balance"}
+TAXONOMY_FUNCTIONS = {"flow", "prior_flow", "ltm_flow", "balance", "opening", "avg_balance"}
 METRIC_FUNCTIONS = {"count_metric": "count", "amount_metric": "EUR"}
 DISPLAY_UNITS = {
     "percent": "ratio",
@@ -311,12 +311,14 @@ def revise(ctx: WorkspaceContext, entity_id: UUID, kpi_id: UUID, data: KpiInput)
     return made
 
 
-def _set_status(kpi: CustomKpi, status: str, by: UUID | None = None, comment: str = "") -> None:
+def _set_status(kpi: CustomKpi, status: str, by: UUID | None = None, comment: str = "",
+                self_approved: bool = False) -> None:  # fmt: skip
     kpi.status = status
     fields = ["status"]
     if by is not None:
         kpi.decided_by_id, kpi.decided_at, kpi.decision_comment = by, timezone.now(), comment
-        fields += ["decided_by", "decided_at", "decision_comment"]
+        kpi.self_approved = self_approved
+        fields += ["decided_by", "decided_at", "decision_comment", "self_approved"]
     kpi.save(update_fields=fields)
 
 
@@ -328,7 +330,8 @@ def decide(
     kpi = _get(ctx, entity.id, kpi_id, lock=True)
     if kpi.status != Status.SUBMITTED:
         raise ConflictError("Only a KPI waiting for approval can be approved or rejected.")
-    if kpi.owner_id == ctx.user.id:
+    own = kpi.owner_id == ctx.user.id
+    if own and not self_approval_allowed(ctx):
         raise ConflictError("Someone other than the author must decide (segregation of duties).")
     comment = comment.strip()[:500]
     if not approve and not comment:
@@ -338,14 +341,14 @@ def decide(
             legal_entity=entity, key=kpi.key, status=Status.APPROVED
         ):
             _set_status(old, Status.SUPERSEDED)
-    _set_status(kpi, Status.APPROVED if approve else Status.REJECTED, ctx.user.id, comment)
+    _set_status(kpi, Status.APPROVED if approve else Status.REJECTED, ctx.user.id, comment, own)
     _audit(
         ctx,
         entity.id,
         "custom_kpi",
         kpi.id,
         "kpi.custom.decided",
-        {"key": kpi.key, "version": kpi.version, "status": kpi.status},
+        {"key": kpi.key, "version": kpi.version, "status": kpi.status, "self_approved": own},
     )
     return kpi
 

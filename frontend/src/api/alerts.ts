@@ -56,3 +56,28 @@ export function useAlertMutations() {
     }),
   };
 }
+
+// --- alert emails (M8-5) --------------------------------------------------------------------
+
+export interface AlertEmailPreference {
+  mode: "IMMEDIATE" | "DIGEST" | "OFF";
+  language: "en" | "el";
+}
+
+export function useAlertEmail() {
+  const { slug } = useScope();
+  const client = useQueryClient();
+  const url = `/w/${slug}/alert-email-preference`;
+  return {
+    current: useQuery({
+      queryKey: ["alert-email", slug],
+      queryFn: () => api<AlertEmailPreference>(url),
+    }),
+    save: useMutation({
+      mutationFn: (body: AlertEmailPreference) =>
+        api<AlertEmailPreference>(url, { method: "PUT", body }),
+      onSuccess: () =>
+        client.invalidateQueries({ queryKey: ["alert-email", slug] }),
+    }),
+  };
+}

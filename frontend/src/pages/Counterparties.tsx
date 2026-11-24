@@ -28,6 +28,7 @@ const EMPTY = {
   name: "",
   kind: "CUSTOMER" as CounterpartyKind,
   vat_no: "",
+  country: "",
   email: "",
   payment_terms_days: 30,
 };
@@ -162,6 +163,7 @@ export function CounterpartiesPage() {
                 <th scope="col">{t("cp.name")}</th>
                 <th scope="col">{t("cp.kind")}</th>
                 <th scope="col">{t("cp.vat")}</th>
+                <th scope="col">{t("cp.country")}</th>
                 <th scope="col" className="amount">
                   {t("cp.terms")}
                 </th>
@@ -174,6 +176,7 @@ export function CounterpartiesPage() {
                   <td>{c.name}</td>
                   <td>{t(`cp.kind.${c.kind}` as MessageKey)}</td>
                   <td>{c.vat_no}</td>
+                  <td>{c.country}</td>
                   <td className="amount">{c.payment_terms_days}</td>
                 </tr>
               ))}
@@ -224,6 +227,21 @@ export function CounterpartiesPage() {
             onChange={(e) => setForm({ ...form, vat_no: e.target.value })}
             maxLength={30}
           />
+        </label>
+        <label>
+          {t("cp.country")}
+          <input
+            value={form.country}
+            onChange={(e) =>
+              setForm({ ...form, country: e.target.value.toUpperCase() })
+            }
+            pattern="[A-Za-z]{2}"
+            maxLength={2}
+            placeholder="CY"
+            aria-describedby="cp-country-help"
+          />
+          <small id="cp-country-help">{t("cp.countryHelp")}</small>
+          <FieldError error={create.error} field="country" />
         </label>
         <label>
           {t("cp.email")}

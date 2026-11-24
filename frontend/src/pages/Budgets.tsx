@@ -1181,6 +1181,7 @@ function BudgetDetail({ budget }: { budget: Budget }) {
           >
             {t("bu.version")} {v.number} · {t(`bu.status.${v.status}`)}
             {tag(v.id) ? ` (${tag(v.id)})` : ""}
+            {v.self_approved ? ` · ${t("approval.self")}` : ""}
           </button>
         ))}
       </div>

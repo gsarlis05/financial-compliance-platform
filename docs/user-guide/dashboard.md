@@ -3,8 +3,9 @@
 **Cash & planning → CFO dashboard** shows the key figures for one period on one page.
 
 ## Choose the period
-- **Period:** month, quarter to date or year to date, ending in the month you choose. Quarters
-  and years follow your fiscal year.
+- **Period:** month, quarter to date, year to date, or the last twelve months, ending in the
+  month you choose. Quarters and years follow your fiscal year; the last twelve months do not, so
+  the budget widgets say to choose another period then.
 - **Compare with:** the budget or the same period a year earlier.
 
 Every widget shows the same period and comparison.
@@ -22,6 +23,12 @@ Every widget shows the same period and comparison.
   well as symbols.
 - **Goals:** each goal's target, likely outcome and status from its latest evaluation.
 - **Alerts:** the open alerts.
+- **Waterfall** (from budget to actual): the budgeted result for the period, one step for each
+  budget line's variance (income up, costs down), and the actual result. The steps add up exactly.
+- **Scenario comparison:** a shared scenario against its base: the change in revenue, EBITDA, net
+  income, cash flow, closing cash and debt over its horizon, and the lowest cash of each. These
+  figures are **hypothetical** and come from the projection engine, which is pending professional
+  review. You need the right to run scenarios to see it.
 
 If a widget has no data yet it says why. If you do not have permission for it, it says that
 instead.
@@ -36,6 +43,13 @@ Select **Customise** to choose the widgets, their order and the KPI cards (up to
 - **Save as workspace default** sets the layout for everyone who has not saved their own. Finance
   managers, partners and owners can do this.
 - **Use the workspace default** forgets your own layout.
+
+Each widget can be **full or half width**, so two half-width widgets sit side by side. Only the
+widgets in your layout are calculated.
+
+## Saved views
+Save a period and a comparison under a name (for example "Board: quarter to date against the prior
+year") and switch to it in one step. Views are yours alone; you can keep up to 20.
 
 ## Firm portfolio
 In a firm workspace, **Cash & planning → Firm portfolio** lists every client you have access to,

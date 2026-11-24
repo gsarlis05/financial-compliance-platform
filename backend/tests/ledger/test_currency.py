@@ -1,6 +1,6 @@
 """Currency foundation (M6F-1, #80; owner decision D8): ISO 4217 everywhere, the transaction /
 functional / reporting split ready in the database, exchange rates as sourced data, and
-multi-currency transactions refused until their full accounting treatment exists."""
+foreign currency refused unless the entity has switched it on (V1-2h: ``test_foreign_currency``)."""
 
 from collections.abc import Callable
 from typing import Any
@@ -48,8 +48,6 @@ def test_entity_currencies_and_the_disabled_switch(books: dict[str, Any]) -> Non
         rows.update(functional_currency="XYZ")
     with pytest.raises(DatabaseError, match="not a supported ISO 4217"), transaction.atomic():
         rows.update(reporting_currency="eur")
-    with pytest.raises(DatabaseError, match="multi_currency_off"), transaction.atomic():
-        rows.update(multi_currency_enabled=True)
     accounts = Account.objects.filter(id=books["accounts"]["1300"]["id"])
     with pytest.raises(DatabaseError, match="not a supported ISO 4217"), transaction.atomic():
         accounts.update(currency="ABC")
@@ -61,8 +59,7 @@ def test_foreign_currency_entries_are_refused(books: dict[str, Any]) -> None:
     refused = entry(books, currency="USD")
     assert refused.status_code == 422, refused.content
     assert refused.json()["errors"]["currency"] == [
-        "Transactions in USD are not available yet: this entity records EUR only "
-        "(multi-currency is disabled in this release)."
+        "Entries are recorded in EUR. For an amount in USD, give it on the line with its rate."
     ]
     assert entry(books, currency="EUR").status_code == 201
     made = entry(books)

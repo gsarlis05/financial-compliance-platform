@@ -48,7 +48,10 @@ INSTALLED_APPS = [
     "fcp.modules.personal",
     "fcp.modules.assets",
     "fcp.modules.projections",
+    "fcp.modules.scenarios",
+    "fcp.modules.mgmt_reporting",
     "fcp.modules.taxrules",
+    "fcp.modules.tax",
 ]
 
 AUTH_USER_MODEL = "identity.User"
@@ -130,6 +133,10 @@ OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", "fcp-backend")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", "")
 OIDC_REDIRECT_URI = env("OIDC_REDIRECT_URI", "http://localhost:8000/auth/callback")
 OIDC_POST_LOGOUT_REDIRECT_URI = env("OIDC_POST_LOGOUT_REDIRECT_URI", "http://localhost:5173/")
+# Where the backend reads the provider's configuration. Normally under the issuer; on the owner's
+# computer (V1-3) the backend reaches the provider inside the container network, while browsers use
+# the issuer's public address.
+OIDC_METADATA_URL = env("OIDC_METADATA_URL", f"{OIDC_ISSUER}/.well-known/openid-configuration")
 # Claim values accepted as proof of multi-factor authentication.
 OIDC_MFA_AMR_VALUES = frozenset(env("OIDC_MFA_AMR_VALUES", "otp,mfa,hwk,swk,webauthn").split(","))
 OIDC_MFA_ACR_VALUES = frozenset(v for v in env("OIDC_MFA_ACR_VALUES", "").split(",") if v)
@@ -158,3 +165,13 @@ WORKSPACE_DELETION_GRACE_DAYS = int(env("WORKSPACE_DELETION_GRACE_DAYS", "30"))
 CLAMD_HOST = env("CLAMD_HOST", "127.0.0.1")
 CLAMD_PORT = int(env("CLAMD_PORT", "3310"))
 CLAMD_TIMEOUT_SECONDS = int(env("CLAMD_TIMEOUT_SECONDS", "30"))
+
+# --- email (M8-5): alert emails through SMTP; locally the Mailpit catcher in compose.yaml ---------
+EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("SMTP_HOST", "127.0.0.1")
+EMAIL_PORT = int(env("SMTP_PORT", "1025"))
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "Financial Compliance Platform <alerts@localhost>")
+APP_URL = env("APP_URL", "http://localhost:5173").rstrip("/")  # links in emails
+ALERT_DIGEST_HOUR = 8  # Europe/Nicosia
+ALERT_EMAILS_PER_HOUR = 20  # immediate emails per user; beyond that the app still lists them

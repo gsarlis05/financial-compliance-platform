@@ -10,7 +10,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
@@ -27,10 +27,12 @@ from . import (
     dimensions,
     entries,
     fx,
+    fxdiff,
     idempotency,
     integrity,
     periods,
     reports,
+    suggestions,
 )
 from .models import (
     Account,
@@ -62,6 +64,7 @@ __all__ = [
     "PostedEntry",
     "PostedLine",
     "TrialBalanceRow",
+    "VatLine",
     "account_balance",
     "account_list",
     "add_account",
@@ -69,16 +72,20 @@ __all__ = [
     "apply_account_template",
     "create_and_post",
     "create_entry_draft",
+    "create_system_draft",
     "dimension_list",
+    "entry_vat_lines",
     "fiscal_year_list",
     "posted_dimension_totals",
     "posted_entries",
     "posted_lines",
+    "posting_watermark",
     "reverse_and_post",
     "router",
     "seed_vat_catalogue",
     "trial_balance_rows",
     "unposted_entries",
+    "vat_lines",
 ]
 
 EntryInput = entries.EntryInput
@@ -198,6 +205,121 @@ def create_entry_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> J
     """A draft from another module (e.g. a bank statement line), source IMPORT; it follows the
     normal workflow (doc 05 §8: sub-ledgers never write journal lines directly)."""
     return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.IMPORT)
+
+
+def create_system_draft(ctx: Any, entity_id: UUID, data: entries.EntryInput) -> JournalEntry:
+    """A draft prepared by the platform (e.g. a VAT settlement, V1-2), source SYSTEM; it follows
+    the normal workflow like every other entry."""
+    return entries.create_draft(ctx, entity_id, data, source=JournalEntry.Source.SYSTEM)
+
+
+@dataclass(frozen=True)
+class VatLine:
+    """A posted line that carries a VAT code or sits on a VAT account (V1-2)."""
+
+    line_id: UUID
+    entry_id: UUID
+    entry_ref: str
+    posting_seq: int
+    accounting_date: date
+    description: str
+    account_code: str
+    account_name: str
+    account_type: str
+    vat_role: str  # INPUT, OUTPUT or "" (a taxable amount on an income or expense account)
+    vat_code_id: str | None
+    vat_code: str
+    treatment: str
+    rate: Decimal | None
+    verified: bool
+    net_debit: Decimal
+    counterparty: str
+    reference: str
+    # V1-2b: the code's category, the line's VAT details and the party's EU data.
+    category: str = ""
+    tax_point: date | None = None
+    vat_recovery_percent: Decimal | None = None
+    vat_blocked: Decimal | None = None
+    counterparty_country: str = ""
+    counterparty_vat_no: str = ""
+    entry_status: str = "POSTED"
+    # V1-2h: the line's foreign amount (signed like net_debit) and its rate, time and source.
+    txn_currency: str = ""
+    txn_net_debit: Decimal | None = None
+    exchange_rate: Decimal | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
+
+
+def entry_vat_lines(ctx: Any, entity_id: UUID, entry_id: UUID) -> list[VatLine]:
+    """The VAT lines of one posted entry (V1-2f), as ``vat_lines`` gives them."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    entry = JournalEntry.objects.filter(legal_entity_id=entity.id, id=entry_id,
+                                        status=JournalEntry.Status.POSTED).first()  # fmt: skip
+    if entry is None:
+        return []
+    found = vat_lines(ctx, entity.id, date_from=entry.accounting_date,
+                      date_to=entry.accounting_date)  # fmt: skip
+    return [ln for ln in found if ln.entry_id == entry.id]
+
+
+def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> list[VatLine]:
+    """Posted lines dated in the range that carry a VAT code or sit on a VAT account, closing
+    entries excluded (requires ``reports.read``).
+
+    A line without its own customer or supplier takes its entry's (V1-2c): the party and the
+    invoice number sit on the receivable or payable line, which carries no VAT code.
+    """
+    entity = get_entity(ctx, entity_id, "reports.read")
+    rows = list(
+        JournalLine.objects.filter(
+            _operating("entry__"),
+            Q(vat_code__isnull=False) | ~Q(account__vat_role=""),
+            entry__legal_entity_id=entity.id, entry__status=JournalEntry.Status.POSTED,
+            entry__accounting_date__gte=date_from, entry__accounting_date__lte=date_to,
+        )
+        .select_related("entry__journal", "account", "vat_code", "counterparty")
+        .order_by("entry__accounting_date", "entry__posting_seq", "line_no")
+    )  # fmt: skip
+    parties: dict[UUID, JournalLine] = {}
+    for party_line in (
+        JournalLine.objects.filter(
+            entry_id__in={ln.entry_id for ln in rows}, counterparty__isnull=False
+        )
+        .select_related("counterparty")
+        .order_by("-line_no")
+    ):
+        parties[party_line.entry_id] = party_line  # the entry's first line with a party wins
+    found = []
+    for ln in rows:
+        own = ln if ln.counterparty_id else parties.get(ln.entry_id)
+        party = own.counterparty if own else None
+        found.append(VatLine(
+            ln.id, ln.entry_id, f"{ln.entry.journal.code}-{ln.entry.entry_no}",
+            ln.entry.posting_seq or 0, ln.entry.accounting_date, ln.entry.description,
+            ln.account.code, ln.account.name, ln.account.type, ln.account.vat_role,
+            ln.vat_code_id, ln.vat_code.code if ln.vat_code else "",
+            ln.vat_code.treatment if ln.vat_code else "",
+            ln.vat_code.rate if ln.vat_code else None,
+            bool(ln.vat_code and ln.vat_code.verified), ln.debit - ln.credit,
+            party.name if party else "", ln.reference or (own.reference if own else ""),
+            ln.vat_code.category if ln.vat_code else "", ln.tax_point, ln.vat_recovery_percent,
+            ln.vat_blocked, party.country if party else "", party.vat_no if party else "",
+            "POSTED", ln.txn_currency or "",
+            None if ln.txn_currency is None
+            else (ln.txn_debit or Decimal(0)) - (ln.txn_credit or Decimal(0)),
+            ln.exchange_rate, ln.rate_at, ln.rate_source,
+        ))  # fmt: skip
+    return found
+
+
+def posting_watermark(ctx: Any, entity_id: UUID) -> int:
+    """The entity's latest posting sequence number (0 before the first posting)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    found = JournalEntry.objects.filter(
+        legal_entity_id=entity.id, status=JournalEntry.Status.POSTED
+    ).aggregate(m=Max("posting_seq"))["m"]
+    return int(found or 0)
 
 
 @dataclass(frozen=True)
@@ -418,6 +540,7 @@ class VatCodeOut(Schema):
     name: str
     name_el: str
     treatment: str
+    category: str = Field(description="The VAT return's category of the code (V1-2b)")
     rate: str | None
     valid_from: date | None
     valid_to: date | None
@@ -442,6 +565,7 @@ def list_vat_codes(
             name=v.name,
             name_el=v.name_el,
             treatment=v.treatment,
+            category=v.category,
             rate=f"{v.rate:.4f}" if v.rate is not None else None,
             valid_from=v.valid_from,
             valid_to=v.valid_to,
@@ -646,6 +770,22 @@ class LineIn(Schema):
     vat_code_id: str | None = Field(
         default=None, max_length=40, description="VAT code id; required on VAT-account lines"
     )
+    tax_point: date | None = Field(default=None, description="When it differs from the date")
+    vat_recovery_percent: str | None = Field(
+        default=None, description="Input VAT lines: the deductible share, 0 to 100"
+    )
+    vat_blocked: str | None = Field(
+        default=None, description="Input VAT lines: the VAT that may not be deducted"
+    )
+    txn_currency: str | None = Field(
+        default=None, pattern=r"^[A-Z]{3}$", description="Foreign currency of the line (V1-2h)"
+    )
+    txn_amount: str | None = Field(default=None, description="The amount in that currency")
+    exchange_rate: str | None = Field(
+        default=None, description="Functional units per unit, at the transaction's date and time"
+    )
+    rate_at: datetime | None = Field(default=None, description="When that rate applied")
+    rate_source: str = Field(default="", max_length=200, description="Bank, invoice, stored rate")
 
 
 class EntryIn(Schema):
@@ -684,6 +824,17 @@ class LineOut(Schema):
     due_date: date | None
     vat_code_id: str | None
     vat_code: str | None
+    tax_point: date | None = None
+    vat_recovery_percent: str | None = None
+    vat_blocked: str | None = None
+    txn_currency: str | None = None
+    txn_amount: str | None = None
+    exchange_rate: str | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
+    fx_difference: str = Field(
+        default="", description="UNREALISED or REALISED on an exchange-difference line (V1-2h2)"
+    )
 
 
 class EntryOut(Schema):
@@ -705,6 +856,7 @@ class EntryOut(Schema):
     correction_reason: str
     prepared_by_id: UUID
     approved_by_id: UUID | None
+    self_approved: bool = Field(description="Approved by its preparer (one-person workspace)")
     posted_by_id: UUID | None
     rejection_reason: str
     unlock_request_id: UUID | None
@@ -728,6 +880,30 @@ class SettingsOut(Schema):
     approval_threshold: str | None
 
 
+class CurrencySettingsIn(Schema):
+    multi_currency_enabled: bool
+    fx_account_id: UUID | None = Field(default=None, description="Where exchange differences go")
+
+
+class CurrencySettingsOut(Schema):
+    functional_currency: str
+    multi_currency_enabled: bool
+    fx_account_id: UUID | None
+
+
+class SuggestedRateOut(Schema):
+    currency: str
+    rate: str = Field(description="Functional units per one unit of the currency")
+    rate_date: date
+    rate_type: str
+    source: str
+
+
+class RateQuery(Schema):
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+    on: date
+
+
 def entry_out(entry: JournalEntry) -> EntryOut:
     lines = sorted(entry.lines.all(), key=lambda ln: ln.line_no)
     return EntryOut(
@@ -749,6 +925,7 @@ def entry_out(entry: JournalEntry) -> EntryOut:
         correction_reason=entry.correction_reason,
         prepared_by_id=entry.prepared_by_id,
         approved_by_id=entry.approved_by_id,
+        self_approved=entry.self_approved,
         posted_by_id=entry.posted_by_id,
         rejection_reason=entry.rejection_reason,
         unlock_request_id=entry.unlock_request_id,
@@ -779,6 +956,19 @@ def entry_out(entry: JournalEntry) -> EntryOut:
                 due_date=ln.due_date,
                 vat_code_id=ln.vat_code_id,
                 vat_code=ln.vat_code.code if ln.vat_code else None,
+                txn_currency=ln.txn_currency,
+                txn_amount=None
+                if ln.txn_currency is None
+                else f"{(ln.txn_debit or ln.txn_credit):f}",
+                exchange_rate=None if ln.exchange_rate is None else f"{ln.exchange_rate:f}",
+                rate_at=ln.rate_at,
+                rate_source=ln.rate_source,
+                fx_difference=ln.fx_difference,
+                tax_point=ln.tax_point,
+                vat_recovery_percent=None
+                if ln.vat_recovery_percent is None
+                else f"{ln.vat_recovery_percent:.2f}",
+                vat_blocked=None if ln.vat_blocked is None else f"{ln.vat_blocked:.2f}",
             )
             for ln in lines
         ],
@@ -804,6 +994,14 @@ def _entry_input(payload: EntryIn) -> entries.EntryInput:
                 ln.reference,
                 ln.due_date,
                 ln.vat_code_id,
+                ln.tax_point,
+                ln.vat_recovery_percent,
+                ln.vat_blocked,
+                ln.txn_currency,
+                ln.txn_amount,
+                ln.exchange_rate,
+                ln.rate_at,
+                ln.rate_source,
             )
             for ln in payload.lines
         ],
@@ -980,6 +1178,7 @@ class UnlockOut(Schema):
     requested_by_id: UUID
     first_approver_id: UUID | None
     second_approver_id: UUID | None
+    self_approved: bool = Field(description="Opened on the requester's own approval (one-person)")
     active_from: datetime | None
     active_until: datetime | None
     closed_at: datetime | None
@@ -1388,10 +1587,53 @@ def _rate_out(r: ExchangeRate) -> ExchangeRateOut:
 @router.get(f"{BASE}/exchange-rates", response=list[ExchangeRateOut])
 @requires("reports.read")
 def list_exchange_rates(request: HttpRequest, slug: str, entity_id: UUID) -> list[ExchangeRateOut]:
-    """Recorded exchange rates (the workspace's), newest first. Nothing converts amounts while
-    multi-currency is disabled."""
+    """Recorded exchange rates (the workspace's), newest first."""
     ctx = workspace_ctx(request, slug, entity_id)
     return [_rate_out(r) for r in fx.rates(ctx, entity_id)]
+
+
+@router.get(
+    f"{BASE}/exchange-rates/suggestion", response={200: SuggestedRateOut, 404: dict[str, str]}
+)
+@requires("ledger.entry.read")
+def suggest_rate(request: HttpRequest, slug: str, entity_id: UUID,
+                 query: Query[RateQuery]) -> Any:  # fmt: skip
+    """The stored rate to suggest for a currency on a date (latest on or before it, spot rates
+    first), in functional units per unit. Only a suggestion: record the rate of the transaction
+    itself (bank, invoice) on the line."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fx.suggested_rate(ctx, entity_id, query.currency, query.on)
+    if found is None:
+        return Status(404, {"detail": f"No stored rate for {query.currency} on or before "
+                                      f"{query.on.isoformat()}."})  # fmt: skip
+    return SuggestedRateOut(currency=query.currency, rate=f"{found.rate:f}",
+                            rate_date=found.rate_date, rate_type=found.rate_type,
+                            source=found.source)  # fmt: skip
+
+
+@router.get(f"{BASE}/currency-settings", response=CurrencySettingsOut)
+@requires("ledger.entry.read")
+def get_currency_settings(request: HttpRequest, slug: str, entity_id: UUID) -> CurrencySettingsOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    entity = get_entity(ctx, entity_id, "ledger.entry.read")
+    found = entries.ledger_settings(ctx, entity_id)
+    return CurrencySettingsOut(functional_currency=entity.functional_currency,
+                               multi_currency_enabled=entity.multi_currency_enabled,
+                               fx_account_id=found.fx_account_id)  # fmt: skip
+
+
+@router.put(f"{BASE}/currency-settings", response=CurrencySettingsOut)
+@requires("ledger.settings.manage")
+def put_currency_settings(request: HttpRequest, slug: str, entity_id: UUID,
+                          payload: CurrencySettingsIn) -> CurrencySettingsOut:  # fmt: skip
+    """Switch foreign currency on (with the account exchange differences go to) or off."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fx.set_currency_settings(ctx, entity_id, enabled=payload.multi_currency_enabled,
+                                     fx_account_id=payload.fx_account_id)  # fmt: skip
+    entity = get_entity(ctx, entity_id, "ledger.entry.read")
+    return CurrencySettingsOut(functional_currency=entity.functional_currency,
+                               multi_currency_enabled=entity.multi_currency_enabled,
+                               fx_account_id=found.fx_account_id)  # fmt: skip
 
 
 @router.post(f"{BASE}/exchange-rates", response={201: ExchangeRateOut})
@@ -1402,3 +1644,178 @@ def add_exchange_rate(request: HttpRequest, slug: str, entity_id: UUID,
     ctx = workspace_ctx(request, slug, entity_id)
     made = fx.add_rate(ctx, entity_id, fx.NewRate(**payload.model_dump()))
     return Status(201, _rate_out(made))
+
+
+# --- Help for data entry (V1-2i, #231) -----------------------------------------------------------
+
+
+class VatFavouritesOut(Schema):
+    vat_code_ids: list[str] = Field(description="The VAT codes this user starred, oldest first")
+
+
+class VatCodeUseOut(Schema):
+    vat_code_id: str
+    uses: int
+
+
+class AccountVatCodeOut(Schema):
+    account_id: UUID
+    vat_code_id: str = Field(description="The code most used with the account")
+    uses: int
+
+
+class VatUsageOut(Schema):
+    codes: list[VatCodeUseOut]
+    accounts: list[AccountVatCodeOut]
+
+
+class EntrySuggestionsQuery(Schema):
+    field: Literal["description", "memo", "reference"]
+    q: str = Field(default="", max_length=100, description="What the user has typed so far")
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class EntrySuggestionOut(Schema):
+    value: str
+    uses: int
+    last_used: datetime
+
+
+@router.get(f"{BASE}/vat-favourites", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def list_vat_favourites(request: HttpRequest, slug: str, entity_id: UUID) -> VatFavouritesOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.put(f"{BASE}/vat-favourites/{{vat_code_id}}", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def star_vat_code(request: HttpRequest, slug: str, entity_id: UUID,
+                  vat_code_id: str) -> VatFavouritesOut:  # fmt: skip
+    """Star a VAT code for yourself in this company (a personal preference)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    suggestions.set_favourite(ctx, entity_id, vat_code_id, on=True)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.delete(f"{BASE}/vat-favourites/{{vat_code_id}}", response=VatFavouritesOut)
+@requires("ledger.entry.read")
+def unstar_vat_code(request: HttpRequest, slug: str, entity_id: UUID,
+                    vat_code_id: str) -> VatFavouritesOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    suggestions.set_favourite(ctx, entity_id, vat_code_id, on=False)
+    return VatFavouritesOut(vat_code_ids=suggestions.favourites(ctx, entity_id))
+
+
+@router.get(f"{BASE}/vat-usage", response=VatUsageOut)
+@requires("ledger.entry.read")
+def vat_usage(request: HttpRequest, slug: str, entity_id: UUID) -> VatUsageOut:
+    """How often each VAT code was used in this company, and each account's usual code."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = suggestions.usage(ctx, entity_id)
+    return VatUsageOut(
+        codes=[VatCodeUseOut(vat_code_id=c.vat_code_id, uses=c.uses) for c in found.codes],
+        accounts=[
+            AccountVatCodeOut(account_id=a.account_id, vat_code_id=a.vat_code_id, uses=a.uses)
+            for a in found.accounts
+        ],
+    )
+
+
+@router.get(f"{BASE}/entry-suggestions", response=list[EntrySuggestionOut])
+@requires("ledger.entry.read")
+def entry_suggestions(request: HttpRequest, slug: str, entity_id: UUID,
+                      q: Query[EntrySuggestionsQuery]) -> list[EntrySuggestionOut]:  # fmt: skip
+    """What was typed before in this company's entries, for the field being typed: matches that
+    start with the text first, then the most used and the most recent."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [EntrySuggestionOut(value=s.value, uses=s.uses, last_used=s.last_used)
+            for s in suggestions.suggest(ctx, entity_id, q.field, q.q, q.limit)]  # fmt: skip
+
+
+# --- Exchange differences (V1-2h2, #230) ---------------------------------------------------------
+
+
+class FxPositionsQuery(Schema):
+    on: date = Field(description="The date to revalue on, usually a period's last day")
+
+
+class FxPositionOut(Schema):
+    account_id: UUID
+    account_code: str
+    account_name: str
+    counterparty_id: UUID | None
+    currency: str
+    foreign: str = Field(description="The balance in the currency, debit positive")
+    euros: str = Field(description="The balance in euros, including earlier differences")
+    rate: str | None = Field(description="The closing rate used, euros per unit")
+    rate_date: date | None
+    rate_source: str
+    revalued: str | None = Field(description="The balance at the closing rate, in euros")
+    difference: str
+    kind: str = Field(description="UNREALISED, REALISED, NO_RATE, or empty: nothing to record")
+
+
+class FxPositionsOut(Schema):
+    on: date
+    positions: list[FxPositionOut]
+    unrealised: str
+    realised: str
+    missing_rates: list[str] = Field(description="Currencies with no stored rate on the date")
+    fx_account_id: UUID | None
+    waiting_entry_id: UUID | None = Field(
+        description="An exchange-differences draft not posted yet"
+    )
+
+
+class FxDraftIn(Schema):
+    on: date
+
+
+def _money(value: Decimal | None) -> str | None:
+    return None if value is None else f"{value:.2f}"
+
+
+@router.get(f"{BASE}/fx-positions", response=FxPositionsOut)
+@requires("ledger.entry.read")
+def fx_positions(request: HttpRequest, slug: str, entity_id: UUID,
+                 q: Query[FxPositionsQuery]) -> FxPositionsOut:  # fmt: skip
+    """Foreign-currency positions on a date and their exchange differences (nothing is recorded)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = fxdiff.positions(ctx, entity_id, q.on)
+    return FxPositionsOut(
+        on=found.on,
+        positions=[
+            FxPositionOut(
+                account_id=p.account_id,
+                account_code=p.account_code,
+                account_name=p.account_name,
+                counterparty_id=p.counterparty_id,
+                currency=p.currency,
+                foreign=f"{p.foreign:.2f}",
+                euros=f"{p.euros:.2f}",
+                rate=None if p.rate is None else f"{p.rate:f}",
+                rate_date=p.rate_date,
+                rate_source=p.rate_source,
+                revalued=_money(p.revalued),
+                difference=f"{p.difference:.2f}",
+                kind=p.kind,
+            )
+            for p in found.positions
+        ],
+        unrealised=f"{found.unrealised:.2f}",
+        realised=f"{found.realised:.2f}",
+        missing_rates=found.missing_rates,
+        fx_account_id=found.fx_account_id,
+        waiting_entry_id=found.waiting_entry_id,
+    )
+
+
+@router.post(f"{BASE}/fx-differences", response={201: EntryOut})
+@requires("ledger.entry.create")
+def fx_differences(request: HttpRequest, slug: str, entity_id: UUID,
+                   payload: FxDraftIn) -> Status[EntryOut]:  # fmt: skip
+    """Prepare one draft entry with the exchange differences on the date. It follows the normal
+    approval and posting; refused while an earlier one is waiting."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, entry_out(fxdiff.draft(ctx, entity_id, payload.on)))

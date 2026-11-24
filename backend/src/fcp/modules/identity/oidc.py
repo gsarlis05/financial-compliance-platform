@@ -50,7 +50,7 @@ def _oauth() -> OAuth:
         name="fcp",
         client_id=settings.OIDC_CLIENT_ID,
         client_secret=settings.OIDC_CLIENT_SECRET,
-        server_metadata_url=f"{settings.OIDC_ISSUER}/.well-known/openid-configuration",
+        server_metadata_url=settings.OIDC_METADATA_URL,
         client_kwargs={"scope": "openid email profile", "code_challenge_method": "S256"},
     )
     return oauth

@@ -12,7 +12,9 @@ import {
   useMe,
   useScope,
   useVatCodes,
+  useWorkspace,
 } from "../api/hooks";
+import { useCurrencySettings, useSuggestRate } from "../api/currency";
 import type { EntryInput, JournalEntry } from "../api/types";
 import {
   Loading,
@@ -24,6 +26,7 @@ import { DocumentsPanel } from "../components/Documents";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount } from "../money";
 import { EntryForm } from "./EntryForm";
+import { useEntryHelpers } from "../api/entryHelpers";
 
 function EntryTable({ entries }: { entries: JournalEntry[] }) {
   const { t, locale } = useI18n();
@@ -120,6 +123,8 @@ export function NewEntryPage() {
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
+  const foreign = useForeign();
+  const helpers = useEntryHelpers();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -151,6 +156,8 @@ export function NewEntryPage() {
         counterparties={counterparties.data ?? []}
         vatCodes={vatCodes.data ?? []}
         fiscalYears={years.data ?? []}
+        foreign={foreign}
+        helpers={helpers}
         saving={save.isPending || act.isPending}
         error={save.error}
         onSave={onSave}
@@ -159,16 +166,28 @@ export function NewEntryPage() {
   );
 }
 
+/** The entry form's foreign-currency support, when the entity has it switched on (V1-2h). */
+function useForeign() {
+  const { get } = useCurrencySettings();
+  const suggest = useSuggestRate();
+  return get.data?.multi_currency_enabled
+    ? { functional: get.data.functional_currency, suggest }
+    : undefined;
+}
+
 /** Read-only view with the workflow actions allowed for the entry's status. A posted entry is
  * never editable; its only action is "Reverse" (AC-F2). */
 export function EntryActions({
   entry,
   myId,
   onAct,
+  onePerson = false,
 }: {
   entry: JournalEntry;
   myId: string | undefined;
   onAct: (action: EntryAction, reason?: string) => void;
+  /** One-person workspace (V1-1): the preparer may approve their own entry. */
+  onePerson?: boolean;
 }) {
   const { t } = useI18n();
   const [reason, setReason] = useState("");
@@ -190,7 +209,7 @@ export function EntryActions({
         <div className="actions">
           <button
             className="primary"
-            disabled={myId === entry.prepared_by_id}
+            disabled={!onePerson && myId === entry.prepared_by_id}
             onClick={() => onAct("approve")}
           >
             {t("je.approve")}
@@ -250,10 +269,13 @@ export function EntryDetailPage() {
   const { slug, entityId } = useScope();
   const entry = useEntry(entryId);
   const me = useMe();
+  const workspace = useWorkspace(slug);
   const accounts = useAccounts();
   const dimensions = useDimensions();
   const counterparties = useCounterparties();
   const vatCodes = useVatCodes();
+  const foreign = useForeign();
+  const helpers = useEntryHelpers();
   const years = useFiscalYears();
   const { save, act } = useEntryMutations();
   const navigate = useNavigate();
@@ -294,6 +316,9 @@ export function EntryDetailPage() {
     >
       <p>
         <StatusBadge prefix="je.status" status={e.status} /> {e.accounting_date}
+        {e.self_approved ? (
+          <span className="badge"> {t("approval.self")}</span>
+        ) : null}
         {e.entry_no ? ` · ${e.journal}-${e.entry_no}` : ""}
         {e.unlock_request_id ? (
           <span className="badge badge-warn"> {t("je.restated")}</span>
@@ -327,6 +352,8 @@ export function EntryDetailPage() {
           counterparties={counterparties.data ?? []}
           vatCodes={vatCodes.data ?? []}
           fiscalYears={years.data ?? []}
+          foreign={foreign}
+          helpers={helpers}
           initial={e}
           saving={save.isPending}
           error={save.error}
@@ -412,7 +439,12 @@ export function EntryDetailPage() {
               </tr>
             </tfoot>
           </table>
-          <EntryActions entry={e} myId={me.data?.id} onAct={onAct} />
+          <EntryActions
+            entry={e}
+            myId={me.data?.id}
+            onAct={onAct}
+            onePerson={workspace.data?.one_person ?? false}
+          />
         </>
       )}
       <ProblemMessage error={act.error} />

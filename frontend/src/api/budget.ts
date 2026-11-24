@@ -24,6 +24,7 @@ export interface BudgetVersion {
   approved_by_id: string | null;
   approved_at: string | null;
   sod_applied: boolean | null;
+  self_approved?: boolean; // approved by its submitter in a one-person workspace (V1-1)
   locked_at: string | null;
   superseded_at: string | null;
 }

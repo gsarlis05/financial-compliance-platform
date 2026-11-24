@@ -17,6 +17,18 @@ export function ProblemMessage({ error }: { error: unknown }) {
         {problem?.detail ??
           (error instanceof Error ? error.message : t("app.retry"))}
       </p>
+      {problem?.code === "auth.step_up_required" ? (
+        <p>
+          <a
+            href={`/auth/login?${new URLSearchParams({
+              next: window.location.pathname,
+              step_up: "1",
+            }).toString()}`}
+          >
+            {t("app.signInAgain")}
+          </a>
+        </p>
+      ) : null}
       {problem?.correlation_id ? (
         <p className="muted">
           {t("app.reference")}: <code>{problem.correlation_id}</code>

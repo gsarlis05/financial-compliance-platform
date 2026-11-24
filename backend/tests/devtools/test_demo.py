@@ -2,6 +2,7 @@
 
 import json
 import os
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,7 @@ def test_demo_entry_nets_each_account_to_one_side() -> None:
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.usefixtures("reference_data", "document_bucket")
-def test_demo_walkthrough_runs_end_to_end() -> None:
+def test_demo_walkthrough_runs_end_to_end() -> None:  # noqa: PLR0915 (one walkthrough)
     viewer = User.objects.create(idp_subject="https://idp.test|viewer", email="viewer@example.test")
     said: list[str] = []
     result = run(share_with="Viewer@Example.test", say=said.append)
@@ -51,7 +52,27 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
     books = build_demo_books()
     assert result.entries_posted == len(books.entries) + 3
     assert Decimal(result.bank_balance) == books.bank_closing_balance - Decimal("350.00")
-    assert len(result.steps) == 33
+    assert len(result.steps) == 37
+    # V1-4 (#210): the numbers agree from screen to screen, module by module.
+    assert [a for a in result.agreements if not a.ok] == []
+    names = [a.name for a in result.agreements]
+    for module in ("Ledger", "Statements", "Budget variance", "KPIs", "Cash forecast",
+                   "Fixed assets", "Projection", "Report pack", "VAT return"):  # fmt: skip
+        assert any(n.startswith(module) for n in names), module
+    assert len(names) == 20, names
+    agreed = next(s for s in result.steps if s.startswith("the numbers agree"))
+    assert agreed.startswith("the numbers agree from screen to screen: 20 checks"), agreed
+    vat_step = next(s for s in result.steps if s.startswith("VAT: quarterly periods"))
+    assert "0 exception(s); reviewed and finalised by the owner" in vat_step, vat_step
+    # The report's VAT equals the VAT the synthetic invoices of the first quarter carry.
+    q1 = [e for e in books.entries if e.accounting_date < date(2026, 4, 1)]
+    output = sum((e.lines["2120"][1] - e.lines["2120"][0] for e in q1 if "2120" in e.lines),
+                 Decimal(0))  # fmt: skip
+    inputs = sum((e.lines["1220"][0] - e.lines["1220"][1] for e in q1 if "1220" in e.lines),
+                 Decimal(0))  # fmt: skip
+    assert f"output VAT {output:.2f}, input VAT {inputs:.2f}, net {output - inputs:.2f}" in vat_step
+    # The return's boxes come from the same lines: domestic sales and purchases only.
+    assert f"Box 1 {output:.2f}, Box 4 {inputs:.2f}, Box 5 {output - inputs:.2f}" in vat_step
     assert (
         "full-year outlook 2027: 0 actual and 12 forecast months from the published projection; "
         "revenue 1320000.00"
@@ -116,6 +137,14 @@ def test_demo_walkthrough_runs_end_to_end() -> None:
         )
         for s in result.steps
     ), result.steps
+    # M7: revenue 15% lower from July 2027. The demo year is seasonal (2026: 560,000 to June,
+    # 640,000 after), so July-December 2027 is 640,000 x 1.1 = 704,000 and 2028 is 1,452,000:
+    # 15% of 2,156,000 = 323,400.
+    scenario_step = next(s for s in result.steps if s.startswith("scenario "))
+    assert "hypothetical, all checks hold; revenue -323400.00" in scenario_step, scenario_step
+    pack_step = next(s for s in result.steps if s.startswith("management pack"))
+    assert "submitted, finalised by the owner (10 sections)" in pack_step, pack_step
+    assert pack_step.endswith("PDF report-pack-2026-12-v1.pdf"), pack_step
     export_step = next(s for s in result.steps if s.startswith("full export of the workspace"))
     assert "deletion confirmed with 30 days' grace, then cancelled" in export_step, export_step
     assert all(line.startswith("✔") for line in said)
@@ -188,7 +217,6 @@ def _assert_golden_forecast(forecast: dict[str, Any], refs: dict[str, Any]) -> N
        professional has checked it (brief §3); regenerate with ``UPDATE_GOLDEN=1`` only after
        reviewing the change.
     """
-    from datetime import date  # noqa: PLC0415
 
     from ..cashflow.test_engine import reference  # noqa: PLC0415
 

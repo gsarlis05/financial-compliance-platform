@@ -37,6 +37,14 @@ draft, you can prepare that month again.
 Select **Dispose**, enter the date and what you received for it. Depreciation stops from that
 month, and the register shows the gain or loss. Book the disposal itself as a journal entry.
 
+## Check the register against the ledger
+Below the register, **Register and ledger** compares, for the date in **Values at**:
+- the cost of the assets you hold with the balance of their cost account;
+- their depreciation with the balance of the accumulated depreciation account.
+
+When they differ, the page says so. Book the purchase or disposal, or post the depreciation
+prepared for a month: months prepared but not posted are listed under the table.
+
 ## Tax capital allowances
 Capital allowances (tax depreciation) are kept **separately** from accounting depreciation: they
 never change the schedule, the book value or any entry.

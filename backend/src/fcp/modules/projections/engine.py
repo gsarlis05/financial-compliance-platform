@@ -82,6 +82,16 @@ def cents(value: Decimal) -> Decimal:
 
 
 @dataclass(frozen=True)
+class ExtraCapex:
+    """Capital expenditure with its own useful life (M7-2: a scenario's investment); it starts and
+    gets allowances like the set's capex of its month, straight-line."""
+
+    month: date
+    amount: Decimal
+    life_months: int
+
+
+@dataclass(frozen=True)
 class EngineInput:
     """Everything a projection depends on, as plain data (pinned in the run's inputs)."""
 
@@ -95,6 +105,10 @@ class EngineInput:
     currency: str = "EUR"  # the entity's functional currency (ISO 4217)
     loans: tuple[LoanTerms, ...] = ()  # M6F-4: loans of the assumption set
     tax: TaxInputs | None = None  # M6F-5: tax rules and positions; None: no income tax
+    # M7-2 (scenarios only; empty for every projection, so its results are unchanged): extra
+    # capex, and one-off payments that settle held liabilities (line -> amount, by month).
+    extra_capex: tuple[ExtraCapex, ...] = ()
+    settlements: dict[date, dict[str, Decimal]] = field(default_factory=dict)
 
 
 @dataclass
@@ -145,13 +159,14 @@ def _new_capex(inp: EngineInput) -> NewCapex:
     qualifying: dict[date, Decimal] = defaultdict(lambda: ZERO)
     allowances: dict[int, Decimal] = defaultdict(lambda: ZERO)
     last_year = inp.months[-1].year if inp.months else 0
-    for month in inp.months:
-        spent = cents(_d(inp, "capex", month))
+    spends = [(m, cents(_d(inp, "capex", m)), max(int(_dd(inp, "capex_life", m)), 1),
+               _dd(inp, "capex_db_rate", m) / HUNDRED) for m in inp.months]  # fmt: skip
+    spends += [(x.month, cents(x.amount), max(x.life_months, 1), Decimal(0))
+               for x in inp.extra_capex]  # fmt: skip
+    for month, spent, life, db_rate in spends:
         if spent <= 0:
             continue
-        life = max(int(_dd(inp, "capex_life", month)), 1)
         offset = max(int(_dd(inp, "capex_start", month)), 0)
-        db_rate = _dd(inp, "capex_db_rate", month) / HUNDRED
         terms = AssetTerms(
             month, spent, Decimal(0), life,
             method=DECLINING_BALANCE if db_rate > 0 else STRAIGHT_LINE,
@@ -237,7 +252,12 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         bs["BS.AR"] = cents(pl["PL.REVENUE"] * _d(inp, "dso", month) / days)
         bs["BS.INVENTORY"] = cents(pl["PL.COGS"] * _d(inp, "dio", month) / days)
         bs["BS.AP"] = cents(pl["PL.COGS"] * _d(inp, "dpo", month) / days)
-        capex = cents(_d(inp, "capex", month))
+        capex = cents(_d(inp, "capex", month)) + sum(
+            (cents(x.amount) for x in inp.extra_capex if x.month == month), ZERO
+        )
+        settled = {line: cents(v) for line, v in inp.settlements.get(month, {}).items()}
+        for line, amount in settled.items():
+            bs[line] = prev[line] - amount
         bs["BS.PPE.GROSS"] = prev["BS.PPE.GROSS"] + capex
         bs["BS.PPE.ACCDEP"] = prev["BS.PPE.ACCDEP"] - dep
         # Income tax (M6F-5): what is owed and deferred, from the tax book.
@@ -270,9 +290,12 @@ def project(inp: EngineInput) -> Projection:  # noqa: PLR0915 (one month, in doc
         cf["CF.WC.AP"] = bs["BS.AP"] - prev["BS.AP"]
         cf["CF.TAX_EXPENSE"] = pl["PL.TAX"]
         cf["CF.TAX_PAID"] = -tax_paid
-        cf["CF.OPERATING"] = sum((cf[k] for k in ("CF.NET_INCOME", "CF.DA", "CF.TAX_EXPENSE",
-                                                   "CF.WC.AR", "CF.WC.INVENTORY", "CF.WC.AP",
-                                                   "CF.TAX_PAID")), ZERO)  # fmt: skip
+        operating = ["CF.NET_INCOME", "CF.DA", "CF.TAX_EXPENSE", "CF.WC.AR", "CF.WC.INVENTORY",
+                     "CF.WC.AP", "CF.TAX_PAID"]  # fmt: skip
+        if inp.settlements:  # M7-2: a scenario's one-off settlements of held liabilities
+            cf["CF.SETTLEMENTS"] = -sum(settled.values(), ZERO)
+            operating.append("CF.SETTLEMENTS")
+        cf["CF.OPERATING"] = sum((cf[k] for k in operating), ZERO)
         cf["CF.CAPEX"] = -capex
         cf["CF.INVESTING"] = cf["CF.CAPEX"]
         cf["CF.BORROWING"], cf["CF.REPAYMENT"] = borrowing + drawn, -(repayment + repaid)
@@ -365,8 +388,8 @@ def _tax_reconciles(m: Month, prev: dict[str, Decimal]) -> bool:
     return ok
 
 
-def _month_checks(m: Month, prev: dict[str, Decimal],
-                  loan_start: dict[str, Decimal]) -> dict[str, bool]:  # fmt: skip
+def _month_checks(m: Month, prev: dict[str, Decimal], loan_start: dict[str, Decimal],
+                  settled: dict[str, Decimal]) -> dict[str, bool]:  # fmt: skip
     a, liabilities, e = totals(m.bs)
     debt = m.bs["BS.DEBT.NONCURRENT"] + m.bs["BS.DEBT.CURRENT"]
     debt_before = prev["BS.DEBT.NONCURRENT"] + prev["BS.DEBT.CURRENT"]
@@ -376,7 +399,8 @@ def _month_checks(m: Month, prev: dict[str, Decimal],
         and m.cf["CF.OPENING_CASH"] == prev["BS.CASH"],
         "retained_earnings_roll": m.bs["BS.EQUITY.RETAINED"]
         == prev["BS.EQUITY.RETAINED"] + m.pl["PL.NET_INCOME"] + m.cf["CF.DIVIDENDS"],
-        "opening_equals_previous_closing": all(m.bs[x] == prev[x] for x in HELD),
+        "opening_equals_previous_closing": all(
+            m.bs[x] == prev[x] - settled.get(x, ZERO) for x in HELD),
         "roll_forwards_tie": all((
             m.bs["BS.PPE.GROSS"] - prev["BS.PPE.GROSS"] == -m.cf["CF.CAPEX"],
             m.bs["BS.PPE.ACCDEP"] - prev["BS.PPE.ACCDEP"] == -m.cf["CF.DA"],
@@ -414,7 +438,8 @@ def check(p: Projection, inp: EngineInput) -> dict[str, bool]:
     loan_start = {loan.code: cents(loan.opening) if loan.drawdown_month is None else ZERO
                   for loan in inp.loans}  # fmt: skip
     for m in p.months:
-        for name, passed in _month_checks(m, prev, loan_start).items():
+        settled = {line: cents(v) for line, v in inp.settlements.get(m.month, {}).items()}
+        for name, passed in _month_checks(m, prev, loan_start, settled).items():
             record(name, passed, f"{m.month:%Y-%m}")
         prev = m.bs
         loan_start = {code: r.closing for code, r in m.loans.items()}

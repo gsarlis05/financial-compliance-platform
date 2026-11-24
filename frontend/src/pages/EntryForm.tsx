@@ -1,3 +1,7 @@
+import Decimal from "decimal.js";
+import type { EntryHelpers } from "../api/entryHelpers";
+import { SuggestInput } from "../components/SuggestInput";
+import { VatCodePicker } from "../components/VatCodePicker";
 import { type SyntheticEvent, useState } from "react";
 import type {
   Account,
@@ -9,6 +13,7 @@ import type {
   Period,
   VatCode,
 } from "../api/types";
+import { CURRENCIES, type SuggestedRate } from "../api/currency";
 import { FieldError, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
@@ -24,6 +29,24 @@ interface LineState {
   counterparty_id: string;
   reference: string;
   vat_code_id: string;
+  /** ISO date; "" = the entry date */
+  tax_point: string;
+  /** Input VAT only; "" = fully recoverable */
+  vat_recovery_percent: string;
+  vat_blocked: string;
+  /** Foreign currency (V1-2h); "" = the functional currency */
+  txn_currency: string;
+  txn_amount: string;
+  exchange_rate: string;
+  /** datetime-local value of when the rate applied */
+  rate_at: string;
+  rate_source: string;
+}
+
+/** "" stays unset; a decimal comma is accepted. The server checks the number. */
+function normaliseOptional(value: string): string | null {
+  const trimmed = value.trim().replace(",", ".");
+  return trimmed === "" ? null : trimmed;
 }
 
 let nextKey = 1;
@@ -37,7 +60,39 @@ const emptyLine = (): LineState => ({
   counterparty_id: "",
   reference: "",
   vat_code_id: "",
+  tax_point: "",
+  vat_recovery_percent: "",
+  vat_blocked: "",
+  txn_currency: "",
+  txn_amount: "",
+  exchange_rate: "",
+  rate_at: "",
+  rate_source: "",
 });
+
+/** The functional amount of a foreign amount at a rate: rounded half up to the cent, as the
+ * server checks; "" while either is missing or not a number. */
+export function converted(amount: string, rate: string): string {
+  try {
+    const a = new Decimal(amount.trim().replace(",", "."));
+    const r = new Decimal(rate.trim().replace(",", "."));
+    if (a.isNaN() || r.isNaN() || a.lte(0) || r.lte(0)) {
+      return "";
+    }
+    return a.times(r).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+  } catch {
+    return "";
+  }
+}
+
+function localDateTime(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+  const at = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
 
 export function periodFor(
   years: FiscalYear[],
@@ -68,6 +123,18 @@ interface Props {
   saving: boolean;
   error: unknown;
   onSave: (body: EntryInput, submit: boolean) => void;
+  /** Favourite VAT codes, usage and typing suggestions (V1-2i); optional. */
+  helpers?: EntryHelpers | undefined;
+  /** Set when the entity has foreign currency switched on (V1-2h). */
+  foreign?:
+    | {
+        functional: string;
+        suggest: (
+          currency: string,
+          on: string,
+        ) => Promise<SuggestedRate | null>;
+      }
+    | undefined;
 }
 
 export function EntryForm({
@@ -80,6 +147,8 @@ export function EntryForm({
   saving,
   error,
   onSave,
+  foreign,
+  helpers,
 }: Props) {
   const { t, locale } = useI18n();
   const [date, setDate] = useState(
@@ -102,6 +171,14 @@ export function EntryForm({
       counterparty_id: l.counterparty_id ?? "",
       reference: l.reference,
       vat_code_id: l.vat_code_id ?? "",
+      tax_point: l.tax_point ?? "",
+      vat_recovery_percent: l.vat_recovery_percent ?? "",
+      vat_blocked: l.vat_blocked ?? "",
+      txn_currency: l.txn_currency ?? "",
+      txn_amount: l.txn_amount ?? "",
+      exchange_rate: l.exchange_rate ?? "",
+      rate_at: localDateTime(l.rate_at ?? null),
+      rate_source: l.rate_source ?? "",
     })) ?? [emptyLine(), emptyLine()],
   );
   // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
@@ -119,8 +196,6 @@ export function EntryForm({
   const hasControl = accounts.some((a) => a.control_type !== "");
   const vatRoleOf = new Map(accounts.map((a) => [a.id, a.vat_role]));
   const showVat = vatCodes.length > 0;
-  const vatLabel = (v: VatCode) =>
-    `${v.code} · ${locale === "el" && v.name_el ? v.name_el : v.name}${v.verified ? "" : ` (${t("vat.unverified")})`}`;
   const partiesFor = (control: string, current: string) =>
     counterparties.filter(
       (c) =>
@@ -143,6 +218,32 @@ export function EntryForm({
 
   const update = (key: number, change: Partial<LineState>) =>
     setLines(lines.map((l) => (l.key === key ? { ...l, ...change } : l)));
+  /** A foreign-currency change: the line's functional amount follows on its side. */
+  const updateForeign = (line: LineState, change: Partial<LineState>) => {
+    const next = { ...line, ...change };
+    const euros = next.txn_currency
+      ? converted(next.txn_amount, next.exchange_rate)
+      : "";
+    const side = line.credit && !line.debit ? "credit" : "debit";
+    update(line.key, euros ? { ...change, [side]: euros } : change);
+  };
+  const [suggesting, setSuggesting] = useState("");
+  async function suggest(line: LineState) {
+    if (!foreign || !line.txn_currency) {
+      return;
+    }
+    setSuggesting("");
+    const found = await foreign.suggest(line.txn_currency, date);
+    if (found === null) {
+      setSuggesting(t("fx.noStoredRate"));
+      return;
+    }
+    updateForeign(line, {
+      exchange_rate: found.rate,
+      rate_at: `${found.rate_date}T00:00`,
+      rate_source: `${found.source} (${found.rate_type}, ${found.rate_date})`,
+    });
+  }
 
   function body(): EntryInput {
     return {
@@ -158,6 +259,22 @@ export function EntryForm({
         counterparty_id: l.counterparty_id || null,
         reference: l.reference,
         vat_code_id: l.vat_code_id || null,
+        ...(l.txn_currency
+          ? {
+              txn_currency: l.txn_currency,
+              txn_amount: l.txn_amount.trim().replace(",", "."),
+              exchange_rate: l.exchange_rate.trim().replace(",", "."),
+              rate_at: l.rate_at ? new Date(l.rate_at).toISOString() : null,
+              rate_source: l.rate_source,
+            }
+          : {}),
+        tax_point: (l.vat_code_id && l.tax_point) || null,
+        ...(l.vat_code_id && vatRoleOf.get(l.account_id) === "INPUT"
+          ? {
+              vat_recovery_percent: normaliseOptional(l.vat_recovery_percent),
+              vat_blocked: normaliseOptional(l.vat_blocked),
+            }
+          : { vat_recovery_percent: null, vat_blocked: null }),
       })),
     };
   }
@@ -186,9 +303,12 @@ export function EntryForm({
         </label>
         <label className="grow">
           {t("je.description")}
-          <input
+          <SuggestInput
+            label={t("je.description")}
+            field="description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            suggest={helpers?.suggest}
             required
             maxLength={500}
           />
@@ -253,6 +373,108 @@ export function EntryForm({
                     error={error}
                     field={`lines.${index}.account_id`}
                   />
+                  {foreign ? (
+                    <details className="vat-details" open={!!line.txn_currency}>
+                      <summary>{t("fx.foreign")}</summary>
+                      <label>
+                        {t("fx.currency")}
+                        <select
+                          aria-label={`${t("fx.currency")} ${index + 1}`}
+                          value={line.txn_currency}
+                          onChange={(e) =>
+                            updateForeign(line, {
+                              txn_currency: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">{foreign.functional}</option>
+                          {Object.keys(CURRENCIES)
+                            .filter((c) => c !== foreign.functional)
+                            .map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      {line.txn_currency ? (
+                        <>
+                          <label>
+                            {t("fx.amount")}
+                            <input
+                              inputMode="decimal"
+                              aria-label={`${t("fx.amount")} ${index + 1}`}
+                              value={line.txn_amount}
+                              onChange={(e) =>
+                                updateForeign(line, {
+                                  txn_amount: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("fx.rate")}
+                            <input
+                              inputMode="decimal"
+                              aria-label={`${t("fx.rate")} ${index + 1}`}
+                              title={t("fx.rateHelp")}
+                              value={line.exchange_rate}
+                              onChange={(e) =>
+                                updateForeign(line, {
+                                  exchange_rate: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => void suggest(line)}
+                          >
+                            {t("fx.useStored")}
+                          </button>
+                          <label>
+                            {t("fx.rateAt")}
+                            <input
+                              type="datetime-local"
+                              aria-label={`${t("fx.rateAt")} ${index + 1}`}
+                              value={line.rate_at}
+                              onChange={(e) =>
+                                update(line.key, { rate_at: e.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("fx.source")}
+                            <input
+                              aria-label={`${t("fx.source")} ${index + 1}`}
+                              placeholder={t("fx.sourceHint")}
+                              maxLength={200}
+                              value={line.rate_source}
+                              onChange={(e) =>
+                                update(line.key, {
+                                  rate_source: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          {suggesting ? (
+                            <p className="muted" role="status">
+                              {suggesting}
+                            </p>
+                          ) : null}
+                          <FieldError
+                            error={error}
+                            field={`lines.${index}.txn_amount`}
+                          />
+                          <FieldError
+                            error={error}
+                            field={`lines.${index}.rate_source`}
+                          />
+                        </>
+                      ) : null}
+                    </details>
+                  ) : null}
                 </td>
                 <td>
                   <input
@@ -282,11 +504,13 @@ export function EntryForm({
                   <FieldError error={error} field={`lines.${index}`} />
                 </td>
                 <td>
-                  <input
-                    aria-label={`${t("je.memo")} ${index + 1}`}
+                  <SuggestInput
+                    label={`${t("je.memo")} ${index + 1}`}
+                    field="memo"
                     value={line.memo}
                     maxLength={300}
-                    onChange={(e) => update(line.key, { memo: e.target.value })}
+                    suggest={helpers?.suggest}
+                    onChange={(memo) => update(line.key, { memo })}
                   />
                   <FieldError
                     error={error}
@@ -295,26 +519,93 @@ export function EntryForm({
                 </td>
                 {showVat ? (
                   <td>
-                    <select
-                      className="dimension-picker"
-                      aria-label={`${t("je.vat")} ${index + 1}`}
+                    <VatCodePicker
+                      index={index}
+                      codes={vatCodes}
                       value={line.vat_code_id}
                       required={!!vatRoleOf.get(line.account_id)}
-                      onChange={(e) =>
-                        update(line.key, { vat_code_id: e.target.value })
+                      onChange={(vat_code_id) =>
+                        update(line.key, { vat_code_id })
                       }
-                    >
-                      <option value="">—</option>
-                      {vatCodes.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {vatLabel(v)}
-                        </option>
-                      ))}
-                    </select>
+                      favourites={helpers?.favourites ?? []}
+                      onFavourite={helpers?.toggleFavourite}
+                      uses={helpers?.uses ?? {}}
+                      usual={helpers?.usual[line.account_id]}
+                    />
                     <FieldError
                       error={error}
                       field={`lines.${index}.vat_code_id`}
                     />
+                    {line.vat_code_id ? (
+                      <details
+                        className="vat-details"
+                        open={
+                          !!(
+                            line.tax_point ||
+                            line.vat_recovery_percent ||
+                            line.vat_blocked
+                          )
+                        }
+                      >
+                        <summary>{t("je.vatDetails")}</summary>
+                        <label>
+                          {t("je.taxPoint")}
+                          <input
+                            type="date"
+                            aria-label={`${t("je.taxPoint")} ${index + 1}`}
+                            title={t("je.taxPointHelp")}
+                            value={line.tax_point}
+                            onChange={(e) =>
+                              update(line.key, { tax_point: e.target.value })
+                            }
+                          />
+                        </label>
+                        <FieldError
+                          error={error}
+                          field={`lines.${index}.tax_point`}
+                        />
+                        {vatRoleOf.get(line.account_id) === "INPUT" ? (
+                          <>
+                            <label>
+                              {t("je.recovery")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.recovery")} ${index + 1}`}
+                                placeholder="100"
+                                value={line.vat_recovery_percent}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_recovery_percent: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_recovery_percent`}
+                            />
+                            <label>
+                              {t("je.blocked")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.blocked")} ${index + 1}`}
+                                placeholder="0.00"
+                                value={line.vat_blocked}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_blocked: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_blocked`}
+                            />
+                          </>
+                        ) : null}
+                      </details>
+                    ) : null}
                   </td>
                 ) : null}
                 {hasControl ? (
@@ -342,14 +633,16 @@ export function EntryForm({
                             </option>
                           ))}
                         </select>
-                        <input
+                        <SuggestInput
                           className="dimension-picker"
-                          aria-label={`${t("je.reference")} ${index + 1}`}
+                          label={`${t("je.reference")} ${index + 1}`}
+                          field="reference"
                           placeholder={t("je.reference")}
                           value={line.reference}
                           maxLength={50}
-                          onChange={(e) =>
-                            update(line.key, { reference: e.target.value })
+                          suggest={helpers?.suggest}
+                          onChange={(reference) =>
+                            update(line.key, { reference })
                           }
                         />
                         <FieldError
