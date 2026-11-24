@@ -1,0 +1,247 @@
+{
+ "first_month": "2027-01-01",
+ "months": 24,
+ "cutover": "2026-12-31",
+ "name": "S3 Negative cash and the credit facility",
+ "description": "Low opening cash and a 45,000 capital purchase in March 2027: the credit facility (limit 20,000, 9% a year) is drawn to keep 1,000 of cash in February and to its limit in March, and cash still goes negative (the projection says so every month); with thin margins it stays negative and the facility stays drawn to the end. Without a capital allowance rate, depreciation is not deductible, so tax is charged although the accounting result is a loss.",
+ "opening": {
+  "BS.CASH": "3000",
+  "BS.AR": "9000",
+  "BS.PPE.GROSS": "10000",
+  "BS.PPE.ACCDEP": "-2000",
+  "BS.AP": "6000",
+  "BS.EQUITY.SHARE_CAPITAL": "2000",
+  "BS.EQUITY.RETAINED": "12000"
+ },
+ "drivers": {
+  "revenue:REV.SALES": "9000",
+  "gross_margin:": "40",
+  "opex:OPEX.PAYROLL": "2500",
+  "opex:OPEX.RENT": "600",
+  "capex:": {
+   "2027-03": "45000"
+  },
+  "capex_life:": "60",
+  "dso:": "45",
+  "dpo:": "20",
+  "minimum_cash:": "1000",
+  "revolver_limit:": "20000",
+  "revolver_rate:": "9"
+ },
+ "register_depreciation": {
+  "amount": "100",
+  "months": 24
+ },
+ "tax": {
+  "rules": [
+   {
+    "year": 2019,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2020,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2021,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2022,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2023,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2024,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2025,
+    "rate": "0.125",
+    "carry": 5,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2026,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2027,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2028,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2029,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2030,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2031,
+    "rate": "0.15",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   }
+  ]
+ }
+}

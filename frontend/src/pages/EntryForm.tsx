@@ -1,0 +1,758 @@
+import Decimal from "decimal.js";
+import type { EntryHelpers } from "../api/entryHelpers";
+import { SuggestInput } from "../components/SuggestInput";
+import { VatCodePicker } from "../components/VatCodePicker";
+import { type SyntheticEvent, useState } from "react";
+import type {
+  Account,
+  Counterparty,
+  Dimension,
+  EntryInput,
+  FiscalYear,
+  JournalEntry,
+  Period,
+  VatCode,
+} from "../api/types";
+import { CURRENCIES, type SuggestedRate } from "../api/currency";
+import { FieldError, ProblemMessage } from "../components/common";
+import { useI18n } from "../i18n/I18n";
+import { formatAmount, isAmount, normaliseAmount, sum } from "../money";
+
+interface LineState {
+  key: number;
+  account_id: string;
+  debit: string;
+  credit: string;
+  memo: string;
+  /** dimension id -> value id ("" = none) */
+  dims: Record<string, string>;
+  counterparty_id: string;
+  reference: string;
+  vat_code_id: string;
+  /** ISO date; "" = the entry date */
+  tax_point: string;
+  /** Input VAT only; "" = fully recoverable */
+  vat_recovery_percent: string;
+  vat_blocked: string;
+  /** Foreign currency (V1-2h); "" = the functional currency */
+  txn_currency: string;
+  txn_amount: string;
+  exchange_rate: string;
+  /** datetime-local value of when the rate applied */
+  rate_at: string;
+  rate_source: string;
+}
+
+/** "" stays unset; a decimal comma is accepted. The server checks the number. */
+function normaliseOptional(value: string): string | null {
+  const trimmed = value.trim().replace(",", ".");
+  return trimmed === "" ? null : trimmed;
+}
+
+let nextKey = 1;
+const emptyLine = (): LineState => ({
+  key: nextKey++,
+  account_id: "",
+  debit: "",
+  credit: "",
+  memo: "",
+  dims: {},
+  counterparty_id: "",
+  reference: "",
+  vat_code_id: "",
+  tax_point: "",
+  vat_recovery_percent: "",
+  vat_blocked: "",
+  txn_currency: "",
+  txn_amount: "",
+  exchange_rate: "",
+  rate_at: "",
+  rate_source: "",
+});
+
+/** The functional amount of a foreign amount at a rate: rounded half up to the cent, as the
+ * server checks; "" while either is missing or not a number. */
+export function converted(amount: string, rate: string): string {
+  try {
+    const a = new Decimal(amount.trim().replace(",", "."));
+    const r = new Decimal(rate.trim().replace(",", "."));
+    if (a.isNaN() || r.isNaN() || a.lte(0) || r.lte(0)) {
+      return "";
+    }
+    return a.times(r).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+  } catch {
+    return "";
+  }
+}
+
+function localDateTime(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+  const at = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+export function periodFor(
+  years: FiscalYear[],
+  date: string,
+  adjustment: boolean,
+): Period | undefined {
+  for (const year of years) {
+    const found = year.periods.find(
+      (p) =>
+        p.is_adjustment === adjustment &&
+        p.start_date <= date &&
+        date <= p.end_date,
+    );
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
+interface Props {
+  accounts: Account[];
+  dimensions?: Dimension[];
+  counterparties?: Counterparty[];
+  vatCodes?: VatCode[];
+  fiscalYears: FiscalYear[];
+  initial?: JournalEntry | undefined;
+  saving: boolean;
+  error: unknown;
+  onSave: (body: EntryInput, submit: boolean) => void;
+  /** Favourite VAT codes, usage and typing suggestions (V1-2i); optional. */
+  helpers?: EntryHelpers | undefined;
+  /** Set when the entity has foreign currency switched on (V1-2h). */
+  foreign?:
+    | {
+        functional: string;
+        suggest: (
+          currency: string,
+          on: string,
+        ) => Promise<SuggestedRate | null>;
+      }
+    | undefined;
+}
+
+export function EntryForm({
+  accounts,
+  dimensions = [],
+  counterparties = [],
+  vatCodes = [],
+  fiscalYears,
+  initial,
+  saving,
+  error,
+  onSave,
+  foreign,
+  helpers,
+}: Props) {
+  const { t, locale } = useI18n();
+  const [date, setDate] = useState(
+    initial?.accounting_date ?? new Date().toISOString().slice(0, 10),
+  );
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [adjustment, setAdjustment] = useState(
+    initial?.use_adjustment_period ?? false,
+  );
+  const [lines, setLines] = useState<LineState[]>(
+    initial?.lines.map((l) => ({
+      key: nextKey++,
+      account_id: l.account_id,
+      debit: l.debit === "0.00" ? "" : l.debit,
+      credit: l.credit === "0.00" ? "" : l.credit,
+      memo: l.memo,
+      dims: Object.fromEntries(
+        l.dimensions.map((d) => [d.dimension_id, d.value_id]),
+      ),
+      counterparty_id: l.counterparty_id ?? "",
+      reference: l.reference,
+      vat_code_id: l.vat_code_id ?? "",
+      tax_point: l.tax_point ?? "",
+      vat_recovery_percent: l.vat_recovery_percent ?? "",
+      vat_blocked: l.vat_blocked ?? "",
+      txn_currency: l.txn_currency ?? "",
+      txn_amount: l.txn_amount ?? "",
+      exchange_rate: l.exchange_rate ?? "",
+      rate_at: localDateTime(l.rate_at ?? null),
+      rate_source: l.rate_source ?? "",
+    })) ?? [emptyLine(), emptyLine()],
+  );
+  // Active dimensions, plus any inactive one already used on this entry (so it stays visible).
+  const usedDims = new Set(
+    lines.flatMap((l) => Object.keys(l.dims).filter((k) => l.dims[k])),
+  );
+  const shownDims = dimensions.filter(
+    (d) => d.status === "ACTIVE" || usedDims.has(d.id),
+  );
+
+  const postable = accounts.filter(
+    (a) => a.is_postable && a.status === "ACTIVE",
+  );
+  const controlOf = new Map(accounts.map((a) => [a.id, a.control_type]));
+  const hasControl = accounts.some((a) => a.control_type !== "");
+  const vatRoleOf = new Map(accounts.map((a) => [a.id, a.vat_role]));
+  const showVat = vatCodes.length > 0;
+  const partiesFor = (control: string, current: string) =>
+    counterparties.filter(
+      (c) =>
+        c.id === current ||
+        (c.status === "ACTIVE" &&
+          (control === "RECEIVABLE"
+            ? c.kind !== "SUPPLIER"
+            : control === "PAYABLE"
+              ? c.kind !== "CUSTOMER"
+              : true)),
+    );
+  const totalDebit = sum(lines.map((l) => l.debit));
+  const totalCredit = sum(lines.map((l) => l.credit));
+  const difference = totalDebit.minus(totalCredit).abs();
+  const amountsValid = lines.every(
+    (l) => isAmount(l.debit) && isAmount(l.credit),
+  );
+  const balanced = difference.isZero() && !totalDebit.isZero();
+  const period = periodFor(fiscalYears, date, adjustment);
+
+  const update = (key: number, change: Partial<LineState>) =>
+    setLines(lines.map((l) => (l.key === key ? { ...l, ...change } : l)));
+  /** A foreign-currency change: the line's functional amount follows on its side. */
+  const updateForeign = (line: LineState, change: Partial<LineState>) => {
+    const next = { ...line, ...change };
+    const euros = next.txn_currency
+      ? converted(next.txn_amount, next.exchange_rate)
+      : "";
+    const side = line.credit && !line.debit ? "credit" : "debit";
+    update(line.key, euros ? { ...change, [side]: euros } : change);
+  };
+  const [suggesting, setSuggesting] = useState("");
+  async function suggest(line: LineState) {
+    if (!foreign || !line.txn_currency) {
+      return;
+    }
+    setSuggesting("");
+    const found = await foreign.suggest(line.txn_currency, date);
+    if (found === null) {
+      setSuggesting(t("fx.noStoredRate"));
+      return;
+    }
+    updateForeign(line, {
+      exchange_rate: found.rate,
+      rate_at: `${found.rate_date}T00:00`,
+      rate_source: `${found.source} (${found.rate_type}, ${found.rate_date})`,
+    });
+  }
+
+  function body(): EntryInput {
+    return {
+      accounting_date: date,
+      description,
+      use_adjustment_period: adjustment,
+      lines: lines.map((l) => ({
+        account_id: l.account_id,
+        debit: normaliseAmount(l.debit),
+        credit: normaliseAmount(l.credit),
+        memo: l.memo,
+        dimension_value_ids: Object.values(l.dims).filter((v) => v !== ""),
+        counterparty_id: l.counterparty_id || null,
+        reference: l.reference,
+        vat_code_id: l.vat_code_id || null,
+        ...(l.txn_currency
+          ? {
+              txn_currency: l.txn_currency,
+              txn_amount: l.txn_amount.trim().replace(",", "."),
+              exchange_rate: l.exchange_rate.trim().replace(",", "."),
+              rate_at: l.rate_at ? new Date(l.rate_at).toISOString() : null,
+              rate_source: l.rate_source,
+            }
+          : {}),
+        tax_point: (l.vat_code_id && l.tax_point) || null,
+        ...(l.vat_code_id && vatRoleOf.get(l.account_id) === "INPUT"
+          ? {
+              vat_recovery_percent: normaliseOptional(l.vat_recovery_percent),
+              vat_blocked: normaliseOptional(l.vat_blocked),
+            }
+          : { vat_recovery_percent: null, vat_blocked: null }),
+      })),
+    };
+  }
+
+  function handle(event: SyntheticEvent, submit: boolean) {
+    event.preventDefault();
+    onSave(body(), submit);
+  }
+
+  return (
+    <form
+      className="entry-form"
+      onSubmit={(e) => handle(e, true)}
+      aria-describedby="entry-balance"
+    >
+      <div className="form inline">
+        <label>
+          {t("je.date")}
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+          <FieldError error={error} field="accounting_date" />
+        </label>
+        <label className="grow">
+          {t("je.description")}
+          <SuggestInput
+            label={t("je.description")}
+            field="description"
+            value={description}
+            onChange={setDescription}
+            suggest={helpers?.suggest}
+            required
+            maxLength={500}
+          />
+          <FieldError error={error} field="description" />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={adjustment}
+            onChange={(e) => setAdjustment(e.target.checked)}
+          />
+          {t("je.adjustmentPeriod")}
+        </label>
+      </div>
+      {period?.status === "LOCKED" ? (
+        <p className="notice warn">{t("per.lockedHelp")}</p>
+      ) : null}
+      {period?.status === "SOFT_CLOSED" ? (
+        <p className="notice">{t("per.softClosedHelp")}</p>
+      ) : null}
+      <div className="table-scroll">
+        <table className="lines">
+          <thead>
+            <tr>
+              <th scope="col">{t("je.account")}</th>
+              <th scope="col">{t("je.debit")}</th>
+              <th scope="col">{t("je.credit")}</th>
+              <th scope="col">{t("je.memo")}</th>
+              {showVat ? <th scope="col">{t("je.vat")}</th> : null}
+              {hasControl ? <th scope="col">{t("je.counterparty")}</th> : null}
+              {shownDims.map((d) => (
+                <th scope="col" key={d.id}>
+                  {d.code}
+                </th>
+              ))}
+              <th scope="col">
+                <span className="visually-hidden">{t("je.removeLine")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line, index) => (
+              <tr key={line.key}>
+                <td>
+                  <select
+                    aria-label={`${t("je.account")} ${index + 1}`}
+                    value={line.account_id}
+                    onChange={(e) =>
+                      update(line.key, { account_id: e.target.value })
+                    }
+                    required
+                  >
+                    <option value="">—</option>
+                    {postable.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} ·{" "}
+                        {locale === "el" && a.name_el ? a.name_el : a.name}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError
+                    error={error}
+                    field={`lines.${index}.account_id`}
+                  />
+                  {foreign ? (
+                    <details className="vat-details" open={!!line.txn_currency}>
+                      <summary>{t("fx.foreign")}</summary>
+                      <label>
+                        {t("fx.currency")}
+                        <select
+                          aria-label={`${t("fx.currency")} ${index + 1}`}
+                          value={line.txn_currency}
+                          onChange={(e) =>
+                            updateForeign(line, {
+                              txn_currency: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">{foreign.functional}</option>
+                          {Object.keys(CURRENCIES)
+                            .filter((c) => c !== foreign.functional)
+                            .map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      {line.txn_currency ? (
+                        <>
+                          <label>
+                            {t("fx.amount")}
+                            <input
+                              inputMode="decimal"
+                              aria-label={`${t("fx.amount")} ${index + 1}`}
+                              value={line.txn_amount}
+                              onChange={(e) =>
+                                updateForeign(line, {
+                                  txn_amount: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("fx.rate")}
+                            <input
+                              inputMode="decimal"
+                              aria-label={`${t("fx.rate")} ${index + 1}`}
+                              title={t("fx.rateHelp")}
+                              value={line.exchange_rate}
+                              onChange={(e) =>
+                                updateForeign(line, {
+                                  exchange_rate: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => void suggest(line)}
+                          >
+                            {t("fx.useStored")}
+                          </button>
+                          <label>
+                            {t("fx.rateAt")}
+                            <input
+                              type="datetime-local"
+                              aria-label={`${t("fx.rateAt")} ${index + 1}`}
+                              value={line.rate_at}
+                              onChange={(e) =>
+                                update(line.key, { rate_at: e.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("fx.source")}
+                            <input
+                              aria-label={`${t("fx.source")} ${index + 1}`}
+                              placeholder={t("fx.sourceHint")}
+                              maxLength={200}
+                              value={line.rate_source}
+                              onChange={(e) =>
+                                update(line.key, {
+                                  rate_source: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          {suggesting ? (
+                            <p className="muted" role="status">
+                              {suggesting}
+                            </p>
+                          ) : null}
+                          <FieldError
+                            error={error}
+                            field={`lines.${index}.txn_amount`}
+                          />
+                          <FieldError
+                            error={error}
+                            field={`lines.${index}.rate_source`}
+                          />
+                        </>
+                      ) : null}
+                    </details>
+                  ) : null}
+                </td>
+                <td>
+                  <input
+                    aria-label={`${t("je.debit")} ${index + 1}`}
+                    inputMode="decimal"
+                    className="amount"
+                    value={line.debit}
+                    aria-invalid={!isAmount(line.debit)}
+                    onChange={(e) =>
+                      update(line.key, { debit: e.target.value })
+                    }
+                  />
+                  <FieldError error={error} field={`lines.${index}.debit`} />
+                </td>
+                <td>
+                  <input
+                    aria-label={`${t("je.credit")} ${index + 1}`}
+                    inputMode="decimal"
+                    className="amount"
+                    value={line.credit}
+                    aria-invalid={!isAmount(line.credit)}
+                    onChange={(e) =>
+                      update(line.key, { credit: e.target.value })
+                    }
+                  />
+                  <FieldError error={error} field={`lines.${index}.credit`} />
+                  <FieldError error={error} field={`lines.${index}`} />
+                </td>
+                <td>
+                  <SuggestInput
+                    label={`${t("je.memo")} ${index + 1}`}
+                    field="memo"
+                    value={line.memo}
+                    maxLength={300}
+                    suggest={helpers?.suggest}
+                    onChange={(memo) => update(line.key, { memo })}
+                  />
+                  <FieldError
+                    error={error}
+                    field={`lines.${index}.dimension_value_ids`}
+                  />
+                </td>
+                {showVat ? (
+                  <td>
+                    <VatCodePicker
+                      index={index}
+                      codes={vatCodes}
+                      value={line.vat_code_id}
+                      required={!!vatRoleOf.get(line.account_id)}
+                      onChange={(vat_code_id) =>
+                        update(line.key, { vat_code_id })
+                      }
+                      favourites={helpers?.favourites ?? []}
+                      onFavourite={helpers?.toggleFavourite}
+                      uses={helpers?.uses ?? {}}
+                      usual={helpers?.usual[line.account_id]}
+                    />
+                    <FieldError
+                      error={error}
+                      field={`lines.${index}.vat_code_id`}
+                    />
+                    {line.vat_code_id ? (
+                      <details
+                        className="vat-details"
+                        open={
+                          !!(
+                            line.tax_point ||
+                            line.vat_recovery_percent ||
+                            line.vat_blocked
+                          )
+                        }
+                      >
+                        <summary>{t("je.vatDetails")}</summary>
+                        <label>
+                          {t("je.taxPoint")}
+                          <input
+                            type="date"
+                            aria-label={`${t("je.taxPoint")} ${index + 1}`}
+                            title={t("je.taxPointHelp")}
+                            value={line.tax_point}
+                            onChange={(e) =>
+                              update(line.key, { tax_point: e.target.value })
+                            }
+                          />
+                        </label>
+                        <FieldError
+                          error={error}
+                          field={`lines.${index}.tax_point`}
+                        />
+                        {vatRoleOf.get(line.account_id) === "INPUT" ? (
+                          <>
+                            <label>
+                              {t("je.recovery")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.recovery")} ${index + 1}`}
+                                placeholder="100"
+                                value={line.vat_recovery_percent}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_recovery_percent: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_recovery_percent`}
+                            />
+                            <label>
+                              {t("je.blocked")}
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${t("je.blocked")} ${index + 1}`}
+                                placeholder="0.00"
+                                value={line.vat_blocked}
+                                onChange={(e) =>
+                                  update(line.key, {
+                                    vat_blocked: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <FieldError
+                              error={error}
+                              field={`lines.${index}.vat_blocked`}
+                            />
+                          </>
+                        ) : null}
+                      </details>
+                    ) : null}
+                  </td>
+                ) : null}
+                {hasControl ? (
+                  <td>
+                    {controlOf.get(line.account_id) ? (
+                      <>
+                        <select
+                          className="dimension-picker"
+                          aria-label={`${t("je.counterparty")} ${index + 1}`}
+                          value={line.counterparty_id}
+                          onChange={(e) =>
+                            update(line.key, {
+                              counterparty_id: e.target.value,
+                            })
+                          }
+                          required
+                        >
+                          <option value="">—</option>
+                          {partiesFor(
+                            controlOf.get(line.account_id) ?? "",
+                            line.counterparty_id,
+                          ).map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.code} · {c.name}
+                            </option>
+                          ))}
+                        </select>
+                        <SuggestInput
+                          className="dimension-picker"
+                          label={`${t("je.reference")} ${index + 1}`}
+                          field="reference"
+                          placeholder={t("je.reference")}
+                          value={line.reference}
+                          maxLength={50}
+                          suggest={helpers?.suggest}
+                          onChange={(reference) =>
+                            update(line.key, { reference })
+                          }
+                        />
+                        <FieldError
+                          error={error}
+                          field={`lines.${index}.counterparty_id`}
+                        />
+                      </>
+                    ) : null}
+                  </td>
+                ) : null}
+                {shownDims.map((d) => (
+                  <td key={d.id}>
+                    <select
+                      className="dimension-picker"
+                      aria-label={`${d.code} ${index + 1}`}
+                      value={line.dims[d.id] ?? ""}
+                      onChange={(e) =>
+                        update(line.key, {
+                          dims: { ...line.dims, [d.id]: e.target.value },
+                        })
+                      }
+                    >
+                      <option value="">—</option>
+                      {d.values
+                        .filter(
+                          (v) =>
+                            v.status === "ACTIVE" || v.id === line.dims[d.id],
+                        )
+                        .map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.code} · {v.name}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
+                ))}
+                <td>
+                  <button
+                    type="button"
+                    className="link-button"
+                    aria-label={`${t("je.removeLine")} ${index + 1}`}
+                    disabled={lines.length <= 2}
+                    onClick={() =>
+                      setLines(lines.filter((l) => l.key !== line.key))
+                    }
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">{t("je.totals")}</th>
+              <td className="amount" data-testid="total-debit">
+                {formatAmount(totalDebit, locale)}
+              </td>
+              <td className="amount" data-testid="total-credit">
+                {formatAmount(totalCredit, locale)}
+              </td>
+              <td
+                colSpan={
+                  2 +
+                  shownDims.length +
+                  (hasControl ? 1 : 0) +
+                  (showVat ? 1 : 0)
+                }
+                id="entry-balance"
+                aria-live="polite"
+                className={balanced ? "ok" : "warn"}
+              >
+                {balanced
+                  ? t("je.balanced")
+                  : `${t("je.difference")}: ${formatAmount(difference, locale)}`}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => setLines([...lines, emptyLine()])}
+      >
+        + {t("je.addLine")}
+      </button>
+      {!balanced ? <p className="notice">{t("je.unbalanced")}</p> : null}
+      {lines.some((l) =>
+        vatCodes.find((v) => v.id === l.vat_code_id && !v.verified),
+      ) ? (
+        <p className="notice">{t("vat.unverifiedHelp")}</p>
+      ) : null}
+      <ProblemMessage error={error} />
+      <div className="actions">
+        <button
+          type="button"
+          disabled={saving || !amountsValid}
+          onClick={(e) => handle(e, false)}
+        >
+          {t("je.saveDraft")}
+        </button>
+        <button
+          type="submit"
+          className="primary"
+          disabled={saving || !amountsValid || !balanced}
+        >
+          {t("je.saveAndSubmit")}
+        </button>
+      </div>
+    </form>
+  );
+}
