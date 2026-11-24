@@ -56,7 +56,7 @@ jobs:
             --entrypoint /bin/sh chrislusf/seaweedfs:4.52 /fcp/seaweedfs-entrypoint.sh
           docker run -d --name clamav -p 127.0.0.1:3310:3310 -e CLAMAV_NO_FRESHCLAMD=true \
             clamav/clamav:1.4.3
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
       - run: uv sync --frozen
@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
       - run: uv sync --frozen
