@@ -1,0 +1,262 @@
+{
+  "jurisdiction": "CY",
+  "note": "Seeded from widely published Cyprus VAT rates and, for the categories, the owner's VAT specification of 2026-11-23 (brief 25). Every entry is UNVERIFIED until a qualified Cyprus tax professional confirms it (owner decision #93). Validity windows are open-ended until verified dates are supplied.",
+  "codes": [
+    {
+      "code": "S19",
+      "name": "Standard rate 19%",
+      "name_el": "Κανονικός συντελεστής 19%",
+      "treatment": "STANDARD",
+      "rate": "0.19",
+      "category": "DOMESTIC"
+    },
+    {
+      "code": "R9",
+      "name": "Reduced rate 9%",
+      "name_el": "Μειωμένος συντελεστής 9%",
+      "treatment": "REDUCED",
+      "rate": "0.09",
+      "category": "DOMESTIC"
+    },
+    {
+      "code": "R5",
+      "name": "Reduced rate 5%",
+      "name_el": "Μειωμένος συντελεστής 5%",
+      "treatment": "REDUCED",
+      "rate": "0.05",
+      "category": "DOMESTIC"
+    },
+    {
+      "code": "Z0",
+      "name": "Zero rate",
+      "name_el": "Μηδενικός συντελεστής",
+      "treatment": "ZERO",
+      "rate": "0",
+      "category": "ZERO_RATED"
+    },
+    {
+      "code": "EX",
+      "name": "Exempt",
+      "name_el": "Απαλλασσόμενη",
+      "treatment": "EXEMPT",
+      "rate": null,
+      "category": "EXEMPT"
+    },
+    {
+      "code": "RC",
+      "name": "EU reverse charge (old code: choose a specific reverse-charge or acquisition code)",
+      "name_el": "Αντίστροφη επιβάρυνση ΕΕ (παλαιός κωδικός: επιλέξτε συγκεκριμένο κωδικό)",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.19",
+      "category": "LEGACY_REVERSE_CHARGE"
+    },
+    {
+      "code": "OUT",
+      "name": "Outside the scope of VAT: not a supply (payroll, financing)",
+      "name_el": "Εκτός πεδίου ΦΠΑ: όχι παράδοση (μισθοδοσία, χρηματοδότηση)",
+      "treatment": "OUT_OF_SCOPE",
+      "rate": null,
+      "category": "NON_SUPPLY"
+    },
+    {
+      "code": "SETTLE",
+      "name": "VAT settlement (payment or refund)",
+      "name_el": "Εκκαθάριση ΦΠΑ (πληρωμή ή επιστροφή)",
+      "treatment": "SETTLEMENT",
+      "rate": null,
+      "category": "SETTLEMENT"
+    },
+    {
+      "code": "R3",
+      "name": "Reduced rate 3%",
+      "name_el": "Μειωμένος συντελεστής 3%",
+      "treatment": "REDUCED",
+      "rate": "0.03",
+      "category": "DOMESTIC"
+    },
+    {
+      "code": "OSD",
+      "name": "Outside scope, with the right to deduct input VAT",
+      "name_el": "Εκτός πεδίου, με δικαίωμα έκπτωσης ΦΠΑ εισροών",
+      "treatment": "OUT_OF_SCOPE",
+      "rate": null,
+      "category": "OUTSIDE_SCOPE_DEDUCTIBLE"
+    },
+    {
+      "code": "EUGS",
+      "name": "Intra-Community supply of goods",
+      "name_el": "Ενδοκοινοτική παράδοση αγαθών",
+      "treatment": "ZERO",
+      "rate": "0",
+      "category": "EU_GOODS_SUPPLY"
+    },
+    {
+      "code": "EUSS",
+      "name": "Services supplied to a business in another EU state",
+      "name_el": "Υπηρεσίες σε επιχείρηση άλλου κράτους μέλους ΕΕ",
+      "treatment": "OUT_OF_SCOPE",
+      "rate": null,
+      "category": "EU_SERVICES_SUPPLY"
+    },
+    {
+      "code": "EUGA19",
+      "name": "Intra-Community acquisition of goods at 19%",
+      "name_el": "Ενδοκοινοτική απόκτηση αγαθών με 19%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.19",
+      "category": "EU_GOODS_ACQUISITION"
+    },
+    {
+      "code": "RCEU19",
+      "name": "Services received from another EU state (reverse charge) at 19%",
+      "name_el": "Υπηρεσίες από άλλο κράτος μέλος ΕΕ (αντίστροφη επιβάρυνση) με 19%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.19",
+      "category": "RC_EU_SERVICES"
+    },
+    {
+      "code": "RCNEU19",
+      "name": "Services received from outside the EU (reverse charge) at 19%",
+      "name_el": "Υπηρεσίες εκτός ΕΕ (αντίστροφη επιβάρυνση) με 19%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.19",
+      "category": "RC_NON_EU_SERVICES"
+    },
+    {
+      "code": "RCDOM19",
+      "name": "Domestic reverse charge at 19%",
+      "name_el": "Εγχώρια αντίστροφη επιβάρυνση με 19%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.19",
+      "category": "RC_DOMESTIC"
+    },
+    {
+      "code": "IMP19",
+      "name": "Import VAT paid at customs at 19%",
+      "name_el": "ΦΠΑ εισαγωγής στο τελωνείο με 19%",
+      "treatment": "STANDARD",
+      "rate": "0.19",
+      "category": "IMPORT"
+    },
+    {
+      "code": "EUGA9",
+      "name": "Intra-Community acquisition of goods at 9%",
+      "name_el": "Ενδοκοινοτική απόκτηση αγαθών με 9%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.09",
+      "category": "EU_GOODS_ACQUISITION"
+    },
+    {
+      "code": "RCEU9",
+      "name": "Services received from another EU state (reverse charge) at 9%",
+      "name_el": "Υπηρεσίες από άλλο κράτος μέλος ΕΕ (αντίστροφη επιβάρυνση) με 9%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.09",
+      "category": "RC_EU_SERVICES"
+    },
+    {
+      "code": "RCNEU9",
+      "name": "Services received from outside the EU (reverse charge) at 9%",
+      "name_el": "Υπηρεσίες εκτός ΕΕ (αντίστροφη επιβάρυνση) με 9%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.09",
+      "category": "RC_NON_EU_SERVICES"
+    },
+    {
+      "code": "RCDOM9",
+      "name": "Domestic reverse charge at 9%",
+      "name_el": "Εγχώρια αντίστροφη επιβάρυνση με 9%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.09",
+      "category": "RC_DOMESTIC"
+    },
+    {
+      "code": "IMP9",
+      "name": "Import VAT paid at customs at 9%",
+      "name_el": "ΦΠΑ εισαγωγής στο τελωνείο με 9%",
+      "treatment": "REDUCED",
+      "rate": "0.09",
+      "category": "IMPORT"
+    },
+    {
+      "code": "EUGA5",
+      "name": "Intra-Community acquisition of goods at 5%",
+      "name_el": "Ενδοκοινοτική απόκτηση αγαθών με 5%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.05",
+      "category": "EU_GOODS_ACQUISITION"
+    },
+    {
+      "code": "RCEU5",
+      "name": "Services received from another EU state (reverse charge) at 5%",
+      "name_el": "Υπηρεσίες από άλλο κράτος μέλος ΕΕ (αντίστροφη επιβάρυνση) με 5%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.05",
+      "category": "RC_EU_SERVICES"
+    },
+    {
+      "code": "RCNEU5",
+      "name": "Services received from outside the EU (reverse charge) at 5%",
+      "name_el": "Υπηρεσίες εκτός ΕΕ (αντίστροφη επιβάρυνση) με 5%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.05",
+      "category": "RC_NON_EU_SERVICES"
+    },
+    {
+      "code": "RCDOM5",
+      "name": "Domestic reverse charge at 5%",
+      "name_el": "Εγχώρια αντίστροφη επιβάρυνση με 5%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.05",
+      "category": "RC_DOMESTIC"
+    },
+    {
+      "code": "IMP5",
+      "name": "Import VAT paid at customs at 5%",
+      "name_el": "ΦΠΑ εισαγωγής στο τελωνείο με 5%",
+      "treatment": "REDUCED",
+      "rate": "0.05",
+      "category": "IMPORT"
+    },
+    {
+      "code": "EUGA3",
+      "name": "Intra-Community acquisition of goods at 3%",
+      "name_el": "Ενδοκοινοτική απόκτηση αγαθών με 3%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.03",
+      "category": "EU_GOODS_ACQUISITION"
+    },
+    {
+      "code": "RCEU3",
+      "name": "Services received from another EU state (reverse charge) at 3%",
+      "name_el": "Υπηρεσίες από άλλο κράτος μέλος ΕΕ (αντίστροφη επιβάρυνση) με 3%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.03",
+      "category": "RC_EU_SERVICES"
+    },
+    {
+      "code": "RCNEU3",
+      "name": "Services received from outside the EU (reverse charge) at 3%",
+      "name_el": "Υπηρεσίες εκτός ΕΕ (αντίστροφη επιβάρυνση) με 3%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.03",
+      "category": "RC_NON_EU_SERVICES"
+    },
+    {
+      "code": "RCDOM3",
+      "name": "Domestic reverse charge at 3%",
+      "name_el": "Εγχώρια αντίστροφη επιβάρυνση με 3%",
+      "treatment": "REVERSE_CHARGE",
+      "rate": "0.03",
+      "category": "RC_DOMESTIC"
+    },
+    {
+      "code": "IMP3",
+      "name": "Import VAT paid at customs at 3%",
+      "name_el": "ΦΠΑ εισαγωγής στο τελωνείο με 3%",
+      "treatment": "REDUCED",
+      "rate": "0.03",
+      "category": "IMPORT"
+    }
+  ]
+}

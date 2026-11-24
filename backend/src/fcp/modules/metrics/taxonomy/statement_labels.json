@@ -1,0 +1,171 @@
+{
+  "note": "Labels of statement sections, subtotals and computed rows (English, Greek). Line labels come from the taxonomy.",
+  "statements": {
+    "PL": {
+      "en": "Profit and loss",
+      "el": "Κατάσταση αποτελεσμάτων"
+    },
+    "BS": {
+      "en": "Balance sheet",
+      "el": "Κατάσταση οικονομικής θέσης"
+    },
+    "CF": {
+      "en": "Cash flow statement",
+      "el": "Κατάσταση ταμειακών ροών"
+    }
+  },
+  "rows": {
+    "NON_CURRENT_ASSETS": {
+      "en": "Non-current assets",
+      "el": "Μη κυκλοφορούντα περιουσιακά στοιχεία"
+    },
+    "CURRENT_ASSETS": {
+      "en": "Current assets",
+      "el": "Κυκλοφορούντα περιουσιακά στοιχεία"
+    },
+    "EQUITY": {
+      "en": "Equity",
+      "el": "Ίδια κεφάλαια"
+    },
+    "NON_CURRENT_LIABILITIES": {
+      "en": "Non-current liabilities",
+      "el": "Μακροπρόθεσμες υποχρεώσεις"
+    },
+    "CURRENT_LIABILITIES": {
+      "en": "Current liabilities",
+      "el": "Βραχυπρόθεσμες υποχρεώσεις"
+    },
+    "REVENUE": {
+      "en": "Revenue",
+      "el": "Έσοδα"
+    },
+    "COST_OF_SALES": {
+      "en": "Cost of sales",
+      "el": "Κόστος πωλήσεων"
+    },
+    "OTHER_INCOME": {
+      "en": "Other income",
+      "el": "Άλλα έσοδα"
+    },
+    "OPERATING_EXPENSES": {
+      "en": "Operating expenses",
+      "el": "Λειτουργικά έξοδα"
+    },
+    "DEPRECIATION_AMORTISATION": {
+      "en": "Depreciation and amortisation",
+      "el": "Αποσβέσεις"
+    },
+    "FINANCE": {
+      "en": "Finance income and costs",
+      "el": "Χρηματοοικονομικά έσοδα και έξοδα"
+    },
+    "TAX": {
+      "en": "Income tax",
+      "el": "Φορολογία εισοδήματος"
+    },
+    "BS.TOTAL.NON_CURRENT_ASSETS": {
+      "en": "Total non-current assets",
+      "el": "Σύνολο μη κυκλοφορούντων περιουσιακών στοιχείων"
+    },
+    "BS.TOTAL.CURRENT_ASSETS": {
+      "en": "Total current assets",
+      "el": "Σύνολο κυκλοφορούντων περιουσιακών στοιχείων"
+    },
+    "BS.TOTAL_ASSETS": {
+      "en": "Total assets",
+      "el": "Σύνολο περιουσιακών στοιχείων"
+    },
+    "BS.EQUITY.RESULT_YTD": {
+      "en": "Profit (loss) for the year to date",
+      "el": "Κέρδος (ζημιά) τρέχουσας χρήσης"
+    },
+    "BS.EQUITY.PRIOR_UNCLOSED": {
+      "en": "Result of earlier years not yet closed",
+      "el": "Αποτελέσματα προηγούμενων χρήσεων (μη κλεισμένα)"
+    },
+    "BS.TOTAL.EQUITY": {
+      "en": "Total equity",
+      "el": "Σύνολο ιδίων κεφαλαίων"
+    },
+    "BS.TOTAL.NON_CURRENT_LIABILITIES": {
+      "en": "Total non-current liabilities",
+      "el": "Σύνολο μακροπρόθεσμων υποχρεώσεων"
+    },
+    "BS.TOTAL.CURRENT_LIABILITIES": {
+      "en": "Total current liabilities",
+      "el": "Σύνολο βραχυπρόθεσμων υποχρεώσεων"
+    },
+    "BS.TOTAL_LIABILITIES": {
+      "en": "Total liabilities",
+      "el": "Σύνολο υποχρεώσεων"
+    },
+    "BS.TOTAL_EQUITY_LIABILITIES": {
+      "en": "Total equity and liabilities",
+      "el": "Σύνολο ιδίων κεφαλαίων και υποχρεώσεων"
+    },
+    "PL.GROSS_PROFIT": {
+      "en": "Gross profit",
+      "el": "Μικτό κέρδος"
+    },
+    "PL.EBITDA": {
+      "en": "Operating profit before depreciation and amortisation (EBITDA)",
+      "el": "Λειτουργικό κέρδος προ αποσβέσεων (EBITDA)"
+    },
+    "PL.OPERATING_PROFIT": {
+      "en": "Operating profit",
+      "el": "Λειτουργικό κέρδος"
+    },
+    "PL.PROFIT_BEFORE_TAX": {
+      "en": "Profit before tax",
+      "el": "Κέρδος προ φόρων"
+    },
+    "PL.RESULT": {
+      "en": "Profit (loss) for the period",
+      "el": "Κέρδος (ζημιά) περιόδου"
+    },
+    "CF.OPERATING": {
+      "en": "Cash flows from operating activities",
+      "el": "Ταμειακές ροές από λειτουργικές δραστηριότητες"
+    },
+    "CF.RESULT": {
+      "en": "Profit (loss) for the period",
+      "el": "Κέρδος (ζημιά) περιόδου"
+    },
+    "CF.NONCASH": {
+      "en": "Depreciation and amortisation",
+      "el": "Αποσβέσεις"
+    },
+    "CF.TOTAL.OPERATING": {
+      "en": "Net cash from operating activities",
+      "el": "Καθαρές ταμειακές ροές από λειτουργικές δραστηριότητες"
+    },
+    "CF.INVESTING": {
+      "en": "Cash flows from investing activities",
+      "el": "Ταμειακές ροές από επενδυτικές δραστηριότητες"
+    },
+    "CF.TOTAL.INVESTING": {
+      "en": "Net cash from investing activities",
+      "el": "Καθαρές ταμειακές ροές από επενδυτικές δραστηριότητες"
+    },
+    "CF.FINANCING": {
+      "en": "Cash flows from financing activities",
+      "el": "Ταμειακές ροές από χρηματοδοτικές δραστηριότητες"
+    },
+    "CF.TOTAL.FINANCING": {
+      "en": "Net cash from financing activities",
+      "el": "Καθαρές ταμειακές ροές από χρηματοδοτικές δραστηριότητες"
+    },
+    "CF.NET_CHANGE": {
+      "en": "Net increase (decrease) in cash and cash equivalents",
+      "el": "Καθαρή αύξηση (μείωση) ταμειακών διαθεσίμων"
+    },
+    "CF.CASH_OPENING": {
+      "en": "Cash and cash equivalents at the beginning of the period",
+      "el": "Ταμειακά διαθέσιμα στην αρχή της περιόδου"
+    },
+    "CF.CASH_CLOSING": {
+      "en": "Cash and cash equivalents at the end of the period",
+      "el": "Ταμειακά διαθέσιμα στο τέλος της περιόδου"
+    }
+  }
+}
