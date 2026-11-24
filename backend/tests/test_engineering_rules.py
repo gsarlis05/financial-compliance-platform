@@ -23,6 +23,9 @@ BACKEND = Path(__file__).resolve().parent.parent
         "def f(a: float) -> None: ...",
         "def f() -> float: ...",
         "x: list[float] = []",
+        "x = 0.5  # fcp-lint: allow-float",  # an exemption needs a reason
+        "x = 0.5  # fcp-lint: allow-float ()",
+        "x = 0.5\ny = 1  # fcp-lint: allow-float (another line)",
     ],
 )
 def test_no_float_checker_flags_float_usage(source: str) -> None:
@@ -36,6 +39,7 @@ def test_no_float_checker_flags_float_usage(source: str) -> None:
         "x = 10",
         "s = 'float 1.5 in a string is fine'",
         "# 1.5 in a comment is fine",
+        "size = 8.5  # fcp-lint: allow-float (PDF font size, not an amount)",
     ],
 )
 def test_no_float_checker_allows_decimal_code(source: str) -> None:
