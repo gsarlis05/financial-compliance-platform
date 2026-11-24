@@ -1,0 +1,140 @@
+{
+ "first_month": "2027-01-01",
+ "months": 24,
+ "cutover": "2026-12-31",
+ "name": "S1 Base: the 24-month golden model",
+ "description": "A Demo Trading-like company: steady sales, new capex in June 2027, other debt repaid monthly, a dividend in June 2028, tax at 12.5% (test rules), an opening income tax balance of 3,000.",
+ "opening": {
+  "BS.CASH": "30000",
+  "BS.AR": "18000",
+  "BS.PPE.GROSS": "24000",
+  "BS.PPE.ACCDEP": "-6000",
+  "BS.AP": "10000",
+  "BS.DEBT.NONCURRENT": "12000",
+  "BS.INCOME_TAX": "3000",
+  "BS.EQUITY.SHARE_CAPITAL": "5000",
+  "BS.EQUITY.RETAINED": "36000"
+ },
+ "drivers": {
+  "revenue:REV.SALES": "20000",
+  "revenue:REV.OTHER": "500",
+  "gross_margin:": "45",
+  "opex:OPEX.PAYROLL": "4000",
+  "opex:OPEX.RENT": "1200",
+  "capex:": {
+   "2027-06": "12000"
+  },
+  "capex_life:": "48",
+  "interest_rate:": "6",
+  "repayment:": "250",
+  "dso:": "30",
+  "dpo:": "30",
+  "dividends:": {
+   "2028-06": "20000"
+  }
+ },
+ "register_depreciation": {
+  "amount": "400",
+  "months": 15
+ },
+ "tax": {
+  "rules": [
+   {
+    "year": 2025,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2026,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2027,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2028,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2029,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   },
+   {
+    "year": 2030,
+    "rate": "0.125",
+    "carry": 7,
+    "instalments": [
+     [
+      "07-31",
+      "0.5"
+     ],
+     [
+      "12-31",
+      "0.5"
+     ]
+    ],
+    "final": "08-01"
+   }
+  ]
+ }
+}
