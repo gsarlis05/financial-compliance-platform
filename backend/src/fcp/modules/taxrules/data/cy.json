@@ -1,0 +1,46 @@
+{
+  "jurisdiction": "CY",
+  "note": "Seeded from published professional summaries of Cyprus corporate income tax (owner decision D4, 2026-11-15). The primary texts (Income Tax Law and the reform laws published in the Official Gazette on 31 December 2025) could not be opened from the development environment. Every rule set is UNVERIFIED until a qualified Cyprus tax professional confirms it (owner item #154). Years before 2020 are not seeded.",
+  "rule_sets": [
+    {
+      "id": "CY:CIT:2020",
+      "tax": "CORPORATE_INCOME_TAX",
+      "effective_from": "2020-01-01",
+      "effective_to": "2025-12-31",
+      "rate": "0.125",
+      "loss_carryforward_years": 5,
+      "tax_year_start_month": 1,
+      "provisional_instalments": [
+        {"month": 7, "day": 31, "share": "0.5"},
+        {"month": 12, "day": 31, "share": "0.5"}
+      ],
+      "final_payment": {"year_offset": 1, "month": 8, "day": 1},
+      "verification_note": "Rate 12.5% and five-year loss carry-forward as in force before the 2026 reform; to be confirmed with the effective dates (#154).",
+      "sources": [
+        {"publisher": "EY Global Tax News", "title": "Cyprus enacts major tax reform legislation (2026-0140)", "url": "https://taxnews.ey.com/news/2026-0140-cyprus-enacts-major-tax-reform-legislation", "note": "States the previous 12.5% rate and five-year carry-forward; summary, not the legal text"},
+        {"publisher": "RSM Cyprus", "title": "Provisional tax assessment 2023", "url": "https://www.rsm.global/cyprus/insights/tax-insights/direct-tax/provisional-tax-assessment-2023", "note": "Instalment dates 31 July and 31 December; final tax by 1 August of the following year"}
+      ]
+    },
+    {
+      "id": "CY:CIT:2026",
+      "tax": "CORPORATE_INCOME_TAX",
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "rate": "0.15",
+      "loss_carryforward_years": 7,
+      "tax_year_start_month": 1,
+      "provisional_instalments": [
+        {"month": 7, "day": 31, "share": "0.5"},
+        {"month": 12, "day": 31, "share": "0.5"}
+      ],
+      "final_payment": {"year_offset": 1, "month": 8, "day": 1},
+      "verification_note": "15% from tax year 2026; seven-year carry-forward from 2026 (s.13(1) first proviso, 'five' replaced by 'seven'). Not yet confirmed: how the seven years apply to losses of years before 2026 (modelled here only for losses arising from 2026), and the amending law's number (summaries cite 207(I)/2025 and 244(I)/2025). See #154.",
+      "sources": [
+        {"publisher": "EY Global Tax News", "title": "Cyprus enacts major tax reform legislation (2026-0140)", "url": "https://taxnews.ey.com/news/2026-0140-cyprus-enacts-major-tax-reform-legislation", "note": "Laws published in the Official Gazette on 31 December 2025, mostly effective 1 January 2026; summary, not the legal text"},
+        {"publisher": "PwC Cyprus", "title": "The Cyprus Tax Reform", "url": "https://www.pwc.com.cy/en/services/tax-legal-services/tax-advisory-services/the-cyprus-tax-reform.html", "note": "Corporate income tax 12.5% to 15%; summary"},
+        {"publisher": "International Tax Review", "title": "Cyprus tax reform updates effective from 2026", "url": "https://www.itrworldtax.com/NewsAndAnalysis/cyprus-tax-reform-updates-effective-from-2026/Index/2225", "note": "Summary"},
+        {"publisher": "IBCCS", "title": "Cyprus Provisional Tax 2026: Deadlines, Rates and Penalties", "url": "https://ibccs.tax/blog/cyprus-provisional-tax-2026-deadlines/", "note": "2026 instalments 31 July and 31 December; 15% rate for provisional estimates"}
+      ]
+    }
+  ]
+}
