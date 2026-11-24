@@ -1,7 +1,644 @@
-"""Public interface of the ``projections`` module.
+"""Public interface of the ``projections`` module and its HTTP routes (M6-2: assumption sets;
+M6-3: projections, published through the calculation-run routes; M6-4: rolling forecasts).
 
-This is the only part of ``fcp.modules.projections`` that other modules may import.
-Nothing is exported yet; the module is implemented in a later milestone.
+Routes are entity-scoped (``/api/w/{slug}/entities/{entity_id}/...``). Values are decimal strings:
+amounts in money, percentages as e.g. ``35`` for 35%, days and months as numbers.
 """
 
-__all__: list[str] = []
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from typing import Any, Literal
+from uuid import UUID
+
+from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
+from ninja import Field, Query, Router, Schema, Status
+
+from fcp.core.api.permissions import requires
+from fcp.modules.audit_log.api import record as audit
+from fcp.modules.metrics.api import CalcRun
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
+
+from . import assumptions, engine, exports, loans, outlook, rolling, runs
+from .assumptions import NewLoanRow, SetInfo, derive_set, observed_days, set_info
+from .debt import LoanTerms
+from .drivers import DRIVERS, OPEX_LINES, REVENUE_LINES
+from .engine import EngineInput, ExtraCapex, Projection
+from .engine import output as project
+from .layout import STATEMENTS as STATEMENT_LAYOUT
+from .layout import name as line_name
+from .layout import with_totals
+from .models import AssumptionSet
+from .outlook import GOAL_LINES, forecast_values, projected_plan
+from .outlook import published as published_projections
+from .runs import load_input, pin
+
+__all__ = [
+    "GOAL_LINES",
+    "OPEX_LINES",
+    "REVENUE_LINES",
+    "STATEMENT_LAYOUT",
+    "EngineInput",
+    "ExtraCapex",
+    "LoanTerms",
+    "NewLoanRow",
+    "Projection",
+    "SetInfo",
+    "derive_set",
+    "forecast_values",
+    "line_name",
+    "load_input",
+    "observed_days",
+    "pin",
+    "project",
+    "projected_plan",
+    "published_projections",
+    "router",
+    "set_info",
+    "with_totals",
+]
+
+router = Router(tags=["projections"])
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+BASE = "/w/{slug}/entities/{uuid:entity_id}"
+
+
+class AssumptionSetIn(Schema):
+    name: str = Field(min_length=1, max_length=120)
+    cutover: date = Field(description="The last day of the last actual month")
+    months: Literal[12, 24, 36] = 24
+    start_from: Literal["ACTUALS", "BUDGET", "EMPTY"] = "ACTUALS"
+    revenue_growth: str = Field(
+        default="0", pattern=r"^-?\d{1,4}(\.\d{1,4})?$", description="% a year (actuals start)"
+    )
+
+
+class AssumptionSetOut(Schema):
+    id: UUID
+    family_id: UUID
+    version: int
+    name: str
+    cutover: date
+    months: int
+    start_from: str
+    note: str
+    status: str = Field(description="DRAFT, APPROVED or SUPERSEDED")
+    supersedes_id: UUID | None
+    created_at: datetime
+    approved_at: datetime | None
+    tax_losses_bf: dict[str, str] = Field(
+        description="Unused tax losses at the start of the first projected tax year, by the "
+        "year they arose"
+    )
+    tax_paid_ytd: str = Field(description="Provisional tax paid for the cut-over's tax year")
+    recognise_loss_dta: bool = Field(description="Deferred tax asset recognised on losses")
+
+
+def _set_out(s: AssumptionSet) -> AssumptionSetOut:
+    return AssumptionSetOut(
+        id=s.id, family_id=s.family_id, version=s.version, name=s.name, cutover=s.cutover,
+        months=s.months, start_from=s.start_from, note=s.note, status=s.status,
+        supersedes_id=s.supersedes_id, created_at=s.created_at, approved_at=s.approved_at,
+        tax_losses_bf=dict(s.tax_losses_bf), tax_paid_ytd=f"{s.tax_paid_ytd:.2f}",
+        recognise_loss_dta=s.recognise_loss_dta,
+    )  # fmt: skip
+
+
+class TaxPositionIn(Schema):
+    tax_losses_bf: dict[str, str] = Field(default_factory=dict, max_length=30)
+    tax_paid_ytd: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$")
+    recognise_loss_dta: bool = False
+
+
+class GridRowOut(Schema):
+    driver: str
+    line: str = Field(description="Taxonomy line, or empty for a single row")
+    unit: str = Field(description="AMOUNT, PERCENT, DAYS or MONTHS")
+    values: list[str]
+    sources: list[str] = Field(description="ACTUALS, BUDGET, DEFAULT or MANUAL per month")
+
+
+class GridOut(Schema):
+    assumption_set: AssumptionSetOut
+    months: list[date]
+    rows: list[GridRowOut]
+    nature: str = Field(default="FORECAST", description="Every value is a forecast assumption")
+
+
+class ChangeIn(Schema):
+    driver: str = Field(max_length=20)
+    line: str = Field(default="", max_length=40)
+    month: date
+    value: str = Field(pattern=r"^-?\d{1,13}(\.\d{1,6})?$")
+
+
+class ChangesIn(Schema):
+    changes: list[ChangeIn] = Field(min_length=1, max_length=2000)
+
+
+class RenameIn(Schema):
+    name: str = Field(min_length=1, max_length=120)
+
+
+@router.get(f"{BASE}/assumption-sets", response=list[AssumptionSetOut])
+@requires("planning.read")
+def list_sets(request: HttpRequest, slug: str, entity_id: UUID) -> list[AssumptionSetOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_set_out(s) for s in assumptions.sets(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/assumption-sets", response={201: AssumptionSetOut})
+@requires("planning.run")
+def create_set(request: HttpRequest, slug: str, entity_id: UUID,
+               payload: AssumptionSetIn) -> Status[AssumptionSetOut]:  # fmt: skip
+    """Start a draft set from last year's actuals, the approved budget, or empty."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = assumptions.create_set(ctx, entity_id, assumptions.NewSet(**payload.dict()))
+    return Status(201, _set_out(made))
+
+
+def _grid_out(g: assumptions.Grid) -> GridOut:
+    return GridOut(
+        assumption_set=_set_out(g.assumption_set), months=g.months,
+        rows=[GridRowOut(driver=k, line=line, unit=unit, values=[f"{v.normalize():f}"
+                                                                 for v in vals],
+                         sources=srcs) for k, line, unit, vals, srcs in g.rows],
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/assumption-sets/{{uuid:set_id}}", response=GridOut)
+@requires("planning.read")
+def get_set(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID) -> GridOut:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _grid_out(assumptions.grid(ctx, entity_id, set_id))
+
+
+@router.put(f"{BASE}/assumption-sets/{{uuid:set_id}}/values", response=GridOut)
+@requires("planning.run")
+def set_values(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+               payload: ChangesIn) -> GridOut:  # fmt: skip
+    """Change values of a draft set (each becomes MANUAL)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    assumptions.set_values(ctx, entity_id, set_id, [
+        assumptions.Change(c.driver, c.line, c.month, c.value) for c in payload.changes
+    ])  # fmt: skip
+    return _grid_out(assumptions.grid(ctx, entity_id, set_id))
+
+
+@router.patch(f"{BASE}/assumption-sets/{{uuid:set_id}}", response=AssumptionSetOut)
+@requires("planning.run")
+def rename_set(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+               payload: RenameIn) -> AssumptionSetOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _set_out(assumptions.rename(ctx, entity_id, set_id, payload.name))
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/approve", response=AssumptionSetOut)
+@requires("planning.publish")
+def approve_set(request: HttpRequest, slug: str, entity_id: UUID,
+                set_id: UUID) -> AssumptionSetOut:  # fmt: skip
+    """Approve a draft: it never changes again; the family's earlier approved version is
+    superseded."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _set_out(assumptions.approve(ctx, entity_id, set_id))
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/revise", response={201: AssumptionSetOut})
+@requires("planning.run")
+def revise_set(request: HttpRequest, slug: str, entity_id: UUID,
+               set_id: UUID) -> Status[AssumptionSetOut]:  # fmt: skip
+    """A new draft version with the same values."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, _set_out(assumptions.revise(ctx, entity_id, set_id)))
+
+
+@router.put(f"{BASE}/assumption-sets/{{uuid:set_id}}/tax", response=AssumptionSetOut)
+@requires("planning.run")
+def set_tax_position(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+                     payload: TaxPositionIn) -> AssumptionSetOut:  # fmt: skip
+    """The tax position at the cut-over (M6F-5): losses brought forward by year, provisional tax
+    paid so far this tax year, and whether a deferred tax asset is recognised on losses."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    data = assumptions.TaxPosition(payload.tax_losses_bf, payload.tax_paid_ytd,
+                                   payload.recognise_loss_dta)  # fmt: skip
+    return _set_out(assumptions.set_tax_position(ctx, entity_id, set_id, data))
+
+
+class LoanIn(Schema):
+    code: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$")
+    name: str = Field(min_length=1, max_length=120)
+    kind: Literal["EXISTING", "NEW"]
+    structure: Literal["ANNUITY", "EQUAL_PRINCIPAL", "BULLET"]
+    term_months: int = Field(ge=1, le=600, description="Repayment months, interest-only included")
+    annual_rate: str = Field(pattern=r"^\d{1,3}(\.\d{1,4})?$", description="% a year")
+    opening_balance: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$",
+                                 description="Existing loan: owed at the cut-over")  # fmt: skip
+    amount: str = Field(default="0", pattern=r"^\d{1,12}(\.\d{1,2})?$",
+                        description="New loan: the amount drawn")  # fmt: skip
+    drawdown_month: date | None = Field(default=None, description="New loan: drawn at its end")
+    interest_only_months: int = Field(default=0, ge=0, le=599)
+    note: str = Field(default="", max_length=500)
+
+
+class LoanOut(Schema):
+    code: str
+    name: str
+    kind: str
+    structure: str
+    term_months: int
+    annual_rate: str
+    opening_balance: str
+    amount: str
+    drawdown_month: date | None
+    interest_only_months: int
+    from_register: bool
+    note: str
+
+
+def _loan_out(loan: Any) -> LoanOut:
+    return LoanOut(code=loan.code, name=loan.name, kind=loan.kind, structure=loan.structure,
+                   term_months=loan.term_months, annual_rate=f"{loan.annual_rate.normalize():f}",
+                   opening_balance=f"{loan.opening_balance:.2f}", amount=f"{loan.amount:.2f}",
+                   drawdown_month=loan.drawdown_month,
+                   interest_only_months=loan.interest_only_months,
+                   from_register=loan.register_series_id is not None, note=loan.note)  # fmt: skip
+
+
+@router.get(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans", response=list[LoanOut])
+@requires("planning.read")
+def list_loans(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID) -> list[LoanOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_loan_out(x) for x in loans.loans(ctx, entity_id, set_id)]
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans", response={201: LoanOut})
+@requires("planning.run")
+def add_loan(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+             payload: LoanIn) -> Status[LoanOut]:  # fmt: skip
+    """A loan of a draft set; its rate path, early repayments and extra drawdowns are rows of
+    the grid (``loan_rate``, ``loan_prepayment``, ``loan_drawdown``)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    made = loans.add_loan(ctx, entity_id, set_id, loans.NewLoan(**payload.model_dump()))
+    return Status(201, _loan_out(made))
+
+
+@router.post(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans/from-register",
+             response={201: list[LoanOut]})  # fmt: skip
+@requires("planning.run")
+def add_loans_from_register(request: HttpRequest, slug: str, entity_id: UUID,
+                            set_id: UUID) -> Status[list[LoanOut]]:  # fmt: skip
+    """The debt register's drawn loans with their balances at the set's cut-over."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return Status(201, [_loan_out(x) for x in loans.add_from_register(ctx, entity_id, set_id)])
+
+
+@router.delete(f"{BASE}/assumption-sets/{{uuid:set_id}}/loans/{{code}}", response={204: None})
+@requires("planning.run")
+def remove_loan(request: HttpRequest, slug: str, entity_id: UUID, set_id: UUID,
+                code: str) -> Status[None]:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    loans.remove_loan(ctx, entity_id, set_id, code)
+    return Status(204, None)
+
+
+class DriverOut(Schema):
+    key: str
+    unit: str
+    lines: list[str]
+    per_loan: bool = Field(description="One row per loan of the set (the loan's code as line)")
+
+
+@router.get(f"{BASE}/assumption-drivers", response=list[DriverOut])
+@requires("planning.read")
+def list_drivers(request: HttpRequest, slug: str, entity_id: UUID) -> list[DriverOut]:
+    workspace_ctx(request, slug, entity_id)
+    return [DriverOut(key=d.key, unit=d.unit, lines=list(d.lines), per_loan=d.per_loan)
+            for d in DRIVERS.values()]  # fmt: skip
+
+
+# --- projections (M6-3) ---------------------------------------------------------------------------
+
+
+class ProjectionIn(Schema):
+    assumption_set_id: UUID
+
+
+class ProjectionRunOut(Schema):
+    id: UUID
+    status: str = Field(description="VALID, INVALID (an invariant failed) or FAILED")
+    as_of_date: date = Field(description="The cut-over")
+    assumption_set_id: UUID | None
+    actuals_watermark: int
+    input_hash: str
+    output_hash: str
+    invariants: dict[str, bool]
+    error: str
+    stale: bool
+    is_published: bool
+    rolling: bool = Field(description="Made by the rolling forecast (M6-4)")
+    validation_status: str = Field(
+        description="PENDING_PROFESSIONAL_REVIEW until the engine is validated and signed off"
+    )
+    created_at: datetime
+
+
+def _projection_out(run: CalcRun) -> ProjectionRunOut:
+    set_id = run.input_refs.get("assumption_set_id")
+    return ProjectionRunOut(
+        id=run.id, status=run.status, as_of_date=run.as_of_date,
+        assumption_set_id=UUID(set_id) if set_id else None,
+        actuals_watermark=run.actuals_watermark, input_hash=run.input_hash,
+        output_hash=run.output_hash, invariants=run.invariant_results, error=run.error,
+        stale=run.stale, is_published=run.is_published, created_at=run.created_at,
+        rolling="rolling_forecast_id" in run.input_refs,
+        validation_status=engine.VALIDATION_STATUS,
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/projections", response=list[ProjectionRunOut])
+@requires("planning.read")
+def list_projections(request: HttpRequest, slug: str, entity_id: UUID) -> list[ProjectionRunOut]:
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [_projection_out(r) for r in runs.projections(ctx, entity_id)]
+
+
+@router.post(f"{BASE}/projections", response={201: ProjectionRunOut})
+@requires("planning.run")
+def run_projection(request: HttpRequest, slug: str, entity_id: UUID,
+                   payload: ProjectionIn) -> Status[ProjectionRunOut]:  # fmt: skip
+    """Project the three statements from an approved assumption set. A run that fails an
+    invariant is INVALID and cannot be published; publish a VALID one through
+    ``/calc-runs/{id}/publish``."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    run = runs.run_projection(ctx, entity_id, payload.assumption_set_id)
+    return Status(201, _projection_out(run))
+
+
+def _cents(value: Decimal | None) -> str | None:
+    """Every projected value is a whole number of cents (doc 10 §2.4)."""
+    return None if value is None else str(value.quantize(Decimal("0.01")))
+
+
+class ProjectionStatementsQuery(Schema):
+    granularity: Literal["MONTH", "QUARTER", "YEAR"] = "MONTH"
+
+
+class ColumnOut(Schema):
+    start: date
+    end: date
+    nature: str = Field(description="ACTUAL for the opening balance sheet, FORECAST otherwise")
+
+
+class ProjectionStatementsOut(Schema):
+    projection: ProjectionRunOut
+    columns: list[ColumnOut]
+    rows: dict[str, list[str | None]] = Field(description="Series key: a decimal string per column")
+    failures: list[str] = Field(description="Failed invariants, as invariant@where")
+    result_ids: dict[str, list[UUID | None]] = Field(
+        description="The stored result per cell, for /calc-runs/{id}/results/{result}/explain"
+    )
+
+
+class ProjectionVsActualsLineOut(Schema):
+    key: str = Field(description="Income statement line, or BS.CASH (month-end cash)")
+    forecast: list[str | None]
+    actual: list[str]
+    variance: list[str | None] = Field(description="Actual - forecast")
+    forecast_total: str | None = Field(description="Closed months: sum (cash: the last month)")
+    actual_total: str | None
+    variance_total: str | None
+
+
+class ProjectionVsActualsOut(Schema):
+    run_id: UUID
+    as_of: date
+    made_at: datetime
+    is_published: bool
+    months: list[date] = Field(description="The projection's months that have closed")
+    lines: list[ProjectionVsActualsLineOut]
+    note: str
+
+
+def _money(value: Decimal | None) -> str | None:
+    return None if value is None else str(value.quantize(Decimal("0.01")))
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}/actuals", response=ProjectionVsActualsOut)
+@requires("planning.read")
+def projection_vs_actuals(request: HttpRequest, slug: str, entity_id: UUID,
+                          run_id: UUID) -> ProjectionVsActualsOut:  # fmt: skip
+    """Any past projection against the posted books, line by line, for its months that have
+    closed (M6F-6, #151). Also needs ``reports.read`` for the actuals."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = outlook.versus_actuals(ctx, entity_id, run_id)
+    return ProjectionVsActualsOut(
+        run_id=found.run.id, as_of=found.run.as_of_date, made_at=found.run.created_at,
+        is_published=found.run.is_published, months=found.months, note=found.note,
+        lines=[ProjectionVsActualsLineOut(
+            key=line.key, forecast=[_money(v) for v in line.forecast],
+            actual=[str(_money(v)) for v in line.actual],
+            variance=[_money(v) for v in line.variance],
+            forecast_total=_money(line.forecast_total), actual_total=_money(line.actual_total),
+            variance_total=_money(line.variance_total)) for line in found.lines],
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}", response=ProjectionStatementsOut)
+@requires("planning.read")
+def get_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
+                   query: Query[ProjectionStatementsQuery]) -> ProjectionStatementsOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = runs.statements(ctx, entity_id, run_id, query.granularity)
+    return ProjectionStatementsOut(
+        projection=_projection_out(found.run),
+        columns=[ColumnOut(start=c.start, end=c.end, nature=c.nature) for c in found.columns],
+        rows={k: [_cents(v) for v in vs] for k, vs in with_totals(found.rows).items()},
+        failures=found.failures, result_ids=found.ids,
+    )  # fmt: skip
+
+
+class ProjectionExportQuery(ProjectionStatementsQuery):
+    lang: Literal["en", "el"] = "en"
+
+
+@router.get(f"{BASE}/projections/{{uuid:run_id}}/export")
+@requires("reports.export")
+def export_projection(request: HttpRequest, slug: str, entity_id: UUID, run_id: UUID,
+                      query: Query[ProjectionExportQuery]) -> HttpResponse:  # fmt: skip
+    """The three projected statements as XLSX, with a nature row above the figures; audited."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = runs.statements(ctx, entity_id, run_id, query.granularity)
+    entity = get_entity(ctx, entity_id, "reports.export")
+    content = exports.to_xlsx(found, entity.legal_name, query.granularity, query.lang,
+                              generated=timezone.now())  # fmt: skip
+    filename = f"projection-{found.run.as_of_date.isoformat()}-{query.granularity.lower()}.xlsx"
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id, action="reports.exported",
+          subject_type="report", subject_id="projection", entity_id=entity_id,
+          changes={"format": "xlsx", "filename": filename, "run_id": str(run_id)})  # fmt: skip
+    response = HttpResponse(content, content_type=XLSX)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+# --- rolling forecasts (M6-4) ---------------------------------------------------------------------
+
+
+class RollingIn(Schema):
+    assumption_set_id: UUID = Field(description="Any version; its family's approved one is used")
+    horizon: Literal[12, 24] = 12
+    active: bool = True
+    interval_minutes: int = Field(
+        default=60, description="Minutes: 15, 30, 60, 120, 240, 480, 1440"
+    )
+    materiality: str | None = Field(
+        default=None, pattern=r"^\d{1,15}(\.\d{1,2})?$",
+        description="Debits posted since the latest run that re-run it at once; empty: never",
+    )  # fmt: skip
+
+
+class RollingOut(Schema):
+    configured: bool
+    family_id: UUID | None = None
+    assumption_set_id: UUID | None = Field(None, description="The approved version in use")
+    horizon: int | None = None
+    active: bool = False
+    latest: ProjectionRunOut | None = None
+    stale: bool = False
+    stale_reasons: list[str] = Field(default_factory=list)
+    material: bool = Field(default=False, description="A material change: re-run at the next pass")
+    posted_since: str = Field(default="0.00", description="Debits posted since the latest run")
+    interval_minutes: int = 60
+    materiality: str | None = None
+    next_regular_run: datetime | None = Field(
+        default=None, description="When a change that is not material is picked up"
+    )
+    history: list[ProjectionRunOut] = Field(default_factory=list)
+
+
+def _rolling_out(ctx: WorkspaceContext, entity_id: UUID) -> RollingOut:
+    found = rolling.setting(ctx, entity_id)
+    if found is None:
+        return RollingOut(configured=False, assumption_set_id=None)
+    done = [r for r in rolling.runs_of(ctx, entity_id, found, 50) if r.status in rolling.FINISHED]
+    latest = done[0] if done else None
+    fresh = rolling.freshness(ctx, entity_id, found, latest) if latest else None
+    current = rolling.approved_version(found.legal_entity_id, found.family_id)
+    return RollingOut(
+        configured=True, family_id=found.family_id,
+        assumption_set_id=current.id if current else None, horizon=found.horizon,
+        active=found.active, latest=_projection_out(latest) if latest else None,
+        stale=fresh.stale if fresh else True,
+        stale_reasons=list(fresh.reasons) if fresh else ["not run yet"],
+        material=fresh.material if fresh else True,
+        posted_since=f"{fresh.posted:.2f}" if fresh else "0.00",
+        interval_minutes=found.interval_minutes,
+        materiality=None if found.materiality is None else f"{found.materiality:.2f}",
+        next_regular_run=(latest.created_at + timedelta(minutes=found.interval_minutes)
+                          if latest else None),
+        history=[_projection_out(r) for r in done],
+    )  # fmt: skip
+
+
+@router.get(f"{BASE}/rolling-forecast", response=RollingOut)
+@requires("planning.read")
+def get_rolling(request: HttpRequest, slug: str, entity_id: UUID) -> RollingOut:
+    """The setting, the latest run, whether it is stale and why, and the earlier runs."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return _rolling_out(ctx, entity_id)
+
+
+@router.put(f"{BASE}/rolling-forecast", response=RollingOut)
+@requires("planning.run")
+def put_rolling(request: HttpRequest, slug: str, entity_id: UUID,
+                payload: RollingIn) -> RollingOut:  # fmt: skip
+    ctx = workspace_ctx(request, slug, entity_id)
+    cadence = rolling.Cadence(
+        payload.interval_minutes,
+        None if payload.materiality is None else Decimal(payload.materiality),
+    )
+    rolling.configure(ctx, entity_id, payload.assumption_set_id, payload.horizon, payload.active,
+                      cadence)  # fmt: skip
+    return _rolling_out(ctx, entity_id)
+
+
+@router.post(f"{BASE}/rolling-forecast/refresh", response=RollingOut)
+@requires("planning.run")
+def refresh_rolling(request: HttpRequest, slug: str, entity_id: UUID) -> RollingOut:
+    """Re-run now if the latest run is stale (the scheduled job does the same every hour)."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    rolling.refresh(ctx, entity_id, trigger=CalcRun.Trigger.USER)
+    return _rolling_out(ctx, entity_id)
+
+
+class ForecastComparisonOut(Schema):
+    months_before: int
+    run_id: UUID
+    forecast: str
+    error: str
+    error_pct: str | None = Field(description="|error| / |actual| in %; null when actual is 0")
+
+
+class AccuracyMonthOut(Schema):
+    month: date
+    actual: dict[str, str]
+    comparisons: dict[str, list[ForecastComparisonOut]]
+
+
+@router.get(f"{BASE}/rolling-forecast/accuracy", response=list[AccuracyMonthOut])
+@requires("planning.read")
+def rolling_accuracy(request: HttpRequest, slug: str, entity_id: UUID) -> list[AccuracyMonthOut]:
+    """For each of the last 12 closed months: revenue, EBITDA and closing cash as forecast 1, 3
+    and 6 months earlier, against the actual."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    return [
+        AccuracyMonthOut(
+            month=m.month,
+            actual={k: str(v.quantize(Decimal("0.01"))) for k, v in m.actual.items()},
+            comparisons={k: [ForecastComparisonOut(months_before=c.horizon, run_id=c.run_id,
+                                           forecast=str(c.forecast.quantize(Decimal("0.01"))),
+                                           error=str(c.error.quantize(Decimal("0.01"))),
+                                           error_pct=None if c.pct is None else str(c.pct))
+                             for c in cs] for k, cs in m.comparisons.items()},
+        )
+        for m in rolling.accuracy(ctx, entity_id)
+    ]  # fmt: skip
+
+
+# --- the full-year outlook (M6-5) -----------------------------------------------------------------
+
+
+class OutlookQuery(Schema):
+    day: date = Field(description="Any day of the fiscal year to show")
+
+
+class OutlookColumnOut(Schema):
+    start: date
+    end: date
+    granularity: str = Field(description="MONTH, QUARTER or YEAR")
+    nature: str = Field(description="ACTUAL, FORECAST, ACTUAL+FORECAST, or empty (not shown)")
+
+
+class OutlookOut(Schema):
+    year_start: date
+    cutover: date | None = Field(description="The last actual month end (the divider)")
+    projection_id: UUID | None
+    note: str
+    columns: list[OutlookColumnOut]
+    rows: dict[str, list[str | None]] = Field(description="12 months, 4 quarters, the year")
+
+
+@router.get(f"{BASE}/outlook", response=OutlookOut)
+@requires("planning.read")
+def get_outlook(request: HttpRequest, slug: str, entity_id: UUID,
+                query: Query[OutlookQuery]) -> OutlookOut:  # fmt: skip
+    """Actual months from the books and forecast months from the latest published projection,
+    each column with its nature; quarters and the year are sums of their months."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = outlook.outlook(ctx, entity_id, query.day)
+    return OutlookOut(
+        year_start=found.year_start, cutover=found.cutover,
+        projection_id=found.run.id if found.run else None, note=found.note,
+        columns=[OutlookColumnOut(start=c.start, end=c.end, granularity=c.granularity,
+                                  nature=c.nature) for c in found.columns],
+        rows={k: [_cents(v) for v in vs] for k, vs in found.rows.items()},
+    )  # fmt: skip
