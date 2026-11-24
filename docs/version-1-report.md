@@ -1,6 +1,6 @@
 # Version 1 report: the complete platform for the owner's own use
 
-Status: **complete except the dependency updates (V1-5, #211)**. It awaits your review. Brief:
+Status: **complete** (2026-11-24). It awaits your review. Brief:
 [planning doc 24](planning/24-version-1-brief.md), approved 2026-11-22.
 
 **Nothing was created on AWS. No migration was applied anywhere but local development and CI.
@@ -103,7 +103,7 @@ screen.**
 | V1-2i Data entry | #233 | VAT code picker with favourites, typing suggestions (ADR-0065) |
 | V1-2h2 Exchange differences | #234 | Revaluation and realised differences as drafts (ADR-0066) |
 | V1-4 End-to-end check | #235 | The 20 agreement checks, the browser walk-through, the fixes above, this report |
-| V1-5 Dependencies | — | Next: the 16 dependency-update PRs (#211) |
+| V1-5 Dependencies | #163–#175, #203, #204 | 15 dependency updates: 11 merged with every check green (ruff, import-linter, hypothesis, uv-build, vite, vitest 5 with jsdom 31, typescript-eslint and @vitejs/plugin-react, every GitHub Action at v7). Closed: Django 6.1 (the platform stays on Django 5.2 LTS, ADR-0006; the move to 6.2 LTS is #236), and three frontend PRs carried by #170 |
 
 ## Acceptance (brief §4)
 | Criterion | Evidence |
@@ -125,4 +125,4 @@ screen.**
    the screenshots are listed at the end).
 2. Go through the [professional review list](review/professional-review-list.md) with a Cyprus
    tax professional when you can.
-3. V1-5 (dependency updates) is next; after it, version 1 is complete.
+3. Plan the move to Django 6.2 LTS after its release in April 2027 (#236).
