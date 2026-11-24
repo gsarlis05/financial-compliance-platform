@@ -1,0 +1,729 @@
+"""Ledger: chart of accounts and fiscal calendar (docs/planning/03 §2, 05 §5).
+
+Journal entries arrive in M1-8. Every table is tenant-owned with FORCE row-level security and
+composite foreign keys that also keep rows inside one legal entity (migration 0002).
+"""
+
+from django.conf import settings
+from django.db import models
+
+from fcp.core.db.models import TenantOwned
+
+LEGAL_ENTITY = "tenancy.LegalEntity"
+
+
+class VatCode(models.Model):
+    """VAT code catalogue as reference data, versioned by validity window (M2-3, doc 03 TAX_CODE).
+
+    Global (not tenant data), seeded by migrations from ``vat/<jurisdiction>.json`` and read-only
+    for the runtime role. ``verified`` stays False until a qualified tax professional confirms the
+    entry (owner decision #93); the UI shows unverified codes as such. No VAT return in M2.
+    """
+
+    class Treatment(models.TextChoices):
+        STANDARD = "STANDARD"
+        REDUCED = "REDUCED"
+        ZERO = "ZERO"
+        EXEMPT = "EXEMPT"
+        REVERSE_CHARGE = "REVERSE_CHARGE"
+        OUT_OF_SCOPE = "OUT_OF_SCOPE"
+        SETTLEMENT = "SETTLEMENT"
+
+    id = models.CharField(primary_key=True, max_length=40)  # e.g. "CY:S19:2000-01-01"
+    jurisdiction = models.CharField(max_length=2)
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=200)
+    name_el = models.CharField(max_length=200, blank=True)
+    treatment = models.CharField(max_length=16, choices=Treatment.choices)
+    # V1-2b (#213): the code's VAT category, which the VAT return's box rules map (tax module).
+    category = models.CharField(max_length=32, blank=True, default="")
+    rate = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True, help_text="Null: no lower bound")
+    valid_to = models.DateField(null=True, blank=True, help_text="Null: still valid")
+    verified = models.BooleanField(default=False)
+    verification_note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "ledger_vat_code"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["jurisdiction", "code", "valid_from"], name="ledger_vat_code_version_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(valid_to__isnull=True)
+                | models.Q(valid_from__isnull=True)
+                | models.Q(valid_to__gte=models.F("valid_from")),
+                name="ledger_vat_code_window_ordered",
+            ),
+        ]
+
+
+class Account(TenantOwned):
+    class Type(models.TextChoices):
+        ASSET = "ASSET"
+        LIABILITY = "LIABILITY"
+        EQUITY = "EQUITY"
+        INCOME = "INCOME"
+        EXPENSE = "EXPENSE"
+
+    class Side(models.TextChoices):
+        DEBIT = "DEBIT"
+        CREDIT = "CREDIT"
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE"
+        INACTIVE = "INACTIVE"
+
+    NORMAL_SIDE = {
+        Type.ASSET: Side.DEBIT,
+        Type.EXPENSE: Side.DEBIT,
+        Type.LIABILITY: Side.CREDIT,
+        Type.EQUITY: Side.CREDIT,
+        Type.INCOME: Side.CREDIT,
+    }
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=200)
+    name_el = models.CharField(max_length=200, blank=True)
+    type = models.CharField(max_length=16, choices=Type.choices)
+    normal_side = models.CharField(max_length=6, choices=Side.choices)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children"
+    )
+
+    class Control(models.TextChoices):
+        NONE = "", "None"
+        RECEIVABLE = "RECEIVABLE"
+        PAYABLE = "PAYABLE"
+
+    is_postable = models.BooleanField(default=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    currency = models.CharField(max_length=3, blank=True, help_text="Blank: any currency")
+    # Control accounts (M2-2): every line needs a counterparty; lines are the open items.
+    control_type = models.CharField(
+        max_length=10, choices=Control.choices, blank=True, default=Control.NONE
+    )
+
+    class VatRole(models.TextChoices):
+        NONE = "", "None"
+        INPUT = "INPUT"
+        OUTPUT = "OUTPUT"
+
+    # VAT control accounts (M2-3): every line needs a VAT code valid on the accounting date.
+    vat_role = models.CharField(max_length=6, choices=VatRole.choices, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_account"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code"], name="ledger_account_code_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(code__regex=r"^[0-9A-Z][0-9A-Z.\-]{0,19}$"),
+                name="ledger_account_code_format",
+            ),
+        ]
+
+
+class FiscalYear(TenantOwned):
+    class Status(models.TextChoices):
+        OPEN = "OPEN"
+        CLOSED = "CLOSED"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    name = models.CharField(max_length=40)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_fiscal_year"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(start_date__lt=models.F("end_date")),
+                name="ledger_fiscal_year_dates",
+            )
+        ]
+
+
+class Period(TenantOwned):
+    class Status(models.TextChoices):
+        OPEN = "OPEN"
+        SOFT_CLOSED = "SOFT_CLOSED"
+        LOCKED = "LOCKED"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.PROTECT, related_name="periods")
+    number = models.PositiveSmallIntegerField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_adjustment = models.BooleanField(default=False)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
+    status_changed_at = models.DateTimeField(null=True, blank=True)
+    status_changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_period"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["fiscal_year", "number"], name="ledger_period_number_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(start_date__lte=models.F("end_date")),
+                name="ledger_period_dates",
+            ),
+        ]
+        ordering = ["fiscal_year__start_date", "number"]
+
+
+# --- journal entries (backlog M1-8) --------------------------------------------------------------
+
+# Monetary columns: NUMERIC(19,4) (doc 03 conventions; ADR-0003).
+
+
+class LedgerSettings(TenantOwned):
+    """Per-entity controls. The approval policy decides when a second person must approve."""
+
+    class Approval(models.TextChoices):
+        NONE = "NONE"  # preparer may post (personal finances)
+        THRESHOLD = "THRESHOLD"  # approval needed above the threshold amount
+        ALWAYS = "ALWAYS"
+
+    legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    approval_policy = models.CharField(max_length=16, choices=Approval.choices)
+    approval_threshold = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    # V1-2h: where exchange differences go (an account mapped to FX.DIFF; 7020 in the template).
+    fx_account = models.ForeignKey(
+        "Account", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_settings"
+
+
+class Journal(TenantOwned):
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "ledger_journal"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code"], name="ledger_journal_code_unique"
+            )
+        ]
+
+
+class JournalEntry(TenantOwned):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT"
+        SUBMITTED = "SUBMITTED"
+        APPROVED = "APPROVED"
+        POSTED = "POSTED"
+        REJECTED = "REJECTED"
+        VOID = "VOID"
+
+    class EntryType(models.TextChoices):
+        STANDARD = "STANDARD"
+        REVERSAL = "REVERSAL"
+        ADJUSTMENT = "ADJUSTMENT"
+        OPENING = "OPENING"
+        CLOSING = "CLOSING"
+
+    class Source(models.TextChoices):
+        MANUAL = "MANUAL"
+        IMPORT = "IMPORT"
+        SYSTEM = "SYSTEM"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    journal = models.ForeignKey(Journal, on_delete=models.PROTECT, related_name="+")
+    entry_type = models.CharField(
+        max_length=16, choices=EntryType.choices, default=EntryType.STANDARD
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANUAL)
+    accounting_date = models.DateField()
+    document_date = models.DateField(null=True, blank=True)
+    use_adjustment_period = models.BooleanField(default=False)
+    description = models.CharField(max_length=500)
+    currency = models.CharField(max_length=3)
+    reverses_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    reversed_by_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    related_entry = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    correction_reason = models.CharField(max_length=500, blank=True)
+    content_hash = models.CharField(max_length=64, blank=True)
+    prepared_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_hash = models.CharField(max_length=64, blank=True)
+    # V1-1 (#207): approved by its preparer in a one-person workspace (database-checked).
+    self_approved = models.BooleanField(default=False)
+    rejection_reason = models.CharField(max_length=500, blank=True)
+    # Set at posting.
+    period = models.ForeignKey(
+        Period, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    fiscal_year = models.ForeignKey(
+        FiscalYear, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    entry_no = models.PositiveIntegerField(null=True, blank=True)
+    posting_seq = models.BigIntegerField(null=True, blank=True)
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_in_soft_closed = models.BooleanField(default=False)
+    unlock_request_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        db_table = "ledger_journal_entry"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["journal", "fiscal_year", "entry_no"], name="ledger_entry_number_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "posting_seq"], name="ledger_entry_posting_seq_unique"
+            ),
+            # An entry can be reversed once: one live reversal per original (AC-C6).
+            models.UniqueConstraint(
+                fields=["reverses_entry"],
+                condition=~models.Q(status__in=["VOID", "REJECTED"]),
+                name="ledger_entry_single_reversal",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(status="POSTED")
+                | models.Q(entry_no__isnull=False, posting_seq__isnull=False, period__isnull=False),
+                name="ledger_entry_posted_fields",
+            ),
+            # Segregation of duties (V1-1): the approver is never the preparer, except a
+            # self-approval, which only a one-person workspace allows (trigger).
+            models.CheckConstraint(
+                condition=models.Q(approved_by__isnull=True)
+                | ~models.Q(approved_by=models.F("prepared_by"))
+                | models.Q(self_approved=True),
+                name="ledger_entry_approver_not_preparer",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(approved_by=models.F("prepared_by")),
+                name="ledger_entry_self_approved_by_preparer",
+            ),
+        ]
+        indexes = [models.Index(fields=["legal_entity", "status", "accounting_date"])]
+
+
+class JournalLine(TenantOwned):
+    entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name="lines")
+    line_no = models.PositiveSmallIntegerField()
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    debit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    credit = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    memo = models.CharField(max_length=300, blank=True)
+    # Sub-ledger fields (M2-2); required on control-account lines.
+    counterparty = models.ForeignKey(
+        "registers.Counterparty", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    reference = models.CharField(max_length=50, blank=True, help_text="Invoice or document no.")
+    due_date = models.DateField(null=True, blank=True)
+    vat_code = models.ForeignKey(
+        VatCode, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    # VAT details (V1-2b, #213). The tax point when it differs from the accounting date; on an
+    # input VAT line, the share of the VAT that may be deducted and the VAT that may not. The line's
+    # amount is the deductible VAT; the blocked VAT is recorded for the VAT return's schedules.
+    tax_point = models.DateField(null=True, blank=True)
+    vat_recovery_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    vat_blocked = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    # Multi-currency (M6F-1, #80): the transaction currency amount and the rate that converted it
+    # into the functional amounts above (debit, credit). All four are empty for a transaction in
+    # the functional currency, which is the only kind allowed while multi-currency is disabled.
+    txn_currency = models.CharField(max_length=3, null=True, blank=True)  # ISO 4217
+    txn_debit = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    txn_credit = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    exchange_rate = models.DecimalField(  # functional units per one transaction unit
+        max_digits=20, decimal_places=10, null=True, blank=True
+    )
+    # V1-2h (#219; owner decision 2026-11-23): the rate is the one of the transaction's date and
+    # time, recorded with when it applied and where it came from (bank, invoice, stored rate).
+    rate_at = models.DateTimeField(null=True, blank=True)
+    rate_source = models.CharField(max_length=200, blank=True)
+
+    # V1-2h2 (#230): an exchange difference on a foreign-currency position. The line keeps the
+    # position's currency with no amount in it (the foreign balance does not change), the rate it
+    # was revalued at (none when realised on settlement) and moves only the functional amount.
+    class FxDifference(models.TextChoices):
+        NONE = "", "None"
+        UNREALISED = "UNREALISED"
+        REALISED = "REALISED"
+
+    fx_difference = models.CharField(
+        max_length=10, choices=FxDifference.choices, blank=True, default=""
+    )
+
+    class Meta:
+        db_table = "ledger_journal_line"
+        constraints = [
+            models.UniqueConstraint(fields=["entry", "line_no"], name="ledger_line_number_unique"),
+            models.CheckConstraint(
+                condition=models.Q(vat_recovery_percent__isnull=True)
+                | models.Q(vat_recovery_percent__gte=0, vat_recovery_percent__lte=100),
+                name="ledger_line_vat_recovery_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(vat_blocked__isnull=True) | models.Q(vat_blocked__gte=0),
+                name="ledger_line_vat_blocked_positive",
+            ),
+            # Exactly one side, strictly positive (AC-C1, enforced by the database too).
+            models.CheckConstraint(
+                condition=(models.Q(debit__gt=0) & models.Q(credit=0))
+                | (models.Q(credit__gt=0) & models.Q(debit=0)),
+                name="ledger_line_one_positive_side",
+            ),
+            # Transaction-currency fields: all empty, or all set on the same side with a rate.
+            models.CheckConstraint(
+                condition=models.Q(
+                    txn_currency__isnull=True,
+                    txn_debit__isnull=True,
+                    txn_credit__isnull=True,
+                    exchange_rate__isnull=True,
+                    fx_difference="",
+                )
+                | (
+                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0, fx_difference="")
+                    & (
+                        (models.Q(debit__gt=0, txn_debit__gt=0, txn_credit=0))
+                        | (models.Q(credit__gt=0, txn_credit__gt=0, txn_debit=0))
+                    )
+                )
+                # An exchange difference: the currency, no foreign amount, a revaluation rate.
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="UNREALISED",
+                    exchange_rate__gt=0,
+                )
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="REALISED",
+                    exchange_rate__isnull=True,
+                ),
+                name="ledger_line_txn_currency_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(txn_currency__isnull=True)
+                | (models.Q(rate_at__isnull=False) & ~models.Q(rate_source="")),
+                name="ledger_line_txn_rate_source",
+            ),
+        ]
+
+
+class EntrySequence(TenantOwned):
+    """Gapless entry numbers per journal and fiscal year; the row is locked while posting."""
+
+    journal = models.ForeignKey(Journal, on_delete=models.PROTECT, related_name="+")
+    fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.PROTECT, related_name="+")
+    last_no = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "ledger_entry_sequence"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["journal", "fiscal_year"], name="ledger_sequence_unique"
+            )
+        ]
+
+
+class PostingCounter(models.Model):
+    """Per-tenant posting watermark (doc 10 §2.3); strictly increasing, gapless."""
+
+    tenant = models.OneToOneField("tenancy.Tenant", primary_key=True, on_delete=models.PROTECT,
+                                  related_name="+")  # fmt: skip
+    last_seq = models.BigIntegerField(default=0)
+
+    class Meta:
+        db_table = "ledger_posting_counter"
+
+
+class IdempotencyRecord(TenantOwned):
+    key = models.CharField(max_length=100)
+    operation = models.CharField(max_length=50)
+    request_hash = models.CharField(max_length=64)
+    response = models.JSONField()
+    status_code = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = "ledger_idempotency"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "key"], name="ledger_idempotency_unique")
+        ]
+
+
+class AccountBalance(TenantOwned):
+    """Debit and credit totals per account and period, maintained at posting (doc 05 §7).
+
+    Rebuildable from posted lines at any time; the integrity job (M1-11) compares the two.
+    """
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    period = models.ForeignKey(Period, on_delete=models.PROTECT, related_name="+")
+    debit_total = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+    credit_total = models.DecimalField(max_digits=19, decimal_places=4, default=0)
+
+    class Meta:
+        db_table = "ledger_account_balance"
+        constraints = [
+            models.UniqueConstraint(fields=["account", "period"], name="ledger_balance_unique")
+        ]
+
+
+class PeriodUnlock(TenantOwned):
+    """A time-boxed exception to a period lock (doc 05 §4, AC-C7).
+
+    Needs two approvals by distinct users with ``ledger.period.unlock_approve``, neither of them
+    the requester. While ACTIVE and inside its window, entries may post into the locked period and
+    are tagged with this unlock; the period itself stays LOCKED, so expiry re-locks automatically.
+    """
+
+    class Status(models.TextChoices):
+        REQUESTED = "REQUESTED"
+        ACTIVE = "ACTIVE"
+        REJECTED = "REJECTED"
+        CLOSED = "CLOSED"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    period = models.ForeignKey(Period, on_delete=models.PROTECT, related_name="unlocks")
+    reason = models.CharField(max_length=500)
+    window_minutes = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.REQUESTED)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    first_approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    second_approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    active_from = models.DateTimeField(null=True, blank=True)
+    active_until = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+    # V1-1 (#207): in a one-person workspace the requester's own approval opens the period.
+    self_approved = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "ledger_period_unlock"
+        constraints = [
+            # At most one open (requested or active) unlock per period.
+            models.UniqueConstraint(
+                fields=["period"],
+                condition=models.Q(status__in=["REQUESTED", "ACTIVE"]),
+                name="ledger_unlock_one_open_per_period",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(first_approver__isnull=True)
+                | ~models.Q(first_approver=models.F("requested_by"))
+                | models.Q(self_approved=True, second_approver__isnull=True),
+                name="ledger_unlock_first_approver_not_requester",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(second_approver__isnull=True)
+                | (
+                    ~models.Q(second_approver=models.F("requested_by"))
+                    & ~models.Q(second_approver=models.F("first_approver"))
+                ),
+                name="ledger_unlock_second_approver_distinct",
+            ),
+        ]
+
+
+class IntegrityCheckRun(TenantOwned):
+    """Result of one integrity check of a workspace (doc 05 §7, AC-C10)."""
+
+    class Status(models.TextChoices):
+        PASSED = "PASSED"
+        FAILED = "FAILED"
+
+    status = models.CharField(max_length=8, choices=Status.choices)
+    results = models.JSONField()
+    trigger = models.CharField(max_length=16, default="SCHEDULE")
+    finished_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "ledger_integrity_check_run"
+        indexes = [models.Index(fields=["tenant", "-created_at"])]
+
+
+# --- analytical dimensions (M2-1, docs/planning/03 §6) --------------------------------------------
+
+
+class Dimension(TenantOwned):
+    """An analysis axis of one legal entity, e.g. department, project or cost centre."""
+
+    class Kind(models.TextChoices):
+        DEPARTMENT = "DEPARTMENT"
+        PROJECT = "PROJECT"
+        COST_CENTRE = "COST_CENTRE"
+        CUSTOM = "CUSTOM"
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE"
+        INACTIVE = "INACTIVE"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_dimension"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "code"], name="ledger_dimension_code_unique"
+            ),
+        ]
+
+
+class DimensionValue(TenantOwned):
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="values")
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=30)
+    name = models.CharField(max_length=200)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children"
+    )
+    status = models.CharField(
+        max_length=16, choices=Dimension.Status.choices, default=Dimension.Status.ACTIVE
+    )
+
+    class Meta:
+        db_table = "ledger_dimension_value"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dimension", "code"], name="ledger_dimension_value_code_unique"
+            ),
+        ]
+
+
+class AccountDimensionRule(TenantOwned):
+    """Per account: a dimension is REQUIRED on every posted line, or BLOCKED. Default: optional."""
+
+    class Rule(models.TextChoices):
+        REQUIRED = "REQUIRED"
+        BLOCKED = "BLOCKED"
+
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="dimension_rules")
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="+")
+    rule = models.CharField(max_length=8, choices=Rule.choices)
+
+    class Meta:
+        db_table = "ledger_account_dimension_rule"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account", "dimension"], name="ledger_account_dimension_rule_unique"
+            ),
+        ]
+
+
+class LineDimension(TenantOwned):
+    """One dimension value tagged on one journal line (at most one value per dimension)."""
+
+    line = models.ForeignKey(JournalLine, on_delete=models.CASCADE, related_name="dimension_tags")
+    dimension = models.ForeignKey(Dimension, on_delete=models.PROTECT, related_name="+")
+    value = models.ForeignKey(DimensionValue, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        db_table = "ledger_line_dimension"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["line", "dimension"], name="ledger_line_dimension_unique"
+            ),
+        ]
+        indexes = [models.Index(fields=["value", "line"])]
+
+
+class ExchangeRate(TenantOwned):
+    """An exchange rate as data (M6F-1, #80; doc 10 §13: no live market data). Entered or imported
+    with its source and the hash of the file it came from; never changed (a correction is a new
+    rate from a new source). ``rate`` is quote units per one base unit on ``rate_date``."""
+
+    class RateType(models.TextChoices):
+        SPOT = "SPOT"  # transaction date (IAS 21.21)
+        CLOSING = "CLOSING"  # period-end (IAS 21.23)
+        AVERAGE = "AVERAGE"  # an approximation of transaction dates (IAS 21.22)
+
+    rate_date = models.DateField()
+    base_currency = models.CharField(max_length=3)  # ISO 4217
+    quote_currency = models.CharField(max_length=3)  # ISO 4217
+    rate = models.DecimalField(max_digits=20, decimal_places=10)
+    rate_type = models.CharField(max_length=8, choices=RateType.choices)
+    source = models.CharField(max_length=200)
+    source_hash = models.CharField(max_length=64, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_exchange_rate"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["rate_date", "base_currency", "quote_currency", "rate_type", "source"],
+                name="ledger_exchange_rate_once",
+            ),
+            models.CheckConstraint(condition=models.Q(rate__gt=0), name="ledger_exchange_rate_pos"),
+            models.CheckConstraint(
+                condition=~models.Q(base_currency=models.F("quote_currency")),
+                name="ledger_exchange_rate_pair",
+            ),
+        ]
+
+
+class VatFavourite(TenantOwned):
+    """A VAT code a user starred for a legal entity (V1-2i, #231): listed first in the entry form's
+    VAT code picker. A personal preference; it changes nothing in the books."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    vat_code = models.ForeignKey(VatCode, on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        db_table = "ledger_vat_favourite"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "user", "vat_code"], name="ledger_vat_favourite_once"
+            ),
+        ]

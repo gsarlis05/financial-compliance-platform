@@ -1,10 +1,14 @@
 """Detect binary floating-point usage in domain code (ADR-0003).
 
 Flags float literals (``1.5``, ``1e3``), calls to ``float(...)`` and ``float`` type annotations.
+A line ending in ``# fcp-lint: allow-float (<reason>)`` is exempt: only for values that are not
+amounts, such as page layout in PDF exports, where the library requires floats. The reason is
+mandatory, so every exemption is visible and justified in review.
 Run as ``python -m tools.fcp_lint.no_float <paths>``; exit code 1 when anything is found.
 """
 
 import ast
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,11 +49,16 @@ class _Visitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+ALLOW = re.compile(r"#\s*fcp-lint:\s*allow-float\s*\(\s*\S[^)]*\)")
+
+
 def check_source(source: str, path: str = "<string>") -> list[Finding]:
     visitor = _Visitor(path)
     visitor.visit(ast.parse(source, filename=path))
+    lines = source.splitlines()
+    allowed = {n for n, text in enumerate(lines, start=1) if ALLOW.search(text)}
     # A float() call is also a Name reference; report each line/message once.
-    return sorted(set(visitor.findings))
+    return sorted({f for f in visitor.findings if f.line not in allowed})
 
 
 def check_paths(paths: list[Path]) -> list[Finding]:

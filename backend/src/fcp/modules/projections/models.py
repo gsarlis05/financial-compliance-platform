@@ -1,0 +1,195 @@
+"""Assumption sets (M6-2): the drivers of a projection, by month.
+
+- A set belongs to a legal entity and a family (its versions). It starts as a ``DRAFT``; once
+  ``APPROVED`` it never changes, and approving a later version of the family marks the earlier
+  approved one ``SUPERSEDED`` (database triggers, doc 10 P5).
+- Values can be added or changed only while their set is a draft (database trigger). Each value
+  says where it came from: last year's actuals, the approved budget, a default, or a person.
+"""
+
+import uuid
+
+from django.conf import settings
+from django.db import models
+
+from fcp.core.db.models import TenantOwned
+
+LEGAL_ENTITY = "tenancy.LegalEntity"
+
+
+class AssumptionSet(TenantOwned):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT"
+        APPROVED = "APPROVED"
+        SUPERSEDED = "SUPERSEDED"
+
+    class StartFrom(models.TextChoices):
+        ACTUALS = "ACTUALS"
+        BUDGET = "BUDGET"
+        EMPTY = "EMPTY"
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    family_id = models.UUIDField(default=uuid.uuid4)
+    version = models.PositiveIntegerField(default=1)
+    name = models.CharField(max_length=120)
+    cutover = models.DateField()  # last day of the last actual month
+    months = models.PositiveSmallIntegerField()  # horizon: 12, 24 or 36
+    start_from = models.CharField(max_length=8, choices=StartFrom.choices)
+    note = models.CharField(max_length=500, blank=True)  # how it was started
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    supersedes = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    superseded_at = models.DateTimeField(null=True, blank=True)
+    # Tax position at the cut-over (M6F-5, #150): unused losses by the year they arose, available
+    # to the first projected tax year ({"2024": "1500.00"}); provisional tax already paid for the
+    # cut-over's tax year; whether a deferred tax asset is recognised on losses (a judgement).
+    tax_losses_bf = models.JSONField(default=dict, blank=True)
+    tax_paid_ytd = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    recognise_loss_dta = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "projections_assumption_set"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["family_id", "version"], name="projections_set_version_once"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(months__in=[12, 24, 36]), name="projections_set_months"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status="DRAFT")
+                | models.Q(approved_by__isnull=False, approved_at__isnull=False),
+                name="projections_set_approved",
+            ),
+        ]
+
+
+class AssumptionValue(TenantOwned):
+    class Source(models.TextChoices):
+        ACTUALS = "ACTUALS"
+        BUDGET = "BUDGET"
+        DEFAULT = "DEFAULT"
+        MANUAL = "MANUAL"
+
+    assumption_set = models.ForeignKey(
+        AssumptionSet, on_delete=models.PROTECT, related_name="values"
+    )
+    driver = models.CharField(max_length=20)
+    line = models.CharField(max_length=40, blank=True)  # taxonomy line, or "" for a single row
+    month = models.DateField()  # first day of the month
+    value = models.DecimalField(max_digits=28, decimal_places=10)
+    source = models.CharField(max_length=8, choices=Source.choices)
+
+    class Meta:
+        db_table = "projections_assumption_value"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assumption_set", "driver", "line", "month"],
+                name="projections_value_once",
+            )
+        ]
+
+
+INTERVALS = [15, 30, 60, 120, 240, 480, 1440]  # minutes between regular re-runs (M6F-6)
+
+
+class RollingForecast(TenantOwned):
+    """A legal entity's rolling forecast setting (M6-4): the next 12 or 24 months, projected from
+    the approved version of an assumption-set family, re-run as the books move. Runs are kept as
+    calculation runs; this row only says what to run and who set it up."""
+
+    legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    family_id = models.UUIDField()  # the approved version of this family is used
+    horizon = models.PositiveSmallIntegerField()  # 12 or 24 months
+    active = models.BooleanField(default=True)
+    # M6F-6 (#151, owner decision D6): postings re-run the forecast at the regular interval; a
+    # material change (an approved assumption version, a closed month, or postings since the
+    # last run of at least ``materiality`` in total debits) at the next 15-minute pass.
+    interval_minutes = models.PositiveSmallIntegerField(default=60)
+    materiality = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )  # the scheduled re-run acts with this user's current permissions
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "projections_rolling_forecast"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(horizon__in=[12, 24]), name="projections_rolling_horizon"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(interval_minutes__in=INTERVALS),
+                name="projections_rolling_interval",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(materiality__isnull=True) | models.Q(materiality__gte=0),
+                name="projections_rolling_materiality",
+            ),
+        ]
+
+
+class AssumptionLoan(TenantOwned):
+    """A loan in an assumption set (M6F-4, #149; owner decision D5). An existing loan starts from
+    its balance at the cut-over (taken from the debt register or entered); a new loan is drawn at
+    the end of its drawdown month. Its monthly rate path, early repayments and extra drawdowns are
+    values of the set (drivers ``loan_rate``, ``loan_prepayment`` and ``loan_drawdown``, with the
+    loan's code as the line). Changes only while the set is a draft (database trigger)."""
+
+    class Kind(models.TextChoices):
+        EXISTING = "EXISTING"
+        NEW = "NEW"
+
+    class Structure(models.TextChoices):
+        ANNUITY = "ANNUITY"
+        EQUAL_PRINCIPAL = "EQUAL_PRINCIPAL"
+        BULLET = "BULLET"
+
+    assumption_set = models.ForeignKey(AssumptionSet, on_delete=models.PROTECT, related_name="+")
+    code = models.CharField(max_length=20)
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    opening_balance = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=19, decimal_places=2, default=0)
+    drawdown_month = models.DateField(null=True, blank=True)  # first day of the month
+    structure = models.CharField(max_length=16, choices=Structure.choices)
+    term_months = models.PositiveSmallIntegerField()
+    interest_only_months = models.PositiveSmallIntegerField(default=0)
+    annual_rate = models.DecimalField(max_digits=9, decimal_places=4)  # percent a year
+    register_series_id = models.UUIDField(null=True, blank=True)  # from the debt register
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = "projections_assumption_loan"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assumption_set", "code"], name="projections_loan_once"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    kind="EXISTING", opening_balance__gt=0, amount=0, drawdown_month__isnull=True
+                )
+                | models.Q(
+                    kind="NEW", opening_balance=0, amount__gt=0, drawdown_month__isnull=False
+                ),
+                name="projections_loan_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    term_months__gte=1,
+                    term_months__lte=600,
+                    interest_only_months__lt=models.F("term_months"),
+                    annual_rate__gte=0,
+                    annual_rate__lte=100,
+                ),
+                name="projections_loan_terms",
+            ),
+        ]

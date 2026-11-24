@@ -1,0 +1,580 @@
+"""Assumption sets (M6-2, brief §3).
+
+A set has one value per driver per month of its horizon (the 12, 24 or 36 months after the
+cut-over). It starts from one of:
+- **last year's actuals:** revenue and operating costs repeat the same month of the 12 months up to
+  the cut-over (revenue grown by an optional % a year); gross margin, DSO, DIO, DPO, the effective
+  tax rate and the interest rate as observed over those 12 months and at the cut-over;
+- **the approved budget:** revenue and operating costs from the current approved annual budget for
+  the months it covers (actuals as above for the others); ratios as from actuals;
+- **empty:** zeros, and a 60-month life for new capital expenditure.
+
+Each value records its source. Drafts can be edited; an approved set never changes, and a revision
+is a new version of the same family (database triggers).
+"""
+
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
+from uuid import UUID
+
+from django.db import transaction
+from django.utils import timezone
+
+from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
+from fcp.modules.audit_log.api import record as audit
+from fcp.modules.budgeting.api import approved_plan
+from fcp.modules.calendar.api import add_months, month_end, month_start
+from fcp.modules.metrics.api import current_mapping
+from fcp.modules.reporting.api import actuals_monthly, opening_net
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+
+from .drivers import DEFAULTS, DRIVERS, OPEX_LINES, REVENUE_LINES, Unit
+from .models import AssumptionLoan, AssumptionSet, AssumptionValue
+
+READ, RUN, PUBLISH = "planning.read", "planning.run", "planning.publish"
+CENT, PLACES = Decimal("0.01"), Decimal("0.0001")
+HUNDRED, DAYS_A_YEAR = Decimal(100), Decimal(365)
+LIMITS: dict[Unit, tuple[Decimal, Decimal]] = {
+    Unit.AMOUNT: (Decimal(0), Decimal("1e12")),
+    Unit.PERCENT: (Decimal(-1000), Decimal(1000)),
+    Unit.DAYS: (Decimal(0), Decimal(3650)),
+    Unit.MONTHS: (Decimal(1), Decimal(1200)),
+}
+Source = AssumptionValue.Source
+
+
+def _invalid(name: str, message: str) -> ValidationFailedError:
+    return ValidationFailedError(message, field_errors={name: [message]})
+
+
+def horizon(cutover: date, months: int) -> list[date]:
+    first = add_months(month_start(cutover), 1)
+    return [add_months(first, n) for n in range(months)]
+
+
+# --- what last year looked like ----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class History:
+    """The 12 months up to the cut-over, by taxonomy line, in each line's natural direction, and
+    the balance-sheet lines at the cut-over (net debit)."""
+
+    months: list[date]
+    pl: dict[str, dict[date, Decimal]]
+    balances: dict[str, Decimal]
+
+
+def history(ctx: WorkspaceContext, entity: UUID, cutover: date) -> History:
+    months = [add_months(month_start(cutover), -n) for n in range(11, -1, -1)]
+    mapping = current_mapping(entity)
+    facts = actuals_monthly(ctx, entity, date_from=months[0], date_to=cutover).facts
+    pl: dict[str, dict[date, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
+    for fact in facts:
+        line = mapping.get(fact.account_id)
+        if line is None or line.statement != "PL":
+            continue
+        income = line.code.startswith(("REV.", "INT.INCOME"))
+        pl[line.code][fact.period] += -fact.net_debit if income else fact.net_debit
+    _, net = opening_net(ctx, entity, before=cutover + timedelta(days=1))
+    balances: dict[str, Decimal] = defaultdict(Decimal)
+    for account_id, amount in net.items():
+        line = mapping.get(account_id)
+        if line is not None and line.statement == "BS":
+            balances[line.code] += amount
+    return History(months, pl, balances)
+
+
+def _total(h: History, *codes: str) -> Decimal:
+    return sum((v for c in codes for v in h.pl.get(c, {}).values()), Decimal(0))
+
+
+def _ratio(numerator: Decimal, denominator: Decimal, scale: Decimal) -> Decimal:
+    return (numerator / denominator * scale).quantize(PLACES) if denominator else Decimal(0)
+
+
+def observed(h: History) -> dict[str, Decimal]:
+    """Ratios from the 12 months up to the cut-over (0 where they cannot be worked out)."""
+    sales = _total(h, "REV.SALES", "REV.SERVICES")
+    cogs = _total(h, "COGS")
+    revenue = _total(h, *REVENUE_LINES)
+    debt = -(h.balances.get("BS.DEBT.NONCURRENT", Decimal(0))
+             + h.balances.get("BS.DEBT.CURRENT", Decimal(0)))  # fmt: skip
+    return {
+        "gross_margin": _ratio(sales - cogs, sales, HUNDRED),
+        "dso": _ratio(h.balances.get("BS.AR", Decimal(0)), revenue, DAYS_A_YEAR),
+        "dio": _ratio(h.balances.get("BS.INVENTORY", Decimal(0)), cogs, DAYS_A_YEAR),
+        "dpo": _ratio(-h.balances.get("BS.AP", Decimal(0)), cogs, DAYS_A_YEAR),
+        "interest_rate": _ratio(_total(h, "INT.EXPENSE"), debt, HUNDRED)
+        if debt > 0
+        else Decimal(0),
+    }
+
+
+# --- starting a set ------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class NewSet:
+    name: str
+    cutover: date
+    months: int
+    start_from: str
+    revenue_growth: str = "0"  # % a year, actuals start only
+
+
+def _clean(value: Decimal, unit: Unit) -> Decimal:
+    return value.quantize(CENT if unit == Unit.AMOUNT else PLACES)
+
+
+def _budget(
+    ctx: WorkspaceContext, entity: UUID, months: list[date]
+) -> dict[str, dict[date, Decimal]]:
+    """The current approved budget by taxonomy line and month (empty if there is none)."""
+    plan = approved_plan(ctx, entity, months)
+    found: dict[str, dict[date, Decimal]] = defaultdict(dict)
+    if plan is None:
+        return found
+    mapping = current_mapping(entity)
+    for subject, by_month in plan.amounts.items():
+        kind, _, ref = subject.partition(":")
+        code = ref if kind == "line" else getattr(mapping.get(UUID(ref)), "code", "")
+        for iso, amount in by_month.items():
+            day = date.fromisoformat(iso)
+            found[code][day] = found[code].get(day, Decimal(0)) + Decimal(amount)
+    return found
+
+
+Row = tuple[str, str, date, Decimal, str]  # driver, line, month, value, source
+
+
+def _empty(months: list[date]) -> list[Row]:
+    values: list[Row] = []
+    for key, driver in DRIVERS.items():
+        default = Decimal(DEFAULTS.get(key, 0))
+        for line in driver.lines:
+            values += [(key, line, m, default, Source.DEFAULT) for m in months]
+    return values
+
+
+def _month(
+    *, h: History, budget: dict[str, dict[date, Decimal]], ratios: dict[str, Decimal],
+    month: date, n: int, growth: Decimal,
+) -> list[Row]:  # fmt: skip
+    """One month of a set started from actuals (and the budget where it covers the month)."""
+    values: list[Row] = []
+    base = h.months[n % 12]
+    for key, lines in (("revenue", REVENUE_LINES), ("opex", OPEX_LINES)):
+        for line in lines:
+            if month in budget.get(line, {}):
+                values.append((key, line, month, budget[line][month], Source.BUDGET))
+                continue
+            amount = h.pl.get(line, {}).get(base, Decimal(0))
+            if key == "revenue":
+                amount *= (1 + growth / HUNDRED) ** (n // 12 + 1)
+            values.append((key, line, month, max(amount, Decimal(0)), Source.ACTUALS))
+    sales = sum((budget.get(c, {}).get(month, Decimal(0)) for c in ("REV.SALES", "REV.SERVICES")),
+                Decimal(0))  # fmt: skip
+    cogs = budget.get("COGS", {}).get(month)
+    if sales and cogs is not None:
+        values.append(("gross_margin", "", month, _ratio(sales - cogs, sales, HUNDRED),
+                       Source.BUDGET))  # fmt: skip
+    else:
+        values.append(("gross_margin", "", month, ratios["gross_margin"], Source.ACTUALS))
+    for key in ("dso", "dio", "dpo", "interest_rate"):
+        values.append((key, "", month, ratios[key], Source.ACTUALS))
+    for key in ("capex_life", "capex_start", "capex_db_rate", "capex_allowance_rate",
+                "tax_adjustment", "capex",
+                "borrowing", "repayment", "dividends", "share_capital", "minimum_cash",
+                "revolver_limit", "revolver_rate"):  # fmt: skip
+        values.append((key, "", month, Decimal(DEFAULTS.get(key, 0)), Source.DEFAULT))
+    return values
+
+
+def _starting_values(
+    ctx: WorkspaceContext, entity: UUID, data: NewSet, growth: Decimal
+) -> tuple[list[Row], str]:
+    months = horizon(data.cutover, data.months)
+    if data.start_from == AssumptionSet.StartFrom.EMPTY:
+        return _empty(months), "Started empty."
+    h = history(ctx, entity, data.cutover)
+    budget = _budget(ctx, entity, months) if data.start_from == "BUDGET" else {}
+    if data.start_from == "BUDGET" and not budget:
+        raise _invalid("start_from", "There is no approved budget for these months.")
+    ratios = observed(h)
+    values: list[Row] = []
+    for n, month in enumerate(months):
+        values += _month(h=h, budget=budget, ratios=ratios, month=month, n=n, growth=growth)
+    note = f"Started from the 12 months to {data.cutover:%d/%m/%Y}"
+    if growth:
+        note += f", revenue {growth}% a year"
+    if budget:
+        note += " and the approved budget for the months it covers"
+    return values, note + "."
+
+
+@transaction.atomic
+def create_set(ctx: WorkspaceContext, entity_id: UUID, data: NewSet) -> AssumptionSet:
+    entity = get_entity(ctx, entity_id, RUN).id
+    name = data.name.strip()
+    if not name or len(name) > 120:
+        raise _invalid("name", "Give the set a name of 1 to 120 characters.")
+    if data.months not in (12, 24, 36):
+        raise _invalid("months", "Choose a horizon of 12, 24 or 36 months.")
+    if data.start_from not in AssumptionSet.StartFrom.values:
+        raise _invalid("start_from", "Start from actuals, the budget, or empty.")
+    if data.cutover != month_end(data.cutover):
+        raise _invalid("cutover", "The cut-over is the last day of a month.")
+    try:
+        growth = Decimal(data.revenue_growth or "0")
+    except InvalidOperation:
+        growth = Decimal("NaN")
+    if not growth.is_finite() or not Decimal(-100) < growth <= Decimal(1000):
+        raise _invalid("revenue_growth", "Enter a growth between -100% and 1000% a year.")
+    values, note = _starting_values(ctx, entity, data, growth)
+    made = AssumptionSet.objects.create(
+        tenant=ctx.tenant, legal_entity_id=entity, name=name, cutover=data.cutover,
+        months=data.months, start_from=data.start_from, note=note, created_by=ctx.user,
+    )  # fmt: skip
+    AssumptionValue.objects.bulk_create(
+        AssumptionValue(tenant=ctx.tenant, assumption_set=made, driver=key, line=line, month=month,
+                        value=_clean(value, DRIVERS[key].unit), source=source)
+        for key, line, month, value, source in values
+    )  # fmt: skip
+    _audit(ctx, "created", made, start_from=made.start_from, months=made.months,
+           cutover=made.cutover.isoformat())  # fmt: skip
+    return made
+
+
+def _audit(ctx: WorkspaceContext, action: str, made: AssumptionSet, **changes: object) -> None:
+    audit(
+        tenant_id=ctx.tenant.id,
+        actor_user_id=ctx.user.id,
+        action=f"projections.assumptions.{action}",
+        subject_type="assumption_set",
+        subject_id=made.id,
+        entity_id=made.legal_entity_id,
+        changes={"name": made.name, "version": made.version, **changes},
+    )
+
+
+# --- reading and editing -------------------------------------------------------------------------
+
+
+def _set(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, permission: str) -> AssumptionSet:
+    entity = get_entity(ctx, entity_id, permission).id
+    found = AssumptionSet.objects.filter(legal_entity_id=entity, id=set_id).first()
+    if found is None:
+        raise NotFoundError("Assumption set not found.")
+    return found
+
+
+def sets(ctx: WorkspaceContext, entity_id: UUID) -> list[AssumptionSet]:
+    entity = get_entity(ctx, entity_id, READ).id
+    return list(
+        AssumptionSet.objects.filter(legal_entity_id=entity).order_by("-created_at", "-version")
+    )
+
+
+@dataclass(frozen=True)
+class Grid:
+    assumption_set: AssumptionSet
+    months: list[date]
+    rows: list[
+        tuple[str, str, Unit, list[Decimal], list[str]]
+    ]  # driver, line, unit, values, sources
+
+
+def grid(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> Grid:
+    made = _set(ctx, entity_id, set_id, READ)
+    months = horizon(made.cutover, made.months)
+    index = {m: i for i, m in enumerate(months)}
+    found: dict[tuple[str, str], tuple[list[Decimal], list[str]]] = {}
+    codes = list(AssumptionLoan.objects.filter(assumption_set=made).order_by("code")
+                 .values_list("code", flat=True))  # fmt: skip
+    for key, driver in DRIVERS.items():
+        for line in codes if driver.per_loan else driver.lines:
+            found[(key, line)] = ([Decimal(0)] * len(months), [Source.DEFAULT] * len(months))
+    for v in AssumptionValue.objects.filter(assumption_set=made):
+        row = found.get((v.driver, v.line))
+        if row is not None and v.month in index:
+            row[0][index[v.month]] = v.value
+            row[1][index[v.month]] = v.source
+    rows = [(k, line, DRIVERS[k].unit, vals, srcs) for (k, line), (vals, srcs) in found.items()]
+    return Grid(made, months, rows)
+
+
+@dataclass(frozen=True)
+class Change:
+    driver: str
+    line: str
+    month: date
+    value: str
+
+
+@transaction.atomic
+def set_values(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, changes: list[Change]) -> int:
+    made = _set(ctx, entity_id, set_id, RUN)
+    if made.status != AssumptionSet.Status.DRAFT:
+        raise ConflictError("This set is approved and never changes. Revise it as a new version.")
+    months = set(horizon(made.cutover, made.months))
+    for n, change in enumerate(changes):
+        driver = DRIVERS.get(change.driver)
+        where = f"changes[{n}]"
+        cell = " ".join(p for p in (change.driver, change.line) if p) + f", {change.month:%m/%Y}"
+        lines = loan_codes(made) if driver is not None and driver.per_loan else (
+            driver.lines if driver is not None else ())  # fmt: skip
+        if driver is None or change.line not in lines:
+            raise _invalid(where, f"{cell}: unknown driver or line.")
+        if month_start(change.month) not in months:
+            raise _invalid(where, f"{cell}: the month is outside the set's horizon.")
+        try:
+            value = Decimal(change.value)
+        except InvalidOperation:
+            raise _invalid(where, f"{cell}: enter a number.") from None
+        low, high = LIMITS[driver.unit]
+        if driver.minimum is not None:
+            low = max(low, Decimal(driver.minimum))
+        if not value.is_finite() or not low <= value <= high:
+            raise _invalid(where, f"{cell}: enter a value between {low} and {high}.")
+        AssumptionValue.objects.update_or_create(
+            assumption_set=made, driver=change.driver, line=change.line,
+            month=month_start(change.month),
+            defaults={"tenant": ctx.tenant, "value": _clean(value, driver.unit),
+                      "source": Source.MANUAL},
+        )  # fmt: skip
+    _audit(ctx, "edited", made, values=len(changes))
+    return len(changes)
+
+
+@transaction.atomic
+def rename(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID, name: str) -> AssumptionSet:
+    made = _set(ctx, entity_id, set_id, RUN)
+    if made.status != AssumptionSet.Status.DRAFT:
+        raise ConflictError("Only a draft can be renamed.")
+    clean = name.strip()
+    if not clean or len(clean) > 120:
+        raise _invalid("name", "Give the set a name of 1 to 120 characters.")
+    made.name = clean
+    made.save(update_fields=["name"])
+    return made
+
+
+@dataclass(frozen=True)
+class TaxPosition:
+    losses_bf: dict[str, str]  # year the loss arose -> unused amount at the start of the year
+    paid_ytd: str  # provisional tax paid for the cut-over's tax year, before the cut-over
+    recognise_loss_dta: bool
+
+
+@transaction.atomic
+def set_tax_position(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID,
+                     data: TaxPosition) -> AssumptionSet:  # fmt: skip
+    """The set's tax position at the cut-over (M6F-5), while it is a draft."""
+    made = _set(ctx, entity_id, set_id, RUN)
+    if made.status != AssumptionSet.Status.DRAFT:
+        raise ConflictError("This set is approved and never changes. Revise it as a new version.")
+    first_year = horizon(made.cutover, made.months)[0].year
+    losses: dict[str, str] = {}
+    for year, raw in sorted(data.losses_bf.items()):
+        if not year.isdigit() or not 2000 <= int(year) < first_year:
+            raise _invalid(
+                "tax_losses_bf",
+                f"{year}: losses brought forward must have arisen "
+                f"in a tax year before {first_year}, the first projected year.",
+            )
+        amount = _cents(raw, "tax_losses_bf")
+        if amount:
+            losses[year] = f"{amount:.2f}"
+    made.tax_losses_bf = losses
+    made.tax_paid_ytd = _cents(data.paid_ytd, "tax_paid_ytd")
+    made.recognise_loss_dta = data.recognise_loss_dta
+    made.save(update_fields=["tax_losses_bf", "tax_paid_ytd", "recognise_loss_dta"])
+    _audit(ctx, "tax_position_set", made, losses=losses, paid_ytd=str(made.tax_paid_ytd),
+           recognise_loss_dta=made.recognise_loss_dta)  # fmt: skip
+    return made
+
+
+def _cents(raw: str, field: str) -> Decimal:
+    try:
+        value = Decimal(raw)
+    except InvalidOperation:
+        value = Decimal("NaN")
+    if (not value.is_finite() or not Decimal(0) <= value < Decimal("1e12")
+            or value != value.quantize(CENT)):  # fmt: skip
+        raise _invalid(field, "Enter an amount in cents, such as 1500.00.")
+    return value
+
+
+@transaction.atomic
+def approve(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> AssumptionSet:
+    """Approve a draft (it then never changes); the family's earlier approved version is
+    superseded."""
+    made = _set(ctx, entity_id, set_id, PUBLISH)
+    if made.status != AssumptionSet.Status.DRAFT:
+        raise ConflictError("Only a draft can be approved.")
+    now = timezone.now()
+    for old in AssumptionSet.objects.filter(family_id=made.family_id,
+                                            status=AssumptionSet.Status.APPROVED):  # fmt: skip
+        old.status, old.superseded_at = AssumptionSet.Status.SUPERSEDED, now
+        old.save(update_fields=["status", "superseded_at"])
+    made.status, made.approved_by, made.approved_at = AssumptionSet.Status.APPROVED, ctx.user, now
+    made.save(update_fields=["status", "approved_by", "approved_at"])
+    _audit(ctx, "approved", made)
+    return made
+
+
+@transaction.atomic
+def revise(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> AssumptionSet:
+    """A new draft version with the same values, to change an approved (or any) set."""
+    made = _set(ctx, entity_id, set_id, RUN)
+    if AssumptionSet.objects.filter(family_id=made.family_id,
+                                    status=AssumptionSet.Status.DRAFT).exists():  # fmt: skip
+        raise ConflictError("This set already has a draft version; edit that one.")
+    latest = AssumptionSet.objects.filter(family_id=made.family_id).order_by("-version").first()
+    number = (latest.version if latest else made.version) + 1
+    draft = AssumptionSet.objects.create(
+        tenant=ctx.tenant, legal_entity_id=made.legal_entity_id, family_id=made.family_id,
+        version=number, name=made.name, cutover=made.cutover, months=made.months,
+        start_from=made.start_from, note=f"Revision of version {made.version}. {made.note}"[:500],
+        supersedes=made, created_by=ctx.user, tax_losses_bf=made.tax_losses_bf,
+        tax_paid_ytd=made.tax_paid_ytd, recognise_loss_dta=made.recognise_loss_dta,
+    )  # fmt: skip
+    AssumptionValue.objects.bulk_create(
+        AssumptionValue(tenant=ctx.tenant, assumption_set=draft, driver=v.driver, line=v.line,
+                        month=v.month, value=v.value, source=v.source)
+        for v in AssumptionValue.objects.filter(assumption_set=made)
+    )  # fmt: skip
+    AssumptionLoan.objects.bulk_create(
+        AssumptionLoan(tenant=ctx.tenant, assumption_set=draft, **{
+            f.name: getattr(loan, f.name) for f in AssumptionLoan._meta.concrete_fields
+            if f.name not in ("id", "tenant", "assumption_set", "created_at")})
+        for loan in AssumptionLoan.objects.filter(assumption_set=made)
+    )  # fmt: skip
+    _audit(ctx, "revised", draft, from_version=made.version)
+    return draft
+
+
+def loan_codes(made: AssumptionSet) -> set[str]:
+    return set(AssumptionLoan.objects.filter(assumption_set=made).values_list("code", flat=True))
+
+
+def approved_loans(made: AssumptionSet) -> list[AssumptionLoan]:
+    """An approved set's loans, for the projection engine (M6F-4)."""
+    return list(AssumptionLoan.objects.filter(assumption_set=made).order_by("code"))
+
+
+def approved_values(
+    ctx: WorkspaceContext, entity_id: UUID, set_id: UUID
+) -> tuple[AssumptionSet, dict[tuple[str, str], dict[date, Decimal]]]:
+    """An approved set's values by (driver, line) and month, for the projection engine (M6-3)."""
+    made = _set(ctx, entity_id, set_id, READ)
+    if made.status == AssumptionSet.Status.DRAFT:
+        raise ConflictError("Approve the assumption set before projecting with it.")
+    found: dict[tuple[str, str], dict[date, Decimal]] = defaultdict(dict)
+    for v in AssumptionValue.objects.filter(assumption_set=made):
+        found[(v.driver, v.line)][v.month] = v.value
+    return made, found
+
+
+@dataclass(frozen=True)
+class SetInfo:
+    """What another module may know about an assumption set (M7-1: a scenario's base)."""
+
+    id: UUID
+    legal_entity_id: UUID
+    family_id: UUID
+    name: str
+    version: int
+    status: str
+    cutover: date
+    months: list[date]  # the first day of each month of the horizon
+    loan_codes: frozenset[str]
+
+
+def set_info(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> SetInfo:
+    made = _set(ctx, entity_id, set_id, READ)
+    return SetInfo(
+        id=made.id, legal_entity_id=made.legal_entity_id, family_id=made.family_id,
+        name=made.name, version=made.version, status=made.status, cutover=made.cutover,
+        months=horizon(made.cutover, made.months), loan_codes=frozenset(loan_codes(made)),
+    )  # fmt: skip
+
+
+@dataclass(frozen=True)
+class NewLoanRow:
+    """A new loan for a derived set (M7-2: from a scenario's new financing)."""
+
+    code: str
+    name: str
+    amount: Decimal
+    drawdown_month: date
+    structure: str
+    term_months: int
+    annual_rate: Decimal
+    interest_only_months: int = 0
+
+
+@transaction.atomic
+def derive_set(  # noqa: PLR0913 (keyword-only parts of the new set)
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    base_id: UUID,
+    *,
+    name: str,
+    note: str,
+    values: dict[tuple[str, str], dict[date, Decimal]],
+    new_loans: list[NewLoanRow],
+) -> AssumptionSet:
+    """A new draft set (its own family) with the base's horizon, tax position and loans, the
+    base's values replaced by ``values`` where they differ (source MANUAL), and ``new_loans``. It
+    goes through the normal approval (M7-2: a scenario promoted to an assumption-set draft)."""
+    base = _set(ctx, entity_id, base_id, RUN)
+    made = AssumptionSet.objects.create(
+        tenant=ctx.tenant, legal_entity_id=base.legal_entity_id, name=name.strip()[:120],
+        cutover=base.cutover, months=base.months, start_from=base.start_from,
+        note=note.strip()[:500], created_by=ctx.user, tax_losses_bf=base.tax_losses_bf,
+        tax_paid_ytd=base.tax_paid_ytd, recognise_loss_dta=base.recognise_loss_dta,
+    )  # fmt: skip
+    AssumptionLoan.objects.bulk_create(
+        [AssumptionLoan(tenant=ctx.tenant, assumption_set=made, **{
+            f.name: getattr(loan, f.name) for f in AssumptionLoan._meta.concrete_fields
+            if f.name not in ("id", "tenant", "assumption_set", "created_at")})
+         for loan in AssumptionLoan.objects.filter(assumption_set=base)]
+        + [AssumptionLoan(tenant=ctx.tenant, assumption_set=made, code=x.code, name=x.name,
+                          kind=AssumptionLoan.Kind.NEW, amount=x.amount,
+                          drawdown_month=x.drawdown_month, structure=x.structure,
+                          term_months=x.term_months, annual_rate=x.annual_rate,
+                          interest_only_months=x.interest_only_months)
+           for x in new_loans]
+    )  # fmt: skip
+    rows: list[AssumptionValue] = []
+    seen: set[tuple[str, str, date]] = set()
+    for v in AssumptionValue.objects.filter(assumption_set=base):
+        value = values.get((v.driver, v.line), {}).get(v.month, v.value)
+        source = v.source if value == v.value else Source.MANUAL
+        rows.append(AssumptionValue(tenant=ctx.tenant, assumption_set=made, driver=v.driver,
+                                    line=v.line, month=v.month, value=value,
+                                    source=source))  # fmt: skip
+        seen.add((v.driver, v.line, v.month))
+    months = set(horizon(base.cutover, base.months))
+    for (driver, line), series in sorted(values.items()):
+        for month, value in sorted(series.items()):
+            if month in months and (driver, line, month) not in seen:
+                rows.append(AssumptionValue(tenant=ctx.tenant, assumption_set=made,
+                                            driver=driver, line=line, month=month, value=value,
+                                            source=Source.MANUAL))  # fmt: skip
+    AssumptionValue.objects.bulk_create(rows)
+    _audit(ctx, "created", made, start_from="SCENARIO", note=made.note,
+           base_set_id=str(base.id))  # fmt: skip
+    return made
+
+
+def observed_days(ctx: WorkspaceContext, entity_id: UUID, cutover: date) -> dict[str, Decimal]:
+    """DSO, DIO and DPO observed over the 12 months to the cut-over (M7-4), as a set started from
+    actuals takes them: balances at the cut-over over the year's revenue or cost of sales x 365."""
+    entity = get_entity(ctx, entity_id, READ).id
+    found = observed(history(ctx, entity, cutover))
+    return {k: found[k] for k in ("dso", "dio", "dpo")}

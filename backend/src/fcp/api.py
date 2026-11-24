@@ -1,0 +1,58 @@
+"""Root HTTP API: mounts each module's router. Session authentication (with CSRF on unsafe
+methods) is the default for every operation."""
+
+from ninja import NinjaAPI
+from ninja.security import django_auth
+
+from fcp.core.api.handlers import install_exception_handlers
+from fcp.modules.assets.api import router as assets_router
+from fcp.modules.audit_log.routes import router as audit_router
+from fcp.modules.banking.api import router as banking_router
+from fcp.modules.budgeting.api import router as budgeting_router
+from fcp.modules.cashflow.api import router as cashflow_router
+from fcp.modules.dashboards.api import router as dashboards_router
+from fcp.modules.documents.api import router as documents_router
+from fcp.modules.goals.api import router as goals_router
+from fcp.modules.identity.api import router as identity_router
+from fcp.modules.kpi.api import router as kpi_router
+from fcp.modules.ledger.api import router as ledger_router
+from fcp.modules.metrics.api import router as metrics_router
+from fcp.modules.mgmt_reporting.api import router as mgmt_reporting_router
+from fcp.modules.personal.api import router as personal_router
+from fcp.modules.projections.api import router as projections_router
+from fcp.modules.registers.api import router as registers_router
+from fcp.modules.reporting.api import router as reporting_router
+from fcp.modules.scenarios.api import router as scenarios_router
+from fcp.modules.tax.api import router as tax_router
+from fcp.modules.taxrules.api import router as taxrules_router
+from fcp.modules.tenancy.api import router as tenancy_router
+
+api = NinjaAPI(
+    title="Financial Compliance Platform API",
+    version="0.1.0",
+    auth=django_auth,
+    urls_namespace="api",
+    docs_url="/docs",
+)
+install_exception_handlers(api)
+api.add_router("/", identity_router)
+api.add_router("/", tenancy_router)
+api.add_router("/", audit_router)
+api.add_router("/", ledger_router)
+api.add_router("/", registers_router)
+api.add_router("/", banking_router)
+api.add_router("/", documents_router)
+api.add_router("/", metrics_router)
+api.add_router("/", cashflow_router)
+api.add_router("/", budgeting_router)
+api.add_router("/", kpi_router)
+api.add_router("/", goals_router)
+api.add_router("/", dashboards_router)
+api.add_router("/", personal_router)
+api.add_router("/", assets_router)
+api.add_router("/", projections_router)
+api.add_router("/", scenarios_router)
+api.add_router("/", mgmt_reporting_router)
+api.add_router("/", taxrules_router)
+api.add_router("/", tax_router)
+api.add_router("/", reporting_router)

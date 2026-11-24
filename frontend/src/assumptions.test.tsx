@@ -1,0 +1,223 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import axe from "axe-core";
+import { MemoryRouter, Route, Routes } from "react-router";
+import { I18nProvider } from "./i18n/I18n";
+import { AssumptionsPage } from "./pages/Assumptions";
+
+function respond(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const set = {
+  id: "s1",
+  family_id: "f1",
+  version: 1,
+  name: "Plan 2027",
+  cutover: "2026-12-31",
+  months: 12,
+  start_from: "ACTUALS",
+  note: "Started from the 12 months to 31/12/2026.",
+  status: "DRAFT",
+  supersedes_id: null,
+  created_at: "2026-11-12T00:00:00Z",
+  approved_at: null,
+  tax_losses_bf: { "2025": "8000.00" },
+  tax_paid_ytd: "0.00",
+  recognise_loss_dta: false,
+};
+const taxRule = {
+  id: "CY:CIT:2026",
+  jurisdiction: "CY",
+  tax: "CIT",
+  effective_from: "2026-01-01",
+  effective_to: null,
+  rate: "0.15",
+  loss_carryforward_years: 7,
+  tax_year_start_month: 1,
+  provisional_instalments: [
+    { month: 7, day: 31, share: "0.5" },
+    { month: 12, day: 31, share: "0.5" },
+  ],
+  final_payment: "1 August of the following year",
+  verified: false,
+  verification_note: "Pending professional verification (#154).",
+  sources: [],
+};
+const months = Array.from({ length: 3 }, (_, i) => `2027-0${i + 1}-01`);
+const grid = {
+  assumption_set: set,
+  months,
+  nature: "FORECAST",
+  rows: [
+    {
+      driver: "revenue",
+      line: "REV.SALES",
+      unit: "AMOUNT",
+      values: ["1320", "1210", "0"],
+      sources: ["ACTUALS", "ACTUALS", "ACTUALS"],
+    },
+    {
+      driver: "dso",
+      line: "",
+      unit: "DAYS",
+      values: ["47.6087", "47.6087", "47.6087"],
+      sources: ["ACTUALS", "ACTUALS", "ACTUALS"],
+    },
+  ],
+};
+
+describe("Assumption sets (M6-2)", () => {
+  it("edits a draft, fills a row to the right, saves and approves", async () => {
+    const sent: { url: string; method: string; body: unknown }[] = [];
+    document.cookie = "__Host-fcp_csrftoken=test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) => {
+        const method = init.method ?? "GET";
+        if (method !== "GET") {
+          sent.push({ url, method, body: JSON.parse(init.body as string) });
+          if (url.endsWith("/tax")) return Promise.resolve(respond(set));
+          return Promise.resolve(respond(method === "PUT" ? grid : set));
+        }
+        if (url.endsWith("/assumption-sets/s1"))
+          return Promise.resolve(respond(grid));
+        if (url.endsWith("/tax-rules"))
+          return Promise.resolve(respond([taxRule]));
+        if (url.endsWith("/loans"))
+          return Promise.resolve(
+            respond([
+              {
+                code: "BANK-1",
+                name: "Bank loan (Demo)",
+                kind: "EXISTING",
+                structure: "ANNUITY",
+                term_months: 48,
+                annual_rate: "5.5",
+                opening_balance: "40000.00",
+                amount: "0.00",
+                drawdown_month: null,
+                interest_only_months: 0,
+                from_register: true,
+                note: "From the debt register (term loan, fixed rate).",
+              },
+            ]),
+          );
+        return Promise.resolve(respond([set]));
+      }),
+    );
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nProvider locale="en">
+          <MemoryRouter initialEntries={["/w/ws/e/e1/assumptions"]}>
+            <Routes>
+              <Route
+                path="/w/:slug/e/:entityId/assumptions"
+                element={<AssumptionsPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </QueryClientProvider>,
+    );
+    const sets = await screen.findByRole("table", { name: "Assumption sets" });
+    fireEvent.click(within(sets).getByRole("button", { name: "Open" }));
+    const table = await screen.findByRole("table", {
+      name: "Assumptions by month",
+    });
+    expect(
+      screen.getByText(/Every value is a forecast assumption/),
+    ).toBeInTheDocument();
+    const loans = await screen.findByRole("table", { name: "Loans" });
+    expect(loans).toHaveTextContent("40,000.00");
+    expect(loans).toHaveTextContent("Annuity (level payments)");
+    const jan = within(table).getByLabelText("Revenue: sales of goods 2027-01");
+    expect(jan).toHaveValue("1320");
+    expect(jan.closest("td")).toHaveAttribute(
+      "title",
+      "From last year's actuals",
+    );
+    fireEvent.change(jan, { target: { value: "1500" } });
+    fireEvent.click(
+      within(table).getByRole("button", {
+        name: "Fill right: Revenue: sales of goods",
+      }),
+    );
+    expect(
+      within(table).getByLabelText("Revenue: sales of goods 2027-03"),
+    ).toHaveValue("1500");
+    // Approving waits until the changes are saved.
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes (3)" }));
+    await waitFor(() =>
+      expect(sent[0]).toEqual({
+        url: "/api/w/ws/entities/e1/assumption-sets/s1/values",
+        method: "PUT",
+        body: {
+          changes: months.map((month) => ({
+            driver: "revenue",
+            line: "REV.SALES",
+            month,
+            value: "1500",
+          })),
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() =>
+      expect(sent[1]?.url).toBe(
+        "/api/w/ws/entities/e1/assumption-sets/s1/approve",
+      ),
+    );
+    // Corporate tax (M6F-5): the rule set in force is shown as pending verification; the tax
+    // position at the cut-over is saved with the set.
+    const rules = screen.getByRole("table", {
+      name: "Rule sets used by this projection",
+    });
+    expect(rules).toHaveTextContent("CY:CIT:2026");
+    expect(rules).toHaveTextContent("15%");
+    expect(rules).toHaveTextContent("Pending professional verification");
+    expect(screen.getByLabelText("Year of loss 1")).toHaveValue("2025");
+    fireEvent.change(
+      screen.getByLabelText(
+        "Provisional tax already paid for the cut-over's tax year",
+      ),
+      { target: { value: "1200.00" } },
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /deferred tax asset/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save the tax position" }),
+    );
+    await waitFor(() =>
+      expect(sent.find((x) => x.url.endsWith("/tax"))).toEqual({
+        url: "/api/w/ws/entities/e1/assumption-sets/s1/tax",
+        method: "PUT",
+        body: {
+          tax_losses_bf: { "2025": "8000.00" },
+          tax_paid_ytd: "1200.00",
+          recognise_loss_dta: true,
+        },
+      }),
+    );
+    expect(await screen.findByText("Tax position saved.")).toBeInTheDocument();
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations.map((v) => v.id)).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+});
