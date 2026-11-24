@@ -1,0 +1,41 @@
+# Tax payments by scenario (generated)
+
+## S1 Base: the 24-month golden model
+
+- 2027-07 PROVISIONAL 3182.81
+- 2027-08 PRIOR 3000.00
+- 2027-12 PROVISIONAL 3187.50
+- 2028-07 PROVISIONAL 3194.07
+- 2028-12 PROVISIONAL 3198.74
+
+## S2 Losses carried forward
+
+- none
+
+## S3 Negative cash and the credit facility
+
+- 2027-07 PROVISIONAL 364.45
+- 2027-12 PROVISIONAL 323.24
+- 2028-07 PROVISIONAL 315.00
+- 2028-12 PROVISIONAL 315.00
+
+## S4 Loans: variable rate, early repayment, new borrowing
+
+- 2027-07 PROVISIONAL 4129.65
+- 2027-12 PROVISIONAL 4065.38
+- 2028-07 PROVISIONAL 4158.51
+- 2028-12 PROVISIONAL 4250.12
+
+## S5 Changing revenues and working capital
+
+- 2027-07 PROVISIONAL 3858.02
+- 2027-12 PROVISIONAL 4639.63
+- 2028-07 PROVISIONAL 4631.32
+- 2028-12 PROVISIONAL 3732.01
+
+## S6 Unexpected expenses, capital allowances and deferred tax
+
+- 2027-07 PROVISIONAL 3757.05
+- 2028-07 PROVISIONAL 2119.70
+- 2028-08 FINAL -3757.05
+- 2028-12 PROVISIONAL 3504.40
