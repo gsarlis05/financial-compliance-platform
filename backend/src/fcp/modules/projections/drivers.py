@@ -1,0 +1,77 @@
+"""The drivers of an assumption set (M6-2, brief §3): what each one means and its unit.
+
+Every driver has one value per month of the horizon. Line drivers (revenue, operating costs) have
+one row per taxonomy line; the others have a single row. Values are stored unrounded; the engine
+rounds each statement line to cents once (doc 10 §2.4).
+"""
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+REVENUE_LINES = ("REV.SALES", "REV.SERVICES", "REV.OTHER")
+OPEX_LINES = (
+    "OPEX.PAYROLL",
+    "OPEX.RENT",
+    "OPEX.UTILITIES",
+    "OPEX.PROFESSIONAL",
+    "OPEX.MARKETING",
+    "OPEX.TRAVEL",
+    "OPEX.INSURANCE",
+    "OPEX.OTHER",
+)
+
+
+class Unit(StrEnum):
+    AMOUNT = "AMOUNT"  # money per month
+    PERCENT = "PERCENT"  # e.g. 35 for 35 %
+    DAYS = "DAYS"
+    MONTHS = "MONTHS"
+
+
+@dataclass(frozen=True)
+class Driver:
+    key: str
+    unit: Unit
+    lines: tuple[str, ...] = ("",)  # taxonomy lines, or "" for a single row
+    minimum: int | None = 0  # None: negative values allowed
+    per_loan: bool = False  # one row per loan of the set, the loan's code as the line (M6F-4)
+
+
+DRIVERS: dict[str, Driver] = {
+    d.key: d
+    for d in (
+        Driver("revenue", Unit.AMOUNT, REVENUE_LINES),
+        Driver("gross_margin", Unit.PERCENT, minimum=None),  # on sales and services revenue
+        Driver("opex", Unit.AMOUNT, OPEX_LINES),
+        Driver("capex", Unit.AMOUNT),
+        Driver("capex_life", Unit.MONTHS),
+        # M6F-3 (#148): when depreciation of new capex starts (months after the month it is
+        # spent; 1 = the month after, the default), its method (a declining-balance rate a year;
+        # 0 = straight-line) and the tax capital allowance rate a year (used from M6F-5).
+        Driver("capex_start", Unit.MONTHS),
+        Driver("capex_db_rate", Unit.PERCENT),
+        Driver("capex_allowance_rate", Unit.PERCENT),
+        Driver("dso", Unit.DAYS),
+        Driver("dio", Unit.DAYS),
+        Driver("dpo", Unit.DAYS),
+        # M6F-5: the tax rate and payment dates come from the tax rule set; this driver adjusts
+        # taxable profit (non-deductible costs positive, non-taxable income negative).
+        Driver("tax_adjustment", Unit.AMOUNT, minimum=None),
+        Driver("borrowing", Unit.AMOUNT),
+        Driver("repayment", Unit.AMOUNT),
+        Driver("interest_rate", Unit.PERCENT),  # a year, on opening debt
+        Driver("dividends", Unit.AMOUNT),
+        Driver("share_capital", Unit.AMOUNT),
+        Driver("minimum_cash", Unit.AMOUNT),
+        Driver("revolver_limit", Unit.AMOUNT),
+        Driver("revolver_rate", Unit.PERCENT),  # a year
+        # Per loan (M6F-4, #149): the rate path, early repayments and extra drawdowns by month.
+        Driver("loan_rate", Unit.PERCENT, (), per_loan=True),  # a year
+        Driver("loan_prepayment", Unit.AMOUNT, (), per_loan=True),
+        Driver("loan_drawdown", Unit.AMOUNT, (), per_loan=True),
+    )
+}
+
+DEFAULT_CAPEX_LIFE = 60  # months, when a set starts empty or from actuals
+# Values a driver takes when a set starts, and when an older set has no row for it.
+DEFAULTS = {"capex_life": 60, "capex_start": 1}

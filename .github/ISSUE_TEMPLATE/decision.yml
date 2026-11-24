@@ -1,0 +1,15 @@
+name: Decision for the product owner
+description: A question only the product owner can answer.
+title: "Decision: "
+labels: ["type:decision", "needs:owner"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question and options
+    validations:
+      required: true
+  - type: textarea
+    id: default
+    attributes:
+      label: Default if not answered, and what it blocks
