@@ -3,7 +3,9 @@
 Routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
@@ -13,13 +15,34 @@ from ninja import Field, File, Form, Query, Router, Schema, Status
 from ninja.files import UploadedFile
 
 from fcp.core.api.permissions import requires
+from fcp.core.errors import ValidationFailedError
 from fcp.modules.tenancy.api import workspace_ctx
 
 from . import services
 from .models import Document
 from .services import Target
 
-__all__: list[str] = ["router"]
+__all__: list[str] = ["DocumentRef", "entry_document", "router"]
+
+
+@dataclass(frozen=True)
+class DocumentRef:
+    id: UUID
+    filename: str
+    sha256: str
+
+
+def entry_document(ctx: Any, entity_id: UUID, document_id: UUID, entry_id: UUID) -> DocumentRef:
+    """A document attached to a journal entry, for other modules to cite as evidence (V1-2f;
+    requires ``documents.read``). Refused when the document is not attached to that entry."""
+    document = services.get_document(ctx, entity_id, document_id)
+    if not any(link.entry_id == entry_id for link in document.links.all()):
+        raise ValidationFailedError(
+            "Attach the document to the entry first.",
+            field_errors={"document_id": ["not attached to this entry"]},
+        )
+    return DocumentRef(document.id, document.filename, document.sha256)
+
 
 router = Router(tags=["documents"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"

@@ -28,6 +28,7 @@ from fcp.modules.ledger.api import (
     EntryInput,
     JournalEntry,
     LineInput,
+    account_balance,
     account_list,
     create_entry_draft,
 )
@@ -508,6 +509,69 @@ def runs(ctx: WorkspaceContext, entity_id: UUID) -> list[RunView]:
     )
     entries = _entries(r.entry_id for r in found)
     return [_run_view(r, entries.get(r.entry_id)) for r in found]
+
+
+# --- the register against the ledger (V1-4) -----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReconciliationRow:
+    account_id: UUID
+    account_code: str
+    account_name: str
+    kind: str  # COST | ACCUMULATED
+    register: Decimal  # as the account should hold it: cost a debit, accumulated a credit
+    ledger: Decimal
+    difference: Decimal
+
+
+@dataclass(frozen=True)
+class Reconciliation:
+    as_of: date
+    rows: list[ReconciliationRow]
+    agrees: bool
+    unposted_runs: list[RunView]
+
+
+def reconcile(ctx: WorkspaceContext, entity_id: UUID, as_of: date) -> Reconciliation:
+    """The register's cost and accumulated depreciation against the ledger on ``as_of``, per
+    account. The register counts assets acquired on or before the date and not disposed of by
+    then, and depreciation from runs whose entry is posted; drafts not posted yet are listed, as
+    they explain a difference until they are."""
+    entity = _entity(ctx, entity_id, READ)
+    held = [a for a in FixedAsset.objects.filter(legal_entity_id=entity, acquired_on__lte=as_of)
+            if a.disposed_on is None or a.disposed_on > as_of]  # fmt: skip
+    found = list(DepreciationRun.objects.filter(legal_entity_id=entity, month__lte=as_of,
+                                                cancelled_at__isnull=True))  # fmt: skip
+    entries = _entries(r.entry_id for r in found)
+    posted = {r.id for r in found
+              if (e := entries.get(r.entry_id)) is not None and e.status == "POSTED"}  # fmt: skip
+    cost: dict[UUID, Decimal] = {}
+    accumulated: dict[UUID, Decimal] = {}
+    ids = {a.id for a in held}
+    for a in held:
+        cost[a.asset_account_id] = cost.get(a.asset_account_id, Decimal(0)) + a.cost
+        accumulated.setdefault(a.accumulated_account_id, Decimal(0))
+    by_asset = {a.id: a for a in held}
+    for line in DepreciationRunLine.objects.filter(run_id__in=posted, asset_id__in=ids):
+        account = by_asset[line.asset_id].accumulated_account_id
+        accumulated[account] += line.amount
+    names = {a.id: a for a in account_list(ctx, entity)}
+    rows: list[ReconciliationRow] = []
+    for kind, totals, sign in (("COST", cost, 1), ("ACCUMULATED", accumulated, -1)):
+        for account_id, register in sorted(totals.items(),
+                                           key=lambda kv: names[kv[0]].code):  # fmt: skip
+            # ``or 0``: a zero balance negated is -0, which would print as "-0.00".
+            ledger = sign * account_balance(ctx, entity, account_id, as_of=as_of) or Decimal(0)
+            rows.append(ReconciliationRow(
+                account_id=account_id, account_code=names[account_id].code,
+                account_name=names[account_id].name, kind=kind, register=register,
+                ledger=ledger, difference=(ledger - register) or Decimal(0)))  # fmt: skip
+    waiting = [r for r in found if r.id not in posted]
+    pending = [_run_view(r, e) for r in waiting
+               if (e := entries.get(r.entry_id)) is not None and e.status not in ENDED]  # fmt: skip
+    return Reconciliation(as_of=as_of, rows=rows, agrees=all(not r.difference for r in rows),
+                          unposted_runs=pending)  # fmt: skip
 
 
 # --- for projections (M6-3) ----------------------------------------------------------------------

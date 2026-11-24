@@ -21,6 +21,7 @@ export interface Workspace {
   roles: string[];
   via_engagement?: string | null; // reached through a firm's engagement grant (M5-4)
   deletion_due?: string | null; // a confirmed deletion purges the workspace after this (M5-6)
+  one_person?: boolean; // in force: whoever prepares may also approve (V1-1)
 }
 
 export interface LegalEntity {
@@ -98,6 +99,15 @@ export interface EntryLine {
   due_date: string | null;
   vat_code_id: string | null;
   vat_code: string | null;
+  tax_point: string | null;
+  vat_recovery_percent: string | null;
+  vat_blocked: string | null;
+  txn_currency?: string | null;
+  txn_amount?: string | null;
+  exchange_rate?: string | null;
+  rate_at?: string | null;
+  rate_source?: string;
+  fx_difference?: string;
 }
 
 export type DimensionKind = "DEPARTMENT" | "PROJECT" | "COST_CENTRE" | "CUSTOM";
@@ -138,6 +148,7 @@ export interface JournalEntry {
   correction_reason: string;
   prepared_by_id: string;
   approved_by_id: string | null;
+  self_approved?: boolean; // approved by its preparer in a one-person workspace (V1-1)
   posted_by_id: string | null;
   rejection_reason: string;
   unlock_request_id: string | null;
@@ -160,6 +171,14 @@ export interface EntryInput {
     counterparty_id?: string | null;
     reference?: string;
     vat_code_id?: string | null;
+    tax_point?: string | null;
+    vat_recovery_percent?: string | null;
+    vat_blocked?: string | null;
+    txn_currency?: string;
+    txn_amount?: string;
+    exchange_rate?: string;
+    rate_at?: string | null;
+    rate_source?: string;
   }[];
 }
 
@@ -192,6 +211,7 @@ export interface PeriodUnlock {
   requested_by_id: string;
   first_approver_id: string | null;
   second_approver_id: string | null;
+  self_approved?: boolean; // opened on the requester's own approval (one-person, V1-1)
   active_until: string | null;
 }
 
@@ -217,6 +237,7 @@ export interface Counterparty {
   name: string;
   kind: CounterpartyKind;
   vat_no: string;
+  country: string;
   email: string;
   payment_terms_days: number;
   status: "ACTIVE" | "INACTIVE";
@@ -292,6 +313,7 @@ export interface VatCode {
   name: string;
   name_el: string;
   treatment: string;
+  category: string;
   rate: string | null;
   valid_from: string | null;
   valid_to: string | null;

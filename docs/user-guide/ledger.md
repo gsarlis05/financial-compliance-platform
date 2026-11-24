@@ -117,6 +117,18 @@ correct entry. An entry can be reversed only once.
 
 **Bookkeeping → Approvals** lists entries waiting for you.
 
+### Faster data entry
+- **VAT code.** Click the VAT field or start typing a code, a name or a rate (for example `S19`,
+  `reduced` or `9%`). Your **★ Favourites** come first, then the codes this company uses most,
+  then every code by category. Use the arrow keys and Enter, or click. The **☆** beside the field
+  adds the chosen code to your favourites; **★** removes it. Favourites are yours alone, for
+  this company.
+- **The usual code.** When you choose an account that usually has a VAT code, the form offers
+  "Use S19, the usual code for this account". It never fills it in for you.
+- **Suggestions while you type.** The description, memo and invoice number fields offer what was
+  typed before in this company's entries: those that start with your text first, then the most
+  used and the most recent. Choose one with the arrow keys and Enter, or keep typing.
+
 ## 7. Period unlocks (exceptional)
 To correct a locked period, an accountant requests an unlock with a reason and a time window
 (5 minutes to 8 hours). Two different approvers (not the requester) approve it, each having
@@ -151,14 +163,21 @@ invoice can be flagged as disputed (automatic matching skips it). A reversed inv
 note that cancels it. CSV export is available.
 
 ## 10. VAT codes
-Each line can carry a **VAT code** from the Cyprus catalogue: S19 (standard 19%), R9 and R5
-(reduced), Z0 (zero), EX (exempt), RC (EU reverse charge), OUT (outside the scope) and SETTLE
-(payments to or refunds from the tax authority). Lines on the VAT accounts (**1220** input VAT,
+Each line can carry a **VAT code** from the Cyprus catalogue. The 32 codes are grouped by kind:
+domestic (S19 standard 19%; R9, R5 and R3 reduced), zero-rated (Z0), exempt (EX), outside the
+scope with a right to deduct (OSD), supplies of goods and services to EU businesses (EUGS, EUSS),
+acquisitions of goods from the EU (EUGA19 and so on), reverse charges on EU services, non-EU
+services and domestic supplies (RCEU19, RCNEU19, RCDOM19 and so on), imports (IMP19 and so on),
+not a supply (OUT) and settlements with the tax authority (SETTLE). The older code RC (reverse
+charge) stays for entries already posted. Lines on the VAT accounts (**1220** input VAT,
 **2120** output VAT) must have one, and the code must be valid on the accounting date.
 
-> **All rates are marked "unverified"** until a Cyprus tax professional confirms them (decision
-> #93). The 3% rate is not in the catalogue yet for the same reason. The app does **not** produce or
-> submit VAT returns; that comes with the rules engine (M9), with human sign-off.
+A line with a VAT code can also carry a tax point and, on input VAT, the recoverable part (see
+[VAT](vat.md)).
+
+> **All rates and rules are marked "unverified"** until a Cyprus tax professional confirms them
+> (decision #93). The app prepares a VAT report per period for you to file yourself; it never
+> files anything (see [VAT](vat.md)).
 
 The catalogue is reference data maintained by the platform (versioned by validity dates); the app
 itself can only read it.
@@ -253,11 +272,35 @@ monthly-summarised books and gives you access as finance manager. See [the demo 
 Every amount is recorded in the entity's **functional currency** (EUR by default) and presented in
 its **reporting currency** (the same in this release). Currencies use ISO 4217 codes.
 
-Entries in another currency are **not available yet**: the platform refuses them with a clear
-message until foreign-currency accounting (conversion, period-end revaluation, exchange gains and
-losses) is complete and tested. The database already has a place for each line's transaction
-currency, amount and rate, so turning it on later needs no change to your recorded data.
+### Entries in another currency
+Turn it on in **Bookkeeping → Ledger settings → Foreign currency**, choosing the account that
+exchange differences go to (7020 "Foreign exchange differences" in the default chart).
 
-You can already record **exchange rates** with their source (for example the ECB reference rate
-and the file it came from) through the API (`POST .../exchange-rates`); a recorded rate is never
-changed. Nothing is converted with them yet.
+Then each line of the entry form has a **Foreign currency** section:
+1. Choose the **currency** and type the **amount in that currency**.
+2. Type the **rate** in euros per unit, as on your bank or card statement. The euro amount fills
+   in by itself: amount × rate, rounded to the cent.
+3. Give the **rate's date and time** and its **source** (for example "bank card statement").
+
+Amounts are converted at the rate of the date and time the purchase happened (your decision of
+23 November 2026). **Use the stored rate** offers the latest rate you recorded on or before the
+entry date; you can change it.
+
+### Exchange rates
+**Ledger settings → Exchange rates** lists the rates you recorded and records new ones: the date,
+the pair, the rate, its type (spot, closing, average) and its source. A recorded rate is never
+changed.
+
+### Exchange differences
+**Bookkeeping → Exchange differences** shows, for a date (usually a period's last day), every
+balance in another currency on a customer, supplier or foreign-currency account:
+- **Unrealised:** an open balance is brought to the **closing rate** you recorded for that date
+  (Ledger settings → Exchange rates, type "Closing"). Without a rate the currency is listed as
+  missing; nothing is guessed.
+- **Realised:** a balance paid in full in its currency but with euros left over (paid at another
+  rate) is cleared.
+
+**Prepare the draft entry** makes one draft entry with all the differences against the account
+for exchange differences. Approve and post it as usual. While it waits, no second one can be
+made, so nothing is booked twice. Revalue again next period: only the change since the last
+revaluation is booked.

@@ -9,7 +9,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -21,9 +21,15 @@ from django.utils import timezone
 from fcp.core.errors import NotFoundError, ValidationFailedError
 from fcp.core.money import Money, MoneyError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import LegalEntity, Tenant, WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import (
+    LegalEntity,
+    Tenant,
+    WorkspaceContext,
+    get_entity,
+    self_approval_allowed,
+)
 
-from . import dimensions
+from . import dimensions, fx
 from .errors import (
     AccountNotPostableError,
     ApprovalRequiredError,
@@ -74,6 +80,21 @@ class LineInput:
     reference: str = ""
     due_date: date | None = None
     vat_code_id: str | None = None
+    # VAT details (V1-2b): see ``JournalLine``; amounts as strings like debit and credit.
+    tax_point: date | None = None
+    vat_recovery_percent: str | None = None
+    vat_blocked: str | None = None
+    # Foreign currency (V1-2h): the line's amount in its currency, the rate (functional units per
+    # unit) of the transaction's date and time, when that rate applied and where it comes from.
+    # The debit or credit above is then that amount converted, rounded half up to the cent.
+    txn_currency: str | None = None
+    txn_amount: str | None = None
+    exchange_rate: str | None = None
+    rate_at: datetime | None = None
+    rate_source: str = ""
+    # V1-2h2: an exchange difference on the position in ``txn_currency`` (no foreign amount; the
+    # rate revalued at, none when realised). Set by the exchange-differences service only.
+    fx_difference: str = ""
 
 
 @dataclass(frozen=True)
@@ -203,22 +224,23 @@ def _amount(value: str, currency: str, field: str) -> Money:
 
 
 def _check_currency(entity: Any, currency: str | None) -> None:
-    """Only the functional currency while multi-currency is disabled (M6F-1, #80; owner decision
-    D8): foreign-currency transactions need translation, revaluation and FX gains and losses,
-    which are not implemented yet."""
+    """Entries are recorded in the functional currency (M6F-1, #80); a foreign currency is given
+    per line, with its amount and rate (V1-2h)."""
     if currency is None or currency == entity.functional_currency:
         return
     message = (
-        f"Transactions in {currency} are not available yet: this entity records "
-        f"{entity.functional_currency} only (multi-currency is disabled in this release)."
+        f"Entries are recorded in {entity.functional_currency}. For an amount in {currency}, "
+        "give it on the line with its rate."
     )
     raise ValidationFailedError(message, field_errors={"currency": [message]})
 
 
 def _validated_lines(
-    entity_id: UUID, currency: str, lines: Sequence[LineInput], *, mirror: bool = False
+    entity: Any, lines: Sequence[LineInput], *, mirror: bool = False
 ) -> list[dict[str, Any]]:
-    """Structural checks that apply to drafts too (each line: one side, positive, rounded)."""
+    """Structural checks that apply to drafts too (each line: one side, positive, rounded; a
+    foreign-currency line converted at its rate)."""
+    entity_id, currency = entity.id, entity.functional_currency
     accounts = {
         a.id: a
         for a in Account.objects.filter(
@@ -261,10 +283,58 @@ def _validated_lines(
                 "reference": line.reference.strip(),
                 "due_date": line.due_date,
                 "vat_code_id": line.vat_code_id,
+                **_vat_details(line, account, i, debit.amount - credit.amount),
+                **fx.foreign_line(
+                    entity,
+                    i,
+                    currency=line.txn_currency,
+                    amount=line.txn_amount,
+                    rate=line.exchange_rate,
+                    rate_at=line.rate_at,
+                    rate_source=line.rate_source,
+                    functional=debit.amount - credit.amount,
+                    difference=line.fx_difference,
+                ),
                 "tags": tags[i],
             }
         )
     return result
+
+
+def _invalid(field: str, message: str) -> ValidationFailedError:
+    return ValidationFailedError(message, field_errors={field: [message]})
+
+
+def _vat_details(line: LineInput, account: Account, i: int, deductible: Decimal) -> dict[str, Any]:
+    """Tax point, deductible share and blocked VAT (V1-2b). A tax point needs a VAT code; the
+    deductible share and the blocked VAT belong to input VAT lines only, whose amount is the
+    deductible VAT, so the line's amount and the blocked VAT must agree with the share."""
+    field = f"lines.{i}"
+    if line.tax_point is not None and not line.vat_code_id:
+        raise _invalid(f"{field}.tax_point", f"Line {i + 1}: a tax point needs a VAT code.")
+    if line.vat_recovery_percent is None and line.vat_blocked is None:
+        return {"tax_point": line.tax_point, "vat_recovery_percent": None, "vat_blocked": None}
+    if account.vat_role != Account.VatRole.INPUT:
+        raise _invalid(f"{field}.vat_recovery_percent",
+                       f"Line {i + 1}: a deductible share or blocked VAT belongs on an input VAT "
+                       "line.")  # fmt: skip
+    try:
+        recovery = Decimal(line.vat_recovery_percent or "100")
+        blocked = Decimal(line.vat_blocked or "0")
+    except ArithmeticError:
+        raise _invalid(f"{field}.vat_recovery_percent", "Enter numbers.") from None
+    if not (0 <= recovery <= 100):
+        raise _invalid(f"{field}.vat_recovery_percent",
+                       f"Line {i + 1}: the deductible share is between 0 and 100%.")  # fmt: skip
+    if blocked < 0 or blocked != blocked.quantize(Decimal("0.01")):
+        raise _invalid(f"{field}.vat_blocked",
+                       f"Line {i + 1}: blocked VAT is a positive amount in cents.")  # fmt: skip
+    expected = ((abs(deductible) + blocked) * recovery / 100).quantize(Decimal("0.01"))
+    if abs(abs(deductible) - expected) > Decimal("0.01"):
+        raise _invalid(f"{field}.vat_blocked",
+                       f"Line {i + 1}: {abs(deductible):.2f} deductible and {blocked:.2f} blocked "
+                       f"do not make {recovery}% deductible.")  # fmt: skip
+    return {"tax_point": line.tax_point, "vat_recovery_percent": recovery, "vat_blocked": blocked}
 
 
 def _counterparties(
@@ -389,9 +459,16 @@ def _hash_line(ln: JournalLine) -> list[Any]:
         row.append(tags)
     if ln.vat_code_id:  # likewise for the VAT code
         row.append(f"vat={ln.vat_code_id}")
-    if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1)
+    if ln.tax_point or ln.vat_recovery_percent is not None:  # likewise for VAT details (V1-2b)
+        row.append([ln.tax_point.isoformat() if ln.tax_point else "",
+                    f"{ln.vat_recovery_percent:.2f}" if ln.vat_recovery_percent is not None else "",
+                    f"{ln.vat_blocked:.2f}" if ln.vat_blocked is not None else ""])  # fmt: skip
+    if ln.txn_currency:  # likewise for transaction-currency fields (M6F-1; rate's time V1-2h)
         row.append([ln.txn_currency, f"{ln.txn_debit:.4f}", f"{ln.txn_credit:.4f}",
-                    f"{ln.exchange_rate:.10f}"])  # fmt: skip
+                    f"{ln.exchange_rate:.10f}" if ln.exchange_rate is not None else "",
+                    ln.rate_at.isoformat() if ln.rate_at else "", ln.rate_source])  # fmt: skip
+        if ln.fx_difference:  # an exchange difference (V1-2h2); other lines hash as before
+            row.append(f"fx={ln.fx_difference}")
     if ln.counterparty_id or ln.reference or ln.due_date:  # likewise for sub-ledger fields
         row.append(
             [
@@ -547,7 +624,7 @@ def create_draft(  # noqa: PLR0913 - keyword-only options
     deactivated since, which must not prevent correcting the books."""
     entity = get_entity(ctx, entity_id, "ledger.entry.create")
     _check_currency(entity, data.currency)
-    lines = _validated_lines(entity.id, entity.functional_currency, data.lines, mirror=mirror)
+    lines = _validated_lines(entity, data.lines, mirror=mirror)
     entry = JournalEntry.objects.create(
         tenant=ctx.tenant,
         legal_entity=entity,
@@ -595,7 +672,7 @@ def update_draft(
             "generate it again."
         )
     _check_currency(entity, data.currency)
-    lines = _validated_lines(entity.id, entity.functional_currency, data.lines)
+    lines = _validated_lines(entity, data.lines)
     before = {
         "accounting_date": entry.accounting_date,
         "description": entry.description,
@@ -608,6 +685,7 @@ def update_draft(
     entry.journal = _journal(ctx, entity.id, data.journal_code)
     entry.status = Status.DRAFT
     entry.approved_by, entry.approved_at, entry.approved_hash = None, None, ""
+    entry.self_approved = False
     entry.content_hash = ""
     entry.save()
     _write_lines(ctx, entry, lines)
@@ -667,7 +745,8 @@ def approve(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEn
     entry = get_entry(ctx, entity_id, entry_id, lock=True)
     if entry.status != Status.SUBMITTED:
         raise InvalidStateError("Only submitted entries can be approved.")
-    if entry.prepared_by_id == ctx.user.id:
+    own = entry.prepared_by_id == ctx.user.id
+    if own and not self_approval_allowed(ctx):
         raise SegregationOfDutiesError(
             "You prepared this entry, so someone else must approve it (segregation of duties)."
         )
@@ -675,7 +754,9 @@ def approve(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID) -> JournalEn
     if current != entry.content_hash:
         raise ApprovalStaleError("The entry changed after it was submitted. Submit it again.")
     entry.approved_by, entry.approved_at, entry.approved_hash = ctx.user, timezone.now(), current
-    _transition(ctx, entry, Status.APPROVED, "ledger.entry.approved", approved_hash=current)
+    entry.self_approved = own
+    _transition(ctx, entry, Status.APPROVED, "ledger.entry.approved", approved_hash=current,
+                self_approved=own)  # fmt: skip
     return entry
 
 
@@ -687,6 +768,7 @@ def reject(ctx: WorkspaceContext, entity_id: UUID, entry_id: UUID, reason: str) 
         raise InvalidStateError("Only submitted or approved entries can be rejected.")
     entry.rejection_reason = reason.strip()
     entry.approved_by, entry.approved_at, entry.approved_hash = None, None, ""
+    entry.self_approved = False
     _transition(ctx, entry, Status.REJECTED, "ledger.entry.rejected", reason=entry.rejection_reason)
     return entry
 

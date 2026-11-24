@@ -477,3 +477,104 @@ def approved_values(
     for v in AssumptionValue.objects.filter(assumption_set=made):
         found[(v.driver, v.line)][v.month] = v.value
     return made, found
+
+
+@dataclass(frozen=True)
+class SetInfo:
+    """What another module may know about an assumption set (M7-1: a scenario's base)."""
+
+    id: UUID
+    legal_entity_id: UUID
+    family_id: UUID
+    name: str
+    version: int
+    status: str
+    cutover: date
+    months: list[date]  # the first day of each month of the horizon
+    loan_codes: frozenset[str]
+
+
+def set_info(ctx: WorkspaceContext, entity_id: UUID, set_id: UUID) -> SetInfo:
+    made = _set(ctx, entity_id, set_id, READ)
+    return SetInfo(
+        id=made.id, legal_entity_id=made.legal_entity_id, family_id=made.family_id,
+        name=made.name, version=made.version, status=made.status, cutover=made.cutover,
+        months=horizon(made.cutover, made.months), loan_codes=frozenset(loan_codes(made)),
+    )  # fmt: skip
+
+
+@dataclass(frozen=True)
+class NewLoanRow:
+    """A new loan for a derived set (M7-2: from a scenario's new financing)."""
+
+    code: str
+    name: str
+    amount: Decimal
+    drawdown_month: date
+    structure: str
+    term_months: int
+    annual_rate: Decimal
+    interest_only_months: int = 0
+
+
+@transaction.atomic
+def derive_set(  # noqa: PLR0913 (keyword-only parts of the new set)
+    ctx: WorkspaceContext,
+    entity_id: UUID,
+    base_id: UUID,
+    *,
+    name: str,
+    note: str,
+    values: dict[tuple[str, str], dict[date, Decimal]],
+    new_loans: list[NewLoanRow],
+) -> AssumptionSet:
+    """A new draft set (its own family) with the base's horizon, tax position and loans, the
+    base's values replaced by ``values`` where they differ (source MANUAL), and ``new_loans``. It
+    goes through the normal approval (M7-2: a scenario promoted to an assumption-set draft)."""
+    base = _set(ctx, entity_id, base_id, RUN)
+    made = AssumptionSet.objects.create(
+        tenant=ctx.tenant, legal_entity_id=base.legal_entity_id, name=name.strip()[:120],
+        cutover=base.cutover, months=base.months, start_from=base.start_from,
+        note=note.strip()[:500], created_by=ctx.user, tax_losses_bf=base.tax_losses_bf,
+        tax_paid_ytd=base.tax_paid_ytd, recognise_loss_dta=base.recognise_loss_dta,
+    )  # fmt: skip
+    AssumptionLoan.objects.bulk_create(
+        [AssumptionLoan(tenant=ctx.tenant, assumption_set=made, **{
+            f.name: getattr(loan, f.name) for f in AssumptionLoan._meta.concrete_fields
+            if f.name not in ("id", "tenant", "assumption_set", "created_at")})
+         for loan in AssumptionLoan.objects.filter(assumption_set=base)]
+        + [AssumptionLoan(tenant=ctx.tenant, assumption_set=made, code=x.code, name=x.name,
+                          kind=AssumptionLoan.Kind.NEW, amount=x.amount,
+                          drawdown_month=x.drawdown_month, structure=x.structure,
+                          term_months=x.term_months, annual_rate=x.annual_rate,
+                          interest_only_months=x.interest_only_months)
+           for x in new_loans]
+    )  # fmt: skip
+    rows: list[AssumptionValue] = []
+    seen: set[tuple[str, str, date]] = set()
+    for v in AssumptionValue.objects.filter(assumption_set=base):
+        value = values.get((v.driver, v.line), {}).get(v.month, v.value)
+        source = v.source if value == v.value else Source.MANUAL
+        rows.append(AssumptionValue(tenant=ctx.tenant, assumption_set=made, driver=v.driver,
+                                    line=v.line, month=v.month, value=value,
+                                    source=source))  # fmt: skip
+        seen.add((v.driver, v.line, v.month))
+    months = set(horizon(base.cutover, base.months))
+    for (driver, line), series in sorted(values.items()):
+        for month, value in sorted(series.items()):
+            if month in months and (driver, line, month) not in seen:
+                rows.append(AssumptionValue(tenant=ctx.tenant, assumption_set=made,
+                                            driver=driver, line=line, month=month, value=value,
+                                            source=Source.MANUAL))  # fmt: skip
+    AssumptionValue.objects.bulk_create(rows)
+    _audit(ctx, "created", made, start_from="SCENARIO", note=made.note,
+           base_set_id=str(base.id))  # fmt: skip
+    return made
+
+
+def observed_days(ctx: WorkspaceContext, entity_id: UUID, cutover: date) -> dict[str, Decimal]:
+    """DSO, DIO and DPO observed over the 12 months to the cut-over (M7-4), as a set started from
+    actuals takes them: balances at the cut-over over the year's revenue or cost of sales x 365."""
+    entity = get_entity(ctx, entity_id, READ).id
+    found = observed(history(ctx, entity, cutover))
+    return {k: found[k] for k in ("dso", "dio", "dpo")}

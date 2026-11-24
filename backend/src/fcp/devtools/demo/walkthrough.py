@@ -22,10 +22,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+from django.db.models import F
 from django.test import Client
 
 from fcp.modules.identity.api import User
 
+from . import agreement
+from .agreement import Agreement
 from .books import BANK, DemoBooks, build_demo_books
 from .camt import Txn, camt053
 
@@ -116,6 +119,7 @@ class DemoResult:
     steps: list[str] = field(default_factory=list)
     statements: dict[str, Any] = field(default_factory=dict)
     forecast: dict[str, Any] = field(default_factory=dict)
+    agreements: list[Agreement] = field(default_factory=list)
 
 
 def _demo_invoice_pdf(text: str, amount: str) -> bytes:
@@ -388,11 +392,12 @@ def _engagement(owner: "DemoClient", host: str, slug: str, year: int) -> dict[st
 
 def _fixed_assets(owner: "DemoClient", base: str, by_code: dict[str, str],
                   year: int) -> dict[str, Any]:  # fmt: skip
-    """Two synthetic assets bought in December and brought into use on 1 January, so under IAS 16
-    depreciation starts in January (M6F-3); January's depreciation is prepared as a draft entry
-    (M6-1). The register only prepares; the normal workflow approves and posts it."""
+    """Two synthetic assets bought and brought into use on 1 January (their purchase is booked in
+    the ledger first, so the register agrees with it, V1-4); under IAS 16 depreciation starts in
+    January (M6F-3) and January's depreciation is prepared as a draft entry (M6-1). The register
+    only prepares; the normal workflow approves and posts it."""
     common = {"asset_account_id": by_code["1010"], "accumulated_account_id": by_code["1019"],
-              "expense_account_id": by_code["6600"], "acquired_on": f"{year}-12-10",
+              "expense_account_id": by_code["6600"], "acquired_on": f"{year + 1}-01-01",
               "available_on": f"{year + 1}-01-01"}  # fmt: skip
     for body in (
         {"code": "VAN-1", "name": "Delivery van (Demo)", "category": "VEHICLES",
@@ -446,6 +451,103 @@ def _rolling(owner: "DemoClient", base: str, set_id: str) -> dict[str, Any]:
     if got["latest"] is None or got["latest"]["status"] != "VALID" or got["stale"]:
         raise DemoStepError(f"The rolling forecast did not run cleanly: {got['stale_reasons']}")
     return got
+
+
+def _scenario(owner: "DemoClient", base: str, set_id: str, year: int) -> dict[str, Any]:
+    """A scenario on the approved assumptions (M7): revenue 15% lower from July of the first
+    projected year and every rate 2 points higher, shared, compared with its base, and a tornado
+    of the lowest month-end cash. Hypothetical: nothing in the plan or the books changes."""
+    made = owner.call("POST", f"{base}/scenarios", {
+        "name": "Slower second half (Demo)", "base_set_id": set_id,
+        "description": "Orders slow from July; rates rise"}, 201)  # fmt: skip
+    url = f"{base}/scenarios/{made['id']}"
+    owner.call("POST", f"{url}/overrides", {
+        "type": "PCT_CHANGE", "rationale": "Orders slow from July",
+        "params": {"driver": "revenue", "percent": "-15", "start_month": f"{year + 1}-07"}},
+        201)  # fmt: skip
+    owner.call("POST", f"{url}/overrides", {
+        "type": "RATE_CHANGE", "rationale": "Rates rise",
+        "params": {"target": "ALL", "points": "2"}}, 201)  # fmt: skip
+    owner.call("POST", f"{url}/share", {})
+    compared = owner.call("GET", f"{url}/comparison?granularity=YEAR")
+    if not compared["valid"]:
+        raise DemoStepError(f"The scenario fails its checks: {compared['failures']}")
+    total = compared["effects"][-1]["changes"]
+    tornado = owner.call("POST", f"{base}/sensitivity/tornado", {
+        "scenario_id": made["id"], "output": "MIN_CASH", "drivers": [],
+        "percent": "10"})  # fmt: skip
+    return {"id": made["id"], "revenue": total["PL.REVENUE"], "cash": total["BS.CASH"],
+            "nature": compared["nature"], "top": tornado["bars"][0]["label"]}  # fmt: skip
+
+
+def _report_pack(owner: "DemoClient", accountant: "DemoClient", base: str,
+                 year: int) -> dict[str, Any]:  # fmt: skip
+    """The December management pack (M8): the accountant generates it, explains the variances it
+    flags, regenerates and submits it; the owner, who did not prepare it, finalises it; the PDF
+    export no longer says DRAFT in its name."""
+    url = f"{base}/report-packs"
+    pack = accountant.call("POST", url, {"period_kind": "MONTH", "month": f"{year}-12-01",
+                                         "title": f"Management pack, December {year} (Demo)"},
+                           201)  # fmt: skip
+    budget = pack["snapshot"]["blocks"]["budget"]
+    explained = 0
+    if budget["status"] == "ok":
+        version = budget["data"]["version_id"]
+        for report in budget["data"]["reports"]:
+            if report["comparison"] != "ACTUAL_VS_BUDGET":
+                continue
+            for row in report["rows"]:
+                if row["requires_explanation"] and not row["explanation"]:
+                    accountant.call("POST", f"{base}/budget-versions/{version}/explanations", {
+                        "line_id": row["line_id"], "month": f"{year}-12-01",
+                        "view": report["view"], "comparison": "ACTUAL_VS_BUDGET",
+                        "comment": "Demo explanation: timing of orders"}, 201)  # fmt: skip
+                    explained += 1
+    accountant.call("POST", f"{url}/{pack['id']}/regenerate", {})
+    accountant.call(
+        "POST",
+        f"{url}/{pack['id']}/comments",
+        {"section": "commentary", "text": "A synthetic year: figures for demonstration only."},
+    )
+    accountant.call("POST", f"{url}/{pack['id']}/submit", {})
+    final = owner.call("POST", f"{url}/{pack['id']}/finalise", {"note": "Demo sign-off"})
+    if final["status"] != "FINAL":
+        raise DemoStepError(f"The pack could not be finalised: {final.get('blockers')}")
+    pdf = owner.get(f"{url}/{pack['id']}/export?format=pdf&lang=en")
+    if pdf.status_code != 200 or not pdf.content.startswith(b"%PDF"):
+        raise DemoStepError(f"The pack's PDF export returned {pdf.status_code}")
+    return {"id": pack["id"], "explained": explained, "sections": len(final["sections"]),
+            "filename": pdf["Content-Disposition"].split("filename=")[1].strip('"')}  # fmt: skip
+
+
+def _vat(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) -> dict[str, Any]:
+    """VAT (V1-2): the owner sets quarterly VAT periods; the accountant prepares the first
+    quarter's report from the posted books; the owner, who did not prepare it, reviews and
+    finalises it and records the filing with a made-up portal reference. Nothing is sent
+    anywhere."""
+    owner.call("POST", f"{base}/vat-period-schemes",
+               {"months": 3, "effective_from": f"{year}-01-01",
+                "note": "Demo: quarterly, as if set by the Tax Department"}, 201)  # fmt: skip
+    report = accountant.call("POST", f"{base}/vat-reports", {"period_start": f"{year}-01-01"}, 201)
+    url = f"{base}/vat-reports/{report['id']}"
+    reviewed = owner.call("POST", f"{url}/review", {})
+    if reviewed["status"] != "REVIEWED":
+        raise DemoStepError(f"The VAT report could not be reviewed: {reviewed.get('blockers')}")
+    signed = owner.call("POST", f"{url}/finalise", {})
+    if signed["status"] != "FINALISED":
+        raise DemoStepError(f"The VAT report could not be finalised: {signed.get('blockers')}")
+    owner.call("POST", f"{url}/filed",
+               {"filed_on": f"{year}-04-20", "reference": "DEMO-0001",
+                "evidence": "Demo: acknowledgement kept with the books"})  # fmt: skip
+    totals = signed["snapshot"]["totals"]
+    boxes = {b["box"]: b["amount"] for b in signed["snapshot"]["return"]["boxes"]}
+    return {"id": report["id"],
+            "boxes": f"Box 1 {boxes['1']}, Box 4 {boxes['4']}, Box 5 {boxes['5']}, "
+                     f"Box 6 {boxes['6']}, Box 7 {boxes['7']}",
+            "sales_vat": totals["sales_vat"], "purchase_vat": totals["purchase_vat"],
+            "net": totals["net"], "direction": totals["direction"],
+            "exceptions": len(signed["snapshot"]["exceptions"]),
+            "reference": "DEMO-0001"}  # fmt: skip
 
 
 def _export_and_deletion(owner: "DemoClient", slug: str) -> dict[str, Any]:
@@ -532,6 +634,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     )
     by_code = {a["code"]: a["id"] for a in accounts}
     vat_accounts = {a["code"] for a in accounts if a["vat_role"]}
+    pnl_accounts = {a["code"] for a in accounts if a["type"] in ("INCOME", "EXPENSE")}
     fiscal_year = accountant.call(
         "POST", f"{base}/fiscal-years", {"start_date": books.fiscal_year_start.isoformat()}, 201
     )
@@ -557,6 +660,13 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
             if code in vat_accounts:
                 line["vat_code_id"] = f"CY:{vat or 'S19'}:open"
             result.append(line)
+        # The taxable amount carries the same VAT code as its VAT (V1-2), so the VAT report can
+        # count it: income and expense lines of an entry with VAT on one code.
+        codes = {ln["vat_code_id"] for ln in result if ln.get("vat_code_id")} - {"CY:SETTLE:open"}
+        if len(codes) == 1:
+            for (spec, _dr, _cr), ln in zip(rows, result, strict=True):
+                if spec.partition("!")[0].partition("@")[0] in pnl_accounts:
+                    ln["vat_code_id"] = next(iter(codes))
         return result
 
     def draft(accounting_date: date, description: str, rows: list[Any]) -> dict[str, Any]:
@@ -815,6 +925,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          f"{engaged['clients']} client in the firm portfolio; after the owner revoked it, the "
          "firm's next request is refused and the client is gone from its portfolio")  # fmt: skip
 
+    supplier = next(c.code for c in books.counterparties if c.kind == "SUPPLIER")
+    through_workflow(draft(date(year + 1, 1, 1), "Delivery van and laptops (Demo), invoice FA-1",
+                           [("1010", Decimal("27600.00"), Decimal(0)),
+                            (f"2100@{supplier}", Decimal(0), Decimal("27600.00"))]))  # fmt: skip
     run = _fixed_assets(accountant, base, by_code, year)
     posted_dep = through_workflow({"id": run["entry_id"]})
     step(f"fixed-asset register: 2 assets; depreciation for {year + 1}-01 prepared by the "
@@ -837,6 +951,34 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     rolled = _rolling(owner, base, plan["id"])
     step(f"rolling forecast: the next {rolled['horizon']} months from the approved assumptions, "
          f"{rolled['latest']['status']}, current; re-run hourly when the books move")  # fmt: skip
+    what_if = _scenario(owner, base, plan["id"], year)
+    step(f"scenario 'Slower second half' on the approved assumptions, shared and compared: "
+         f"{what_if['nature'].lower()}, all checks hold; revenue {what_if['revenue']}, closing "
+         f"cash {what_if['cash']} against the base; tornado: {what_if['top']} moves the lowest "
+         "cash most")  # fmt: skip
+    packed = _report_pack(owner, accountant, base, year)
+    step(f"management pack for December {year}: generated by the accountant, "
+         f"{packed['explained']} variance(s) explained, submitted, finalised by the owner "
+         f"({packed['sections']} sections); PDF {packed['filename']}")  # fmt: skip
+    vat = _vat(owner, accountant, base, year)
+    step(f"VAT: quarterly periods from {year}-01-01; the first quarter's report prepared by the "
+         f"accountant from the posted books: output VAT {vat['sales_vat']}, input VAT "
+         f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}; return "
+         f"{vat['boxes']} (box rules unverified), "
+         f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and "
+         f"recorded as filed (reference {vat['reference']}); nothing was sent to the Tax "
+         "Department")  # fmt: skip
+    agreements = agreement.check(
+        owner.call, base, year, statements=statements, forecast=forecast,
+        budget_version=budget["id"], pack_id=packed["id"], vat_report=vat["id"],
+    )  # fmt: skip
+    failed = [a for a in agreements if not a.ok]
+    if failed:
+        raise DemoStepError("Figures differ between screens: " + "; ".join(
+            f"{a.name}: {a.left} against {a.right}" for a in failed))  # fmt: skip
+    step(f"the numbers agree from screen to screen: {len(agreements)} checks from the ledger "
+         "through the statements, budget variance, KPIs, cash forecast, fixed assets, "
+         "projection and report pack to the VAT return")  # fmt: skip
     exported = _export_and_deletion(owner, slug)
     step(f"full export of the workspace: {exported['tables']} tables and {exported['files']} "
          "document file(s), every file matching its count and hash in the manifest; a spare "
@@ -844,7 +986,10 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
          "cancelled")  # fmt: skip
 
     if share_with:
-        viewer = User.objects.filter(email__iexact=share_with).order_by("created_at").first()
+        # The account that signed in last: a reset identity-provider user (as the browser
+        # walk-through does) signs in as a new account with the same email (V1-4).
+        latest = (F("last_login").desc(nulls_last=True), "-created_at")
+        viewer = User.objects.filter(email__iexact=share_with).order_by(*latest).first()
         if viewer is None:
             say(f"! no user with email {share_with}; sign in once through the web UI, then rerun")
         else:
@@ -866,6 +1011,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
         forecast=forecast,
         steps=steps,
         statements=statements,
+        agreements=agreements,
     )
 
 

@@ -18,6 +18,7 @@ import {
 import { PersonalPlanPage } from "./pages/PersonalPlan";
 import { PortfolioPage } from "./pages/Portfolio";
 import { EngagementsPage } from "./pages/Engagements";
+import { VatPage } from "./pages/Vat";
 import { WorkspaceDataPage } from "./pages/WorkspaceData";
 import { FixedAssetsPage } from "./pages/FixedAssets";
 import { AssumptionsPage } from "./pages/Assumptions";
@@ -35,12 +36,18 @@ import {
   EntryDetailPage,
   NewEntryPage,
 } from "./pages/Entries";
+import { LedgerSettingsPage } from "./pages/LedgerSettings";
+import { FxDifferencesPage } from "./pages/FxDifferences";
 import { PeriodsPage } from "./pages/Periods";
+import { ReportPacksPage } from "./pages/ReportPacks";
 import { StatementsPage } from "./pages/Statements";
 import { IntegrityPage, TrialBalancePage } from "./pages/Reports";
 import { WorkspaceHome, WorkspacesPage } from "./pages/Workspaces";
 import { OutlookPage } from "./pages/Outlook";
 import { ProjectionsPage } from "./pages/Projections";
+import { ScenariosPage } from "./pages/Scenarios";
+import { SensitivityPage } from "./pages/Sensitivity";
+import { WorkingCapitalPage } from "./pages/WorkingCapital";
 
 const router = createBrowserRouter([
   {
@@ -66,6 +73,12 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/assumptions", element: <AssumptionsPage /> },
       { path: "w/:slug/e/:entityId/projections", element: <ProjectionsPage /> },
       { path: "w/:slug/e/:entityId/outlook", element: <OutlookPage /> },
+      { path: "w/:slug/e/:entityId/scenarios", element: <ScenariosPage /> },
+      { path: "w/:slug/e/:entityId/sensitivity", element: <SensitivityPage /> },
+      {
+        path: "w/:slug/e/:entityId/working-capital",
+        element: <WorkingCapitalPage />,
+      },
       { path: "w/:slug/e/:entityId/commitments", element: <CommitmentsPage /> },
       {
         path: "w/:slug/e/:entityId/custom-kpis",
@@ -121,10 +134,23 @@ const router = createBrowserRouter([
       { path: "w/:slug/e/:entityId/receivables", element: <ReceivablesPage /> },
       { path: "w/:slug/e/:entityId/periods", element: <PeriodsPage /> },
       {
+        path: "w/:slug/e/:entityId/ledger-settings",
+        element: <LedgerSettingsPage />,
+      },
+      {
+        path: "w/:slug/e/:entityId/fx-differences",
+        element: <FxDifferencesPage />,
+      },
+      {
         path: "w/:slug/e/:entityId/trial-balance",
         element: <TrialBalancePage />,
       },
       { path: "w/:slug/e/:entityId/statements", element: <StatementsPage /> },
+      {
+        path: "w/:slug/e/:entityId/report-packs",
+        element: <ReportPacksPage />,
+      },
+      { path: "w/:slug/e/:entityId/vat", element: <VatPage /> },
       { path: "w/:slug/e/:entityId/integrity", element: <IntegrityPage /> },
       { path: "w/:slug/e/:entityId/engagements", element: <EngagementsPage /> },
     ],

@@ -44,7 +44,10 @@ def window_code() -> str:
 
 def test_catalogue_lists_codes_flagged_unverified(books: dict[str, Any]) -> None:
     codes = books["client"].get(f"{books['base']}/vat-codes").json()
-    assert {c["code"] for c in codes} == {"S19", "R9", "R5", "Z0", "EX", "RC", "OUT", "SETTLE"}
+    assert {"S19", "R9", "R5", "R3", "Z0", "EX", "RC", "OUT", "SETTLE"} <= {
+        c["code"] for c in codes
+    }
+    assert len(codes) == 32  # with the EU, reverse-charge and import codes (V1-2b)
     assert all(c["verified"] is False for c in codes)
     assert "tax professional" in codes[0]["verification_note"]
     s19 = next(c for c in codes if c["code"] == "S19")

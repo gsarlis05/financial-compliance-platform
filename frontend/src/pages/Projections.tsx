@@ -26,8 +26,8 @@ import { formatAmount } from "../money";
 import { NatureTag } from "./CashForecast";
 
 type Kind = "line" | "subtotal" | "total";
-const REVENUE = ["REV.SALES", "REV.SERVICES", "REV.OTHER"];
-const OPEX = [
+export const REVENUE = ["REV.SALES", "REV.SERVICES", "REV.OTHER"];
+export const OPEX = [
   "OPEX.PAYROLL",
   "OPEX.RENT",
   "OPEX.UTILITIES",
@@ -749,7 +749,12 @@ export function ProjectionsPage() {
   const [explain, setExplain] = useState<{ key: string; index: number } | null>(
     null,
   );
-  const runId = selected ?? list.data?.[0]?.id ?? null;
+  // The published projection first (the one the outlook and report packs use), then the latest.
+  const runId =
+    selected ??
+    list.data?.find((r) => r.is_published && !r.rolling)?.id ??
+    list.data?.[0]?.id ??
+    null;
   const shown = useProjection(runId, granularity);
   const data = shown.data;
   const explainId =

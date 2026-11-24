@@ -104,7 +104,7 @@ def close(a: Decimal | str, b: str) -> bool:
 def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> None:
     body = run(k)
     assert body["status"] == "VALID"
-    assert body["library"] == "CORE@1.0"
+    assert body["library"] == "CORE@1.1"
     assert body["unmapped_accounts"] == 0
     v = values(body)
     expected = {
@@ -126,6 +126,15 @@ def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> No
         "NET_PROFIT_GROWTH": "-0.75",
         "DEBT_TO_EQUITY": "0.15",
         "INTEREST_COVERAGE": "25",
+        # CORE@1.1 (M7-6). EBITDA of the 12 months to March 2026: 1,000 - 600 - 100 = 300 (the
+        # February 2025 sale is outside them). Net debt: loan 300 - cash 2,290 = -1,990 (net cash).
+        "NET_DEBT_TO_EBITDA": str(Decimal(-1990) / Decimal(300)),
+        # (EBITDA 300 - tax 40) / (interest 10 + the loan, all due within 12 months: 300).
+        "DSCR": str(Decimal(260) / Decimal(310)),
+        # Revenue 1,000 x 365 / 90 over average receivables (0 + 500) / 2 = 250.
+        "RECEIVABLES_TURNOVER": str(Decimal(1000) * Decimal(365) / Decimal(90) / Decimal(250)),
+        # Cost of sales 600 x 365 / 90 over average stock 200.
+        "INVENTORY_TURNOVER": str(Decimal(600) * Decimal(365) / Decimal(90) / Decimal(200)),
     }
     for key, want in expected.items():
         assert close(v[key], want), (key, v[key], want)
@@ -134,7 +143,7 @@ def test_every_core_kpi_matches_the_hand_computed_value(k: dict[str, Any]) -> No
     first = body["values"][0]
     assert (first["nature"], first["definition_id"], first["display"]) == (
         "ACTUAL",
-        "CORE@1.0:GROSS_MARGIN",
+        "CORE@1.1:GROSS_MARGIN",
         "percent",
     )
 
@@ -169,7 +178,7 @@ def test_drill_down_reproducibility_and_latest(k: dict[str, Any]) -> None:
         .json()
     )
     refs = {(ln["input_kind"], ln["input_ref"]) for ln in explained["lineage"]}
-    assert ("FORMULA", "CORE@1.0:DSO") in refs
+    assert ("FORMULA", "CORE@1.1:DSO") in refs
     ar = k["accounts"]["1200"]["id"]
     sales = k["accounts"]["4000"]["id"]
     amounts = {ln["input_ref"]: ln["amount"] for ln in explained["lineage"]}
@@ -191,7 +200,7 @@ def test_drill_down_reproducibility_and_latest(k: dict[str, Any]) -> None:
         == 404
     )
     definitions = k["client"].get(f"{k['base']}/kpi-definitions").json()
-    assert len(definitions) == 19
+    assert len(definitions) == 23
     assert all(d["convention"] and d["example"] for d in definitions)
 
 
@@ -256,7 +265,7 @@ def test_negative_equity_and_cash_burn_in_the_pure_engine() -> None:
 
 
 def test_every_library_formula_compiles_with_the_documented_unit() -> None:
-    assert seed_libraries() == 19  # idempotent at runtime too
+    assert seed_libraries() == 42  # CORE@1.0 (19) and CORE@1.1 (23); idempotent at runtime too
     units = {
         "percent": "ratio",
         "ratio": "ratio",
@@ -269,6 +278,7 @@ def test_every_library_formula_compiles_with_the_documented_unit() -> None:
     assert {f.name for f in functions} == {
         "flow",
         "prior_flow",
+        "ltm_flow",
         "balance",
         "opening",
         "avg_balance",

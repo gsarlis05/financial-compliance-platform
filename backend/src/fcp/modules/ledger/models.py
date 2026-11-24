@@ -35,6 +35,8 @@ class VatCode(models.Model):
     name = models.CharField(max_length=200)
     name_el = models.CharField(max_length=200, blank=True)
     treatment = models.CharField(max_length=16, choices=Treatment.choices)
+    # V1-2b (#213): the code's VAT category, which the VAT return's box rules map (tax module).
+    category = models.CharField(max_length=32, blank=True, default="")
     rate = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
     valid_from = models.DateField(null=True, blank=True, help_text="Null: no lower bound")
     valid_to = models.DateField(null=True, blank=True, help_text="Null: still valid")
@@ -199,6 +201,10 @@ class LedgerSettings(TenantOwned):
     legal_entity = models.OneToOneField(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
     approval_policy = models.CharField(max_length=16, choices=Approval.choices)
     approval_threshold = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
+    # V1-2h: where exchange differences go (an account mapped to FX.DIFF; 7020 in the template).
+    fx_account = models.ForeignKey(
+        "Account", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
@@ -274,6 +280,8 @@ class JournalEntry(TenantOwned):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_hash = models.CharField(max_length=64, blank=True)
+    # V1-1 (#207): approved by its preparer in a one-person workspace (database-checked).
+    self_approved = models.BooleanField(default=False)
     rejection_reason = models.CharField(max_length=500, blank=True)
     # Set at posting.
     period = models.ForeignKey(
@@ -311,6 +319,19 @@ class JournalEntry(TenantOwned):
                 | models.Q(entry_no__isnull=False, posting_seq__isnull=False, period__isnull=False),
                 name="ledger_entry_posted_fields",
             ),
+            # Segregation of duties (V1-1): the approver is never the preparer, except a
+            # self-approval, which only a one-person workspace allows (trigger).
+            models.CheckConstraint(
+                condition=models.Q(approved_by__isnull=True)
+                | ~models.Q(approved_by=models.F("prepared_by"))
+                | models.Q(self_approved=True),
+                name="ledger_entry_approver_not_preparer",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(self_approved=False)
+                | models.Q(approved_by=models.F("prepared_by")),
+                name="ledger_entry_self_approved_by_preparer",
+            ),
         ]
         indexes = [models.Index(fields=["legal_entity", "status", "accounting_date"])]
 
@@ -331,6 +352,14 @@ class JournalLine(TenantOwned):
     vat_code = models.ForeignKey(
         VatCode, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
+    # VAT details (V1-2b, #213). The tax point when it differs from the accounting date; on an
+    # input VAT line, the share of the VAT that may be deducted and the VAT that may not. The line's
+    # amount is the deductible VAT; the blocked VAT is recorded for the VAT return's schedules.
+    tax_point = models.DateField(null=True, blank=True)
+    vat_recovery_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    vat_blocked = models.DecimalField(max_digits=19, decimal_places=4, null=True, blank=True)
     # Multi-currency (M6F-1, #80): the transaction currency amount and the rate that converted it
     # into the functional amounts above (debit, credit). All four are empty for a transaction in
     # the functional currency, which is the only kind allowed while multi-currency is disabled.
@@ -340,11 +369,36 @@ class JournalLine(TenantOwned):
     exchange_rate = models.DecimalField(  # functional units per one transaction unit
         max_digits=20, decimal_places=10, null=True, blank=True
     )
+    # V1-2h (#219; owner decision 2026-11-23): the rate is the one of the transaction's date and
+    # time, recorded with when it applied and where it came from (bank, invoice, stored rate).
+    rate_at = models.DateTimeField(null=True, blank=True)
+    rate_source = models.CharField(max_length=200, blank=True)
+
+    # V1-2h2 (#230): an exchange difference on a foreign-currency position. The line keeps the
+    # position's currency with no amount in it (the foreign balance does not change), the rate it
+    # was revalued at (none when realised on settlement) and moves only the functional amount.
+    class FxDifference(models.TextChoices):
+        NONE = "", "None"
+        UNREALISED = "UNREALISED"
+        REALISED = "REALISED"
+
+    fx_difference = models.CharField(
+        max_length=10, choices=FxDifference.choices, blank=True, default=""
+    )
 
     class Meta:
         db_table = "ledger_journal_line"
         constraints = [
             models.UniqueConstraint(fields=["entry", "line_no"], name="ledger_line_number_unique"),
+            models.CheckConstraint(
+                condition=models.Q(vat_recovery_percent__isnull=True)
+                | models.Q(vat_recovery_percent__gte=0, vat_recovery_percent__lte=100),
+                name="ledger_line_vat_recovery_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(vat_blocked__isnull=True) | models.Q(vat_blocked__gte=0),
+                name="ledger_line_vat_blocked_positive",
+            ),
             # Exactly one side, strictly positive (AC-C1, enforced by the database too).
             models.CheckConstraint(
                 condition=(models.Q(debit__gt=0) & models.Q(credit=0))
@@ -358,15 +412,36 @@ class JournalLine(TenantOwned):
                     txn_debit__isnull=True,
                     txn_credit__isnull=True,
                     exchange_rate__isnull=True,
+                    fx_difference="",
                 )
                 | (
-                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0)
+                    models.Q(txn_currency__isnull=False, exchange_rate__gt=0, fx_difference="")
                     & (
                         (models.Q(debit__gt=0, txn_debit__gt=0, txn_credit=0))
                         | (models.Q(credit__gt=0, txn_credit__gt=0, txn_debit=0))
                     )
+                )
+                # An exchange difference: the currency, no foreign amount, a revaluation rate.
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="UNREALISED",
+                    exchange_rate__gt=0,
+                )
+                | models.Q(
+                    txn_currency__isnull=False,
+                    txn_debit=0,
+                    txn_credit=0,
+                    fx_difference="REALISED",
+                    exchange_rate__isnull=True,
                 ),
                 name="ledger_line_txn_currency_shape",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(txn_currency__isnull=True)
+                | (models.Q(rate_at__isnull=False) & ~models.Q(rate_source="")),
+                name="ledger_line_txn_rate_source",
             ),
         ]
 
@@ -463,6 +538,8 @@ class PeriodUnlock(TenantOwned):
     active_until = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     decision_note = models.CharField(max_length=500, blank=True)
+    # V1-1 (#207): in a one-person workspace the requester's own approval opens the period.
+    self_approved = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ledger_period_unlock"
@@ -475,7 +552,8 @@ class PeriodUnlock(TenantOwned):
             ),
             models.CheckConstraint(
                 condition=models.Q(first_approver__isnull=True)
-                | ~models.Q(first_approver=models.F("requested_by")),
+                | ~models.Q(first_approver=models.F("requested_by"))
+                | models.Q(self_approved=True, second_approver__isnull=True),
                 name="ledger_unlock_first_approver_not_requester",
             ),
             models.CheckConstraint(
@@ -630,5 +708,22 @@ class ExchangeRate(TenantOwned):
             models.CheckConstraint(
                 condition=~models.Q(base_currency=models.F("quote_currency")),
                 name="ledger_exchange_rate_pair",
+            ),
+        ]
+
+
+class VatFavourite(TenantOwned):
+    """A VAT code a user starred for a legal entity (V1-2i, #231): listed first in the entry form's
+    VAT code picker. A personal preference; it changes nothing in the books."""
+
+    legal_entity = models.ForeignKey(LEGAL_ENTITY, on_delete=models.PROTECT, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    vat_code = models.ForeignKey(VatCode, on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        db_table = "ledger_vat_favourite"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "user", "vat_code"], name="ledger_vat_favourite_once"
             ),
         ]

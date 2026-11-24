@@ -207,6 +207,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/approvals`, "nav.approvals"],
         [`${base}/bank`, "nav.bank"],
         [`${base}/fixed-assets`, "nav.fixedAssets"],
+        [`${base}/fx-differences`, "nav.fxDifferences"],
       ],
     },
     {
@@ -228,6 +229,9 @@ function MainNav({ base }: { base: string }) {
         [`${base}/assumptions`, "nav.assumptions"],
         [`${base}/projections`, "nav.projections"],
         [`${base}/outlook`, "nav.outlook"],
+        [`${base}/scenarios`, "nav.scenarios"],
+        [`${base}/sensitivity`, "nav.sensitivity"],
+        [`${base}/working-capital`, "nav.workingCapital"],
         [`${base}/kpis`, "nav.kpis"],
         [`${base}/custom-kpis`, "nav.customKpis"],
         [`${base}/goals`, "nav.goals"],
@@ -240,6 +244,8 @@ function MainNav({ base }: { base: string }) {
       links: [
         [`${base}/trial-balance`, "nav.trialBalance"],
         [`${base}/statements`, "nav.statements"],
+        [`${base}/report-packs`, "nav.packs"],
+        [`${base}/vat`, "nav.vat"],
       ],
     },
     {
@@ -249,6 +255,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/dimensions`, "nav.dimensions"],
         [`${base}/mapping`, "nav.mapping"],
         [`${base}/periods`, "nav.periods"],
+        [`${base}/ledger-settings`, "nav.ledgerSettings"],
         [`${base}/engagements`, "nav.engagements"],
         [`${base}/data`, "nav.data"],
       ],

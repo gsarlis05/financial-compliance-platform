@@ -387,6 +387,17 @@ button:disabled {
   min-width: 9rem;
   max-width: 14rem;
 }
+.lines .vat-details {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+.lines .vat-details label {
+  display: block;
+  margin-top: 0.25rem;
+}
+.lines .vat-details input {
+  max-width: 10rem;
+}
 
 /* Financial statements (M2-8) */
 .segmented {
@@ -626,6 +637,20 @@ input.narrow {
   font-size: 11px;
   fill: var(--muted);
 }
+.chart-hypothetical {
+  fill: none;
+  stroke: #8a3ffc;
+  stroke-width: 2.5;
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+}
+.chart-bar-low {
+  fill: #8a3ffc;
+  opacity: 0.55;
+}
+.chart-bar-high {
+  fill: #8a3ffc;
+}
 .chart-forecast {
   fill: none;
   stroke: var(--text);
@@ -795,12 +820,21 @@ ul.alerts .card a {
 }
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 .dash-widget {
   padding: 1rem;
   min-width: 0;
+  grid-column: 1 / -1; /* full width unless chosen half (M8-4) */
+}
+.dash-widget.dash-half {
+  grid-column: auto;
+}
+@media (max-width: 52rem) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .dash-widget a,
 ul.alerts .card a {
@@ -875,4 +909,89 @@ ul.checklist li {
   background: var(--primary);
   color: #fff;
   font-weight: 600;
+}
+
+/* VAT box changes (V1-2d) */
+.inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+/* Combobox: VAT code picker and typing suggestions (V1-2i) */
+.combobox {
+  position: relative;
+}
+.combobox input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.combobox-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: 100%;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(28rem, 90vw);
+  max-height: 18rem;
+  overflow-y: auto;
+  margin: 2px 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.15);
+}
+.combobox-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.combobox-group {
+  display: block;
+  padding: 0.35rem 0.6rem 0.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.combobox-options li,
+.combobox-empty {
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combobox-options li.active {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.combobox-options li.active .combobox-hint {
+  color: inherit;
+}
+.vat-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.vat-pick .combobox {
+  flex: 1;
+  min-width: 9rem;
+  max-width: 14rem;
+}
+.star {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--warn);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.3rem;
+}
+.star:disabled {
+  color: var(--muted);
 }

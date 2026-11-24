@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from fcp.core.errors import NotFoundError, ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
-from fcp.modules.tenancy.api import WorkspaceContext, get_entity
+from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import entries
 from .errors import AlreadyReversedError, InvalidStateError, SegregationOfDutiesError
@@ -111,6 +111,19 @@ def create_reversal(
             reference=line.reference,
             due_date=line.due_date,
             vat_code_id=line.vat_code_id,
+            tax_point=line.tax_point,
+            vat_recovery_percent=None
+            if line.vat_recovery_percent is None
+            else str(line.vat_recovery_percent),
+            vat_blocked=None if line.vat_blocked is None else f"{line.vat_blocked:.2f}",
+            txn_currency=line.txn_currency,
+            txn_amount=None
+            if line.txn_currency is None
+            else str(line.txn_debit or line.txn_credit),
+            exchange_rate=None if line.exchange_rate is None else str(line.exchange_rate),
+            rate_at=line.rate_at,
+            rate_source=line.rate_source,
+            fx_difference=line.fx_difference,
         )
         for line in sorted(original.lines.all(), key=lambda ln: ln.line_no)
     ]
@@ -148,7 +161,12 @@ def link_reversal(entry: JournalEntry) -> None:
 
     def tags(ln: JournalLine) -> tuple[str, ...]:
         dims = sorted(str(t.value_id) for t in ln.dimension_tags.all())
-        return (*dims, f"counterparty={ln.counterparty_id}", f"vat={ln.vat_code_id}")
+        return (
+            *dims,
+            f"counterparty={ln.counterparty_id}",
+            f"vat={ln.vat_code_id}",
+            f"fx={ln.txn_currency}:{ln.exchange_rate}",
+        )
 
     expected = sorted((ln.account_id, ln.credit, ln.debit, tags(ln)) for ln in original.lines.all())
     actual = sorted((ln.account_id, ln.debit, ln.credit, tags(ln)) for ln in entry.lines.all())
@@ -282,9 +300,22 @@ def approve_unlock(ctx: WorkspaceContext, entity_id: UUID, unlock_id: UUID) -> P
     if unlock.status != PeriodUnlock.Status.REQUESTED:
         raise InvalidStateError(f"This unlock is {unlock.status.lower()}.")
     if ctx.user.id == unlock.requested_by_id:
-        raise SegregationOfDutiesError(
-            "You requested this unlock, so two other people must approve it."
-        )
+        if not self_approval_allowed(ctx):
+            raise SegregationOfDutiesError(
+                "You requested this unlock, so two other people must approve it."
+            )
+        # One-person workspace (V1-1): the requester's own approval opens the period, and the
+        # unlock is recorded as self-approved.
+        now = timezone.now()
+        unlock.first_approver, unlock.self_approved = ctx.user, True
+        unlock.status = PeriodUnlock.Status.ACTIVE
+        unlock.active_from = now
+        unlock.active_until = now + timedelta(minutes=unlock.window_minutes)
+        unlock.save(update_fields=["first_approver", "self_approved", "status", "active_from",
+                                   "active_until"])  # fmt: skip
+        _audit_unlock(ctx, unlock, "ledger.period.unlock_approved", approval=1,
+                      self_approved=True, active_until=unlock.active_until)  # fmt: skip
+        return unlock
     if ctx.user.id == unlock.first_approver_id:
         raise SegregationOfDutiesError(
             "You already approved this unlock; a second person must approve."

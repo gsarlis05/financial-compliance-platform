@@ -362,6 +362,9 @@ describe("EntryForm dimensions (M2-1)", () => {
           due_date: null,
           vat_code_id: null,
           vat_code: null,
+          tax_point: null,
+          vat_recovery_percent: null,
+          vat_blocked: null,
         },
       ],
     };
@@ -392,6 +395,7 @@ const parties: Counterparty[] = [
     name: "Alpha (Demo)",
     kind: "CUSTOMER",
     vat_no: "",
+    country: "",
     email: "",
     payment_terms_days: 30,
     status: "ACTIVE",
@@ -403,6 +407,7 @@ const parties: Counterparty[] = [
     name: "Beta (Demo)",
     kind: "SUPPLIER",
     vat_no: "",
+    country: "",
     email: "",
     payment_terms_days: 45,
     status: "ACTIVE",
@@ -468,6 +473,7 @@ describe("EntryForm VAT codes (M2-3)", () => {
       name: "Standard rate 19%",
       name_el: "",
       treatment: "STANDARD",
+      category: "DOMESTIC",
       rate: "0.1900",
       valid_from: null,
       valid_to: null,
@@ -485,14 +491,20 @@ describe("EntryForm VAT codes (M2-3)", () => {
     fill("Debit 1", "19.00");
     fill("Account 2", "vat");
     fill("Credit 2", "19.00");
-    const picker = screen.getByLabelText<HTMLSelectElement>("VAT 2");
+    const picker = screen.getByRole<HTMLInputElement>("combobox", {
+      name: "VAT 2",
+    });
     expect(picker.required).toBe(true);
-    expect(screen.getByLabelText<HTMLSelectElement>("VAT 1").required).toBe(
-      false,
-    );
-    expect(Array.from(picker.options).map((o) => o.text)).toContain(
-      "S19 · Standard rate 19% (unverified)",
-    );
+    expect(
+      screen.getByRole<HTMLInputElement>("combobox", { name: "VAT 1" })
+        .required,
+    ).toBe(false);
+    fireEvent.focus(picker);
+    expect(
+      screen.getByRole("option", {
+        name: "S19 · Standard rate 19% (unverified)",
+      }),
+    ).toBeInTheDocument();
     fill("VAT 2", "CY:S19:open");
     expect(
       screen.getByText(/not yet verified by a Cyprus tax professional/),
@@ -503,6 +515,61 @@ describe("EntryForm VAT codes (M2-3)", () => {
       { lines: { vat_code_id: string | null }[] },
     ];
     expect(body.lines.map((l) => l.vat_code_id)).toEqual([null, "CY:S19:open"]);
+  });
+
+  it("asks for a tax point, and on input VAT for the recoverable part (V1-2b)", async () => {
+    const inputVat: Account = {
+      ...vatAccount,
+      id: "vin",
+      code: "1450",
+      name: "VAT recoverable",
+      type: "ASSET",
+      normal_side: "DEBIT",
+      vat_role: "INPUT",
+    };
+    const { onSave, container } = renderForm({
+      accounts: [...accounts, vatAccount, inputVat],
+      vatCodes: codes,
+    });
+    fill("Description", "Car hire, half business");
+    fill("Account 1", "vin");
+    fill("Debit 1", "9.50");
+    fill("Account 2", "a1");
+    fill("Credit 2", "9.50");
+    expect(screen.queryByLabelText("Tax point 1")).not.toBeInTheDocument();
+    fill("VAT 1", "CY:S19:open");
+    fireEvent.blur(screen.getByRole("combobox", { name: "VAT 1" }));
+    fireEvent.focus(screen.getByRole("combobox", { name: "VAT 2" }));
+    expect(screen.getByRole("group", { name: "Domestic" })).toBeInTheDocument();
+    fireEvent.blur(screen.getByRole("combobox", { name: "VAT 2" }));
+    fill("Tax point 1", "2026-03-31");
+    fill("Recoverable % 1", "50");
+    fill("Non-recoverable VAT 1", "9,50");
+    // Only input VAT has a recoverable part.
+    fill("Account 1", "vat");
+    expect(screen.queryByLabelText("Recoverable % 1")).not.toBeInTheDocument();
+    fill("Account 1", "vin");
+    await noAxeViolations(container);
+    fireEvent.click(screen.getByRole("button", { name: "Save and submit" }));
+    const [body] = onSave.mock.calls[0] as [
+      {
+        lines: {
+          tax_point: string | null;
+          vat_recovery_percent: string | null;
+          vat_blocked: string | null;
+        }[];
+      },
+    ];
+    expect(body.lines[0]).toMatchObject({
+      tax_point: "2026-03-31",
+      vat_recovery_percent: "50",
+      vat_blocked: "9.50",
+    });
+    expect(body.lines[1]).toMatchObject({
+      tax_point: null,
+      vat_recovery_percent: null,
+      vat_blocked: null,
+    });
   });
 });
 
@@ -554,5 +621,21 @@ describe("EntryActions (AC-F2)", () => {
       ),
     );
     expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+  });
+
+  it("in a one-person workspace the preparer may approve (V1-1)", () => {
+    const onAct = vi.fn();
+    render(
+      wrap(
+        <EntryActions
+          entry={{ ...posted, status: "SUBMITTED" }}
+          myId="u1"
+          onAct={onAct}
+          onePerson
+        />,
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(onAct).toHaveBeenCalledWith("approve");
   });
 });
