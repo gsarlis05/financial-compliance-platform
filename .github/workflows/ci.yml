@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start object storage (SeaweedFS) and antivirus (ClamAV) for the document tests
         working-directory: .
         run: |
@@ -101,7 +101,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -118,7 +118,7 @@ jobs:
     name: Security scans (Semgrep, gitleaks)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Semgrep (project rules)
@@ -138,7 +138,7 @@ jobs:
       TFLINT_IMAGE: ghcr.io/terraform-linters/tflint:v0.65.0
       CHECKOV_IMAGE: bridgecrew/checkov:3.4.3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: No apply path exists (AC-M0-6)
         run: |
           if grep -rnE '(terraform|tofu)[^#]*[[:space:]](apply|destroy|import)([[:space:]]|$)' \
@@ -168,7 +168,7 @@ jobs:
     name: Container images (build, checkov, production-like smoke; never pushed)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Dockerfile policy (checkov)
         run: >-
           docker run --rm -v "$PWD:/src" bridgecrew/checkov:3.4.3
@@ -197,7 +197,7 @@ jobs:
     name: Prove gates reject violations
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
