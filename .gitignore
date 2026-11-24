@@ -34,3 +34,6 @@ crash.log
 .DS_Store
 .idea/
 .vscode/
+
+# Local version 1 backups (V1-3): data and secrets, never committed
+backups/

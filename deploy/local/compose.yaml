@@ -1,0 +1,157 @@
+# Version 1 on the owner's own computer (V1-3, ADR-0057). Started by scripts/local/fcp.sh, which
+# writes the secrets to deploy/local/.env (never committed). Every port binds to 127.0.0.1 only.
+#   http://localhost:8088  the platform        http://localhost:8080  sign-in (Keycloak)
+#   http://localhost:8025  emails it sends (Mailpit; nothing leaves the computer)
+name: fcp-local
+
+x-app: &app
+  image: fcp-backend:local
+  read_only: true
+  tmpfs: ["/tmp"]
+  restart: unless-stopped
+  environment: &app-env
+    DJANGO_SETTINGS_MODULE: fcp.settings.local
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    CSRF_TRUSTED_ORIGINS: http://localhost:8088
+    POSTGRES_HOST: postgres
+    POSTGRES_DB: fcp
+    POSTGRES_APP_USER: fcp_app
+    POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD}
+    OIDC_ISSUER: http://localhost:8080/realms/fcp
+    OIDC_METADATA_URL: http://keycloak:8080/realms/fcp/.well-known/openid-configuration
+    OIDC_CLIENT_ID: fcp-backend
+    OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+    OIDC_REDIRECT_URI: http://localhost:8088/auth/callback
+    OIDC_POST_LOGOUT_REDIRECT_URI: http://localhost:8088/
+    LOGIN_REDIRECT_URL: /
+    LOGOUT_REDIRECT_URL: /
+    S3_ENDPOINT: http://objectstore:8333
+    S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+    S3_SECRET_KEY: ${S3_SECRET_KEY}
+    DOCUMENTS_BUCKET: fcp-documents
+    CLAMD_HOST: antivirus
+    SMTP_HOST: mail
+    SMTP_PORT: "1025"
+    APP_URL: http://localhost:8088
+  depends_on:
+    postgres: {condition: service_healthy}
+
+services:
+  postgres:
+    image: postgres:17.11
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fcp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+      - "./postgres/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro"
+      - "../../scripts/db/create_roles.sql:/fcp/create_roles.sql:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fcp"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  keycloak:
+    image: keycloak/keycloak:26.8.1
+    restart: unless-stopped
+    command: ["start", "--import-realm", "--http-enabled=true", "--health-enabled=true",
+              "--hostname=http://localhost:8080", "--hostname-backchannel-dynamic=true"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      FCP_OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: ["./keycloak:/opt/keycloak/data/import:ro"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  objectstore:
+    image: chrislusf/seaweedfs:4.52
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/fcp/seaweedfs-entrypoint.sh"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - "documents:/data"
+      - "../../infra/local/seaweedfs-entrypoint.sh:/fcp/seaweedfs-entrypoint.sh:ro"
+
+  antivirus:
+    image: clamav/clamav:1.4.3
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "true"
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  mail:
+    image: axllent/mailpit:v1.33.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:8025:8025"]
+
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *app-env
+      DB_ROLE: owner
+      POSTGRES_OWNER_USER: fcp_owner
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD}
+
+  api:
+    <<: *app
+    depends_on:
+      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    <<: *app
+    command: ["python", "manage.py", "banking_process_imports", "--loop"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  jobs:
+    <<: *app
+    command: ["/bin/sh", "/fcp/jobs.sh"]
+    environment:
+      <<: *app-env
+      POSTGRES_OWNER_USER: fcp_owner
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD}
+    volumes: ["./jobs.sh:/fcp/jobs.sh:ro"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  web:
+    image: fcp-web:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:uid=101,gid=101", "/etc/nginx/conf.d:uid=101,gid=101"]
+    environment:
+      API_UPSTREAM: http://api:8000
+      IDP_ORIGIN: http://localhost:8080
+      FORWARDED_PROTO: http
+    ports: ["127.0.0.1:8088:8080"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  documents:

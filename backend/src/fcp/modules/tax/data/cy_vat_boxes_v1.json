@@ -1,0 +1,297 @@
+{
+  "id": "CY-VAT-BOXES@1",
+  "jurisdiction": "CY",
+  "status": "PENDING_PROFESSIONAL_VERIFICATION",
+  "effective_from": null,
+  "effective_note": "Applies until superseded. The dates from which these rules apply are to be confirmed by a Cyprus tax professional (#93).",
+  "sources": [
+    {
+      "key": "spec",
+      "title": "Owner's specification 'Cyprus VAT Report Generator' v1.0, 2026-11-23 (brief 25)",
+      "section": "§1 return summary, §2 transaction mapping"
+    },
+    {
+      "key": "1",
+      "title": "Cyprus Tax Department - VAT Guide: Fill in your VAT Return (English, 6 August 2024)",
+      "url": "https://www.gov.cy/media/sites/167/2026/01/ENG-%CE%9F%CE%B4%CE%B7%CE%B3%CF%8C%CF%82-%CE%A6%CE%A0%CE%91.pdf"
+    },
+    {
+      "key": "2",
+      "title": "Cyprus Tax Department - Greek completion guide for the VAT return (18 December 2019)",
+      "url": "https://www.mof.gov.cy/mof/tax/TaxDep.nsf/F4C32AE3D3F79397C22589CF002832E6/$file/%CE%9F%CE%B4%CE%B7%CE%B3%CF%8C%CF%82%20%CE%B3%CE%B9%CE%B1%20%CE%A3%CF%85%CE%BC%CF%80%CE%BB%CE%AE%CF%81%CF%89%CF%83%CE%B7%20%CE%94%CE%AE%CE%BB%CF%89%CF%83%CE%B7%CF%82%20%CE%A6%CE%A0%CE%91%2018_12_2019.pdf"
+    }
+  ],
+  "boxes": [
+    {
+      "box": "1",
+      "label": "Output VAT, including applicable reverse-charge VAT",
+      "kind": "VAT"
+    },
+    {
+      "box": "2",
+      "label": "VAT on EU acquisitions of goods and related costs",
+      "kind": "VAT"
+    },
+    {
+      "box": "3",
+      "label": "Total VAT due (Box 1 + Box 2)",
+      "kind": "VAT",
+      "formula": "1+2"
+    },
+    {
+      "box": "4",
+      "label": "Deductible input VAT, including eligible import, acquisition and reverse-charge VAT",
+      "kind": "VAT"
+    },
+    {
+      "box": "5",
+      "label": "Net VAT (Box 3 - Box 4): positive is payable, negative is a credit",
+      "kind": "VAT",
+      "formula": "3-4"
+    },
+    {
+      "box": "6",
+      "label": "Sales and other reportable outputs, excluding VAT, including relevant reverse-charge values",
+      "kind": "VALUE"
+    },
+    {
+      "box": "7",
+      "label": "Purchases and other reportable inputs, excluding VAT",
+      "kind": "VALUE"
+    },
+    {
+      "box": "8A",
+      "label": "Intra-Community supplies of goods",
+      "kind": "VALUE"
+    },
+    {
+      "box": "8B",
+      "label": "Qualifying services supplied to other EU member states",
+      "kind": "VALUE"
+    },
+    {
+      "box": "9",
+      "label": "Zero-rated outputs, excluding Boxes 8A and 8B",
+      "kind": "VALUE"
+    },
+    {
+      "box": "10",
+      "label": "Qualifying outside-scope supplies with input deduction rights, excluding Box 8B",
+      "kind": "VALUE"
+    },
+    {
+      "box": "11A",
+      "label": "EU acquisitions of goods and related costs",
+      "kind": "VALUE"
+    },
+    {
+      "box": "11B",
+      "label": "Services received from VAT-registered suppliers in other EU member states",
+      "kind": "VALUE"
+    }
+  ],
+  "rules": [
+    {
+      "category": "DOMESTIC",
+      "line": "OUTPUT_VAT",
+      "boxes": [
+        "1"
+      ],
+      "source": "spec §2: domestic taxable sale"
+    },
+    {
+      "category": "DOMESTIC",
+      "line": "NET_SALE",
+      "boxes": [
+        "6"
+      ],
+      "source": "spec §2: domestic taxable sale"
+    },
+    {
+      "category": "DOMESTIC",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §2: domestic deductible purchase"
+    },
+    {
+      "category": "DOMESTIC",
+      "line": "NET_PURCHASE",
+      "boxes": [
+        "7"
+      ],
+      "source": "spec §2: domestic deductible purchase"
+    },
+    {
+      "category": "EU_GOODS_ACQUISITION",
+      "line": "OUTPUT_VAT",
+      "boxes": [
+        "2"
+      ],
+      "source": "spec §2: qualifying EU goods acquisition"
+    },
+    {
+      "category": "EU_GOODS_ACQUISITION",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §2: qualifying EU goods acquisition (4 if deductible)"
+    },
+    {
+      "category": "EU_GOODS_ACQUISITION",
+      "line": "NET_PURCHASE",
+      "boxes": [
+        "7",
+        "11A"
+      ],
+      "source": "spec §2: qualifying EU goods acquisition"
+    },
+    {
+      "category": "RC_EU_SERVICES",
+      "line": "OUTPUT_VAT",
+      "boxes": [
+        "1"
+      ],
+      "source": "spec §2: EU services received, Cyprus reverse charge"
+    },
+    {
+      "category": "RC_EU_SERVICES",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §2: EU services received (4 if deductible)"
+    },
+    {
+      "category": "RC_EU_SERVICES",
+      "line": "NET_PURCHASE",
+      "boxes": [
+        "6",
+        "7",
+        "11B"
+      ],
+      "source": "spec §2: EU services received"
+    },
+    {
+      "category": "RC_NON_EU_SERVICES",
+      "line": "OUTPUT_VAT",
+      "boxes": [
+        "1"
+      ],
+      "source": "spec §2: non-EU services received, Cyprus reverse charge"
+    },
+    {
+      "category": "RC_NON_EU_SERVICES",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §2: non-EU services received (4 if deductible)"
+    },
+    {
+      "category": "RC_NON_EU_SERVICES",
+      "line": "NET_PURCHASE",
+      "boxes": [
+        "6",
+        "7"
+      ],
+      "source": "spec §2: non-EU services received"
+    },
+    {
+      "category": "RC_DOMESTIC",
+      "line": "OUTPUT_VAT",
+      "boxes": [
+        "1"
+      ],
+      "source": "spec §2: domestic reverse-charge receipt"
+    },
+    {
+      "category": "RC_DOMESTIC",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §2: domestic reverse-charge receipt (4 if deductible)"
+    },
+    {
+      "category": "RC_DOMESTIC",
+      "line": "NET_PURCHASE",
+      "boxes": [
+        "6",
+        "7"
+      ],
+      "source": "spec §2: domestic reverse-charge receipt"
+    },
+    {
+      "category": "EU_GOODS_SUPPLY",
+      "line": "NET_SALE",
+      "boxes": [
+        "6",
+        "8A"
+      ],
+      "source": "spec §2: qualifying EU goods supply"
+    },
+    {
+      "category": "EU_SERVICES_SUPPLY",
+      "line": "NET_SALE",
+      "boxes": [
+        "6",
+        "8B"
+      ],
+      "source": "spec §2: qualifying EU B2B service supply"
+    },
+    {
+      "category": "ZERO_RATED",
+      "line": "NET_SALE",
+      "boxes": [
+        "6",
+        "9"
+      ],
+      "source": "spec §2: qualifying zero-rated local supply or export"
+    },
+    {
+      "category": "OUTSIDE_SCOPE_DEDUCTIBLE",
+      "line": "NET_SALE",
+      "boxes": [
+        "6",
+        "10"
+      ],
+      "source": "spec §2: qualifying outside-scope supply with deduction rights"
+    },
+    {
+      "category": "IMPORT",
+      "line": "INPUT_VAT",
+      "boxes": [
+        "4"
+      ],
+      "source": "spec §1: Box 4 includes eligible import VAT"
+    }
+  ],
+  "excluded": [
+    {
+      "category": "NON_SUPPLY",
+      "reason": "Not a supply (payroll, financing and other non-supplies are excluded explicitly; spec §2)."
+    },
+    {
+      "category": "SETTLEMENT",
+      "reason": "A VAT payment, refund or settlement transfer: part of the reconciliation, not of the return."
+    }
+  ],
+  "unsupported": [
+    {
+      "category": "EXEMPT",
+      "reason": "Exempt supplies and purchases are not mapped by the specification. Check with your tax adviser and record any amount as a manual adjustment."
+    },
+    {
+      "category": "IMPORT",
+      "line": "NET_PURCHASE",
+      "reason": "The value of imports is not mapped by the specification. Check with your tax adviser."
+    },
+    {
+      "category": "LEGACY_REVERSE_CHARGE",
+      "reason": "The old code RC does not say which reverse charge applies. Use a specific reverse-charge or acquisition code."
+    }
+  ]
+}
