@@ -334,7 +334,7 @@ def test_opening_refusals_name_the_row_and_the_reason(books: dict[str, Any]) -> 
     found = opening(books, tb, None, account_map="{}", as_of="2030-01-01")
     joined = "\n".join(messages(found))
     assert "No fiscal year contains 01/01/2030" in joined
-    assert "the open invoices in the open invoices file add up to 0.00" in joined
+    assert "no open invoices are listed for it" in joined
 
 
 @pytest.mark.django_db

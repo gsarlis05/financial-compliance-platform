@@ -28,6 +28,7 @@ const empty: ImportOutcome = {
   problems: [],
   warnings: [],
   unknown_accounts: [],
+  unknown_counterparties: [],
   accounts: [],
   counterparties: [],
   skipped: [],
@@ -80,6 +81,16 @@ const clean: ImportOutcome = {
   total_credit: "1250.00",
 };
 
+const presets = [
+  {
+    key: "QUICKBOOKS",
+    name: "QuickBooks",
+    day_first: false,
+    status: "TO_BE_CONFIRMED",
+    note: "Dates read month first.",
+  },
+];
+
 const checkOpening = () =>
   within(
     screen.getByRole("region", {
@@ -106,6 +117,8 @@ describe("Bring your books in", () => {
               },
             ]),
           );
+        if (url.endsWith("/imports/presets"))
+          return Promise.resolve(respond(presets));
         const form = Object.fromEntries((init.body as FormData).entries());
         sent.push(form);
         if (form.commit === "true")
@@ -172,5 +185,73 @@ describe("Bring your books in", () => {
       ["false", '{"OLD-30":"3000"}'],
       ["true", '{"OLD-30":"3000"}'],
     ]);
+  });
+
+  it("reads a package's aged report, month first, and offers to create the missing customers", async () => {
+    const sent: Record<string, FormDataEntryValue>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) => {
+        if (url.endsWith("/accounts")) return Promise.resolve(respond([]));
+        if (url.endsWith("/imports/presets"))
+          return Promise.resolve(respond(presets));
+        sent.push(Object.fromEntries((init.body as FormData).entries()));
+        return Promise.resolve(
+          respond({
+            ...empty,
+            problems: [
+              {
+                file: "ar.csv",
+                row: 6,
+                column: "Contact",
+                message: "New Client Ltd is not set up.",
+              },
+            ],
+            unknown_counterparties: [
+              { name: "New Client Ltd", side: "RECEIVABLE", rows: [6] },
+            ],
+          }),
+        );
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nProvider locale="en">
+          <MemoryRouter initialEntries={["/w/ws/e/e1/import"]}>
+            <Routes>
+              <Route
+                path="/w/:slug/e/:entityId/import"
+                element={<ImportPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("option", { name: "QuickBooks" });
+    fireEvent.change(screen.getByLabelText("The files come from"), {
+      target: { value: "QUICKBOOKS" },
+    });
+    expect(
+      screen.getByLabelText("Dates in these files are written"),
+    ).toHaveValue("month");
+    expect(
+      screen.getByText(/not yet been checked against a real export/),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Trial balance file"), {
+      target: { files: [new File(["x"], "tb.csv")] },
+    });
+    fireEvent.change(screen.getByLabelText("Or an aged receivables report"), {
+      target: { files: [new File(["y"], "ar.csv")] },
+    });
+    fireEvent.click(checkOpening());
+    expect(await screen.findByText("New Client Ltd")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Create them with this import/));
+    fireEvent.click(checkOpening());
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[0]?.date_order).toBe("month");
+    expect(sent[0]?.aged_receivables).toBeInstanceOf(File);
+    expect(sent[0]?.create_counterparties).toBeUndefined();
+    expect(sent[1]?.create_counterparties).toBe("true");
   });
 });

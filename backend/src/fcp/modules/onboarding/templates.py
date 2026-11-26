@@ -18,6 +18,30 @@ _DATA = json.loads((Path(__file__).parent / "templates.json").read_text("utf-8")
 KINDS = tuple(_DATA["templates"])
 YES = frozenset(names(*_DATA["yes"]))
 NO = frozenset(names(*_DATA["no"]))
+# Account types as written in the chart (ours, accountants' and packages'), normalised; a type such
+# as "Accounts Receivable" also makes the account a control account ("ASSET:RECEIVABLE").
+ACCOUNT_TYPES = {names(k)[0]: v for k, v in _DATA["account_types"].items()}
+TOTAL_WORDS = names(*_DATA["totals"])
+
+
+@dataclass(frozen=True)
+class Preset:
+    key: str
+    name: str
+    day_first: bool
+    note: str
+    status: str = "TO_BE_CONFIRMED"
+
+
+PRESETS = {p["key"]: Preset(p["key"], p["name"], p["day_first"], p["note"])
+           for p in _DATA["presets"]}  # fmt: skip
+
+
+def is_total(*cells: str) -> bool:
+    """A subtotal or total row: its first text cell starts with a word such as Total."""
+    first = next((c for c in cells if c.strip()), "")
+    words = names(first)[0] if first else ""
+    return any(words == w or words.startswith(f"{w} ") for w in TOTAL_WORDS)
 
 
 @dataclass(frozen=True)

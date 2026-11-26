@@ -267,7 +267,7 @@ export const en = {
     "Customers and suppliers already set up with the same code and name are skipped.",
   "imp.opening.title": "3. Opening balances and open invoices",
   "imp.opening.help":
-    "The trial balance on the opening date, and for the receivables and payables accounts the invoices still open behind their balances (they must add up to them). An account your file names that the chart does not have can be mapped to one of the chart's accounts.",
+    "The trial balance on the opening date (the template, your accountant's trial balance as delivered, or a trial balance report from your accounting software), and for the receivables and payables accounts the invoices still open behind their balances, from the template or from aged receivables and payables reports (they must add up to the balances). Headings and total rows are skipped, and the file's total is checked. An account your file names that the chart does not have can be mapped to one of the chart's accounts.",
   "imp.chooseFile": "File (Excel or CSV)",
   "imp.asOf": "Opening date",
   "imp.tbFile": "Trial balance file",
@@ -298,6 +298,21 @@ export const en = {
   "imp.map.help":
     "Choose the chart account for each, then check the file again.",
   "imp.map.choose": "Choose an account",
+  "imp.source": "The files come from",
+  "imp.source.own": "The templates, my own spreadsheet or my accountant",
+  "imp.source.toConfirm":
+    "{name}: its report exports are read by their column names. This has not yet been checked against a real export from {name}; check the preview carefully.",
+  "imp.dateOrder": "Dates in these files are written",
+  "imp.dateOrder.day": "Day first (31/12/2026)",
+  "imp.dateOrder.month": "Month first (12/31/2026)",
+  "imp.arFile": "Or an aged receivables report",
+  "imp.apFile": "And an aged payables report",
+  "imp.results": "Carry the year's income and expense into",
+  "imp.results.keep":
+    "Keep them as they are (starting part way through a year)",
+  "imp.parties.unknown": "Customers and suppliers not set up yet",
+  "imp.parties.create":
+    "Create them with this import (customers from the receivables report, suppliers from the payables report)",
   "fxd.title": "Exchange differences",
   "fxd.help":
     "Amounts owed in another currency, and accounts kept in one, are brought to the closing rate of the date (unrealised differences). When such a balance is paid in full and euros are left over, they are cleared (realised differences). Both go to the account for exchange differences in one draft entry that you approve and post as usual.",
@@ -2528,6 +2543,20 @@ export const el: Record<MessageKey, string> = {
   "imp.map.help":
     "Επιλέξτε τον λογαριασμό του σχεδίου για τον καθένα και ελέγξτε ξανά το αρχείο.",
   "imp.map.choose": "Επιλέξτε λογαριασμό",
+  "imp.source": "Τα αρχεία προέρχονται από",
+  "imp.source.own": "Τα πρότυπα, δικό μου υπολογιστικό φύλλο ή τον λογιστή μου",
+  "imp.source.toConfirm":
+    "{name}: οι αναφορές του διαβάζονται από τα ονόματα των στηλών τους. Αυτό δεν έχει ακόμη ελεγχθεί με πραγματική εξαγωγή από το {name}· ελέγξτε προσεκτικά την προεπισκόπηση.",
+  "imp.dateOrder": "Οι ημερομηνίες στα αρχεία γράφονται",
+  "imp.dateOrder.day": "Πρώτα η ημέρα (31/12/2026)",
+  "imp.dateOrder.month": "Πρώτα ο μήνας (12/31/2026)",
+  "imp.arFile": "Ή μια αναφορά ενηλικίωσης απαιτήσεων",
+  "imp.apFile": "Και μια αναφορά ενηλικίωσης υποχρεώσεων",
+  "imp.results": "Μεταφορά των εσόδων και εξόδων της χρήσης στον λογαριασμό",
+  "imp.results.keep": "Να μείνουν ως έχουν (έναρξη μέσα στη χρήση)",
+  "imp.parties.unknown": "Πελάτες και προμηθευτές που δεν υπάρχουν ακόμη",
+  "imp.parties.create":
+    "Να δημιουργηθούν με αυτή την εισαγωγή (πελάτες από την αναφορά απαιτήσεων, προμηθευτές από την αναφορά υποχρεώσεων)",
   "fxd.title": "Συναλλαγματικές διαφορές",
   "fxd.help":
     "Τα ποσά που οφείλονται σε άλλο νόμισμα, και οι λογαριασμοί που τηρούνται σε άλλο νόμισμα, αποτιμώνται με την ισοτιμία κλεισίματος της ημερομηνίας (μη πραγματοποιημένες διαφορές). Όταν ένα τέτοιο υπόλοιπο εξοφληθεί πλήρως και μείνουν ευρώ, μηδενίζονται (πραγματοποιημένες διαφορές). Και οι δύο πηγαίνουν στον λογαριασμό συναλλαγματικών διαφορών σε μία πρόχειρη εγγραφή, που εγκρίνετε και καταχωρίζετε όπως πάντα.",

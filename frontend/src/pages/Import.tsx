@@ -11,6 +11,7 @@ import {
   type TemplateKind,
   templateUrl,
   useImport,
+  useImportPresets,
 } from "../api/imports";
 import { Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
@@ -213,59 +214,141 @@ function FileStep({
   );
 }
 
+function FileInput({
+  label,
+  onFile,
+}: {
+  label: MessageKey;
+  onFile: (file: File | null) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <label>
+      {t(label)}
+      <input
+        type="file"
+        accept=".xlsx,.csv,text/csv"
+        onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
+}
+
+type Files = Record<"tb" | "items" | "ar" | "ap", File | null>;
+
 function OpeningStep() {
   const { t } = useI18n();
   const run = useImport("opening-balances");
   const accounts = useAccounts();
-  const [file, setFile] = useState<File | null>(null);
-  const [items, setItems] = useState<File | null>(null);
+  const presets = useImportPresets();
+  const [files, setFiles] = useState<Files>({
+    tb: null,
+    items: null,
+    ar: null,
+    ap: null,
+  });
   const [asOf, setAsOf] = useState(`${new Date().getFullYear()}-01-01`);
+  const [source, setSource] = useState("");
+  const [dateOrder, setDateOrder] = useState<"day" | "month">("day");
+  const [results, setResults] = useState("");
+  const [create, setCreate] = useState(false);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const postable = (accounts.data ?? []).filter(
+  const active = (accounts.data ?? []).filter(
     (a) => a.is_postable && a.status === "ACTIVE",
   );
+  const preset = presets.data?.find((p) => p.key === source);
   const checked = run.data && !run.data.committed ? run.data : null;
+  const change = (apply: () => void) => {
+    apply();
+    run.reset();
+  };
+  const setFile = (key: keyof Files) => (file: File | null) =>
+    change(() => setFiles((f) => ({ ...f, [key]: file })));
   const request = (commit: boolean) =>
-    file &&
-    run.mutate({ file, openItems: items, asOf, accountMap: mapping, commit });
+    files.tb &&
+    run.mutate({
+      file: files.tb,
+      openItems: files.items,
+      agedReceivables: files.ar,
+      agedPayables: files.ap,
+      asOf,
+      accountMap: mapping,
+      resultsAccount: results,
+      dateOrder,
+      createCounterparties: create,
+      commit,
+    });
   return (
     <section className="card stack" aria-labelledby="imp-opening">
       <h2 id="imp-opening">{t("imp.opening.title")}</h2>
       <p className="muted">{t("imp.opening.help")}</p>
       <Templates kinds={["opening-balances", "open-items"]} />
       <label>
+        {t("imp.source")}
+        <select
+          value={source}
+          onChange={(e) => {
+            const next = presets.data?.find((p) => p.key === e.target.value);
+            change(() => {
+              setSource(e.target.value);
+              setDateOrder(next && !next.day_first ? "month" : "day");
+            });
+          }}
+        >
+          <option value="">{t("imp.source.own")}</option>
+          {presets.data?.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {preset ? (
+        <p className="notice warn">
+          {t("imp.source.toConfirm").replace("{name}", preset.name)}{" "}
+          {preset.note}
+        </p>
+      ) : null}
+      <label>
         {t("imp.asOf")}
         <input
           type="date"
           value={asOf}
           required
-          onChange={(e) => {
-            setAsOf(e.target.value);
-            run.reset();
-          }}
+          onChange={(e) => change(() => setAsOf(e.target.value))}
         />
       </label>
       <label>
-        {t("imp.tbFile")}
-        <input
-          type="file"
-          accept=".xlsx,.csv,text/csv"
-          onChange={(e) => {
-            setFile(e.target.files?.[0] ?? null);
-            run.reset();
-          }}
-        />
+        {t("imp.dateOrder")}
+        <select
+          value={dateOrder}
+          onChange={(e) =>
+            change(() => setDateOrder(e.target.value as "day" | "month"))
+          }
+        >
+          <option value="day">{t("imp.dateOrder.day")}</option>
+          <option value="month">{t("imp.dateOrder.month")}</option>
+        </select>
       </label>
+      <FileInput label="imp.tbFile" onFile={setFile("tb")} />
+      <FileInput label="imp.itemsFile" onFile={setFile("items")} />
+      <FileInput label="imp.arFile" onFile={setFile("ar")} />
+      <FileInput label="imp.apFile" onFile={setFile("ap")} />
       <label>
-        {t("imp.itemsFile")}
-        <input
-          type="file"
-          accept=".xlsx,.csv,text/csv"
-          onChange={(e) => {
-            setItems(e.target.files?.[0] ?? null);
-            run.reset();
-          }}
-        />
+        {t("imp.results")}
+        <select
+          value={results}
+          onChange={(e) => change(() => setResults(e.target.value))}
+        >
+          <option value="">{t("imp.results.keep")}</option>
+          {active
+            .filter((a) => a.type === "EQUITY")
+            .map((a) => (
+              <option key={a.id} value={a.code}>
+                {a.code} {a.name}
+              </option>
+            ))}
+        </select>
       </label>
       {run.data?.unknown_accounts.length ? (
         <fieldset className="stack">
@@ -273,7 +356,7 @@ function OpeningStep() {
           <p className="muted">{t("imp.map.help")}</p>
           {run.data.unknown_accounts.map((u) => (
             <label key={u.code}>
-              {u.code} {u.name}
+              {u.code === u.name ? u.code : `${u.code} ${u.name}`}
               <select
                 value={mapping[u.code] ?? ""}
                 onChange={(e) =>
@@ -281,7 +364,7 @@ function OpeningStep() {
                 }
               >
                 <option value="">{t("imp.map.choose")}</option>
-                {postable.map((a) => (
+                {active.map((a) => (
                   <option key={a.id} value={a.code}>
                     {a.code} {a.name}
                   </option>
@@ -291,10 +374,28 @@ function OpeningStep() {
           ))}
         </fieldset>
       ) : null}
+      {run.data?.unknown_counterparties.length || create ? (
+        <fieldset className="stack">
+          <legend>{t("imp.parties.unknown")}</legend>
+          <ul>
+            {run.data?.unknown_counterparties.map((u) => (
+              <li key={`${u.side}-${u.name}`}>{u.name}</li>
+            ))}
+          </ul>
+          <label className="inline">
+            <input
+              type="checkbox"
+              checked={create}
+              onChange={(e) => change(() => setCreate(e.target.checked))}
+            />
+            {t("imp.parties.create")}
+          </label>
+        </fieldset>
+      ) : null}
       <div className="row">
         <button
           type="button"
-          disabled={!file || !asOf || run.isPending}
+          disabled={!files.tb || !asOf || run.isPending}
           onClick={() => request(false)}
         >
           {t("imp.check")}
@@ -303,7 +404,10 @@ function OpeningStep() {
           type="button"
           className="primary"
           disabled={
-            !file || !checked || checked.problems.length > 0 || run.isPending
+            !files.tb ||
+            !checked ||
+            checked.problems.length > 0 ||
+            run.isPending
           }
           onClick={() => request(true)}
         >
