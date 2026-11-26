@@ -1,0 +1,5 @@
+Code,Name,Type,Parent code,Postable,Control,VAT role,Greek name
+1360,Petty cash (Demo),Asset,,Yes,,,Ταμείο μικροεξόδων
+4200,Consulting revenue (Demo),Income,,Yes,,,Έσοδα συμβουλευτικής
+6950,Software subscriptions (Demo),Expense,,Yes,,,
+4000,Sales revenue,Income,,Yes,,,
