@@ -1,0 +1,100 @@
+{
+ "note": "Header names a bank CSV export may use for each field, normalised (lower case, no accents or punctuation), in English and Greek (R-1, #244). Add names here when a real export uses another.",
+ "fields": {
+  "date": [
+   "date",
+   "transaction date",
+   "booking date",
+   "posting date",
+   "completed date",
+   "date completed",
+   "entry date",
+   "trade date",
+   "ημερομηνια",
+   "ημερομηνια συναλλαγης",
+   "ημ νια",
+   "ημερ",
+   "ημερομηνια εγγραφης",
+   "ημερομηνια καταχωρισης"
+  ],
+  "value_date": [
+   "value date",
+   "valuation date",
+   "ημερομηνια αξιας",
+   "αξια"
+  ],
+  "description": [
+   "description",
+   "details",
+   "narrative",
+   "transaction details",
+   "particulars",
+   "transaction description",
+   "memo",
+   "περιγραφη",
+   "αιτιολογια",
+   "λεπτομερειες",
+   "περιγραφη συναλλαγης"
+  ],
+  "amount": [
+   "amount",
+   "transaction amount",
+   "amount eur",
+   "ποσο",
+   "ποσο συναλλαγης"
+  ],
+  "debit": [
+   "debit",
+   "debits",
+   "withdrawal",
+   "withdrawals",
+   "paid out",
+   "money out",
+   "χρεωση",
+   "χρεωσεις",
+   "αναληψη",
+   "αναληψεις"
+  ],
+  "credit": [
+   "credit",
+   "credits",
+   "deposit",
+   "deposits",
+   "paid in",
+   "money in",
+   "πιστωση",
+   "πιστωσεις",
+   "καταθεση",
+   "καταθεσεις"
+  ],
+  "balance": [
+   "balance",
+   "running balance",
+   "account balance",
+   "balance eur",
+   "υπολοιπο",
+   "λογιστικο υπολοιπο"
+  ],
+  "reference": [
+   "reference",
+   "ref",
+   "reference number",
+   "transaction reference",
+   "ref no",
+   "αριθμος αναφορας",
+   "αναφορα",
+   "κωδικος αναφορας"
+  ],
+  "counterparty": [
+   "counterparty",
+   "payee",
+   "beneficiary",
+   "payer",
+   "beneficiary name",
+   "counterparty name",
+   "δικαιουχος",
+   "αντισυμβαλλομενος",
+   "επωνυμια"
+  ]
+ }
+}

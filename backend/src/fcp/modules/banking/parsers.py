@@ -210,8 +210,12 @@ def parse_camt053(data: bytes) -> ParsedStatement:
 
 # --- CSV ------------------------------------------------------------------------------------------
 
-DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d.%m.%Y", "%d-%m-%Y", "%m/%d/%Y")
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d.%m.%Y", "%d-%m-%Y", "%m/%d/%Y",
+                # R-1 (#244): exports that stamp each line with a time, or use two-digit years.
+                "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M",
+                "%d/%m/%y", "%d.%m.%y")  # fmt: skip
 ENCODINGS = ("utf-8-sig", "utf-8", "cp1253", "latin-1")
+MAX_SKIP_ROWS = 30
 
 
 @dataclass(frozen=True)
@@ -235,6 +239,7 @@ class CsvMapping:
     decimal_comma: bool = False
     has_header: bool = True
     encoding: str = "utf-8-sig"
+    skip_rows: int = 0  # lines before the header (account details some banks put first)
     strict: bool = True
 
     def validate(self) -> None:
@@ -248,6 +253,10 @@ class CsvMapping:
             )
         if self.amount and (self.debit or self.credit):
             raise StatementFormatError("Map either an amount column or debit and credit, not both.")
+        if not 0 <= self.skip_rows <= MAX_SKIP_ROWS:
+            raise StatementFormatError(
+                f"Skip between 0 and {MAX_SKIP_ROWS} lines before the header."
+            )
 
 
 # Matches the synthetic bank export (date, description, amount, balance, ..., reference).
@@ -277,7 +286,7 @@ def _rows(data: bytes, mapping: CsvMapping) -> list[list[str]]:
         rows = list(csv.reader(io.StringIO(text, newline=""), delimiter=mapping.delimiter))
     except csv.Error as exc:
         raise StatementFormatError(f"The CSV could not be read: {str(exc)[:100]}.") from None
-    rows = [r for r in rows if any(cell.strip() for cell in r)]
+    rows = [r for r in rows if any(cell.strip() for cell in r)][mapping.skip_rows :]
     if not rows:
         raise StatementFormatError("The file has no rows.")
     if len(rows) > MAX_LINES + 1:

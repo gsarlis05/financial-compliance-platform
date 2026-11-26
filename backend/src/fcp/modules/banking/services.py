@@ -26,6 +26,7 @@ from fcp.modules.ledger import api as ledger
 from fcp.modules.registers.api import OpenItem, open_items
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity
 
+from . import detect as detection
 from . import parsers
 from .models import BankAccount, Reconciliation, StatementImport, StatementLine
 from .parsers import CsvMapping, ParsedStatement, StatementFormatError
@@ -157,6 +158,14 @@ def set_csv_mapping(
         {"mapping": mapping},
     )
     return account
+
+
+def detect_csv(ctx: WorkspaceContext, entity_id: UUID, account_id: UUID, data: bytes,
+               preset: str = "") -> detection.Detection:  # fmt: skip
+    """How to read a CSV statement for this account, recognised from the file (R-1, #244).
+    Nothing is imported or saved."""
+    get_account(ctx, entity_id, account_id, "banking.statement.manage")
+    return detection.detect(data, preset)
 
 
 def _mapping_from(raw: dict[str, Any] | None) -> CsvMapping:

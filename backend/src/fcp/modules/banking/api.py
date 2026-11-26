@@ -7,7 +7,7 @@ Routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from django.http import HttpRequest
@@ -18,6 +18,7 @@ from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import WorkspaceContext, workspace_ctx
 
 from . import services
+from .detect import PRESETS
 from .models import BankAccount, Reconciliation, StatementImport, StatementLine
 from .parsers import DATE_FORMATS, ENCODINGS, MAX_BYTES
 
@@ -143,6 +144,7 @@ class CsvMappingIn(Schema):
     decimal_comma: bool = False
     has_header: bool = True
     encoding: str = Field(default="utf-8-sig", description=f"One of {', '.join(ENCODINGS)}")
+    skip_rows: int = Field(default=0, ge=0, le=30, description="Lines before the header")
 
 
 @router.put(f"{BASE}/bank-accounts/{{uuid:account_id}}/csv-mapping", response=BankAccountOut)
@@ -446,3 +448,84 @@ def reconciliations(
             "-as_of", "-created_at"
         )
     ]
+
+
+# --- recognising a CSV export (R-1, #244) --------------------------------------------------------
+
+
+class BankPresetOut(Schema):
+    key: str
+    name: str
+    status: str = Field(description="TO_BE_CONFIRMED until checked against a real export")
+    note: str
+
+
+class DetectQuestionOut(Schema):
+    field: str
+    message: str
+    options: list[str]
+    chosen: str
+
+
+class PreviewLineOut(Schema):
+    booking_date: date
+    amount: str
+    description: str
+    reference: str
+    counterparty_name: str
+
+
+class DetectOut(Schema):
+    mapping: CsvMappingIn = Field(description="Ready to save as the account's CSV mapping")
+    columns: dict[str, str] = Field(description="Field: the file's own column name")
+    questions: list[DetectQuestionOut] = Field(description="What the file leaves open")
+    preview: list[PreviewLineOut]
+    preset: BankPresetOut | None
+    error: str = Field(description="Why the preview could not be read with this layout, if so")
+
+
+def _preset_out(p: Any) -> BankPresetOut:
+    return BankPresetOut(key=p.key, name=p.name, status=p.status, note=p.note)
+
+
+@router.get(f"{BASE}/bank-presets", response=list[BankPresetOut])
+@requires("banking.read")
+def bank_presets(request: HttpRequest, slug: str, entity_id: UUID) -> list[BankPresetOut]:
+    """Banks with a preset. Each only breaks ties a file leaves open, and is marked to be
+    confirmed until checked against a real export."""
+    workspace_ctx(request, slug, entity_id)
+    return [_preset_out(p) for p in PRESETS.values()]
+
+
+@router.post(f"{BASE}/bank-accounts/{{uuid:account_id}}/csv-detect", response=DetectOut)
+@requires("banking.statement.manage")
+def detect_csv(
+    request: HttpRequest,
+    slug: str,
+    entity_id: UUID,
+    account_id: UUID,
+    file: File[UploadedFile],
+    preset: Form[str] = "",
+) -> DetectOut:
+    """Recognise how a CSV export is laid out, with a preview of its first lines. Nothing is
+    imported or saved; save the mapping, then upload the file as usual."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    found = services.detect_csv(ctx, entity_id, account_id, file.read(MAX_BYTES + 1), preset)
+    m = found.mapping
+    return DetectOut(
+        mapping=CsvMappingIn(
+            date=m.date, amount=m.amount, debit=m.debit, credit=m.credit,
+            description=m.description, reference=m.reference, counterparty=m.counterparty,
+            balance=m.balance, date_format=m.date_format, delimiter=m.delimiter,
+            decimal_comma=m.decimal_comma, has_header=m.has_header, encoding=m.encoding,
+            skip_rows=m.skip_rows,
+        ),
+        columns=found.columns,
+        questions=[DetectQuestionOut(field=q.field, message=q.message, options=list(q.options),
+                                     chosen=q.chosen) for q in found.questions],
+        preview=[PreviewLineOut(booking_date=ln.booking_date, amount=f"{ln.amount:.2f}",
+                                description=ln.description, reference=ln.reference,
+                                counterparty_name=ln.counterparty_name) for ln in found.preview],
+        preset=_preset_out(found.preset) if found.preset else None,
+        error=found.error,
+    )  # fmt: skip
