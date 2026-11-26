@@ -9070,6 +9070,13 @@
             "title": "Unknown Accounts",
             "type": "array"
           },
+          "unknown_counterparties": {
+            "items": {
+              "$ref": "#/components/schemas/ImportUnknownPartyOut"
+            },
+            "title": "Unknown Counterparties",
+            "type": "array"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -9085,6 +9092,7 @@
           "problems",
           "warnings",
           "unknown_accounts",
+          "unknown_counterparties",
           "accounts",
           "counterparties",
           "skipped",
@@ -9095,6 +9103,39 @@
           "files"
         ],
         "title": "ImportOutcomeOut",
+        "type": "object"
+      },
+      "ImportPresetOut": {
+        "properties": {
+          "day_first": {
+            "title": "Day First",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "day_first",
+          "status",
+          "note"
+        ],
+        "title": "ImportPresetOut",
         "type": "object"
       },
       "ImportProblemOut": {
@@ -9149,6 +9190,32 @@
           "rows"
         ],
         "title": "ImportUnknownAccountOut",
+        "type": "object"
+      },
+      "ImportUnknownPartyOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "side",
+          "rows"
+        ],
+        "title": "ImportUnknownPartyOut",
         "type": "object"
       },
       "InstalmentOut": {
@@ -30305,7 +30372,7 @@
     },
     "/api/w/{slug}/entities/{entity_id}/imports/opening-balances": {
       "post": {
-        "description": "The opening trial balance (with the open invoices behind the receivables and payables) as\none draft entry dated ``as_of``. ``account_map``: a JSON object from a file's account code to\na chart account code, for accounts the chart does not have.",
+        "description": "The opening trial balance (the template, an accountant's or a package's trial balance) as\none draft entry dated ``as_of``, with the open invoices behind the receivables and payables\n(the template, or a package's aged receivables and payables reports).\n\n- ``account_map``: a JSON object from a file's account (code, or name when there is no code)\n  to a chart account code;\n- ``results_account``: an equity account to carry the income and expense balances into;\n- ``date_order``: how the files' dates are written (day or month first);\n- ``create_counterparties``: create the customers and suppliers the reports name that are\n  not set up yet.",
         "operationId": "fcp_modules_onboarding_api_import_opening_balances",
         "parameters": [
           {
@@ -30338,6 +30405,30 @@
                     "title": "Account Map",
                     "type": "string"
                   },
+                  "aged_payables": {
+                    "anyOf": [
+                      {
+                        "format": "binary",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Aged Payables"
+                  },
+                  "aged_receivables": {
+                    "anyOf": [
+                      {
+                        "format": "binary",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Aged Receivables"
+                  },
                   "as_of": {
                     "format": "date",
                     "title": "As Of",
@@ -30347,6 +30438,20 @@
                     "default": false,
                     "title": "Commit",
                     "type": "boolean"
+                  },
+                  "create_counterparties": {
+                    "default": false,
+                    "title": "Create Counterparties",
+                    "type": "boolean"
+                  },
+                  "date_order": {
+                    "default": "day",
+                    "enum": [
+                      "day",
+                      "month"
+                    ],
+                    "title": "Date Order",
+                    "type": "string"
                   },
                   "file": {
                     "format": "binary",
@@ -30364,6 +30469,11 @@
                       }
                     ],
                     "title": "Open Items"
+                  },
+                  "results_account": {
+                    "default": "",
+                    "title": "Results Account",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -30395,6 +30505,58 @@
           }
         ],
         "summary": "Import Opening Balances",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/imports/presets": {
+      "get": {
+        "description": "Accounting packages whose report exports are read by their column names; a preset only\nsets the date order. Each is to be confirmed against a real export.",
+        "operationId": "fcp_modules_onboarding_api_import_presets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportPresetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Presets",
         "tags": [
           "onboarding"
         ]

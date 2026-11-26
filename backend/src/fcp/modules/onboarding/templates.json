@@ -1,71 +1,552 @@
 {
-  "_comment": "Import templates (R-2, #245). For each template: its columns in order, each with the header written in the template, the other header names recognised (English and Greek; compared without case, accents or punctuation) and a note for the 'How to fill in' sheet. Synthetic examples only.",
-  "yes": ["yes", "y", "true", "1", "x", "ναι", "ν"],
-  "no": ["no", "n", "false", "0", "όχι", "οχι", "ο"],
+  "_comment": "Import templates (R-2, #245). For each template: its columns in order, each with the header written in the template, the other header names recognised (English and Greek; compared without case, accents or punctuation) and a note for the 'How to fill in' sheet. Synthetic examples only. R-3 (#246): header names used by accountants' trial balances and by accounting packages' report exports are listed too; the package presets below only set the date order and are to be confirmed against a real export.",
+  "yes": [
+    "yes",
+    "y",
+    "true",
+    "1",
+    "x",
+    "ναι",
+    "ν"
+  ],
+  "no": [
+    "no",
+    "n",
+    "false",
+    "0",
+    "όχι",
+    "οχι",
+    "ο"
+  ],
   "templates": {
     "chart": {
       "title": "Chart of accounts",
       "columns": [
-        {"key": "code", "header": "Code", "also": ["Account code", "Account", "Account no", "Κωδικός", "Κωδικός λογαριασμού"], "note": "Letters, digits, '.' and '-', up to 20 characters. Required."},
-        {"key": "name", "header": "Name", "also": ["Account name", "Description", "Όνομα", "Περιγραφή", "Λογαριασμός"], "note": "Required."},
-        {"key": "type", "header": "Type", "also": ["Account type", "Τύπος"], "note": "Asset, Liability, Equity, Income or Expense. Required."},
-        {"key": "parent_code", "header": "Parent code", "also": ["Parent", "Heading", "Γονικός", "Ομάδα"], "note": "The code of a heading account (Postable: No) of the same type, in this file or already in the chart. Optional."},
-        {"key": "postable", "header": "Postable", "also": ["Is postable", "Κινούμενος"], "note": "Yes (entries can be posted to it) or No (a heading). Blank: Yes."},
-        {"key": "control", "header": "Control", "also": ["Control type", "Έλεγχος"], "note": "Receivable or Payable for customer and supplier control accounts; otherwise blank."},
-        {"key": "vat_role", "header": "VAT role", "also": ["VAT", "ΦΠΑ"], "note": "Input or Output for the VAT accounts; otherwise blank."},
-        {"key": "name_el", "header": "Greek name", "also": ["Name el", "Ελληνικό όνομα"], "note": "Optional."}
+        {
+          "key": "code",
+          "header": "Code",
+          "also": [
+            "Account code",
+            "Account",
+            "Account no",
+            "Κωδικός",
+            "Κωδικός λογαριασμού",
+            "*Code",
+            "Account number",
+            "Number",
+            "No"
+          ],
+          "note": "Letters, digits, '.' and '-', up to 20 characters. Required."
+        },
+        {
+          "key": "name",
+          "header": "Name",
+          "also": [
+            "Account name",
+            "Description",
+            "Όνομα",
+            "Περιγραφή",
+            "Λογαριασμός",
+            "*Name",
+            "Account description"
+          ],
+          "note": "Required."
+        },
+        {
+          "key": "type",
+          "header": "Type",
+          "also": [
+            "Account type",
+            "Τύπος",
+            "*Type",
+            "Account class",
+            "Class",
+            "Category"
+          ],
+          "note": "Asset, Liability, Equity, Income or Expense. Required."
+        },
+        {
+          "key": "parent_code",
+          "header": "Parent code",
+          "also": [
+            "Parent",
+            "Heading",
+            "Γονικός",
+            "Ομάδα",
+            "Parent account",
+            "Sub-account of"
+          ],
+          "note": "The code of a heading account (Postable: No) of the same type, in this file or already in the chart. Optional."
+        },
+        {
+          "key": "postable",
+          "header": "Postable",
+          "also": [
+            "Is postable",
+            "Κινούμενος"
+          ],
+          "note": "Yes (entries can be posted to it) or No (a heading). Blank: Yes."
+        },
+        {
+          "key": "control",
+          "header": "Control",
+          "also": [
+            "Control type",
+            "Έλεγχος"
+          ],
+          "note": "Receivable or Payable for customer and supplier control accounts; otherwise blank."
+        },
+        {
+          "key": "vat_role",
+          "header": "VAT role",
+          "also": [
+            "VAT",
+            "ΦΠΑ",
+            "Tax role"
+          ],
+          "note": "Input or Output for the VAT accounts; otherwise blank."
+        },
+        {
+          "key": "name_el",
+          "header": "Greek name",
+          "also": [
+            "Name el",
+            "Ελληνικό όνομα"
+          ],
+          "note": "Optional."
+        }
       ],
       "example": [
-        ["1000", "Current assets", "Asset", "", "No", "", "", "Κυκλοφορούν ενεργητικό"],
-        ["1010", "Bank account (Demo)", "Asset", "1000", "Yes", "", "", ""],
-        ["1200", "Trade receivables", "Asset", "1000", "Yes", "Receivable", "", ""],
-        ["2200", "VAT payable", "Liability", "", "Yes", "", "Output", ""]
+        [
+          "1000",
+          "Current assets",
+          "Asset",
+          "",
+          "No",
+          "",
+          "",
+          "Κυκλοφορούν ενεργητικό"
+        ],
+        [
+          "1010",
+          "Bank account (Demo)",
+          "Asset",
+          "1000",
+          "Yes",
+          "",
+          "",
+          ""
+        ],
+        [
+          "1200",
+          "Trade receivables",
+          "Asset",
+          "1000",
+          "Yes",
+          "Receivable",
+          "",
+          ""
+        ],
+        [
+          "2200",
+          "VAT payable",
+          "Liability",
+          "",
+          "Yes",
+          "",
+          "Output",
+          ""
+        ]
       ]
     },
     "counterparties": {
       "title": "Customers and suppliers",
       "columns": [
-        {"key": "code", "header": "Code", "also": ["Customer code", "Supplier code", "Κωδικός"], "note": "Letters, digits, '.', '-' and '_', up to 30 characters. Required."},
-        {"key": "name", "header": "Name", "also": ["Customer", "Supplier", "Company", "Επωνυμία", "Όνομα"], "note": "Required."},
-        {"key": "kind", "header": "Kind", "also": ["Type", "Είδος", "Τύπος"], "note": "Customer, Supplier or Both. Required."},
-        {"key": "vat_no", "header": "VAT number", "also": ["VAT no", "VAT", "Αριθμός ΦΠΑ"], "note": "Optional."},
-        {"key": "email", "header": "Email", "also": ["E-mail", "Email address"], "note": "Optional."},
-        {"key": "payment_terms_days", "header": "Payment terms (days)", "also": ["Payment terms", "Terms", "Όροι πληρωμής"], "note": "Whole days, 0 to 365. Blank: 30."},
-        {"key": "country", "header": "Country", "also": ["Country code", "Χώρα"], "note": "Two letters, such as CY or GR. Optional."}
+        {
+          "key": "code",
+          "header": "Code",
+          "also": [
+            "Customer code",
+            "Supplier code",
+            "Κωδικός"
+          ],
+          "note": "Letters, digits, '.', '-' and '_', up to 30 characters. Required."
+        },
+        {
+          "key": "name",
+          "header": "Name",
+          "also": [
+            "Customer",
+            "Supplier",
+            "Company",
+            "Επωνυμία",
+            "Όνομα"
+          ],
+          "note": "Required."
+        },
+        {
+          "key": "kind",
+          "header": "Kind",
+          "also": [
+            "Type",
+            "Είδος",
+            "Τύπος"
+          ],
+          "note": "Customer, Supplier or Both. Required."
+        },
+        {
+          "key": "vat_no",
+          "header": "VAT number",
+          "also": [
+            "VAT no",
+            "VAT",
+            "Αριθμός ΦΠΑ"
+          ],
+          "note": "Optional."
+        },
+        {
+          "key": "email",
+          "header": "Email",
+          "also": [
+            "E-mail",
+            "Email address"
+          ],
+          "note": "Optional."
+        },
+        {
+          "key": "payment_terms_days",
+          "header": "Payment terms (days)",
+          "also": [
+            "Payment terms",
+            "Terms",
+            "Όροι πληρωμής"
+          ],
+          "note": "Whole days, 0 to 365. Blank: 30."
+        },
+        {
+          "key": "country",
+          "header": "Country",
+          "also": [
+            "Country code",
+            "Χώρα"
+          ],
+          "note": "Two letters, such as CY or GR. Optional."
+        }
       ],
       "example": [
-        ["C-001", "Example Customer Ltd (Demo)", "Customer", "CY00000000X", "", "30", "CY"],
-        ["S-001", "Example Supplier Ltd (Demo)", "Supplier", "", "", "45", "GR"]
+        [
+          "C-001",
+          "Example Customer Ltd (Demo)",
+          "Customer",
+          "CY00000000X",
+          "",
+          "30",
+          "CY"
+        ],
+        [
+          "S-001",
+          "Example Supplier Ltd (Demo)",
+          "Supplier",
+          "",
+          "",
+          "45",
+          "GR"
+        ]
       ]
     },
     "opening-balances": {
       "title": "Opening trial balance",
       "columns": [
-        {"key": "account", "header": "Account code", "also": ["Account", "Code", "Account no", "Κωδικός", "Κωδικός λογαριασμού"], "note": "An account of the chart, or one you map to it when importing. Required."},
-        {"key": "name", "header": "Account name", "also": ["Name", "Description", "Όνομα", "Περιγραφή", "Λογαριασμός"], "note": "Shown when mapping an account that is not in the chart. Optional."},
-        {"key": "debit", "header": "Debit", "also": ["Dr", "Debit balance", "Χρέωση", "Χρεωστικό"], "note": "The balance if it is a debit. Use Debit and Credit, or one Balance column."},
-        {"key": "credit", "header": "Credit", "also": ["Cr", "Credit balance", "Πίστωση", "Πιστωτικό"], "note": "The balance if it is a credit."},
-        {"key": "balance", "header": "Balance", "also": ["Net", "Amount", "Υπόλοιπο"], "note": "Instead of Debit and Credit: debit balances positive, credit balances negative."}
+        {
+          "key": "account",
+          "header": "Account code",
+          "also": [
+            "Account",
+            "Code",
+            "Account no",
+            "Κωδικός",
+            "Κωδικός λογαριασμού",
+            "Account number",
+            "Account no.",
+            "No",
+            "Number"
+          ],
+          "note": "An account of the chart, or one you map to it when importing. Required."
+        },
+        {
+          "key": "name",
+          "header": "Account name",
+          "also": [
+            "Name",
+            "Description",
+            "Όνομα",
+            "Περιγραφή",
+            "Λογαριασμός",
+            "Account description",
+            "Λεπτομέρειες"
+          ],
+          "note": "Shown when mapping an account that is not in the chart. Optional."
+        },
+        {
+          "key": "debit",
+          "header": "Debit",
+          "also": [
+            "Dr",
+            "Debit balance",
+            "Χρέωση",
+            "Χρεωστικό",
+            "Debit - Year to date",
+            "YTD Debit",
+            "Debit (EUR)",
+            "Debit amount",
+            "Total debit",
+            "Debits"
+          ],
+          "note": "The balance if it is a debit. Use Debit and Credit, or one Balance column."
+        },
+        {
+          "key": "credit",
+          "header": "Credit",
+          "also": [
+            "Cr",
+            "Credit balance",
+            "Πίστωση",
+            "Πιστωτικό",
+            "Credit - Year to date",
+            "YTD Credit",
+            "Credit (EUR)",
+            "Credit amount",
+            "Total credit",
+            "Credits"
+          ],
+          "note": "The balance if it is a credit."
+        },
+        {
+          "key": "balance",
+          "header": "Balance",
+          "also": [
+            "Net",
+            "Amount",
+            "Υπόλοιπο",
+            "Closing balance",
+            "Net balance",
+            "Balance (EUR)",
+            "Ending balance",
+            "Τελικό υπόλοιπο"
+          ],
+          "note": "Instead of Debit and Credit: debit balances positive, credit balances negative."
+        }
       ],
       "example": [
-        ["1010", "Bank account (Demo)", "12500.00", "", ""],
-        ["1200", "Trade receivables", "3400.50", "", ""],
-        ["3000", "Share capital", "", "15900.50", ""]
+        [
+          "1010",
+          "Bank account (Demo)",
+          "12500.00",
+          "",
+          ""
+        ],
+        [
+          "1200",
+          "Trade receivables",
+          "3400.50",
+          "",
+          ""
+        ],
+        [
+          "3000",
+          "Share capital",
+          "",
+          "15900.50",
+          ""
+        ]
       ]
     },
     "open-items": {
       "title": "Open customer and supplier invoices",
       "columns": [
-        {"key": "account", "header": "Account code", "also": ["Account", "Control account", "Κωδικός λογαριασμού"], "note": "The receivables or payables account. Required."},
-        {"key": "counterparty", "header": "Customer or supplier code", "also": ["Customer code", "Supplier code", "Customer", "Supplier", "Counterparty", "Πελάτης", "Προμηθευτής"], "note": "A customer or supplier already set up (import them first). Required."},
-        {"key": "invoice", "header": "Invoice number", "also": ["Invoice", "Invoice no", "Reference", "Document", "Αριθμός τιμολογίου", "Τιμολόγιο", "Παραστατικό"], "note": "Required; each invoice once per customer or supplier."},
-        {"key": "invoice_date", "header": "Invoice date", "also": ["Date", "Document date", "Ημερομηνία", "Ημερομηνία τιμολογίου"], "note": "Optional."},
-        {"key": "due_date", "header": "Due date", "also": ["Due", "Λήξη", "Ημερομηνία λήξης"], "note": "Blank: the invoice date plus the payment terms."},
-        {"key": "amount", "header": "Amount outstanding", "also": ["Amount", "Outstanding", "Open amount", "Balance", "Ποσό", "Υπόλοιπο"], "note": "What is still unpaid. Negative for a credit note or an amount paid in advance. Required."}
+        {
+          "key": "account",
+          "header": "Account code",
+          "also": [
+            "Account",
+            "Control account",
+            "Κωδικός λογαριασμού"
+          ],
+          "note": "The receivables or payables account. Required."
+        },
+        {
+          "key": "counterparty",
+          "header": "Customer or supplier code",
+          "also": [
+            "Customer code",
+            "Supplier code",
+            "Customer",
+            "Supplier",
+            "Counterparty",
+            "Πελάτης",
+            "Προμηθευτής",
+            "Contact",
+            "Contact name",
+            "Customer name",
+            "Supplier name",
+            "Vendor",
+            "Vendor name",
+            "Name",
+            "Επωνυμία"
+          ],
+          "note": "A customer or supplier already set up (import them first). Required."
+        },
+        {
+          "key": "invoice",
+          "header": "Invoice number",
+          "also": [
+            "Invoice",
+            "Invoice no",
+            "Reference",
+            "Document",
+            "Αριθμός τιμολογίου",
+            "Τιμολόγιο",
+            "Παραστατικό",
+            "Invoice reference",
+            "Number",
+            "Num",
+            "No",
+            "Document number",
+            "Transaction"
+          ],
+          "note": "Required; each invoice once per customer or supplier."
+        },
+        {
+          "key": "invoice_date",
+          "header": "Invoice date",
+          "also": [
+            "Date",
+            "Document date",
+            "Ημερομηνία",
+            "Ημερομηνία τιμολογίου",
+            "Transaction date",
+            "Issue date"
+          ],
+          "note": "Optional."
+        },
+        {
+          "key": "due_date",
+          "header": "Due date",
+          "also": [
+            "Due",
+            "Λήξη",
+            "Ημερομηνία λήξης",
+            "Due on"
+          ],
+          "note": "Blank: the invoice date plus the payment terms."
+        },
+        {
+          "key": "amount",
+          "header": "Amount outstanding",
+          "also": [
+            "Amount",
+            "Outstanding",
+            "Open amount",
+            "Balance",
+            "Ποσό",
+            "Υπόλοιπο",
+            "Amount due",
+            "Balance due",
+            "Open balance",
+            "Total outstanding",
+            "Total due",
+            "Total",
+            "Οφειλόμενο"
+          ],
+          "note": "What is still unpaid. Negative for a credit note or an amount paid in advance. Required."
+        }
       ],
       "example": [
-        ["1200", "C-001", "INV-0017", "15/12/2026", "14/01/2027", "3400.50"]
+        [
+          "1200",
+          "C-001",
+          "INV-0017",
+          "15/12/2026",
+          "14/01/2027",
+          "3400.50"
+        ]
       ]
     }
-  }
+  },
+  "totals": [
+    "total",
+    "totals",
+    "grand total",
+    "sum",
+    "net",
+    "σύνολο",
+    "σύνολα",
+    "γενικό σύνολο"
+  ],
+  "account_types": {
+    "asset": "ASSET",
+    "assets": "ASSET",
+    "current asset": "ASSET",
+    "current assets": "ASSET",
+    "fixed asset": "ASSET",
+    "fixed assets": "ASSET",
+    "non-current asset": "ASSET",
+    "non current asset": "ASSET",
+    "bank": "ASSET",
+    "cash": "ASSET",
+    "inventory": "ASSET",
+    "prepayment": "ASSET",
+    "other current asset": "ASSET",
+    "other asset": "ASSET",
+    "accounts receivable": "ASSET:RECEIVABLE",
+    "receivable": "ASSET:RECEIVABLE",
+    "trade receivables": "ASSET:RECEIVABLE",
+    "liability": "LIABILITY",
+    "liabilities": "LIABILITY",
+    "current liability": "LIABILITY",
+    "non-current liability": "LIABILITY",
+    "non current liability": "LIABILITY",
+    "long term liability": "LIABILITY",
+    "other current liability": "LIABILITY",
+    "credit card": "LIABILITY",
+    "accounts payable": "LIABILITY:PAYABLE",
+    "payable": "LIABILITY:PAYABLE",
+    "trade payables": "LIABILITY:PAYABLE",
+    "equity": "EQUITY",
+    "capital": "EQUITY",
+    "income": "INCOME",
+    "revenue": "INCOME",
+    "sales": "INCOME",
+    "other income": "INCOME",
+    "expense": "EXPENSE",
+    "expenses": "EXPENSE",
+    "cost": "EXPENSE",
+    "direct costs": "EXPENSE",
+    "cost of goods sold": "EXPENSE",
+    "cost of sales": "EXPENSE",
+    "overhead": "EXPENSE",
+    "overheads": "EXPENSE",
+    "depreciation": "EXPENSE",
+    "other expense": "EXPENSE",
+    "ενεργητικό": "ASSET",
+    "παθητικό": "LIABILITY",
+    "υποχρεώσεις": "LIABILITY",
+    "ίδια κεφάλαια": "EQUITY",
+    "έσοδα": "INCOME",
+    "έξοδα": "EXPENSE"
+  },
+  "presets": [
+    {
+      "key": "XERO",
+      "name": "Xero",
+      "day_first": true,
+      "note": "Reports exported to Excel or CSV. Not yet checked against a real export."
+    },
+    {
+      "key": "QUICKBOOKS",
+      "name": "QuickBooks",
+      "day_first": false,
+      "note": "Dates read month first (12/31/2026), as in its US edition; choose day first if your export shows 31/12/2026. Not yet checked against a real export."
+    }
+  ]
 }

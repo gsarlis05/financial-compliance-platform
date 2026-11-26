@@ -89,6 +89,25 @@ write `1250.00` or `1.250,00`. Dates are read day first (03/04/2026 is 3 April).
 When the check is clean, import. The opening balances become **one draft entry**, which you
 approve and post as usual. Once posted, the trial balance equals your file to the cent.
 
+**From your accountant or your accounting software.** Step 3 also reads:
+- your accountant's year-end trial balance as delivered;
+- a trial balance report exported from accounting software;
+- aged receivables and aged payables reports, in place of the open-invoices template.
+
+When reading these files:
+- Headings, accounts with no balance, and subtotal and total rows are skipped, and the file's
+  total is checked against its lines.
+- Amounts written with Dr or Cr are understood.
+- An account written as "1200 Trade receivables", or by its name alone, is found in the chart.
+- If the trial balance still shows the year's income and expense, choose the retained earnings
+  account to carry them into.
+- Customers and suppliers in the aged reports are found by code or name. Those not set up yet are
+  listed, and you can choose to create them with the import.
+
+Choose where the files come from: Xero or QuickBooks set the date order (QuickBooks month first).
+Neither has yet been checked against a real export, so look at the preview carefully. You can
+always set the date order yourself.
+
 ## 5. Fiscal years and periods
 On **Periods**, create a fiscal year from its first day. It gets 12 monthly periods plus an
 adjustment period for year-end entries. Each period is:

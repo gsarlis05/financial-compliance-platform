@@ -227,9 +227,13 @@ def _number_text(raw: str) -> str | None:
     return cleaned if _PLAIN.match(cleaned) else None
 
 
+_DR_CR = re.compile(r"^(dr|cr)\.?\s*|\s*(dr|cr)\.?$", re.IGNORECASE)
+
+
 def amount(value: object) -> Decimal | Problem:  # noqa: PLR0911 (one return per kind of cell)
     """The cell as an amount (blank: zero), or the problem with it. Negative amounts are written
-    with a leading minus or in brackets."""
+    with a leading minus or in brackets; an accountant's "1,250.00 Cr" (or "Cr 1,250.00") is a
+    credit, so negative, and "Dr" a debit."""
     if value is FORMULA:
         return Problem(0, "", "Formulas are not accepted; enter the value.")
     if value is None or (isinstance(value, str) and not value.strip()):
@@ -242,7 +246,11 @@ def amount(value: object) -> Decimal | Problem:  # noqa: PLR0911 (one return per
         number = Decimal(repr(value))
     elif isinstance(value, str):
         raw = value.strip().replace("€", "").replace("EUR", "").strip()
-        negative = raw.startswith("-") or (raw.startswith("(") and raw.endswith(")"))
+        side = _DR_CR.search(raw)
+        credit = bool(side and (side.group(1) or side.group(2)).lower() == "cr")
+        if side:
+            raw = _DR_CR.sub("", raw).strip()
+        negative = credit != (raw.startswith("-") or (raw.startswith("(") and raw.endswith(")")))
         digits = _number_text(raw.strip("-()").strip())
         if digits is None:
             return Problem(0, "", f"{value.strip()[:20]!r} is not an amount this import can read "
@@ -259,12 +267,27 @@ def amount(value: object) -> Decimal | Problem:  # noqa: PLR0911 (one return per
     return number.quantize(CENT)
 
 
-DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d.%m.%Y", "%d-%m-%Y")
+# Year first, or with the month in words: the same whatever the order of day and month.
+FIXED_FORMATS = ("%Y-%m-%d", "%Y/%m/%d", "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",
+                 "%d-%b-%Y", "%d-%b-%y")  # fmt: skip
+DAY_FIRST = ("%d/%m/%Y", "%d.%m.%Y", "%d-%m-%Y", "%d/%m/%y")
+MONTH_FIRST = ("%m/%d/%Y", "%m-%d-%Y", "%m/%d/%y")
 
 
-def day(value: object) -> date | Problem | None:
-    """The cell as a date (blank: None). Typed dates are read day first (Cyprus): 03/04/2026 is
-    3 April 2026; or year first, 2026-04-03."""
+def _parsed(text: str, formats: tuple[str, ...]) -> date | None:
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt).date()  # noqa: DTZ007 - a calendar date
+        except ValueError:
+            continue
+    return None
+
+
+def day(value: object, *, day_first: bool = True) -> date | Problem | None:  # noqa: PLR0911
+    """The cell as a date (blank: None). Typed dates are read day first (Cyprus) unless
+    ``day_first`` is false: 03/04/2026 is then 4 March 2026. Year first (2026-04-03) and dates
+    with the month in words (15 Dec 2025) read the same either way. A time after the date is
+    ignored."""
     if value is FORMULA:
         return Problem(0, "", "Formulas are not accepted; enter the value.")
     if value is None or (isinstance(value, str) and not value.strip()):
@@ -274,11 +297,15 @@ def day(value: object) -> date | Problem | None:
     if isinstance(value, date):
         return value
     if isinstance(value, str):
-        for fmt in DATE_FORMATS:
-            try:
-                return datetime.strptime(value.strip()[:10], fmt).date()  # noqa: DTZ007 - a date
-            except ValueError:
-                continue
+        text = " ".join(value.split())
+        text = re.sub(r"[ T]\d{1,2}:\d{2}(:\d{2})?$", "", text)
+        found = _parsed(text, FIXED_FORMATS + (DAY_FIRST if day_first else MONTH_FIRST))
+        if found is not None:
+            return found
+        if _parsed(text, MONTH_FIRST if day_first else DAY_FIRST) is not None:
+            order = "month first (12/31/2026)" if day_first else "day first (31/12/2026)"
+            return Problem(0, "", f"{text[:20]!r} reads only {order}: choose that date order for "
+                                  "this file.")  # fmt: skip
     return Problem(0, "", "Enter a date as 31/12/2026 or 2026-12-31.")
 
 
