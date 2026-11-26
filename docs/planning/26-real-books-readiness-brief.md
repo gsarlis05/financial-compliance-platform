@@ -1,6 +1,6 @@
 # 26 — Real books readiness: bringing your bank statements and your books in
 
-Status: **PROPOSED (2026-11-25)**, for the owner's approval. After version 1 the owner chose
+Status: **APPROVED (2026-11-26)** by the owner ("Approved"). After version 1 the owner chose
 "Real books readiness" as the next step and asked for **all four banks** (Bank of Cyprus,
 Hellenic Bank, Eurobank Cyprus, Revolut Business) and **all ways** of bringing existing books in
 (spreadsheets, accounting software, an accountant's figures, starting fresh).
