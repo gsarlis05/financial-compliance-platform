@@ -8831,6 +8831,57 @@
         "title": "IgnoreIn",
         "type": "object"
       },
+      "ImportLineOut": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "counterparty_code": {
+            "title": "Counterparty Code",
+            "type": "string"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "account_name",
+          "debit",
+          "credit",
+          "counterparty_code",
+          "reference",
+          "due_date"
+        ],
+        "title": "ImportLineOut",
+        "type": "object"
+      },
       "ImportOut": {
         "properties": {
           "closing_balance": {
@@ -8934,6 +8985,170 @@
           "processed_at"
         ],
         "title": "ImportOut",
+        "type": "object"
+      },
+      "ImportOutcomeOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "committed": {
+            "title": "Committed",
+            "type": "boolean"
+          },
+          "counterparties": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Counterparties",
+            "type": "array"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
+          "files": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "object"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ImportLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ImportProblemOut"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "total_credit": {
+            "title": "Total Credit",
+            "type": "string"
+          },
+          "total_debit": {
+            "title": "Total Debit",
+            "type": "string"
+          },
+          "unknown_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ImportUnknownAccountOut"
+            },
+            "title": "Unknown Accounts",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "committed",
+          "rows",
+          "problems",
+          "warnings",
+          "unknown_accounts",
+          "accounts",
+          "counterparties",
+          "skipped",
+          "lines",
+          "total_debit",
+          "total_credit",
+          "entry_id",
+          "files"
+        ],
+        "title": "ImportOutcomeOut",
+        "type": "object"
+      },
+      "ImportProblemOut": {
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file",
+          "row",
+          "column",
+          "message"
+        ],
+        "title": "ImportProblemOut",
+        "type": "object"
+      },
+      "ImportUnknownAccountOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "rows"
+        ],
+        "title": "ImportUnknownAccountOut",
         "type": "object"
       },
       "InstalmentOut": {
@@ -29937,6 +30152,321 @@
         "summary": "Remove Holiday",
         "tags": [
           "registers"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/imports/chart": {
+      "post": {
+        "description": "Accounts from the chart template; accounts already in the chart, identical, are skipped.",
+        "operationId": "fcp_modules_onboarding_api_import_chart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "commit": {
+                    "default": false,
+                    "title": "Commit",
+                    "type": "boolean"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOutcomeOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Chart",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/imports/counterparties": {
+      "post": {
+        "description": "Customers and suppliers from the template; identical ones already set up are skipped.",
+        "operationId": "fcp_modules_onboarding_api_import_counterparties",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "commit": {
+                    "default": false,
+                    "title": "Commit",
+                    "type": "boolean"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOutcomeOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Counterparties",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/imports/opening-balances": {
+      "post": {
+        "description": "The opening trial balance (with the open invoices behind the receivables and payables) as\none draft entry dated ``as_of``. ``account_map``: a JSON object from a file's account code to\na chart account code, for accounts the chart does not have.",
+        "operationId": "fcp_modules_onboarding_api_import_opening_balances",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "account_map": {
+                    "default": "{}",
+                    "title": "Account Map",
+                    "type": "string"
+                  },
+                  "as_of": {
+                    "format": "date",
+                    "title": "As Of",
+                    "type": "string"
+                  },
+                  "commit": {
+                    "default": false,
+                    "title": "Commit",
+                    "type": "boolean"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  },
+                  "open_items": {
+                    "anyOf": [
+                      {
+                        "format": "binary",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Open Items"
+                  }
+                },
+                "required": [
+                  "file",
+                  "as_of"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOutcomeOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Opening Balances",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/imports/templates/{kind}": {
+      "get": {
+        "description": "An empty import template, as an Excel workbook (with a \"How to fill in\" sheet) or CSV.",
+        "operationId": "fcp_modules_onboarding_api_import_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "chart",
+                "counterparties",
+                "opening-balances",
+                "open-items"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "xlsx",
+              "enum": [
+                "xlsx",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Template",
+        "tags": [
+          "onboarding"
         ]
       }
     },

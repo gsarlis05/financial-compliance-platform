@@ -208,6 +208,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/bank`, "nav.bank"],
         [`${base}/fixed-assets`, "nav.fixedAssets"],
         [`${base}/fx-differences`, "nav.fxDifferences"],
+        [`${base}/import`, "nav.import"],
       ],
     },
     {

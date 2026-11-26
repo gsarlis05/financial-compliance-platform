@@ -1,0 +1,333 @@
+// Bring your books in (R-2, #245): three steps, each with its template (Excel or CSV). A file is
+// first checked (every problem by row; nothing is kept), then imported. The chart and the
+// customers and suppliers are created directly; the opening balances, with the open invoices
+// behind the receivables and payables, become one draft entry approved and posted as usual.
+import { useState } from "react";
+import { Link } from "react-router";
+import { useAccounts, useScope } from "../api/hooks";
+import {
+  type ImportKind,
+  type ImportOutcome,
+  type TemplateKind,
+  templateUrl,
+  useImport,
+} from "../api/imports";
+import { Page, ProblemMessage } from "../components/common";
+import { useI18n } from "../i18n/I18n";
+import type { MessageKey } from "../i18n/messages";
+import { formatAmount } from "../money";
+
+function Templates({ kinds }: { kinds: TemplateKind[] }) {
+  const { t } = useI18n();
+  const { base } = useScope();
+  return (
+    <p className="muted">
+      {t("imp.templates")}{" "}
+      {kinds.map((kind) => (
+        <span key={kind}>
+          {t(`imp.template.${kind}` as MessageKey)}:{" "}
+          <a href={templateUrl(base, kind, "xlsx")} download>
+            Excel
+          </a>{" "}
+          ·{" "}
+          <a href={templateUrl(base, kind, "csv")} download>
+            CSV
+          </a>{" "}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function Outcome({ outcome }: { outcome: ImportOutcome }) {
+  const { t, locale } = useI18n();
+  const { slug, entityId } = useScope();
+  const clean = outcome.problems.length === 0;
+  const created = outcome.accounts.length || outcome.counterparties.length;
+  return (
+    <div className="stack">
+      {outcome.committed ? (
+        <p className="notice" role="status">
+          {t("imp.done")}
+          {outcome.entry_id ? (
+            <>
+              {" "}
+              <Link to={`/w/${slug}/e/${entityId}/entries/${outcome.entry_id}`}>
+                {t("imp.openEntry")}
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : clean ? (
+        <p className="notice" role="status">
+          {t("imp.ready")}
+        </p>
+      ) : (
+        <p className="notice warn" role="alert">
+          {t("imp.problems").replace("{n}", String(outcome.problems.length))}
+        </p>
+      )}
+      {outcome.warnings.map((w) => (
+        <p key={w} className="notice warn">
+          {w}
+        </p>
+      ))}
+      {!clean ? (
+        <div className="table-scroll">
+          <table aria-label={t("imp.problemTable")}>
+            <thead>
+              <tr>
+                <th scope="col">{t("imp.file")}</th>
+                <th scope="col">{t("imp.row")}</th>
+                <th scope="col">{t("imp.column")}</th>
+                <th scope="col">{t("imp.message")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {outcome.problems.map((p, i) => (
+                <tr key={`${p.file}-${p.row}-${p.column}-${i}`}>
+                  <td>{p.file}</td>
+                  <td>{p.row || "—"}</td>
+                  <td>{p.column || "—"}</td>
+                  <td>{p.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {created || outcome.skipped.length ? (
+        <p className="muted">
+          {t("imp.summary")
+            .replace(
+              "{created}",
+              String(outcome.accounts.length + outcome.counterparties.length),
+            )
+            .replace("{skipped}", String(outcome.skipped.length))}
+        </p>
+      ) : null}
+      {outcome.lines.length ? (
+        <div className="table-scroll">
+          <table aria-label={t("imp.lineTable")}>
+            <thead>
+              <tr>
+                <th scope="col">{t("imp.account")}</th>
+                <th scope="col">{t("imp.party")}</th>
+                <th scope="col">{t("imp.reference")}</th>
+                <th scope="col" className="num">
+                  {t("imp.debit")}
+                </th>
+                <th scope="col" className="num">
+                  {t("imp.credit")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {outcome.lines.map((ln, i) => (
+                <tr key={`${ln.account_code}-${ln.reference}-${i}`}>
+                  <td>
+                    {ln.account_code} {ln.account_name}
+                  </td>
+                  <td>{ln.counterparty_code}</td>
+                  <td>{ln.reference}</td>
+                  <td className="num">
+                    {Number(ln.debit) ? formatAmount(ln.debit, locale) : ""}
+                  </td>
+                  <td className="num">
+                    {Number(ln.credit) ? formatAmount(ln.credit, locale) : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colSpan={3}>
+                  {t("imp.total")}
+                </th>
+                <td className="num">
+                  {formatAmount(outcome.total_debit, locale)}
+                </td>
+                <td className="num">
+                  {formatAmount(outcome.total_credit, locale)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FileStep({
+  kind,
+  title,
+  help,
+}: {
+  kind: Exclude<ImportKind, "opening-balances">;
+  title: MessageKey;
+  help: MessageKey;
+}) {
+  const { t } = useI18n();
+  const run = useImport(kind);
+  const [file, setFile] = useState<File | null>(null);
+  const checked = run.data && !run.data.committed ? run.data : null;
+  return (
+    <section className="card stack" aria-labelledby={`imp-${kind}`}>
+      <h2 id={`imp-${kind}`}>{t(title)}</h2>
+      <p className="muted">{t(help)}</p>
+      <Templates kinds={[kind]} />
+      <label>
+        {t("imp.chooseFile")}
+        <input
+          type="file"
+          accept=".xlsx,.csv,text/csv"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            run.reset();
+          }}
+        />
+      </label>
+      <div className="row">
+        <button
+          type="button"
+          disabled={!file || run.isPending}
+          onClick={() => file && run.mutate({ file, commit: false })}
+        >
+          {t("imp.check")}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={
+            !file || !checked || checked.problems.length > 0 || run.isPending
+          }
+          onClick={() => file && run.mutate({ file, commit: true })}
+        >
+          {t("imp.import")}
+        </button>
+      </div>
+      <ProblemMessage error={run.error} />
+      {run.data ? <Outcome outcome={run.data} /> : null}
+    </section>
+  );
+}
+
+function OpeningStep() {
+  const { t } = useI18n();
+  const run = useImport("opening-balances");
+  const accounts = useAccounts();
+  const [file, setFile] = useState<File | null>(null);
+  const [items, setItems] = useState<File | null>(null);
+  const [asOf, setAsOf] = useState(`${new Date().getFullYear()}-01-01`);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const postable = (accounts.data ?? []).filter(
+    (a) => a.is_postable && a.status === "ACTIVE",
+  );
+  const checked = run.data && !run.data.committed ? run.data : null;
+  const request = (commit: boolean) =>
+    file &&
+    run.mutate({ file, openItems: items, asOf, accountMap: mapping, commit });
+  return (
+    <section className="card stack" aria-labelledby="imp-opening">
+      <h2 id="imp-opening">{t("imp.opening.title")}</h2>
+      <p className="muted">{t("imp.opening.help")}</p>
+      <Templates kinds={["opening-balances", "open-items"]} />
+      <label>
+        {t("imp.asOf")}
+        <input
+          type="date"
+          value={asOf}
+          required
+          onChange={(e) => {
+            setAsOf(e.target.value);
+            run.reset();
+          }}
+        />
+      </label>
+      <label>
+        {t("imp.tbFile")}
+        <input
+          type="file"
+          accept=".xlsx,.csv,text/csv"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            run.reset();
+          }}
+        />
+      </label>
+      <label>
+        {t("imp.itemsFile")}
+        <input
+          type="file"
+          accept=".xlsx,.csv,text/csv"
+          onChange={(e) => {
+            setItems(e.target.files?.[0] ?? null);
+            run.reset();
+          }}
+        />
+      </label>
+      {run.data?.unknown_accounts.length ? (
+        <fieldset className="stack">
+          <legend>{t("imp.map.title")}</legend>
+          <p className="muted">{t("imp.map.help")}</p>
+          {run.data.unknown_accounts.map((u) => (
+            <label key={u.code}>
+              {u.code} {u.name}
+              <select
+                value={mapping[u.code] ?? ""}
+                onChange={(e) =>
+                  setMapping({ ...mapping, [u.code]: e.target.value })
+                }
+              >
+                <option value="">{t("imp.map.choose")}</option>
+                {postable.map((a) => (
+                  <option key={a.id} value={a.code}>
+                    {a.code} {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
+      <div className="row">
+        <button
+          type="button"
+          disabled={!file || !asOf || run.isPending}
+          onClick={() => request(false)}
+        >
+          {t("imp.check")}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={
+            !file || !checked || checked.problems.length > 0 || run.isPending
+          }
+          onClick={() => request(true)}
+        >
+          {t("imp.createDraft")}
+        </button>
+      </div>
+      <ProblemMessage error={run.error} />
+      {run.data ? <Outcome outcome={run.data} /> : null}
+    </section>
+  );
+}
+
+export function ImportPage() {
+  const { t } = useI18n();
+  return (
+    <Page title={t("imp.title")}>
+      <p className="muted">{t("imp.help")}</p>
+      <FileStep kind="chart" title="imp.chart.title" help="imp.chart.help" />
+      <FileStep
+        kind="counterparties"
+        title="imp.parties.title"
+        help="imp.parties.help"
+      />
+      <OpeningStep />
+    </Page>
+  );
+}

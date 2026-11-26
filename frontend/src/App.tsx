@@ -38,6 +38,7 @@ import {
 } from "./pages/Entries";
 import { LedgerSettingsPage } from "./pages/LedgerSettings";
 import { FxDifferencesPage } from "./pages/FxDifferences";
+import { ImportPage } from "./pages/Import";
 import { PeriodsPage } from "./pages/Periods";
 import { ReportPacksPage } from "./pages/ReportPacks";
 import { StatementsPage } from "./pages/Statements";
@@ -141,6 +142,7 @@ const router = createBrowserRouter([
         path: "w/:slug/e/:entityId/fx-differences",
         element: <FxDifferencesPage />,
       },
+      { path: "w/:slug/e/:entityId/import", element: <ImportPage /> },
       {
         path: "w/:slug/e/:entityId/trial-balance",
         element: <TrialBalancePage />,
