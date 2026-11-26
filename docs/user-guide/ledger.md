@@ -69,6 +69,26 @@ Headings (shown with "· heading") group accounts and cannot be posted to. Add y
 below the table. Accounts are never deleted (postings must keep their account); deactivating
 an account is available through the API in M1.
 
+### Bringing your existing books in
+**Bookkeeping → Bring your books in** moves your existing books here in three steps, each with a
+template to download (Excel or CSV):
+1. **Chart of accounts.** Accounts already in the chart with the same name and type are skipped.
+2. **Customers and suppliers.**
+3. **Opening balances and open invoices.** The trial balance on the opening date. For the
+   receivables and payables accounts, add the invoices still open; they must add up to each
+   account's balance. If your file names an account the chart does not have, choose which chart
+   account it goes to.
+
+You can use your own file instead of a template if its columns have the same names (English or
+Greek). The order of the columns does not matter.
+
+**Check the file** first: every problem is listed with its row, and nothing is kept. Formulas are
+not accepted. Amounts such as `1,250` are refused because they could be thousands or decimals;
+write `1250.00` or `1.250,00`. Dates are read day first (03/04/2026 is 3 April).
+
+When the check is clean, import. The opening balances become **one draft entry**, which you
+approve and post as usual. Once posted, the trial balance equals your file to the cent.
+
 ## 5. Fiscal years and periods
 On **Periods**, create a fiscal year from its first day. It gets 12 monthly periods plus an
 adjustment period for year-end entries. Each period is:
