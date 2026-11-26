@@ -96,7 +96,7 @@ class _Item:
 
 
 @dataclass
-class _Chart:
+class Chart:
     by_code: dict[str, Account]
     by_name: dict[str, list[Account]]
     account_map: dict[str, str]
@@ -137,7 +137,7 @@ def _check_file_total(table: Table, sums: tuple[Decimal, Decimal],
                                          f"lines ({lines_debit - lines_credit:.2f}).")  # fmt: skip
 
 
-def _balances(table: Table, chart: _Chart, out: Outcome) -> dict[str, Decimal]:
+def _balances(table: Table, chart: Chart, out: Outcome) -> dict[str, Decimal]:
     """Net debit balance per chart account (several file accounts may map to one)."""
     totals: dict[str, Decimal] = defaultdict(Decimal)
     unknown: dict[str, tuple[str, list[int]]] = {}
@@ -183,7 +183,7 @@ def _balances(table: Table, chart: _Chart, out: Outcome) -> dict[str, Decimal]:
     return totals
 
 
-def _carry_results(totals: dict[str, Decimal], chart: _Chart, code: str, table: Table) -> None:
+def _carry_results(totals: dict[str, Decimal], chart: Chart, code: str, table: Table) -> None:
     """Move the income and expense balances into ``code`` (retained earnings)."""
     target = chart.by_code.get(code.strip().upper())
     if target is None or target.type != "EQUITY" or not target.is_postable:
@@ -237,7 +237,7 @@ class _Parties:
         return None
 
 
-def _default_account(chart: _Chart, side: str) -> Account | None:
+def _default_account(chart: Chart, side: str) -> Account | None:
     found = [
         a
         for a in chart.by_code.values()
@@ -246,7 +246,7 @@ def _default_account(chart: _Chart, side: str) -> Account | None:
     return found[0] if len(found) == 1 else None  # fmt: skip
 
 
-def _items(table: Table, chart: _Chart, parties: _Parties, side: str | None,
+def _items(table: Table, chart: Chart, parties: _Parties, side: str | None,
            day_first: bool, seen: dict[tuple[str, str, str], int]) -> list[_Item]:  # fmt: skip
     """``side``: None for the template (an account column), else the report's side."""
     found: list[_Item] = []
@@ -328,7 +328,7 @@ def _already_booked(entity_id: UUID, items: list[_Item], tables_by_file: dict[st
 # --- the entry ----------------------------------------------------------------------------------
 
 
-def _plan_lines(totals: dict[str, Decimal], items: list[_Item], chart: _Chart,
+def _plan_lines(totals: dict[str, Decimal], items: list[_Item], chart: Chart,
                 tb: Table) -> list[PlannedLine]:  # fmt: skip
     by_account: dict[str, list[_Item]] = defaultdict(list)
     for item in items:
@@ -361,7 +361,7 @@ def _plan_lines(totals: dict[str, Decimal], items: list[_Item], chart: _Chart,
     return lines
 
 
-def _read_items(req: OpeningRequest, chart: _Chart, parties: _Parties,
+def _read_items(req: OpeningRequest, chart: Chart, parties: _Parties,
                 out: Outcome) -> tuple[list[_Item], dict[str, Table]]:  # fmt: skip
     items: list[_Item] = []
     read: dict[str, Table] = {}
@@ -423,7 +423,7 @@ def import_opening_balances(ctx: WorkspaceContext, entity_id: UUID, req: Opening
     for a in accounts:
         if a.is_postable:
             by_name[tables.normalise(a.name)].append(a)
-    chart = _Chart(
+    chart = Chart(
         {a.code: a for a in accounts},
         by_name,
         {k.strip(): v.strip() for k, v in req.account_map.items() if v.strip()},

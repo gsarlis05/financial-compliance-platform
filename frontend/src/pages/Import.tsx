@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useAccounts, useScope } from "../api/hooks";
+import type { Account } from "../api/types";
 import {
   type ImportKind,
   type ImportOutcome,
@@ -234,6 +235,120 @@ function FileInput({
   );
 }
 
+function AccountMapping({
+  outcome,
+  accounts,
+  mapping,
+  onChange,
+}: {
+  outcome: ImportOutcome | undefined;
+  accounts: Account[];
+  mapping: Record<string, string>;
+  onChange: (mapping: Record<string, string>) => void;
+}) {
+  const { t } = useI18n();
+  if (!outcome?.unknown_accounts.length) {
+    return null;
+  }
+  return (
+    <fieldset className="stack">
+      <legend>{t("imp.map.title")}</legend>
+      <p className="muted">{t("imp.map.help")}</p>
+      {outcome.unknown_accounts.map((u) => (
+        <label key={u.code}>
+          {u.code === u.name ? u.code : `${u.code} ${u.name}`}
+          <select
+            value={mapping[u.code] ?? ""}
+            onChange={(e) => onChange({ ...mapping, [u.code]: e.target.value })}
+          >
+            <option value="">{t("imp.map.choose")}</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.code}>
+                {a.code} {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+function PriorStep() {
+  const { t } = useI18n();
+  const run = useImport("prior-year");
+  const accounts = useAccounts();
+  const [file, setFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<"year_to_date" | "month">("year_to_date");
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const active = (accounts.data ?? []).filter((a) => a.is_postable);
+  const checked = run.data && !run.data.committed ? run.data : null;
+  const request = (commit: boolean) =>
+    file &&
+    run.mutate({ file, accountMap: mapping, profitAndLoss: mode, commit });
+  return (
+    <section className="card stack" aria-labelledby="imp-prior">
+      <h2 id="imp-prior">{t("imp.prior.title")}</h2>
+      <p className="muted">{t("imp.prior.help")}</p>
+      <Templates kinds={["prior-year"]} />
+      <label>
+        {t("imp.prior.mode")}
+        <select
+          value={mode}
+          onChange={(e) => {
+            setMode(e.target.value as "year_to_date" | "month");
+            run.reset();
+          }}
+        >
+          <option value="year_to_date">{t("imp.prior.ytd")}</option>
+          <option value="month">{t("imp.prior.month")}</option>
+        </select>
+      </label>
+      <FileInput
+        label="imp.chooseFile"
+        onFile={(f) => {
+          setFile(f);
+          run.reset();
+        }}
+      />
+      <AccountMapping
+        outcome={run.data}
+        accounts={active}
+        mapping={mapping}
+        onChange={setMapping}
+      />
+      <div className="row">
+        <button
+          type="button"
+          disabled={!file || run.isPending}
+          onClick={() => request(false)}
+        >
+          {t("imp.check")}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={
+            !file || !checked || checked.problems.length > 0 || run.isPending
+          }
+          onClick={() => request(true)}
+        >
+          {t("imp.import")}
+        </button>
+      </div>
+      <ProblemMessage error={run.error} />
+      {run.data?.months.length ? (
+        <p className="muted">
+          {t("imp.prior.summary")
+            .replace("{months}", run.data.months.join(", "))
+            .replace("{accounts}", String(run.data.accounts.length))}
+        </p>
+      ) : null}
+      {run.data ? <Outcome outcome={run.data} /> : null}
+    </section>
+  );
+}
+
 type Files = Record<"tb" | "items" | "ar" | "ap", File | null>;
 
 function OpeningStep() {
@@ -350,30 +465,12 @@ function OpeningStep() {
             ))}
         </select>
       </label>
-      {run.data?.unknown_accounts.length ? (
-        <fieldset className="stack">
-          <legend>{t("imp.map.title")}</legend>
-          <p className="muted">{t("imp.map.help")}</p>
-          {run.data.unknown_accounts.map((u) => (
-            <label key={u.code}>
-              {u.code === u.name ? u.code : `${u.code} ${u.name}`}
-              <select
-                value={mapping[u.code] ?? ""}
-                onChange={(e) =>
-                  setMapping({ ...mapping, [u.code]: e.target.value })
-                }
-              >
-                <option value="">{t("imp.map.choose")}</option>
-                {active.map((a) => (
-                  <option key={a.id} value={a.code}>
-                    {a.code} {a.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </fieldset>
-      ) : null}
+      <AccountMapping
+        outcome={run.data}
+        accounts={active}
+        mapping={mapping}
+        onChange={setMapping}
+      />
       {run.data?.unknown_counterparties.length || create ? (
         <fieldset className="stack">
           <legend>{t("imp.parties.unknown")}</legend>
@@ -432,6 +529,7 @@ export function ImportPage() {
         help="imp.parties.help"
       />
       <OpeningStep />
+      <PriorStep />
     </Page>
   );
 }

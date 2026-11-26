@@ -108,6 +108,15 @@ Choose where the files come from: Xero or QuickBooks set the date order (QuickBo
 Neither has yet been checked against a real export, so look at the preview carefully. You can
 always set the date order yourself.
 
+**The prior year by month (step 4).** To compare with last year (budget against the prior year,
+KPIs, statements), import a monthly trial balance of the months before your books start. The
+template lists those 12 months. Each cell is the account's balance at the end of the month. Income
+and expense can be written year to date, as a monthly trial balance shows them, or as each month's
+own amount.
+
+These figures are kept for comparisons only; they never become entries. Every month must balance,
+and the last month must agree with your opening balances. Importing again replaces them.
+
 ## 5. Fiscal years and periods
 On **Periods**, create a fiscal year from its first day. It gets 12 monthly periods plus an
 adjustment period for year-end entries. Each period is:

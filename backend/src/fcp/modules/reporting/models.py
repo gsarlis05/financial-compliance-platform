@@ -67,3 +67,31 @@ class ActualsState(TenantOwned):
         constraints = [
             models.UniqueConstraint(fields=["tenant"], name="reporting_state_one_per_tenant"),
         ]
+
+
+class FactComparative(TenantOwned):
+    """The months before the books start (R-4, #247): each account's movement per month, from a
+    prior year's monthly trial balance imported as comparatives. Never journal entries.
+
+    They are read alongside the facts for months before the entity's first fiscal year, and they
+    count towards balances only at dates up to that start: from then on the opening entry carries
+    the balances, so nothing is counted twice."""
+
+    legal_entity = models.ForeignKey("tenancy.LegalEntity", on_delete=models.PROTECT,
+                                     related_name="+")  # fmt: skip
+    account_id = models.UUIDField()
+    month = models.DateField(help_text="First day of the month")
+    debit_total = models.DecimalField(max_digits=19, decimal_places=4)
+    credit_total = models.DecimalField(max_digits=19, decimal_places=4)
+
+    class Meta:
+        db_table = "reporting_fact_comparative"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["legal_entity", "account_id", "month"], name="reporting_comparative_key"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(debit_total__gte=0, credit_total__gte=0),
+                name="reporting_comparative_non_negative",
+            ),
+        ]

@@ -15,16 +15,17 @@ from ninja.files import UploadedFile
 
 from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
+from fcp.modules.reporting.api import books_start
 from fcp.modules.tenancy.api import workspace_ctx
 
-from . import opening, services, templates
+from . import opening, prior, services, templates
 from .tables import MAX_BYTES
 
 __all__ = ["router"]
 
 router = Router(tags=["onboarding"])
 BASE = "/w/{slug}/entities/{uuid:entity_id}"
-Kind = Literal["chart", "counterparties", "opening-balances", "open-items"]
+Kind = Literal["chart", "counterparties", "opening-balances", "open-items", "prior-year"]
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -81,6 +82,7 @@ class ImportOutcomeOut(Schema):
     total_credit: str
     entry_id: UUID | None
     files: dict[str, str]
+    months: list[str]
 
 
 def _out(found: services.Outcome) -> ImportOutcomeOut:
@@ -99,7 +101,7 @@ def _out(found: services.Outcome) -> ImportOutcomeOut:
                              counterparty_code=ln.counterparty_code, reference=ln.reference,
                              due_date=ln.due_date) for ln in found.lines],
         total_debit=f"{found.total_debit:.2f}", total_credit=f"{found.total_credit:.2f}",
-        entry_id=found.entry_id, files=found.files,
+        entry_id=found.entry_id, files=found.files, months=found.months,
     )  # fmt: skip
 
 
@@ -114,11 +116,13 @@ def import_template(
     format: Literal["xlsx", "csv"] = "xlsx",
 ) -> HttpResponse:  # fmt: skip
     """An empty import template, as an Excel workbook (with a "How to fill in" sheet) or CSV."""
-    workspace_ctx(request, slug, entity_id)
+    ctx = workspace_ctx(request, slug, entity_id)
+    months = prior.template_months(books_start(ctx, entity_id)) if kind == "prior-year" else ()
     if format == "csv":
-        response = HttpResponse(templates.as_csv(kind), content_type="text/csv; charset=utf-8")
+        response = HttpResponse(templates.as_csv(kind, months),
+                                content_type="text/csv; charset=utf-8")  # fmt: skip
     else:
-        response = HttpResponse(templates.as_workbook(kind), content_type=XLSX)
+        response = HttpResponse(templates.as_workbook(kind, months), content_type=XLSX)
     response["Content-Disposition"] = f'attachment; filename="import-{kind}.{format}"'
     return response
 
@@ -200,3 +204,20 @@ def import_opening_balances(  # noqa: PLR0913, PLR0917 - the form's fields
         day_first=date_order == "day", create_counterparties=create_counterparties,
     )  # fmt: skip
     return _out(opening.import_opening_balances(ctx, entity_id, req, commit=commit))
+
+
+@router.post(f"{BASE}/imports/prior-year", response=ImportOutcomeOut)
+@requires("ledger.entry.create")
+def import_prior_year(  # noqa: PLR0913, PLR0917 - the form's fields
+    request: HttpRequest, slug: str, entity_id: UUID, file: File[UploadedFile],
+    account_map: Form[str] = "{}",
+    profit_and_loss: Form[Literal["year_to_date", "month"]] = "year_to_date",
+    commit: Form[bool] = False,
+) -> ImportOutcomeOut:  # fmt: skip
+    """The months before the books start, from a monthly trial balance, kept as comparatives
+    (no entries). ``profit_and_loss``: income and expense written year to date (as a monthly
+    trial balance shows them) or as each month's own amount."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    req = prior.PriorRequest(upload=_upload(file), account_map=_mapping(account_map),
+                             year_to_date=profit_and_loss == "year_to_date")  # fmt: skip
+    return _out(prior.import_prior_year(ctx, entity_id, req, commit=commit))

@@ -66,28 +66,34 @@ def fields(kind: str) -> dict[str, tuple[str, ...]]:
     return {c.key: names(c.header, *c.also) for c in columns(kind)}
 
 
-def as_csv(kind: str) -> bytes:
+def headers(kind: str, months: tuple[str, ...] = ()) -> list[str]:
+    """The header row; the prior-year template adds one column per month (2025-01 …)."""
+    return [c.header for c in columns(kind)] + list(months)
+
+
+def as_csv(kind: str, months: tuple[str, ...] = ()) -> bytes:
     out = io.StringIO()
-    csv.writer(out, lineterminator="\r\n").writerow([c.header for c in columns(kind)])
+    csv.writer(out, lineterminator="\r\n").writerow(headers(kind, months))
     return out.getvalue().encode("utf-8-sig")
 
 
-def as_workbook(kind: str) -> bytes:
+def as_workbook(kind: str, months: tuple[str, ...] = ()) -> bytes:
     from openpyxl import Workbook  # noqa: PLC0415 (only templates need openpyxl)
     from openpyxl.styles import Font  # noqa: PLC0415
     from openpyxl.utils import get_column_letter  # noqa: PLC0415
 
     cols = columns(kind)
+    head = headers(kind, months)
     book = Workbook()
     sheet = book.active
     if sheet is None:  # pragma: no cover (a new workbook always has one sheet)
         raise ValueError("No sheet.")
     sheet.title = "Import"
-    sheet.append([c.header for c in cols])
+    sheet.append(head)
     for i, cell in enumerate(sheet[1]):
         cell.font = Font(bold=True)
         letter = get_column_letter(i + 1)
-        sheet.column_dimensions[letter].width = max(14, len(cols[i].header) + 4)
+        sheet.column_dimensions[letter].width = max(14, len(head[i]) + 4)
         # Codes typed in these columns stay text: leading zeros are kept.
         sheet.column_dimensions[letter].number_format = "@"
     sheet.freeze_panes = "A2"
@@ -101,9 +107,13 @@ def as_workbook(kind: str) -> bytes:
         cell.font = Font(bold=True)
     for c in cols:
         how.append([safe_text(c.header), safe_text(c.note)])
+    template = _DATA["templates"][kind]
+    if "months_note" in template:
+        how.append(["2025-01 …", safe_text(template["months_note"])])
     how.append([])
     how.append(["Example (synthetic)"])
-    how.append([c.header for c in cols])
+    width = len(template["example"][0])
+    how.append([*head, "2025-01", "2025-02"][:width] if months else head)
     for row in _DATA["templates"][kind]["example"]:
         how.append([safe_text(v) for v in row])
     how.column_dimensions["A"].width = 28

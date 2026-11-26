@@ -37,6 +37,7 @@ const empty: ImportOutcome = {
   total_credit: "0.00",
   entry_id: null,
   files: {},
+  months: [],
 };
 
 const unmapped: ImportOutcome = {
@@ -253,5 +254,61 @@ describe("Bring your books in", () => {
     expect(sent[0]?.aged_receivables).toBeInstanceOf(File);
     expect(sent[0]?.create_counterparties).toBeUndefined();
     expect(sent[1]?.create_counterparties).toBe("true");
+  });
+
+  it("checks a prior year by month and shows the months it covers", async () => {
+    const sent: { url: string; form: Record<string, FormDataEntryValue> }[] =
+      [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) => {
+        if (url.endsWith("/accounts")) return Promise.resolve(respond([]));
+        if (url.endsWith("/imports/presets"))
+          return Promise.resolve(respond(presets));
+        sent.push({
+          url,
+          form: Object.fromEntries((init.body as FormData).entries()),
+        });
+        return Promise.resolve(
+          respond({
+            ...empty,
+            kind: "prior-year",
+            months: ["2025-11", "2025-12"],
+            accounts: ["1300", "4000"],
+          }),
+        );
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <I18nProvider locale="en">
+          <MemoryRouter initialEntries={["/w/ws/e/e1/import"]}>
+            <Routes>
+              <Route
+                path="/w/:slug/e/:entityId/import"
+                element={<ImportPage />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </QueryClientProvider>,
+    );
+    const step = within(
+      screen.getByRole("region", {
+        name: "4. The prior year by month (for comparisons)",
+      }),
+    );
+    fireEvent.change(step.getByLabelText("Income and expense are written"), {
+      target: { value: "month" },
+    });
+    fireEvent.change(step.getByLabelText("File (Excel or CSV)"), {
+      target: { files: [new File(["x"], "prior.csv")] },
+    });
+    fireEvent.click(step.getByRole("button", { name: "Check the file" }));
+    expect(
+      await step.findByText("Months: 2025-11, 2025-12. Accounts: 2."),
+    ).toBeInTheDocument();
+    expect(sent[0]?.url).toMatch(/\/imports\/prior-year$/);
+    expect(sent[0]?.form.profit_and_loss).toBe("month");
   });
 });

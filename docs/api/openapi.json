@@ -9037,6 +9037,13 @@
             "title": "Lines",
             "type": "array"
           },
+          "months": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
           "problems": {
             "items": {
               "$ref": "#/components/schemas/ImportProblemOut"
@@ -9100,7 +9107,8 @@
           "total_debit",
           "total_credit",
           "entry_id",
-          "files"
+          "files",
+          "months"
         ],
         "title": "ImportOutcomeOut",
         "type": "object"
@@ -30562,6 +30570,94 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/imports/prior-year": {
+      "post": {
+        "description": "The months before the books start, from a monthly trial balance, kept as comparatives\n(no entries). ``profit_and_loss``: income and expense written year to date (as a monthly\ntrial balance shows them) or as each month's own amount.",
+        "operationId": "fcp_modules_onboarding_api_import_prior_year",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "account_map": {
+                    "default": "{}",
+                    "title": "Account Map",
+                    "type": "string"
+                  },
+                  "commit": {
+                    "default": false,
+                    "title": "Commit",
+                    "type": "boolean"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  },
+                  "profit_and_loss": {
+                    "default": "year_to_date",
+                    "enum": [
+                      "year_to_date",
+                      "month"
+                    ],
+                    "title": "Profit And Loss",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOutcomeOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Import Prior Year",
+        "tags": [
+          "onboarding"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/imports/templates/{kind}": {
       "get": {
         "description": "An empty import template, as an Excel workbook (with a \"How to fill in\" sheet) or CSV.",
@@ -30595,7 +30691,8 @@
                 "chart",
                 "counterparties",
                 "opening-balances",
-                "open-items"
+                "open-items",
+                "prior-year"
               ],
               "title": "Kind",
               "type": "string"
