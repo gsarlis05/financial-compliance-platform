@@ -104,6 +104,7 @@ class Outcome:
     total_credit: Decimal = ZERO
     entry_id: UUID | None = None
     files: dict[str, str] = field(default_factory=dict)  # name -> SHA-256
+    months: list[str] = field(default_factory=list)  # prior year (R-4): the months imported
 
     @property
     def difference(self) -> Decimal:
@@ -111,10 +112,11 @@ class Outcome:
 
 
 def read_upload(upload: Upload, kind: str, ready: Callable[[set[str]], bool], missing: str,
-          out: Outcome) -> Table | None:  # fmt: skip
+                out: Outcome, dynamic: tables.Dynamic | None = None) -> Table | None:  # fmt: skip
     out.files[upload.name] = upload.sha256
     try:
-        table = tables.read(upload.data, upload.name, templates.fields(kind), ready, missing)
+        table = tables.read(upload.data, upload.name, templates.fields(kind), ready, missing,
+                            dynamic)  # fmt: skip
     except TableError as refused:
         out.problems.append(Problem(0, "", str(refused), upload.name))
         return None

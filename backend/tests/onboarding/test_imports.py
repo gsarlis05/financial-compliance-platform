@@ -122,7 +122,8 @@ def test_templates_download_and_read_back(books: dict[str, Any]) -> None:
         assert got.status_code == 200
         book = load_workbook(io.BytesIO(got.content))
         assert book.sheetnames == ["Import", "How to fill in"]
-        assert [c.value for c in book["Import"][1]] == [c.header for c in templates.columns(kind)]
+        fixed = [c.header for c in templates.columns(kind)]
+        assert [c.value for c in book["Import"][1]][: len(fixed)] == fixed
         as_csv = client.get(f"{books['base']}/imports/templates/{kind}", {"format": "csv"})
         assert as_csv.content.decode("utf-8-sig").startswith(templates.columns(kind)[0].header)
     # A filled-in template is read back from its first sheet only.

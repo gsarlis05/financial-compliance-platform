@@ -21,7 +21,7 @@ from django.db import connection
 from django.db.models import F, Q, Sum
 from django.utils import timezone
 
-from .models import ActualsState, FactDaily, FactMonthly
+from .models import ActualsState, FactComparative, FactDaily, FactMonthly
 
 ZERO = Decimal(0)
 
@@ -130,6 +130,7 @@ SELECT l.account_id, e.accounting_date, {closing}, sum(l.debit), sum(l.credit)
 """
 _LATER = _LATER_TEMPLATE.format(closing=_IS_CLOSING)
 Totals = dict[tuple[UUID, date], list[Decimal]]
+Balances = dict[date, dict[UUID, Decimal]]
 
 
 def _pinned(entity_id: UUID, tenant_id: UUID, watermark: int | None) -> tuple[int, Later]:
@@ -169,6 +170,57 @@ def _facts(rows: Iterable[tuple[UUID, date, Decimal, Decimal]]) -> Totals:
 def _as_facts(facts: Totals) -> list[Fact]:
     ordered = sorted(facts.items(), key=lambda kv: (kv[0][1], str(kv[0][0])))
     return [Fact(a, p, d, c) for (a, p), (d, c) in ordered]
+
+
+# --- comparatives (R-4): the months before the books start ----------------------------------------
+
+
+def books_start(entity_id: UUID) -> date | None:
+    """The first day the ledger covers: the start of the entity's first fiscal year."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT min(start_date) FROM ledger_fiscal_year WHERE legal_entity_id = %s",
+                       [entity_id])  # fmt: skip
+        row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def next_month(month: date) -> date:
+    return date(month.year + month.month // 12, month.month % 12 + 1, 1)
+
+
+def _comparatives_before(entity_id: UUID, cutoffs: list[date]) -> Balances:
+    """Each cut-off's net debit balance per account from the comparatives: months that ended
+    before it, and only for cut-offs up to the books start (from then on the opening entry
+    carries the balances)."""
+    found: Balances = {d: {} for d in cutoffs}
+    start = books_start(entity_id)
+    wanted = [d for d in cutoffs if start is None or d <= start]
+    if not wanted:
+        return found
+    rows = list(FactComparative.objects.filter(legal_entity_id=entity_id, month__lt=max(wanted))
+                .values_list("account_id", "month", "debit_total", "credit_total"))  # fmt: skip
+    for d in wanted:
+        totals = found[d]
+        for account_id, month, debit, credit in rows:
+            if next_month(month) <= d:
+                totals[account_id] = totals.get(account_id, ZERO) + debit - credit
+    return found
+
+
+def comparatives(entity_id: UUID) -> list[Fact]:
+    rows = FactComparative.objects.filter(legal_entity_id=entity_id).order_by("month")
+    return [Fact(r.account_id, r.month, r.debit_total, r.credit_total) for r in rows]
+
+
+def replace_comparatives(entity_id: UUID, tenant_id: UUID, facts: list[Fact]) -> int:
+    """Replace the entity's comparatives (one set per entity)."""
+    FactComparative.objects.filter(legal_entity_id=entity_id).delete()
+    FactComparative.objects.bulk_create([
+        FactComparative(tenant_id=tenant_id, legal_entity_id=entity_id, account_id=f.account_id,
+                        month=f.period, debit_total=f.debit_total, credit_total=f.credit_total)
+        for f in facts if f.debit_total or f.credit_total
+    ])  # fmt: skip
+    return len(facts)
 
 
 def posted_since(entity_id: UUID, tenant_id: UUID, watermark: int) -> bool:
@@ -211,6 +263,15 @@ def monthly(entity_id: UUID, tenant_id: UUID, *, date_from: date, date_to: date,
     facts = _facts((r.account_id, r.month, r.debit_total, r.credit_total) for r in rows)
     _subtract(facts, ((a, d.replace(day=1), dr, cr) for a, d, closing, dr, cr in later
                       if not closing))  # fmt: skip
+    # The months before the books start come from the comparatives (R-4); no fiscal year covers
+    # them, so no posting can, and the two never overlap.
+    start = books_start(entity_id)
+    for r in FactComparative.objects.filter(legal_entity_id=entity_id, month__gte=first,
+                                            month__lte=last):  # fmt: skip
+        if start is None or r.month < start:
+            totals = facts.setdefault((r.account_id, r.month), [ZERO, ZERO])
+            totals[0] += r.debit_total
+            totals[1] += r.credit_total
     return Actuals(pinned, _as_facts(facts))
 
 
@@ -245,10 +306,9 @@ def net_before(
     totals: dict[UUID, Decimal] = defaultdict(lambda: ZERO)
     for (account_id, _, _), (debit, credit) in rows.items():
         totals[account_id] += debit - credit
+    for account_id, value in _comparatives_before(entity_id, [before])[before].items():
+        totals[account_id] += value
     return pinned, dict(totals)
-
-
-Balances = dict[date, dict[UUID, Decimal]]
 
 
 def net_before_many(
@@ -281,6 +341,9 @@ def net_before_many(
                 value = row[f"{prefix}{i}"]
                 if value is not None:
                     target[d][row["account_id"]] = value
+    for d, extra in _comparatives_before(entity_id, unique).items():
+        for account_id, value in extra.items():
+            every[d][account_id] = every[d].get(account_id, ZERO) + value
     return watermark, every, closing
 
 

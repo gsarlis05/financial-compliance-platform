@@ -471,6 +471,66 @@
           "3400.50"
         ]
       ]
+    },
+    "prior-year": {
+      "title": "Prior year by month",
+      "columns": [
+        {
+          "key": "account",
+          "header": "Account code",
+          "also": [
+            "Account",
+            "Code",
+            "Account no",
+            "Account number",
+            "Κωδικός",
+            "Κωδικός λογαριασμού"
+          ],
+          "note": "An account of the chart, or one you map to it when importing. Required."
+        },
+        {
+          "key": "name",
+          "header": "Account name",
+          "also": [
+            "Name",
+            "Description",
+            "Όνομα",
+            "Περιγραφή",
+            "Λογαριασμός"
+          ],
+          "note": "Shown when mapping an account that is not in the chart. Optional."
+        },
+        {
+          "key": "opening",
+          "header": "Opening",
+          "also": [
+            "Opening balance",
+            "Brought forward",
+            "B/f",
+            "Start",
+            "Υπόλοιπο έναρξης",
+            "Από μεταφορά"
+          ],
+          "note": "The balance at the start of the first month, for balance-sheet accounts. Optional; without it the first month's movement includes the opening balance."
+        }
+      ],
+      "months_note": "One column per month (2025-01, 2025-02 …): each account's balance at the end of that month, as a monthly trial balance shows it, debit positive and credit negative. Income and expense accounts year to date, or the month's own amount if you choose so when importing.",
+      "example": [
+        [
+          "1300",
+          "Bank - current account (Demo)",
+          "8000.00",
+          "9000.00",
+          "9500.00"
+        ],
+        [
+          "4000",
+          "Sales revenue (Demo)",
+          "",
+          "-3000.00",
+          "-6000.00"
+        ]
+      ]
     }
   },
   "totals": [

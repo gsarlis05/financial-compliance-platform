@@ -43,7 +43,9 @@ __all__ = [
     "accounts",
     "actuals_monthly",
     "balances_before",
+    "books_start",
     "cash_daily",
+    "comparative_facts",
     "current_watermark",
     "dimension_actuals",
     "dimension_values",
@@ -52,6 +54,7 @@ __all__ = [
     "opening_net",
     "posted_since",
     "posted_volume_since",
+    "replace_comparatives",
     "router",
     "unposted_count",
 ]
@@ -235,6 +238,34 @@ def balances_before(
     the part of it from year-end closing entries."""
     entity = get_entity(ctx, entity_id, "reports.read")
     return actuals.net_before_many(entity.id, ctx.tenant.id, cutoffs=cutoffs)
+
+
+def books_start(ctx: WorkspaceContext, entity_id: UUID) -> date | None:
+    """The first day the ledger covers (the start of the first fiscal year), if any."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.books_start(entity.id)
+
+
+def comparative_facts(ctx: WorkspaceContext, entity_id: UUID) -> list[Fact]:
+    """The comparatives' monthly movements per account (R-4)."""
+    entity = get_entity(ctx, entity_id, "reports.read")
+    return actuals.comparatives(entity.id)
+
+
+def replace_comparatives(ctx: WorkspaceContext, entity_id: UUID, facts: list[Fact],
+                         changes: dict[str, object]) -> int:  # fmt: skip
+    """Replace the months before the books start (R-4) with ``facts``; audited with ``changes``
+    (what was imported, from which file). Every month must end before the books start."""
+    entity = get_entity(ctx, entity_id, "ledger.entry.create")
+    start = actuals.books_start(entity.id)
+    if start is None or any(actuals.next_month(f.period) > start for f in facts):
+        raise ValidationFailedError("Comparatives are only for months before the first fiscal "
+                                    "year.")  # fmt: skip
+    count = actuals.replace_comparatives(entity.id, ctx.tenant.id, facts)
+    audit(tenant_id=ctx.tenant.id, actor_user_id=ctx.user.id,
+          action="reporting.comparatives.replaced", subject_type="legal_entity",
+          subject_id=entity.id, entity_id=entity.id, changes=changes)  # fmt: skip
+    return count
 
 
 def _shift_years(day: date, years: int) -> date:

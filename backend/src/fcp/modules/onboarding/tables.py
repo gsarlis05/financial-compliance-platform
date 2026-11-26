@@ -130,19 +130,31 @@ def _csv_rows(text: str, delimiter: str) -> list[list[object]]:
     return rows
 
 
+Dynamic = Callable[[object], str | None]
+
+
 def _header(
-    rows: list[list[object]], fields: dict[str, tuple[str, ...]], ready: Callable[[set[str]], bool]
-) -> tuple[int, dict[str, int]] | None:
+    rows: list[list[object]], fields: dict[str, tuple[str, ...]],
+    ready: Callable[[set[str]], bool], dynamic: Dynamic | None,
+) -> tuple[int, dict[str, int]] | None:  # fmt: skip
     names = {name: key for key, synonyms in fields.items() for name in synonyms}
     for index, row in enumerate(rows[:HEADER_SEARCH_ROWS]):
         found: dict[str, int] = {}
         for i, cell in enumerate(row):
             key = names.get(normalise(str(cell))) if isinstance(cell, str) else None
+            if key is None and dynamic is not None and cell is not None:
+                key = dynamic(cell)
             if key and key not in found:
                 found[key] = i
         if ready(set(found)):
             return index, found
     return None
+
+
+def _label(cell: object) -> str:
+    if isinstance(cell, datetime):
+        return f"{cell:%Y-%m}"
+    return str(cell).strip()
 
 
 def read(
@@ -151,9 +163,11 @@ def read(
     fields: dict[str, tuple[str, ...]],
     ready: Callable[[set[str]], bool],
     missing: str,
+    dynamic: Dynamic | None = None,
 ) -> Table:
     """The rows of ``data`` by field. ``fields`` maps each field to its normalised header names;
-    the header is the first row (of the first 10) for which ``ready`` holds."""
+    ``dynamic`` names other header cells (such as months); the header is the first row (of the
+    first 10) for which ``ready`` holds."""
     if not data:
         raise TableError(f"{file}: the file is empty.")
     if len(data) > MAX_BYTES:
@@ -164,12 +178,12 @@ def read(
         text = _decode(data)
         candidates = [_csv_rows(text, d) for d in DELIMITERS]
     for rows in candidates:
-        header = _header(rows, fields, ready)
+        header = _header(rows, fields, ready, dynamic)
         if header is None:
             continue
         index, found = header
         head = rows[index]
-        table = Table(file, index + 1, {k: str(head[i]).strip() for k, i in found.items()})
+        table = Table(file, index + 1, {k: _label(head[i]) for k, i in found.items()})
         for number, row in enumerate(rows[index + 1 :], start=index + 2):
             if all(c is None or (isinstance(c, str) and not c.strip()) for c in row):
                 continue

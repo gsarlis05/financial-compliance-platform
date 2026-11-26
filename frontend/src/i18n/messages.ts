@@ -298,6 +298,14 @@ export const en = {
   "imp.map.help":
     "Choose the chart account for each, then check the file again.",
   "imp.map.choose": "Choose an account",
+  "imp.template.prior-year": "prior year by month",
+  "imp.prior.title": "4. The prior year by month (for comparisons)",
+  "imp.prior.help":
+    "A monthly trial balance of the months before your books start: each account's balance at the end of each month. It is kept for comparisons (budget against the prior year, KPIs, statements) and never becomes entries. Each month must balance, and the last month must agree with the opening balances.",
+  "imp.prior.mode": "Income and expense are written",
+  "imp.prior.ytd": "Year to date (as a monthly trial balance shows them)",
+  "imp.prior.month": "As each month's own amount",
+  "imp.prior.summary": "Months: {months}. Accounts: {accounts}.",
   "imp.source": "The files come from",
   "imp.source.own": "The templates, my own spreadsheet or my accountant",
   "imp.source.toConfirm":
@@ -2543,6 +2551,14 @@ export const el: Record<MessageKey, string> = {
   "imp.map.help":
     "Επιλέξτε τον λογαριασμό του σχεδίου για τον καθένα και ελέγξτε ξανά το αρχείο.",
   "imp.map.choose": "Επιλέξτε λογαριασμό",
+  "imp.template.prior-year": "προηγούμενη χρήση ανά μήνα",
+  "imp.prior.title": "4. Η προηγούμενη χρήση ανά μήνα (για συγκρίσεις)",
+  "imp.prior.help":
+    "Ένα μηνιαίο ισοζύγιο των μηνών πριν από την έναρξη των βιβλίων σας: το υπόλοιπο κάθε λογαριασμού στο τέλος κάθε μήνα. Κρατείται για συγκρίσεις (προϋπολογισμός έναντι προηγούμενης χρήσης, δείκτες, καταστάσεις) και δεν γίνεται ποτέ εγγραφές. Κάθε μήνας πρέπει να ισοσκελίζει και ο τελευταίος να συμφωνεί με τα υπόλοιπα έναρξης.",
+  "imp.prior.mode": "Τα έσοδα και τα έξοδα γράφονται",
+  "imp.prior.ytd": "Από την αρχή της χρήσης (όπως στο μηνιαίο ισοζύγιο)",
+  "imp.prior.month": "Ως το ποσό κάθε μήνα",
+  "imp.prior.summary": "Μήνες: {months}. Λογαριασμοί: {accounts}.",
   "imp.source": "Τα αρχεία προέρχονται από",
   "imp.source.own": "Τα πρότυπα, δικό μου υπολογιστικό φύλλο ή τον λογιστή μου",
   "imp.source.toConfirm":

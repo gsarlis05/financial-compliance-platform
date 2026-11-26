@@ -5,7 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "./client";
 import { useScope } from "./hooks";
 
-export type ImportKind = "chart" | "counterparties" | "opening-balances";
+export type ImportKind =
+  | "chart"
+  | "counterparties"
+  | "opening-balances"
+  | "prior-year";
 export type TemplateKind = ImportKind | "open-items";
 
 export interface ImportOutcome {
@@ -36,6 +40,7 @@ export interface ImportOutcome {
   total_credit: string;
   entry_id: string | null;
   files: Record<string, string>;
+  months: string[];
 }
 
 export interface ImportRequest {
@@ -49,6 +54,7 @@ export interface ImportRequest {
   resultsAccount?: string;
   dateOrder?: "day" | "month";
   createCounterparties?: boolean;
+  profitAndLoss?: "year_to_date" | "month";
 }
 
 export interface ImportPreset {
@@ -101,6 +107,9 @@ export function useImport(kind: ImportKind) {
       }
       if (req.createCounterparties) {
         body.append("create_counterparties", "true");
+      }
+      if (req.profitAndLoss) {
+        body.append("profit_and_loss", req.profitAndLoss);
       }
       if (req.asOf) {
         body.append("as_of", req.asOf);
