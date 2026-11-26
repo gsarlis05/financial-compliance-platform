@@ -37,6 +37,8 @@ The owner can move from synthetic data to their own books in an afternoon, witho
 | R-4 | **The prior year by month** | Monthly balances per account for the year before the opening date, from the R-2 template, kept as prior-year comparatives (budget variance against the prior year, KPIs, the cash forecast's history) without creating entries in a closed year. |
 | R-5 | **Guide and check** | A guide "Moving your books in"; synthetic example files for each template and for each bank preset; an end-to-end test that imports a full set and checks the trial balance equals the source; PROGRESS and a short report. |
 
+Issues: R-1 #244 · R-2 #245 · R-3 #246 · R-4 #247 · R-5 #248.
+
 ## 4. Acceptance
 - **AC-R1** A statement from each preset's synthetic file, and from a file with unfamiliar column
   names in Greek, imports without manual column set-up, or asks one clear question.
