@@ -1,0 +1,8 @@
+Aged receivables detail (Demo)
+Contact,Invoice Number,Invoice Date,Due Date,Current,1 - 30,Total
+Alpha Trading Ltd (Demo),INV-0101,10 Dec 2025,9 Jan 2026,3400.00,,3400.00
+Alpha Trading Ltd (Demo),CN-0007,28 Dec 2025,,-150.00,,-150.00
+Total Alpha Trading Ltd (Demo),,,,3250.00,,3250.00
+Beta Services Ltd (Demo),INV-0102,15 Dec 2025,,2000.00,,2000.00
+Gamma GmbH (Demo),INV-0103,22 Dec 2025,21 Jan 2026,900.00,,900.00
+Total,,,,6150.00,,6150.00

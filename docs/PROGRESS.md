@@ -7,7 +7,16 @@ The single place to see where implementation stands. It is updated with every PR
 depends on a chat session. Until 2026-11-16 branches were stacked (each PR targeted the previous one); since the
 consolidation every new PR targets `main`.
 
-## Status (updated 2026-11-23)
+## Status (updated 2026-11-26)
+
+**Real books readiness is complete** (2026-11-26, brief 26): bank statements from the four banks
+recognised from the file, the chart, customers and suppliers, opening balances and open invoices
+imported from templates, an accountant's trial balance or package reports, and the prior year by
+month kept as comparatives; see the [real books readiness report](real-books-readiness-report.md)
+and the guide [Moving your books in](user-guide/moving-your-books-in.md). The presets stay to be
+confirmed against the owner's anonymised exports.
+
+### Status of 2026-11-24
 
 **Version 1 is complete** (2026-11-24). The end-to-end check passes
 through the API (20 agreement checks) and in a real browser; see the
@@ -168,6 +177,7 @@ until validated and signed by a qualified professional; brief
 | R-2 Spreadsheet import: templates (Excel and CSV, with a "How to fill in" sheet) for the chart of accounts, customers and suppliers, the opening trial balance and the open invoices; columns found by their English or Greek header names; hardened reading (no formulas, no macros, size and row limits), amounts read exactly and ambiguous ones refused; check first (every problem by file, row and column; the real services run and are rolled back), then import; accounts and customers or suppliers created directly, identical ones skipped; the opening balances one balanced draft entry with a line per open invoice on the receivables and payables (they must add up to the balance), accounts the chart lacks mapped; audited with each file's SHA-256; Bring your books in screen (ADR-0068, issue #245; brief 26) | `claude/r-2-spreadsheet-import` | #250 | Merged |
 | R-3 Accountant's trial balance and accounting-package exports: headings, zero rows, subtotals and totals skipped and the file's total checked against its lines; Dr and Cr amounts; accounts found by "code name" or by name alone; the year's income and expense carried into a chosen equity account; aged receivables and payables reports for the open invoices (customer or supplier by code or name, the entity's control account, subtotals skipped), with the missing customers and suppliers listed and created on request; date order day or month first, a date fitting only the other order refused with the reason; package account types recognised (Accounts Receivable makes a control account); Xero and QuickBooks presets set the date order, to be confirmed (ADR-0069, issue #246; brief 26) | `claude/r-3-accountant-and-packages` | #251 | Merged |
 | R-4 The prior year by month as comparatives: a monthly trial balance of the months before the first fiscal year (income and expense year to date or per month, an optional opening column; month headers in several forms; template with the 12 months) kept as movements per month in `reporting_fact_comparative` (RLS), never entries; read by the gateway's monthly actuals for those months and by balances only up to the books start, so the opening entry is never counted twice; checks: months before the books and consecutive, each month balanced, the last month equal to the opening entry for assets and liabilities, accounts known or mapped; one set per entity, replaced and audited (ADR-0070, issue #247; brief 26) | `claude/r-4-prior-year` | #252 | Open (CI) |
+| R-5 Guide and check: guide "Moving your books in" (before you start, the four steps, bank statements, confirming the presets, what each refusal means); synthetic example files for every template, for an accountant's trial balance and package aged reports, for the prior year by month and for each bank preset (`examples/books/`, each bank file a different shape and not the bank's real layout); an end-to-end test importing the full set through the API (trial balance equal to the source to the cent after posting, nothing in the books before; the accountant and package versions give the same opening; each preset's statement imported with no question); real books readiness report (`docs/real-books-readiness-report.md`, issue #248; brief 26) | `claude/r-5-guide-and-check` | — | Open |
 
 ## Open questions for the product owner
 - Bank used and statement export formats (CSV / CAMT.053)? Any current accounting software? (before M2)

@@ -70,6 +70,7 @@ below the table. Accounts are never deleted (postings must keep their account); 
 an account is available through the API in M1.
 
 ### Bringing your existing books in
+The full walk-through, with example files, is in [Moving your books in](moving-your-books-in.md).
 **Bookkeeping → Bring your books in** moves your existing books here in three steps, each with a
 template to download (Excel or CSV):
 1. **Chart of accounts.** Accounts already in the chart with the same name and type are skipped.

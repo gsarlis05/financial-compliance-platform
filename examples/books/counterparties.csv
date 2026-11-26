@@ -1,0 +1,6 @@
+Code,Name,Kind,VAT number,Email,Payment terms (days),Country
+C-001,Alpha Trading Ltd (Demo),Customer,CY99000001X,accounts@alpha.example,30,CY
+C-002,Beta Services Ltd (Demo),Customer,,,45,CY
+C-003,Gamma GmbH (Demo),Customer,DE999000003,,30,DE
+S-001,Delta Supplies Ltd (Demo),Supplier,CY99000004X,,30,CY
+S-002,Epsilon Office Ltd (Demo),Supplier,,,15,GR

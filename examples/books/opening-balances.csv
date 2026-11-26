@@ -1,0 +1,12 @@
+Account code,Account name,Debit,Credit
+1010,"Property, plant and equipment - cost",12000.00,
+1019,"Property, plant and equipment - accumulated depreciation",,2400.00
+1200,Trade receivables,6150.00,
+1220,VAT receivable (input VAT),320.00,
+1300,Bank - current account,18240.50,
+1310,Bank - savings account,5000.00,
+2020,Director loans,,4000.00
+2100,Trade payables,,3210.00
+2120,VAT payable (output VAT),,1140.50
+3000,Share capital,,10000.00
+3200,Retained earnings,,20960.00
