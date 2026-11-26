@@ -1,3 +1,4 @@
+import { CsvLayout } from "../components/CsvLayout";
 import { useState } from "react";
 import { Link } from "react-router";
 import {
@@ -161,14 +162,24 @@ function BankAccountView({ account }: { account: BankAccount }) {
             <option value="CSV">CSV</option>
           </select>
         </label>
-        <button
-          type="submit"
-          className="primary"
-          disabled={!file || actions.upload.isPending}
-        >
-          {t("bank.import")}
-        </button>
+        {format === "CSV" ? null : (
+          <button
+            type="submit"
+            className="primary"
+            disabled={!file || actions.upload.isPending}
+          >
+            {t("bank.import")}
+          </button>
+        )}
       </form>
+      {format === "CSV" && file ? (
+        <CsvLayout
+          accountId={account.id}
+          file={file}
+          importing={actions.upload.isPending}
+          onImport={() => actions.upload.mutate({ file, format: "CSV" })}
+        />
+      ) : null}
       <ProblemMessage error={actions.upload.error} />
       {actions.upload.data ? (
         <p

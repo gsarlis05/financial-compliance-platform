@@ -2169,6 +2169,35 @@
         "title": "BankAccountOut",
         "type": "object"
       },
+      "BankPresetOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "description": "TO_BE_CONFIRMED until checked against a real export",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "status",
+          "note"
+        ],
+        "title": "BankPresetOut",
+        "type": "object"
+      },
       "BehaviourOut": {
         "properties": {
           "counterparty_code": {
@@ -4567,7 +4596,7 @@
           },
           "date_format": {
             "default": "%Y-%m-%d",
-            "description": "One of %Y-%m-%d, %d/%m/%Y, %d.%m.%Y, %d-%m-%Y, %m/%d/%Y",
+            "description": "One of %Y-%m-%d, %d/%m/%Y, %d.%m.%Y, %d-%m-%Y, %m/%d/%Y, %Y-%m-%d %H:%M:%S, %Y-%m-%d %H:%M, %d/%m/%Y %H:%M:%S, %d/%m/%Y %H:%M, %d/%m/%y, %d.%m.%y",
             "title": "Date Format",
             "type": "string"
           },
@@ -4615,6 +4644,14 @@
             "maxLength": 60,
             "title": "Reference",
             "type": "string"
+          },
+          "skip_rows": {
+            "default": 0,
+            "description": "Lines before the header",
+            "maximum": 30,
+            "minimum": 0,
+            "title": "Skip Rows",
+            "type": "integer"
           }
         },
         "required": [
@@ -5653,6 +5690,93 @@
           "created_at"
         ],
         "title": "DepreciationRunOut",
+        "type": "object"
+      },
+      "DetectOut": {
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Field: the file's own column name",
+            "title": "Columns",
+            "type": "object"
+          },
+          "error": {
+            "description": "Why the preview could not be read with this layout, if so",
+            "title": "Error",
+            "type": "string"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/CsvMappingIn",
+            "description": "Ready to save as the account's CSV mapping"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankPresetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewLineOut"
+            },
+            "title": "Preview",
+            "type": "array"
+          },
+          "questions": {
+            "description": "What the file leaves open",
+            "items": {
+              "$ref": "#/components/schemas/DetectQuestionOut"
+            },
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mapping",
+          "columns",
+          "questions",
+          "preview",
+          "preset",
+          "error"
+        ],
+        "title": "DetectOut",
+        "type": "object"
+      },
+      "DetectQuestionOut": {
+        "properties": {
+          "chosen": {
+            "title": "Chosen",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "field",
+          "message",
+          "options",
+          "chosen"
+        ],
+        "title": "DetectQuestionOut",
         "type": "object"
       },
       "DimensionIn": {
@@ -12966,6 +13090,40 @@
           "month"
         ],
         "title": "PrepareIn",
+        "type": "object"
+      },
+      "PreviewLineOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "counterparty_name": {
+            "title": "Counterparty Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "booking_date",
+          "amount",
+          "description",
+          "reference",
+          "counterparty_name"
+        ],
+        "title": "PreviewLineOut",
         "type": "object"
       },
       "ProjectedKpiOut": {
@@ -22036,6 +22194,90 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/csv-detect": {
+      "post": {
+        "description": "Recognise how a CSV export is laid out, with a preview of its first lines. Nothing is\nimported or saved; save the mapping, then upload the file as usual.",
+        "operationId": "fcp_modules_banking_api_detect_csv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  },
+                  "preset": {
+                    "default": "",
+                    "title": "Preset",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "MultiPartBodyParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Detect Csv",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/bank-accounts/{account_id}/csv-mapping": {
       "put": {
         "operationId": "fcp_modules_banking_api_set_csv_mapping",
@@ -22456,6 +22698,58 @@
           }
         ],
         "summary": "Reconciliations",
+        "tags": [
+          "banking"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/bank-presets": {
+      "get": {
+        "description": "Banks with a preset. Each only breaks ties a file leaves open, and is marked to be\nconfirmed until checked against a real export.",
+        "operationId": "fcp_modules_banking_api_bank_presets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BankPresetOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Bank Presets",
         "tags": [
           "banking"
         ]

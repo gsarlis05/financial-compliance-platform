@@ -213,8 +213,19 @@ a receipt.
 **Bookkeeping → Bank** holds your bank accounts. Each one is linked to its ledger account (for example
 *1300 Bank*).
 - **Import** a statement file: ISO 20022 **CAMT.053** (XML), which most EU banks export, or **CSV**.
-  - For a CSV, the column layout can be saved per bank account (API for now; the default reads
-    `date, description, amount, balance, …, reference`).
+  - For a **CSV**, choose the file and the page works out how to read it: the encoding (including
+    Windows Greek), the separator, the lines of account details some banks put first, which
+    column is the date, description, amount (or debit and credit), balance and reference (from
+    the column names, in English or Greek), the decimal separator and the date format. It shows
+    the columns it found and the first lines as they will be imported.
+  - If the file leaves something open, it asks: for example whether 03/04/2026 is 3 April or
+    4 March, when every date fits both. Nothing is guessed.
+  - **Save this layout and import** keeps the layout for the account, so the next file from the
+    same bank imports straight away.
+  - Choosing your bank (Bank of Cyprus, Hellenic Bank, Eurobank Cyprus, Revolut Business) only
+    settles such questions; the columns always come from your file. These bank settings are
+    marked "to be confirmed" until they have been checked against a real export: send one,
+    anonymised, to have yours confirmed.
   - Files of up to 5 MB are accepted. They are checked for safety and imported in the background.
   - Importing the same file again is refused. A statement that overlaps an earlier one adds only
     the new transactions.
