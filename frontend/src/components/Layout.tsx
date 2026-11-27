@@ -257,6 +257,7 @@ function MainNav({ base }: { base: string }) {
         [`${base}/mapping`, "nav.mapping"],
         [`${base}/periods`, "nav.periods"],
         [`${base}/ledger-settings`, "nav.ledgerSettings"],
+        [`${base}/tax-rules`, "nav.taxRules"],
         [`${base}/engagements`, "nav.engagements"],
         [`${base}/data`, "nav.data"],
       ],

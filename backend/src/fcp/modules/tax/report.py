@@ -102,7 +102,11 @@ def _kind(line: Line, roles: set[str]) -> str:
 
 
 def compute(
-    lines: list[Line], start: str | None = None, end: str | None = None, rules: str = RULES
+    lines: list[Line],
+    start: str | None = None,
+    end: str | None = None,
+    rules: str = RULES,
+    fixes: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     roles: dict[tuple[str, str], set[str]] = defaultdict(set)
     for ln in lines:
@@ -110,7 +114,7 @@ def compute(
             roles[(ln.entry_id, ln.code)].add(ln.vat_role)
 
     zero = Decimal(0)
-    boxes = _Boxes(rules)
+    boxes = _Boxes(rules, fixes or {})
     codes: dict[str, dict[str, Any]] = {}
     entries: dict[str, set[str]] = defaultdict(set)
     accounts: dict[str, dict[str, Any]] = {}
@@ -293,15 +297,16 @@ def digest(value: Any) -> str:
 class _Boxes:
     """The return's boxes, built from each line's contribution under one version of the rules."""
 
-    def __init__(self, rules: str) -> None:
+    def __init__(self, rules: str, fixes: dict[str, dict[str, Any]]) -> None:
         self.rules = ruleset(rules)
         self.version = rules
+        self.fixes = fixes
         self.exact: dict[str, Decimal] = {b: Decimal(0) for b in ALL_BOXES}
         self.exceptions: list[dict[str, str]] = []
         self._unsupported: set[tuple[str, str, str]] = set()
 
     def add(self, ln: Line, kind: LineKind, amount: Decimal, row: dict[str, Any]) -> dict[str, Any]:
-        found = mapping(ln.category, kind, self.version)
+        found = mapping(ln.category, kind, self.version, self.fixes)
         for box in found.boxes:
             self.exact[box] += amount
         if found.status == "UNSUPPORTED" and (ln.entry_ref, ln.code, kind) not in self._unsupported:
@@ -313,13 +318,15 @@ class _Boxes:
                 "boxes": {b: money(amount) for b in found.boxes}}  # fmt: skip
 
     def excluded(self, ln: Line, row: dict[str, Any]) -> dict[str, Any]:
-        found = mapping(ln.category or "SETTLEMENT", "INPUT_VAT", self.version)
+        found = mapping(ln.category or "SETTLEMENT", "INPUT_VAT", self.version, self.fixes)
         return {**row, "line_kind": "", "mapping": found.status, "rule": found.reason,
                 "boxes": {}}  # fmt: skip
 
     def result(self) -> dict[str, Any]:
         return {"rules": self.version, "status": self.rules["status"],
                 "sources": self.rules["sources"],
+                # The entity's box rule corrections in force, pinned with the return (T-2).
+                "corrections": self.fixes,
                 **present(dict(self.exact), self.rules)}  # fmt: skip
 
 

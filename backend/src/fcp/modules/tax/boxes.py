@@ -41,7 +41,28 @@ def ruleset(version: str = "CY-VAT-BOXES@1") -> dict[str, Any]:
     return data
 
 
-def mapping(category: str, kind: LineKind, version: str = "CY-VAT-BOXES@1") -> Mapping:
+def key(category: str, kind: str) -> str:
+    """How a box rule is named in a correction (brief 27, T-2): CATEGORY|LINE."""
+    return f"{category}|{kind}"
+
+
+def mapping(
+    category: str,
+    kind: LineKind,
+    version: str = "CY-VAT-BOXES@1",
+    fixes: dict[str, dict[str, Any]] | None = None,
+) -> Mapping:
+    """The boxes a line goes to; ``fixes``: the entity's box rule corrections in force for the
+    return (brief 27, T-2), which replace the version's rule for their category and line."""
+    fix = (fixes or {}).get(key(category, kind))
+    if fix is not None:
+        values = fix["values"]
+        reason = (
+            f"Corrected from {fix['effective_from']}: {fix['source']}"
+            if values["status"] == "MAPPED"
+            else f"Excluded by a correction from {fix['effective_from']}: {fix['source']}"
+        )
+        return Mapping(values["status"], tuple(values["boxes"]), reason)
     rules = ruleset(version)
     for rule in rules["rules"]:
         if (rule["category"], rule["line"]) == (category, kind):

@@ -142,7 +142,12 @@ publications it was taken from. Cyprus is the first country: 12.5% for tax years
 two halves by 31 July and 31 December; the balance by 1 August of the following year.
 
 You **checked these rules on 27/11/2026** (brief 27). That is shown wherever they are used, and it
-is not a verification by a Cyprus tax professional. They are not tax advice, and the platform never files a tax return.
+is not a verification by a Cyprus tax professional.
+
+If the rules change, correct them under **Setup → Tax rules**. Enter the rate, the years losses can
+be carried forward, the provisional instalments, the final payment and the source, from the
+first day of a tax year. Projections run after that use the corrected rules for those years;
+earlier runs keep the rules they used. They are not tax advice, and the platform never files a tax return.
 See them with `GET .../tax-rules`.
 
 Projections use these rule sets (see *Corporate tax*); a projection whose years no rule set

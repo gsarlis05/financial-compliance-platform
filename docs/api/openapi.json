@@ -2271,6 +2271,116 @@
         "title": "BehaviourQuery",
         "type": "object"
       },
+      "BoxRuleCorrectionIn": {
+        "properties": {
+          "boxes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Boxes",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "effective_from": {
+            "description": "Applies to VAT returns whose period starts then or later",
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "line": {
+            "enum": [
+              "OUTPUT_VAT",
+              "INPUT_VAT",
+              "NET_SALE",
+              "NET_PURCHASE"
+            ],
+            "title": "Line",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "MAPPED",
+              "EXCLUDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "effective_from",
+          "category",
+          "line",
+          "status",
+          "source"
+        ],
+        "title": "BoxRuleCorrectionIn",
+        "type": "object"
+      },
+      "BoxRuleOut": {
+        "properties": {
+          "boxes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Boxes",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "corrected_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected From"
+          },
+          "line": {
+            "title": "Line",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "line",
+          "status",
+          "boxes",
+          "reason",
+          "corrected_from"
+        ],
+        "title": "BoxRuleOut",
+        "type": "object"
+      },
       "BudgetCommentIn": {
         "properties": {
           "comment": {
@@ -4063,6 +4173,157 @@
           "unmapped_idle"
         ],
         "title": "CompletenessOut",
+        "type": "object"
+      },
+      "CorporateTaxCorrectionIn": {
+        "properties": {
+          "effective_from": {
+            "description": "The first day of the first tax year it applies to",
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "final_payment_day": {
+            "maximum": 31,
+            "minimum": 1,
+            "title": "Final Payment Day",
+            "type": "integer"
+          },
+          "final_payment_month": {
+            "maximum": 12,
+            "minimum": 1,
+            "title": "Final Payment Month",
+            "type": "integer"
+          },
+          "final_payment_years_after": {
+            "maximum": 3,
+            "minimum": 0,
+            "title": "Final Payment Years After",
+            "type": "integer"
+          },
+          "loss_carryforward_years": {
+            "maximum": 50,
+            "minimum": 0,
+            "title": "Loss Carryforward Years",
+            "type": "integer"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          },
+          "provisional_instalments": {
+            "items": {
+              "$ref": "#/components/schemas/TaxInstalmentOut"
+            },
+            "maxItems": 12,
+            "title": "Provisional Instalments",
+            "type": "array"
+          },
+          "rate": {
+            "description": "A fraction: 0.15 for 15%",
+            "pattern": "^0(\\.\\d{1,4})?$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "tax_year_start_month": {
+            "maximum": 12,
+            "minimum": 1,
+            "title": "Tax Year Start Month",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "effective_from",
+          "rate",
+          "loss_carryforward_years",
+          "tax_year_start_month",
+          "provisional_instalments",
+          "final_payment_years_after",
+          "final_payment_month",
+          "final_payment_day",
+          "source"
+        ],
+        "title": "CorporateTaxCorrectionIn",
+        "type": "object"
+      },
+      "CorrectionOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": true,
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "target",
+          "effective_from",
+          "values",
+          "source",
+          "note",
+          "created_at",
+          "created_by"
+        ],
+        "title": "CorrectionOut",
+        "type": "object"
+      },
+      "CorrectionQuery": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Kind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CorrectionQuery",
         "type": "object"
       },
       "CounterpartDecisionIn": {
@@ -9396,12 +9657,9 @@
       },
       "Kind": {
         "enum": [
-          "VAT",
-          "CORPORATE_TAX",
-          "SPECIAL_DEFENCE",
-          "SOCIAL_INSURANCE",
-          "PAYE",
-          "OTHER"
+          "VAT_CODE",
+          "VAT_BOX_RULE",
+          "CORPORATE_TAX"
         ],
         "title": "Kind",
         "type": "string"
@@ -18244,6 +18502,97 @@
         "title": "VarianceRowOut",
         "type": "object"
       },
+      "VatCodeCorrectionIn": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "clear_rate": {
+            "default": false,
+            "description": "Set the code to have no rate",
+            "title": "Clear Rate",
+            "type": "boolean"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "name_el": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name El"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A fraction, 0.19 for 19%",
+            "title": "Rate"
+          },
+          "source": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "treatment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treatment"
+          }
+        },
+        "required": [
+          "effective_from",
+          "source"
+        ],
+        "title": "VatCodeCorrectionIn",
+        "type": "object"
+      },
       "VatCodeOut": {
         "properties": {
           "category": {
@@ -18253,6 +18602,24 @@
           },
           "code": {
             "title": "Code",
+            "type": "string"
+          },
+          "corrected_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The start of the entity's correction in force on the date asked (brief 27)",
+            "title": "Corrected From"
+          },
+          "correction_source": {
+            "default": "",
+            "title": "Correction Source",
             "type": "string"
           },
           "id": {
@@ -36516,6 +36883,73 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/rule-corrections": {
+      "get": {
+        "description": "Every correction of the entity's rules, the most recent first.",
+        "operationId": "fcp_modules_taxrules_api_list_corrections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Kind"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CorrectionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Corrections",
+        "tags": [
+          "taxrules"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/scenarios": {
       "get": {
         "description": "Your drafts, and every shared or archived scenario of the entity.",
@@ -38568,6 +39002,64 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/tax-rules/corrections": {
+      "post": {
+        "description": "A corrected corporate income tax rule set for this entity, from the start of a tax year.\nProjections run after it use it for the years it covers; earlier runs keep theirs.",
+        "operationId": "fcp_modules_taxrules_api_correct_corporate_tax",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorporateTaxCorrectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Correct Corporate Tax",
+        "tags": [
+          "taxrules"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/taxonomy": {
       "get": {
         "operationId": "fcp_modules_metrics_api_taxonomy",
@@ -38851,6 +39343,135 @@
         ]
       }
     },
+    "/api/w/{slug}/entities/{entity_id}/vat-box-rules": {
+      "get": {
+        "description": "Every category and line kind with the boxes it goes to for a return starting on ``on``\n(today by default), the entity's corrections included.",
+        "operationId": "fcp_modules_tax_api_list_box_rules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BoxRuleOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Box Rules",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-box-rules/corrections": {
+      "post": {
+        "description": "Correct which boxes a category and line kind go to, for VAT returns whose period starts on\nor after the date. Earlier returns keep the rules they used.",
+        "operationId": "fcp_modules_tax_api_correct_box_rule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoxRuleCorrectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Correct Box Rule",
+        "tags": [
+          "VAT"
+        ]
+      }
+    },
     "/api/w/{slug}/entities/{entity_id}/vat-codes": {
       "get": {
         "operationId": "fcp_modules_ledger_api_list_vat_codes",
@@ -38916,6 +39537,75 @@
           }
         ],
         "summary": "List Vat Codes",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/vat-codes/{code}/corrections": {
+      "post": {
+        "description": "Correct a VAT code for this entity from a date (brief 27, T-2). Lines dated from then on\nuse it in VAT returns prepared after it; earlier returns keep what they used.",
+        "operationId": "fcp_modules_ledger_api_correct_vat_code",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VatCodeCorrectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "Correct Vat Code",
         "tags": [
           "ledger"
         ]

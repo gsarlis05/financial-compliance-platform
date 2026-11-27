@@ -49,6 +49,7 @@ from fcp.modules.ledger.api import (
     posting_watermark,
     vat_lines,
 )
+from fcp.modules.taxrules.api import Kind, all_for, latest_by_target
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, self_approval_allowed
 
 from . import periods as P
@@ -168,6 +169,7 @@ def _take(
     rules = BOX_RULES.get(jurisdiction)
     if rules is None:
         raise _invalid("period_start", "VAT returns can be prepared for Cyprus entities only.")
+    found = vat_lines(ctx, entity_id, date_from=start, date_to=end)
     lines = [
         Line(str(v.line_id), str(v.entry_id), v.entry_ref, v.accounting_date.isoformat(),
              v.description, v.account_code, v.account_name, v.account_type, v.vat_role,
@@ -179,9 +181,17 @@ def _take(
              txn_currency=v.txn_currency, txn_net_debit=v.txn_net_debit,
              exchange_rate=v.exchange_rate,
              rate_at=v.rate_at.isoformat() if v.rate_at else None, rate_source=v.rate_source)
-        for v in vat_lines(ctx, entity_id, date_from=start, date_to=end)
+        for v in found
     ]  # fmt: skip
-    taken = compute(lines, start.isoformat(), end.isoformat(), rules)
+    # Brief 27, T-2: the entity's box rule corrections in force for a return starting on
+    # ``start``, and the VAT code corrections the lines used, both pinned with the report.
+    fixes = {target: c.as_ref() for target, c in
+             latest_by_target(all_for(entity_id, Kind.VAT_BOX_RULE), start).items()}  # fmt: skip
+    taken = compute(lines, start.isoformat(), end.isoformat(), rules, fixes)
+    used = {v.correction["id"]: v.correction for v in found if v.correction}
+    taken["code_corrections"] = sorted(
+        used.values(), key=lambda c: (c["target"], c["effective_from"])
+    )
     entries = {ln.entry_id for ln in lines if ln.category == "IMPORT"}
     records = VatImport.objects.filter(legal_entity_id=entity_id, entry_id__in=entries,
                                        voided_at__isnull=True).order_by("customs_date")  # fmt: skip
