@@ -1858,6 +1858,13 @@ export const en = {
     "You checked the projection engine on {on}. It has not been independently validated by a professional, so treat projections as estimates, not certified figures.",
   "pj.professionallyValidated":
     "The projection engine was validated by {by} on {on}.",
+  "vat.xml.title": "Tax Department XML",
+  "vat.xml.draft": "Draft",
+  "vat.xml.help":
+    "An XML file of this return in the Tax Department's format will be offered here. It is a draft: the official schema and guide are not available yet, so no file is produced and nothing is ever sent. Enter the figures on the portal yourself, as now.",
+  "vat.xml.download": "Download the XML (not available yet)",
+  "vat.xml.why":
+    "Waiting for the Tax Department's official schema (XSD) and guide (#220).",
   "vat.rulesOwnerChecked":
     "Box rules {rules} are taken from your specification and the Tax Department's guides. You checked them on {on} (not a professional verification); corrections go on the Tax rules screen. Enter these figures on the portal yourself.",
   "pj.pendingReview":
@@ -4203,6 +4210,13 @@ export const el: Record<MessageKey, string> = {
     "Ελέγξατε το μοντέλο προβολών στις {on}. Δεν έχει επικυρωθεί ανεξάρτητα από επαγγελματία· οι προβολές είναι εκτιμήσεις, όχι πιστοποιημένα στοιχεία.",
   "pj.professionallyValidated":
     "Το μοντέλο προβολών επικυρώθηκε από {by} στις {on}.",
+  "vat.xml.title": "XML Τμήματος Φορολογίας",
+  "vat.xml.draft": "Πρόχειρο",
+  "vat.xml.help":
+    "Εδώ θα προσφέρεται αρχείο XML της δήλωσης στη μορφή του Τμήματος Φορολογίας. Είναι πρόχειρο: το επίσημο σχήμα και ο οδηγός δεν είναι ακόμη διαθέσιμα, οπότε δεν δημιουργείται αρχείο και δεν αποστέλλεται ποτέ τίποτα. Καταχωρίστε τα ποσά στην πύλη μόνοι σας, όπως τώρα.",
+  "vat.xml.download": "Λήψη XML (δεν είναι ακόμη διαθέσιμη)",
+  "vat.xml.why":
+    "Αναμένεται το επίσημο σχήμα (XSD) και ο οδηγός του Τμήματος Φορολογίας (#220).",
   "vat.rulesOwnerChecked":
     "Οι κανόνες θυρίδων {rules} προέρχονται από τις προδιαγραφές σας και τους οδηγούς του Τμήματος Φορολογίας. Τους ελέγξατε στις {on} (όχι επαγγελματική επαλήθευση)· οι διορθώσεις γίνονται στην οθόνη Φορολογικοί κανόνες. Καταχωρίστε τα ποσά στην πύλη μόνοι σας.",
   "pj.pendingReview":

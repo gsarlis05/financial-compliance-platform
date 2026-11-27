@@ -264,6 +264,7 @@ function ReportView({
       <VatVies report={r} />
       <Schedules report={r} />
       <Reconciliation report={r} />
+      <XmlDraft />
 
       <h3>{t("vat.totals")}</h3>
       <table>
@@ -744,6 +745,26 @@ const EU_TYPES = {
   GOODS_ACQUIRED: 1,
   SERVICES_RECEIVED: 1,
 };
+
+/** The Tax Department's XML export, as a draft (brief 27, T-3, #256): ready for when the official
+ * schema and guide are available, and producing nothing until then. */
+export function XmlDraft() {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="vat-xml">
+      <h3 id="vat-xml">
+        {t("vat.xml.title")} <span className="badge">{t("vat.xml.draft")}</span>
+      </h3>
+      <p role="note">{t("vat.xml.help")}</p>
+      <button type="button" disabled aria-describedby="vat-xml-why">
+        {t("vat.xml.download")}
+      </button>
+      <p id="vat-xml-why" className="muted">
+        {t("vat.xml.why")}
+      </p>
+    </section>
+  );
+}
 
 function Reconciliation({ report }: { report: VatReportDetail }) {
   const { t, locale } = useI18n();
