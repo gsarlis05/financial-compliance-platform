@@ -55,6 +55,11 @@ The box rules come from your specification and the Tax Department's guides. You 
 27/11/2026; each report records that, and that it is not a verification by a Cyprus tax
 professional.
 
+### Tax Department XML (draft)
+Each report shows a **Tax Department XML** section marked **draft**. It is ready for when the Tax
+Department's official schema and guide are available (#220). Until then it produces no file, and
+nothing is ever sent: enter the figures on the portal yourself.
+
 ### Correcting a rule
 If a rate, a code or a box rule changes, correct it under **Setup → Tax rules**:
 - **A VAT code:** its rate, treatment, category or name, for lines dated from a day you choose.
