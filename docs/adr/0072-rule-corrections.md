@@ -47,7 +47,7 @@ Earlier returns and runs must never change.
   projection run pins the rule set it used in its inputs, as before; a corrected set's id is
   `CORRECTION:<id>`. Earlier reports and runs keep what they used. A draft report regenerated
   after a correction uses it.
-- **Who.** A new permission, `tax.rules.correct`, held by the owner role only.
+- **Who.** A new permission, `tax.rules.correct`. Only the owner and a firm partner hold it; they are the two roles that hold every permission. An accountant, a finance manager or a reviewer does not.
 - **The screen.** Setup → Tax rules shows:
   - who checked the rules (ADR-0071);
   - the VAT codes on a date;

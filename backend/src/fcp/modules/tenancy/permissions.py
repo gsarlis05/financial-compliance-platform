@@ -175,6 +175,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     # itself (checked in tenancy.lifecycle).
     Role.PARTNER: _SIGN_OFF
     | {
+        "tax.rules.correct",
         "tenancy.entity.manage",
         "tenancy.members.manage",
         "tenancy.workspace.export",
