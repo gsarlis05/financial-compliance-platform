@@ -319,6 +319,8 @@ export interface VatCode {
   valid_to: string | null;
   verified: boolean;
   verification_note: string;
+  /** PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED (brief 27). */
+  review_status?: string;
 }
 
 export interface TaxonomyLine {

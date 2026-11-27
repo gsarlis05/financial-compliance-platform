@@ -64,7 +64,7 @@ The projection then shows, every month:
 
 Tax years must be calendar years. Late-payment interest, penalties and the charge for
 underestimating provisional tax are not modelled. The figures are a projection, not tax advice,
-and the rules are pending verification by a tax professional.
+and the rules were checked by you on 27/11/2026, not verified by a tax professional.
 
 ## Running a projection
 With an approved set, open **Cash & planning → Projections**, choose the set and select **Run**. It starts
@@ -141,8 +141,8 @@ publications it was taken from. Cyprus is the first country: 12.5% for tax years
 15% from 2026; losses carried forward 5 years (7 years for losses from 2026); provisional tax in
 two halves by 31 July and 31 December; the balance by 1 August of the following year.
 
-These rules are **pending verification** by a Cyprus tax professional and are shown as such
-wherever they are used. They are not tax advice, and the platform never files a tax return.
+You **checked these rules on 27/11/2026** (brief 27). That is shown wherever they are used, and it
+is not a verification by a Cyprus tax professional. They are not tax advice, and the platform never files a tax return.
 See them with `GET .../tax-rules`.
 
 Projections use these rule sets (see *Corporate tax*); a projection whose years no rule set

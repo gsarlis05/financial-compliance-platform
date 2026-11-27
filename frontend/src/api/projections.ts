@@ -43,6 +43,8 @@ export interface TaxRuleSet {
   final_payment: string;
   verified: boolean;
   verification_note: string;
+  review_status?: string;
+  review_note?: string;
   sources: { publisher: string; title: string; url: string; note: string }[];
 }
 

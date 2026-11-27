@@ -15,6 +15,7 @@ from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
 from ninja import Field, Query, Router, Schema, Status
 
+from fcp.core import reviews
 from fcp.core.api.permissions import requires
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.identity.api import require_recent_auth
@@ -544,8 +545,10 @@ class VatCodeOut(Schema):
     rate: str | None
     valid_from: date | None
     valid_to: date | None
-    verified: bool
+    verified: bool = Field(description="Verified by a qualified tax professional")
     verification_note: str
+    review_status: str = Field(description="PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED "
+                               "for the jurisdiction's VAT codes (brief 27)")  # fmt: skip
 
 
 class VatCodeQuery(Schema):
@@ -571,6 +574,9 @@ def list_vat_codes(
             valid_to=v.valid_to,
             verified=v.verified,
             verification_note=v.verification_note,
+            review_status="PROFESSIONALLY_VERIFIED"
+            if v.verified
+            else reviews.review(reviews.vat_codes(v.jurisdiction)).status,
         )
         for v in accounts.vat_codes(ctx, entity_id, on=q.on)
     ]

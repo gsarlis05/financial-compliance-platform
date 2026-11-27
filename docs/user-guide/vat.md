@@ -51,8 +51,9 @@ value of an import. It is listed under **Checks**: ask your tax adviser how to r
 - a country that does not fit the code;
 - Box 6 or Box 7 smaller than the boxes it includes, which a credit note can cause.
 
-The box rules come from your specification and the Tax Department's guides. They are marked as
-not yet verified by a Cyprus tax professional. The figures are prepared for you to check and
+The box rules come from your specification and the Tax Department's guides. You checked them on
+27/11/2026; each report records that, and that it is not a verification by a Cyprus tax
+professional. The figures are prepared for you to check and
 enter yourself.
 
 ### VAT codes and line details

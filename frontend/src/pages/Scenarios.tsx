@@ -25,6 +25,7 @@ import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 import { formatKpi } from "./Kpis";
 import { OPEX, REVENUE } from "./Projections";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 type Field = {
   name: string;
@@ -480,9 +481,7 @@ function ComparisonPanel({ detail }: { detail: ScenarioDetail }) {
   return (
     <section className="card" aria-labelledby="sc-compare">
       <h2 id="sc-compare">{t("sc.compare")}</h2>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <div className="form inline">
         <span role="group" aria-label={t("pj.granularity")}>
           {(["MONTH", "QUARTER", "YEAR"] as Granularity[]).map((g) => (

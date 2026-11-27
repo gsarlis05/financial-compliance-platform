@@ -208,7 +208,11 @@ function TaxPosition({ set }: { set: AssumptionSet }) {
                     {r.final_payment}
                   </td>
                   <td>
-                    {r.verified ? t("as.taxIsVerified") : t("as.taxPending")}
+                    {r.verified
+                      ? t("as.taxIsVerified")
+                      : r.review_note && r.review_status !== "PENDING"
+                        ? r.review_note
+                        : t("as.taxPending")}
                   </td>
                 </tr>
               ))}

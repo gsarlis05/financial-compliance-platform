@@ -24,6 +24,7 @@ import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 import { NatureTag } from "./CashForecast";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 type Kind = "line" | "subtotal" | "total";
 export const REVENUE = ["REV.SALES", "REV.SERVICES", "REV.OTHER"];
@@ -764,9 +765,7 @@ export function ProjectionsPage() {
   return (
     <Page title={t("nav.projections")}>
       <p>{t("pj.intro")}</p>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <RunPanel onRun={(id) => setSelected(id)} />
       <section className="card" aria-labelledby="pj-list">
         <h2 id="pj-list">{t("pj.list")}</h2>

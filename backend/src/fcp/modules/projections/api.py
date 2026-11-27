@@ -14,12 +14,13 @@ from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from ninja import Field, Query, Router, Schema, Status
 
+from fcp.core import reviews
 from fcp.core.api.permissions import requires
 from fcp.modules.audit_log.api import record as audit
 from fcp.modules.metrics.api import CalcRun
 from fcp.modules.tenancy.api import WorkspaceContext, get_entity, workspace_ctx
 
-from . import assumptions, engine, exports, loans, outlook, rolling, runs
+from . import assumptions, exports, loans, outlook, rolling, runs
 from .assumptions import NewLoanRow, SetInfo, derive_set, observed_days, set_info
 from .debt import LoanTerms
 from .drivers import DRIVERS, OPEX_LINES, REVENUE_LINES
@@ -337,7 +338,8 @@ class ProjectionRunOut(Schema):
     is_published: bool
     rolling: bool = Field(description="Made by the rolling forecast (M6-4)")
     validation_status: str = Field(
-        description="PENDING_PROFESSIONAL_REVIEW until the engine is validated and signed off"
+        description="PENDING_PROFESSIONAL_REVIEW, OWNER_CHECKED or PROFESSIONALLY_VERIFIED "
+        "(fcp.core.reviews)"
     )
     created_at: datetime
 
@@ -351,7 +353,7 @@ def _projection_out(run: CalcRun) -> ProjectionRunOut:
         output_hash=run.output_hash, invariants=run.invariant_results, error=run.error,
         stale=run.stale, is_published=run.is_published, created_at=run.created_at,
         rolling="rolling_forecast_id" in run.input_refs,
-        validation_status=engine.VALIDATION_STATUS,
+        validation_status=reviews.engine_status(),
     )  # fmt: skip
 
 

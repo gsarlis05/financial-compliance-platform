@@ -27,8 +27,8 @@ Every widget shows the same period and comparison.
   budget line's variance (income up, costs down), and the actual result. The steps add up exactly.
 - **Scenario comparison:** a shared scenario against its base: the change in revenue, EBITDA, net
   income, cash flow, closing cash and debt over its horizon, and the lowest cash of each. These
-  figures are **hypothetical** and come from the projection engine, which is pending professional
-  review. You need the right to run scenarios to see it.
+  figures are **hypothetical** and come from the projection engine, which you checked on
+  27/11/2026 (not an independent professional validation). You need the right to run scenarios to see it.
 
 If a widget has no data yet it says why. If you do not have permission for it, it says that
 instead.

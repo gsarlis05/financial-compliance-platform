@@ -16,7 +16,8 @@ The pack takes, at that moment and **with your own permissions**:
   date, year to date and full year, against the original budget and against the prior year, with
   each variance's explanation;
 - the KPI set for the period, the latest 13-week cash forecast, the latest published projection
-  for the next 12 months (marked **pending professional review**) and your goals.
+  for the next 12 months (marked with the engine's review status: checked by you on 27/11/2026) and
+  your goals.
 
 A part you may not see is left out and says so; a part without data says why (for example "No KPI
 set for this period yet"). The pack records the last posting it includes and the runs it used.
@@ -25,7 +26,7 @@ set for this period yet"). The pack records the last posting it includes and the
 A pack has up to ten sections, in the order you choose: executive overview, revenue and
 profitability, cash flow (with the 13-week forecast), financial position and working capital (with
 the working-capital KPIs), budget performance, KPI scorecard, forecast (the published projection,
-marked pending professional review), risks, goal progress and commentary.
+marked with the engine's review status), risks, goal progress and commentary.
 
 **Comparison columns:** actual is always shown. Add any of budget (the current approved budget),
 original budget, prior year and variance (the variance, its percentage, whether it is favourable,

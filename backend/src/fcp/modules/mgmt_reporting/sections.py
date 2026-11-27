@@ -15,12 +15,14 @@ outlook (actual months plus the budget for the rest of the year) to budget perfo
 from decimal import Decimal
 from typing import Any
 
+from fcp.core import reviews
 from fcp.modules.projections.api import line_name
 
 PENDING = ("Pending professional review: the projection engine has not been independently "
            "validated. Use these figures as estimates, not certified figures.")  # fmt: skip
 PENDING_EL = ("Εκκρεμεί επαγγελματικός έλεγχος: το μοντέλο προβολών δεν έχει επικυρωθεί "
               "ανεξάρτητα. Πρόκειται περί εκτιμήσεων, όχι πιστοποιημένων στοιχείων.")  # fmt: skip
+ESTIMATES_EL = PENDING_EL.rsplit(". ", 1)[1]
 TITLES = {
     "overview": ("Executive overview", "Συνοπτική εικόνα"),
     "profitability": ("Revenue and profitability", "Έσοδα και κερδοφορία"),
@@ -293,7 +295,11 @@ def _forecast(block: dict[str, Any]) -> dict[str, Any]:
     if block["status"] != "ok":
         return s
     data = block["data"]
-    s["notice"], s["notice_el"] = PENDING, PENDING_EL
+    if data.get("engine_status", "PENDING_PROFESSIONAL_REVIEW") == "PENDING_PROFESSIONAL_REVIEW":
+        s["notice"], s["notice_el"] = PENDING, PENDING_EL  # as it stood when the pack was made
+    else:
+        s["notice"] = f"{reviews.engine_note('en')} Use these figures as estimates."
+        s["notice_el"] = f"{reviews.engine_note('el')} {ESTIMATES_EL}"
     cols = [_col("line"), *({"key": m, "label": m[:7], "label_el": m[:7]}
                             for m in data["months"])]  # fmt: skip
     rows = [{"key": k, "label": line_name(k, "en"), "label_el": line_name(k, "el"),

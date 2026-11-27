@@ -8,6 +8,7 @@ import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 import { STATEMENTS } from "./Projections";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 const OUTLOOK_ROWS = [
   ...(STATEMENTS[0]?.rows ?? []),
@@ -33,9 +34,7 @@ export function OutlookPage() {
   return (
     <Page title={t("nav.outlook")}>
       <p>{t("ol.intro")}</p>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <div className="form inline">
         <label>
           {t("ol.year")}

@@ -188,7 +188,10 @@ def test_forecast_cash_kpi_and_goal_sections(hist: dict[str, Any]) -> None:
     pack = generate(hist, {"period_kind": "MONTH", "month": "2026-12-01"})
     found = sections(hist, pack["id"])
     forecast = section(found, "forecast")
-    assert forecast["notice"].startswith("Pending professional review")
+    assert forecast["notice"].startswith(
+        "The projection engine was checked by the owner on "
+        "27/11/2026; it is not independently certified."
+    )
     table = forecast["tables"][0]
     assert [r["key"] for r in table["rows"]] == [
         "PL.REVENUE", "PL.EBITDA", "PL.NET_INCOME", "CF.NET_CHANGE", "BS.CASH"]  # fmt: skip

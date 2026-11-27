@@ -76,7 +76,7 @@ def test_comparison_save_and_promote(plan: dict[str, Any]) -> None:
     assert got.status_code == 200, got.content
     cmp = got.json()
     assert (cmp["nature"], cmp["valid"], cmp["failures"]) == ("HYPOTHETICAL", True, [])
-    assert cmp["engine_status"] == "PENDING_PROFESSIONAL_REVIEW"
+    assert cmp["engine_status"] == "OWNER_CHECKED"
     assert cmp["columns"][0] == {"start": "2026-12-01", "end": "2026-12-31", "nature": "ACTUAL"}
     assert {x["nature"] for x in cmp["columns"][1:]} == {"HYPOTHETICAL"}
     rows = {r["key"]: r for r in cmp["rows"]}

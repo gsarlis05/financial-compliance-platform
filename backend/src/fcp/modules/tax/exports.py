@@ -6,11 +6,12 @@ is not signed off says DRAFT. Text from the books is made formula-safe in Excel 
 """
 
 import io
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 from xml.sax.saxutils import escape
 
+from fcp.core import reviews
 from fcp.core.export import pdf_fonts, safe_text
 
 Lang = Literal["en", "el"]
@@ -127,6 +128,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "box": "Box",
         "item": "Item",
         "rounding": "Rounding",
+        "rules_what": "Box rules {rules}",
+        "sources": "Sources: {src}.",
         "rules": "Box rules {rules}: not yet verified by a Cyprus tax professional. "
         "Sources: {src}.",
         "no_return": "This report was prepared before the boxes were added. Regenerate it, or "
@@ -248,6 +251,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "box": "Θυρίδα",
         "item": "Στοιχείο",
         "rounding": "Στρογγυλοποίηση",
+        "rules_what": "Κανόνες θυρίδων {rules}",
+        "sources": "Πηγές: {src}.",
         "rules": "Κανόνες θυρίδων {rules}: δεν έχουν ακόμη επαληθευτεί από φοροτεχνικό στην "
         "Κύπρο. Πηγές: {src}.",
         "no_return": "Αναφορά χωρίς θυρίδες (παλαιότερη μορφή). Ενημερώστε την ή ξεκινήστε "
@@ -312,6 +317,17 @@ def rules_note(report: Any, lang: Lang) -> str:
     if not found:
         return t["no_return"]
     sources = "; ".join(s["title"] for s in found["sources"])
+    pinned = report.snapshot.get("reviews", {}).get("box_rules")
+    if pinned and pinned["status"] != "PENDING":  # the check pinned with the report (brief 27)
+        review = reviews.Review(
+            pinned["subject"],
+            pinned["status"],
+            date.fromisoformat(pinned["on"]),
+            pinned["by"],
+            pinned["note"],
+        )
+        what = t["rules_what"].format(rules=found["rules"])
+        return f"{reviews.rules_note_for(review, what, lang)} {t['sources'].format(src=sources)}"
     return t["rules"].format(rules=found["rules"], src=sources)
 
 

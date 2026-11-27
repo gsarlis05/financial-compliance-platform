@@ -1,0 +1,91 @@
+{
+  "_comment": "Who has checked the platform's rules and engine, and when (brief 27, #254). Append a new entry to change a status; never edit or remove one. Statuses: PENDING (not yet checked), OWNER_CHECKED (checked by the owner: not a professional verification), PROFESSIONALLY_VERIFIED (verified by a qualified professional, named in 'by'). The latest entry per subject applies.",
+  "reviews": [
+    {
+      "subject": "CY:VAT_CODES",
+      "status": "PENDING",
+      "on": null,
+      "by": "",
+      "note": "Seeded from the sources listed with each code; to be verified (#93)."
+    },
+    {
+      "subject": "CY:VAT_BOX_RULES",
+      "status": "PENDING",
+      "on": null,
+      "by": "",
+      "note": "From the owner's specification and the Tax Department's guides; to be verified (#93)."
+    },
+    {
+      "subject": "CY:CORPORATE_INCOME_TAX",
+      "status": "PENDING",
+      "on": null,
+      "by": "",
+      "note": "Seeded from the sources listed with each rule set; to be verified (#154)."
+    },
+    {
+      "subject": "PROJECTION_ENGINE",
+      "status": "PENDING",
+      "on": null,
+      "by": "",
+      "note": "Golden model and validation package in place; to be reviewed (#153)."
+    },
+    {
+      "subject": "CY:VAT_CODES",
+      "status": "OWNER_CHECKED",
+      "on": "2026-11-27",
+      "by": "The owner",
+      "note": "Checked by the owner (brief 27, #254). Not a professional verification. Corrections are entered on the Tax rules screen."
+    },
+    {
+      "subject": "CY:VAT_BOX_RULES",
+      "status": "OWNER_CHECKED",
+      "on": "2026-11-27",
+      "by": "The owner",
+      "note": "Checked by the owner (brief 27, #254). Not a professional verification. Corrections are entered on the Tax rules screen."
+    },
+    {
+      "subject": "CY:CORPORATE_INCOME_TAX",
+      "status": "OWNER_CHECKED",
+      "on": "2026-11-27",
+      "by": "The owner",
+      "note": "Checked by the owner (brief 27, #254). Not a professional verification. Corrections are entered on the Tax rules screen."
+    },
+    {
+      "subject": "PROJECTION_ENGINE",
+      "status": "OWNER_CHECKED",
+      "on": "2026-11-27",
+      "by": "The owner",
+      "note": "Checked by the owner (brief 27, #254). Not an independent professional validation. Its inputs are corrected on their screens; a change to the engine itself sets this back to pending."
+    }
+  ],
+  "wording": {
+    "engine": {
+      "PENDING": {
+        "en": "The projection engine is pending independent professional review and is not certified.",
+        "el": "Εκκρεμεί ανεξάρτητος επαγγελματικός έλεγχος του μοντέλου προβολών, χωρίς πιστοποίηση."
+      },
+      "OWNER_CHECKED": {
+        "en": "The projection engine was checked by the owner on {on}; it is not independently certified.",
+        "el": "Το μοντέλο προβολών ελέγχθηκε από τον ιδιοκτήτη στις {on}· δεν έχει πιστοποιηθεί ανεξάρτητα."
+      },
+      "PROFESSIONALLY_VERIFIED": {
+        "en": "The projection engine was validated by {by} on {on}.",
+        "el": "Το μοντέλο προβολών επικυρώθηκε από {by} στις {on}."
+      }
+    },
+    "rules": {
+      "PENDING": {
+        "en": "{what}: not yet verified by a Cyprus tax professional.",
+        "el": "{what}: δεν έχουν ακόμη επαληθευτεί από φοροτεχνικό."
+      },
+      "OWNER_CHECKED": {
+        "en": "{what}: checked by the owner on {on} (not a professional verification).",
+        "el": "{what}: ελέγχθηκαν από τον ιδιοκτήτη στις {on} (όχι επαγγελματική επαλήθευση)."
+      },
+      "PROFESSIONALLY_VERIFIED": {
+        "en": "{what}: verified by {by} on {on}.",
+        "el": "{what}: επαληθεύτηκαν από {by} στις {on}."
+      }
+    }
+  }
+}

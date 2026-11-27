@@ -117,7 +117,11 @@ def test_the_return_from_real_entries(v: dict[str, Any]) -> None:
     summary = [list(r) for r in book["Summary"].iter_rows(values_only=True)]
     printed = {str(r[0]): r[2] for r in summary if r[0] in boxes and len(r) > 2}
     assert {k: f"{printed[k]:.2f}" for k in boxes} == boxes
-    assert any("CY-VAT-BOXES@1: not yet verified" in str(r[0]) for r in summary)
+    assert any(
+        "CY-VAT-BOXES@1: checked by the owner on 27/11/2026 (not a professional "
+        "verification)" in str(r[0])
+        for r in summary
+    )
     header = [c.value for c in book["Lines"][1]]
     assert header[7:9] == ["Boxes", "Rule"]
     pdf = v["client"].get(f"{url}?format=pdf")

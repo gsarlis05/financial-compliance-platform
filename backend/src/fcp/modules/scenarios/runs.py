@@ -23,6 +23,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from fcp.core import reviews
 from fcp.core.errors import ConflictError, NotFoundError, ValidationFailedError
 from fcp.modules.metrics.api import (
     CalcRun,
@@ -338,5 +339,5 @@ def summary(ctx: WorkspaceContext, entity_id: UUID, scenario_id: UUID) -> dict[s
         "first_negative_month": {k: v.first_negative_month.isoformat()
                                  if v.first_negative_month else None
                                  for k, v in c.liquidity.items()},
-        "engine_status": "PENDING_PROFESSIONAL_REVIEW",
+        "engine_status": reviews.engine_status(),
     }  # fmt: skip

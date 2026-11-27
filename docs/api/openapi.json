@@ -5132,7 +5132,6 @@
             "type": "string"
           },
           "engine_status": {
-            "default": "PENDING_PROFESSIONAL_REVIEW",
             "title": "Engine Status",
             "type": "string"
           },
@@ -13477,7 +13476,6 @@
             "type": "string"
           },
           "engine_status": {
-            "default": "PENDING_PROFESSIONAL_REVIEW",
             "title": "Engine Status",
             "type": "string"
           },
@@ -13711,7 +13709,7 @@
             "type": "string"
           },
           "validation_status": {
-            "description": "PENDING_PROFESSIONAL_REVIEW until the engine is validated and signed off",
+            "description": "PENDING_PROFESSIONAL_REVIEW, OWNER_CHECKED or PROFESSIONALLY_VERIFIED (fcp.core.reviews)",
             "title": "Validation Status",
             "type": "string"
           }
@@ -14746,6 +14744,52 @@
         "title": "ReverseIn",
         "type": "object"
       },
+      "ReviewOut": {
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "status",
+          "on",
+          "by",
+          "note",
+          "label"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
       "RiskIn": {
         "properties": {
           "mitigation": {
@@ -15520,8 +15564,7 @@
             "type": "array"
           },
           "engine_status": {
-            "default": "PENDING_PROFESSIONAL_REVIEW",
-            "description": "The projection engine is not yet validated by a professional",
+            "description": "The projection engine's review status (fcp.core.reviews)",
             "title": "Engine Status",
             "type": "string"
           },
@@ -16379,7 +16422,6 @@
             "type": "boolean"
           },
           "engine_status": {
-            "default": "PENDING_PROFESSIONAL_REVIEW",
             "title": "Engine Status",
             "type": "string"
           },
@@ -17279,6 +17321,16 @@
             "title": "Rate",
             "type": "string"
           },
+          "review_note": {
+            "description": "Who checked the rules and when, in plain words",
+            "title": "Review Note",
+            "type": "string"
+          },
+          "review_status": {
+            "description": "PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED",
+            "title": "Review Status",
+            "type": "string"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceOut"
@@ -17317,6 +17369,8 @@
           "final_payment",
           "verified",
           "verification_note",
+          "review_status",
+          "review_note",
           "sources"
         ],
         "title": "TaxRuleSetOut",
@@ -18224,6 +18278,11 @@
             ],
             "title": "Rate"
           },
+          "review_status": {
+            "description": "PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED for the jurisdiction's VAT codes (brief 27)",
+            "title": "Review Status",
+            "type": "string"
+          },
           "treatment": {
             "title": "Treatment",
             "type": "string"
@@ -18257,6 +18316,7 @@
             "type": "string"
           },
           "verified": {
+            "description": "Verified by a qualified tax professional",
             "title": "Verified",
             "type": "boolean"
           }
@@ -18272,7 +18332,8 @@
           "valid_from",
           "valid_to",
           "verified",
-          "verification_note"
+          "verification_note",
+          "review_status"
         ],
         "title": "VatCodeOut",
         "type": "object"
@@ -19203,7 +19264,6 @@
             "type": "string"
           },
           "engine_status": {
-            "default": "PENDING_PROFESSIONAL_REVIEW",
             "title": "Engine Status",
             "type": "string"
           },
@@ -36198,6 +36258,58 @@
         "summary": "Trial Balance Csv",
         "tags": [
           "ledger"
+        ]
+      }
+    },
+    "/api/w/{slug}/entities/{entity_id}/reviews": {
+      "get": {
+        "description": "Who has checked the platform's rules and the projection engine, and when (brief 27).",
+        "operationId": "fcp_modules_taxrules_api_list_reviews",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "summary": "List Reviews",
+        "tags": [
+          "taxrules"
         ]
       }
     },

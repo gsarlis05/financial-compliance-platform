@@ -7,6 +7,7 @@ import io
 from datetime import datetime
 from typing import Literal
 
+from fcp.core import reviews
 from fcp.core.export import safe_text
 
 from .layout import STATEMENTS, name, with_totals
@@ -15,14 +16,12 @@ from .runs import Statements
 Lang = Literal["en", "el"]
 _TEXT = {
     "en": {"nature": "Nature", "ACTUAL": "Actual", "FORECAST": "Forecast", "line": "Line",
-           "note": "Projection (forecast, not actual results). The projection engine is pending "
-                   "independent professional review and is not certified. Run {run} "
+           "note": "Projection (forecast, not actual results). {engine} Run {run} "
                    "({status}); cut-over {cutover}; postings up to #{watermark}; inputs "
                    "{input_hash}; outputs {output_hash}; generated {generated}.",
            "opening": "Opening (actual)"},
     "el": {"nature": "Φύση", "ACTUAL": "Πραγματικό", "FORECAST": "Πρόβλεψη", "line": "Γραμμή",
-           "note": "Πρόβλεψη (όχι πραγματικά αποτελέσματα). Εκκρεμεί ανεξάρτητος επαγγελματικός "
-                   "έλεγχος του μοντέλου προβολών, χωρίς πιστοποίηση. Υπολογισμός {run} "
+           "note": "Πρόβλεψη (όχι πραγματικά αποτελέσματα). {engine} Υπολογισμός {run} "
                    "({status}); ημερομηνία αποκοπής {cutover}; εγγραφές έως #{watermark}; είσοδοι "
                    "{input_hash}; έξοδοι {output_hash}; δημιουργία {generated}.",
            "opening": "Έναρξη (πραγματικό)"},
@@ -46,6 +45,7 @@ def to_xlsx(s: Statements, entity_name: str, granularity: str, lang: Lang = "en"
         run=s.run.id, status=s.run.status, cutover=s.run.as_of_date.isoformat(),
         watermark=s.run.actuals_watermark, input_hash=s.run.input_hash[:12],
         output_hash=s.run.output_hash[:12], generated=generated.isoformat(timespec="seconds"),
+        engine=reviews.engine_note(lang),
     )  # fmt: skip
     book = Workbook()
     book.remove(book.active)  # type: ignore[arg-type]

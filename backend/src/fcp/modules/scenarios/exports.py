@@ -9,6 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
 
+from fcp.core import reviews
 from fcp.core.export import safe_text
 from fcp.modules.projections.api import STATEMENT_LAYOUT, line_name, with_totals
 
@@ -22,8 +23,7 @@ _TEXT = {
            "IS": "Scenario income statement", "BS": "Scenario balance sheet",
            "CF": "Scenario cash flow statement",
            "note": "Scenario {name} (hypothetical: not actual results and not an approved "
-                   "forecast). Base: {base} v{version} ({status}). The projection engine is "
-                   "pending independent professional review and is not certified. Postings up to "
+                   "forecast). Base: {base} v{version} ({status}). {engine} Postings up to "
                    "#{watermark}; invariants {valid}; generated {generated}.",
            "ok": "hold", "failed": "FAILED"},
     "el": {"nature": "Φύση", "ACTUAL": "Πραγματικό", "HYPOTHETICAL": "Υποθετικό", "line": "Γραμμή",
@@ -134,7 +134,7 @@ def to_xlsx(c: Comparison, entity_name: str, granularity: str, lang: Lang = "en"
     note = t["note"].format(
         name=c.scenario.name, base=c.base.name, version=c.base.version, status=c.base.status,
         watermark=c.watermark, valid=t["ok"] if c.valid else t["failed"],
-        generated=generated.isoformat(timespec="seconds"),
+        generated=generated.isoformat(timespec="seconds"), engine=reviews.engine_note(lang),
     )  # fmt: skip
     book = Workbook()
     book.remove(book.active)  # type: ignore[arg-type]
