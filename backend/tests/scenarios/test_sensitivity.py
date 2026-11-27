@@ -100,7 +100,7 @@ def test_api_cache_quota_and_bases(plan: dict[str, Any], make_user: Make,
     assert got.status_code == 200, got.content
     t = got.json()
     assert (t["nature"], t["cached"], t["base"]["value"]) == ("HYPOTHETICAL", False, "1200.00")
-    assert t["engine_status"] == "PENDING_PROFESSIONAL_REVIEW"
+    assert t["engine_status"] == "OWNER_CHECKED"
     assert [(b["driver"], b["swing"]) for b in t["bars"]] == [
         ("gross_margin", "960.00"), ("revenue:REV.SALES", "960.00"),
         ("opex:OPEX.RENT", "720.00"), ("interest_rate", "0.00")]  # fmt: skip

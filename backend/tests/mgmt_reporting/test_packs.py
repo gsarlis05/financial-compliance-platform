@@ -292,7 +292,7 @@ def test_kpis_cash_and_projection_blocks(hist: dict[str, Any]) -> None:
     assert blocks["budget"]["reason"] == "No approved annual budget covers this period."
     projected = blocks["projection"]["data"]
     assert (projected["run_id"], projected["engine_status"], projected["nature"]) == (
-        run["id"], "PENDING_PROFESSIONAL_REVIEW", "FORECAST")  # fmt: skip
+        run["id"], "OWNER_CHECKED", "FORECAST")  # fmt: skip
     assert projected["months"][0] == "2027-01-01"
     assert len(projected["rows"]["BS.CASH"]) == len(projected["months"]) == 12
     latest = c.get(f"{base}/projections/{run['id']}").json()

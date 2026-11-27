@@ -224,8 +224,8 @@ charge) stays for entries already posted. Lines on the VAT accounts (**1220** in
 A line with a VAT code can also carry a tax point and, on input VAT, the recoverable part (see
 [VAT](vat.md)).
 
-> **All rates and rules are marked "unverified"** until a Cyprus tax professional confirms them
-> (decision #93). The app prepares a VAT report per period for you to file yourself; it never
+> **You checked the rates and rules on 27/11/2026** (brief 27). That is shown wherever they are
+> used, and it is not a confirmation by a Cyprus tax professional (#93), which remains possible. The app prepares a VAT report per period for you to file yourself; it never
 > files anything (see [VAT](vat.md)).
 
 The catalogue is reference data maintained by the platform (versioned by validity dates); the app

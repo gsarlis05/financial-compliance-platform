@@ -119,6 +119,11 @@ export interface VatSnapshot {
   }[];
   settlements: string;
   unverified_codes: string[];
+  /** Who had checked the codes and box rules when the report was prepared (brief 27). */
+  reviews?: Record<
+    "vat_codes" | "box_rules",
+    { status: string; on: string | null }
+  >;
   exceptions: { kind: string; entry: string; detail: string }[];
   lines: VatLine[];
 }

@@ -51,7 +51,7 @@ export function VatCodePicker({
   const name = (v: VatCode) =>
     locale === "el" && v.name_el ? v.name_el : v.name;
   const labelOf = (v: VatCode) =>
-    `${v.code} · ${name(v)}${v.verified ? "" : ` (${t("vat.unverified")})`}`;
+    `${v.code} · ${name(v)}${!v.verified && (v.review_status ?? "PENDING") === "PENDING" ? ` (${t("vat.unverified")})` : ""}`;
   const byId = new Map(codes.map((v) => [v.id, v]));
   const chosen = byId.get(value);
   const [typed, setTyped] = useState<string | null>(null);

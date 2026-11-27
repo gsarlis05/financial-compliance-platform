@@ -51,9 +51,9 @@ from .debt import LoanMonth, LoanTerms, opening_current, project_loan
 from .drivers import DEFAULTS, OPEX_LINES, REVENUE_LINES
 from .tax import TaxBook, TaxInputs, TaxMonth
 
-# The engine is not production-ready until the validation package passes and a qualified
-# independent professional has signed it (owner decision D9, 2026-11-15; brief 20 §5). Changed
-# only when that sign-off is recorded.
+# The engine's review status (owner decision D9, 2026-11-15; brief 20 §5) is data: see
+# ``fcp.core.reviews`` (brief 27: checked by the owner on 2026-11-27, not a professional
+# validation). This is the status while nobody has checked it.
 VALIDATION_STATUS = "PENDING_PROFESSIONAL_REVIEW"
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")

@@ -36,7 +36,7 @@ def test_export(plan: dict[str, Any], make_user: Make, api_client: Make) -> None
     note = str(income["A3"].value)
     assert note.startswith("Scenario ")
     assert "hypothetical: not actual results and not an approved forecast" in note
-    assert "not certified" in note
+    assert "not independently certified" in note
     assert [x.value for x in income[6]][1:4] == ["Base", "Scenario", "Difference"]
     assert [x.value for x in income[7]][:4] == ["Nature"] + ["Hypothetical"] * 3
     revenue = next(r for r in income.iter_rows(min_row=8) if r[0].value == "Revenue")

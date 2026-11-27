@@ -1787,6 +1787,12 @@ export const en = {
   "pj.status.FAILED": "failed",
   "pj.published": "published",
   "pj.rollingRun": "rolling forecast",
+  "pj.ownerChecked":
+    "You checked the projection engine on {on}. It has not been independently validated by a professional, so treat projections as estimates, not certified figures.",
+  "pj.professionallyValidated":
+    "The projection engine was validated by {by} on {on}.",
+  "vat.rulesOwnerChecked":
+    "Box rules {rules} are taken from your specification and the Tax Department's guides. You checked them on {on} (not a professional verification); corrections go on the Tax rules screen. Enter these figures on the portal yourself.",
   "pj.pendingReview":
     "Pending professional review: the projection engine has not yet been independently validated and signed off by a qualified professional. Use projections as estimates, not certified figures.",
   "pj.stale": "out of date",
@@ -4059,6 +4065,12 @@ export const el: Record<MessageKey, string> = {
   "pj.status.FAILED": "απέτυχε",
   "pj.published": "δημοσιευμένη",
   "pj.rollingRun": "κυλιόμενη πρόβλεψη",
+  "pj.ownerChecked":
+    "Ελέγξατε το μοντέλο προβολών στις {on}. Δεν έχει επικυρωθεί ανεξάρτητα από επαγγελματία· οι προβολές είναι εκτιμήσεις, όχι πιστοποιημένα στοιχεία.",
+  "pj.professionallyValidated":
+    "Το μοντέλο προβολών επικυρώθηκε από {by} στις {on}.",
+  "vat.rulesOwnerChecked":
+    "Οι κανόνες θυρίδων {rules} προέρχονται από τις προδιαγραφές σας και τους οδηγούς του Τμήματος Φορολογίας. Τους ελέγξατε στις {on} (όχι επαγγελματική επαλήθευση)· οι διορθώσεις γίνονται στην οθόνη Φορολογικοί κανόνες. Καταχωρίστε τα ποσά στην πύλη μόνοι σας.",
   "pj.pendingReview":
     "Εκκρεμεί επαγγελματικός έλεγχος: το μοντέλο προβολών δεν έχει ακόμη επικυρωθεί και υπογραφεί από ανεξάρτητο, κατάλληλα προσοντούχο επαγγελματία. Χρησιμοποιήστε τις προβολές ως εκτιμήσεις, όχι ως πιστοποιημένα ποσά.",
   "pj.stale": "μη ενημερωμένη",

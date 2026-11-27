@@ -547,6 +547,8 @@ def _vat(owner: "DemoClient", accountant: "DemoClient", base: str, year: int) ->
             "sales_vat": totals["sales_vat"], "purchase_vat": totals["purchase_vat"],
             "net": totals["net"], "direction": totals["direction"],
             "exceptions": len(signed["snapshot"]["exceptions"]),
+            "rules_status": signed["snapshot"]["reviews"]["box_rules"]["status"].lower()
+            .replace("_", " "),
             "reference": "DEMO-0001"}  # fmt: skip
 
 
@@ -964,7 +966,7 @@ def run(  # noqa: PLR0912, PLR0915 - a linear, narrated script reads best as one
     step(f"VAT: quarterly periods from {year}-01-01; the first quarter's report prepared by the "
          f"accountant from the posted books: output VAT {vat['sales_vat']}, input VAT "
          f"{vat['purchase_vat']}, net {vat['net']} {vat['direction'].lower()}; return "
-         f"{vat['boxes']} (box rules unverified), "
+         f"{vat['boxes']} (box rules: {vat['rules_status']}), "
          f"{vat['exceptions']} exception(s); reviewed and finalised by the owner and "
          f"recorded as filed (reference {vat['reference']}); nothing was sent to the Tax "
          "Department")  # fmt: skip

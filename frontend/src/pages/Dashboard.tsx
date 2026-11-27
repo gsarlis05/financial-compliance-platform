@@ -23,6 +23,7 @@ import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 import { formatValue } from "./Goals";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 /** The last complete month (YYYY-MM-01), the default period end. */
 export function lastMonth(today = new Date()): string {
@@ -477,9 +478,7 @@ function ScenarioSummary({ data }: { data: Widget["data"] }) {
         </span>{" "}
         · {t("sc.base")}: {data.base_name} v{data.base_version}
       </p>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <div className="table-scroll">
         <table className="grid">
           <caption>{t("dash.sc.caption")}</caption>

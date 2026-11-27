@@ -31,6 +31,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from fcp.core import reviews
 from fcp.core.errors import DomainError, NotFoundError, PermissionDeniedError
 from fcp.modules.budgeting.api import VarianceComparison, compute_variance, list_budget_views
 from fcp.modules.calendar.api import add_months, month_end, month_start
@@ -47,7 +48,6 @@ VIEWS = ("MONTH", "QTD", "YTD", "FULL_YEAR")
 COMPARISONS = (VarianceComparison.ACTUAL_VS_BUDGET, VarianceComparison.CURRENT_VS_ORIGINAL,
                VarianceComparison.ACTUAL_VS_PRIOR_YEAR)  # fmt: skip
 PROJECTED = ("PL.REVENUE", "PL.EBITDA", "PL.NET_INCOME", "CF.NET_CHANGE", "BS.CASH")
-ENGINE_STATUS = "PENDING_PROFESSIONAL_REVIEW"
 HORIZON = 12  # projected months shown after the period
 
 
@@ -219,7 +219,7 @@ def projection(ctx: WorkspaceContext, entity_id: UUID, p: Period) -> dict[str, A
             continue
         return {
             "run_id": str(run.id), "as_of": run.as_of_date.isoformat(), "stale": run.stale,
-            "nature": "FORECAST", "engine_status": ENGINE_STATUS,
+            "nature": "FORECAST", "engine_status": reviews.engine_status(),
             "months": [m.isoformat() for m in shown],
             "rows": {k: [_money(values.get(k, {}).get(m)) for m in shown] for k in PROJECTED},
         }  # fmt: skip

@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from fcp.core import reviews
 from fcp.devtools.validation import harness
 from fcp.modules.projections.engine import VALIDATION_STATUS, EngineInput
 
@@ -35,8 +36,10 @@ def test_the_engine_agrees_with_the_independent_model() -> None:
 
 
 def test_the_engine_is_not_marked_as_validated() -> None:
-    # Owner decision D9: only a signed professional review may change this.
+    # Owner decision D9: only a signed professional review makes it validated. The owner's check
+    # (brief 27) is recorded as such, never as a professional validation.
     assert VALIDATION_STATUS == "PENDING_PROFESSIONAL_REVIEW"
+    assert reviews.review(reviews.ENGINE).status == "OWNER_CHECKED"
     sign_off = (harness.ROOT / "05-reviewer-sign-off.md").read_text()
     assert "Not yet completed" in sign_off
 

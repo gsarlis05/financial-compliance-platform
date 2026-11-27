@@ -82,7 +82,7 @@ def test_scenario_widget(plan: dict[str, Any], make_user: Make, api_client: Make
     assert data["changes"] == compared["effects"][-1]["changes"]
     assert (data["nature"], data["engine_status"]) == (
         "HYPOTHETICAL",
-        "PENDING_PROFESSIONAL_REVIEW",
+        "OWNER_CHECKED",
     )
     assert data["changes"]["PL.REVENUE"] == "6000.00"  # 12 x 1,000 x 50%
     viewer = join(plan["client"], plan["ws"]["slug"], make_user("viewer@example.test"),

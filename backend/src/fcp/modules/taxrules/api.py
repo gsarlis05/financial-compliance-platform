@@ -1,7 +1,7 @@
 """Public interface of the ``taxrules`` module and its HTTP routes (M6F-2, #147).
 
-Rule sets are reference data. The route shows the rule sets of an entity's jurisdiction, each
-with its sources and verification status.
+Rule sets are reference data. The routes show the rule sets of an entity's jurisdiction, each
+with its sources and review status, and who has checked the rules and the engine (brief 27).
 """
 
 from datetime import date
@@ -10,6 +10,7 @@ from uuid import UUID
 from django.http import HttpRequest
 from ninja import Field, Router, Schema
 
+from fcp.core import reviews
 from fcp.core.api.permissions import requires
 from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
@@ -47,7 +48,24 @@ class TaxRuleSetOut(Schema):
     final_payment: str = Field(description="When the balance is due, after the tax year")
     verified: bool = Field(description="False until a qualified tax professional confirms it")
     verification_note: str
+    review_status: str = Field(description="PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED")
+    review_note: str = Field(description="Who checked the rules and when, in plain words")
     sources: list[SourceOut]
+
+
+class ReviewOut(Schema):
+    subject: str
+    status: str
+    on: date | None
+    by: str
+    note: str
+    label: str
+
+
+def _review(r: TaxRules) -> reviews.Review:
+    if r.verified:
+        return reviews.Review(r.id, "PROFESSIONALLY_VERIFIED", None, "", r.verification_note)
+    return reviews.review(reviews.corporate_tax(r.jurisdiction))
 
 
 def _out(r: TaxRules) -> TaxRuleSetOut:
@@ -61,6 +79,7 @@ def _out(r: TaxRules) -> TaxRuleSetOut:
                                  for i in r.instalments],
         final_payment=f"{day:02d}/{month:02d} of the year {offset} after the tax year",
         verified=r.verified, verification_note=r.verification_note,
+        review_status=_review(r).status, review_note=_review(r).label(),
         sources=[SourceOut(**{k: s.get(k, "") for k in ("publisher", "title", "url", "note")})
                  for s in r.sources],
     )  # fmt: skip
@@ -73,3 +92,12 @@ def list_tax_rules(request: HttpRequest, slug: str, entity_id: UUID) -> list[Tax
     ctx = workspace_ctx(request, slug, entity_id)
     entity = get_entity(ctx, entity_id, "planning.read")
     return [_out(r) for r in rule_sets(entity.jurisdiction)]
+
+
+@router.get(f"{BASE}/reviews", response=list[ReviewOut])
+@requires("tenancy.workspace.read")
+def list_reviews(request: HttpRequest, slug: str, entity_id: UUID) -> list[ReviewOut]:
+    """Who has checked the platform's rules and the projection engine, and when (brief 27)."""
+    workspace_ctx(request, slug, entity_id)
+    return [ReviewOut(subject=r.subject, status=r.status, on=r.on, by=r.by, note=r.note,
+                      label=r.label()) for r in reviews.current()]  # fmt: skip

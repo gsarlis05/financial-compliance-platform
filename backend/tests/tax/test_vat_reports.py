@@ -141,7 +141,9 @@ def test_the_golden_quarter(v: dict[str, Any]) -> None:
     ]
     # The specification does not map exempt purchases: shown as an exception, never guessed.
     assert [(e["kind"], e["entry"]) for e in snap["exceptions"]] == [("UNSUPPORTED", "GJ-6")]
-    assert snap["unverified_codes"] == ["EX", "R9", "S19", "Z0"]  # verified by nobody yet (#93)
+    # No professional has verified the codes (#93), but the owner checked them (brief 27).
+    assert snap["unverified_codes"] == []
+    assert snap["reviews"]["vat_codes"]["status"] == "OWNER_CHECKED"
     # The return (V1-2c): each box from the lines' contributions, under unverified rules.
     vat_return = snap["return"]
     assert (vat_return["rules"], vat_return["status"]) == (

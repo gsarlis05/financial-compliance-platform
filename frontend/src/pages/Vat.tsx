@@ -24,6 +24,7 @@ import { Loading, Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
+import { dayMonthYear } from "../components/ReviewNote";
 
 const LENGTHS = [1, 2, 3, 4, 6, 12];
 
@@ -378,7 +379,17 @@ function ReturnView({
   return (
     <section aria-labelledby="vat-return">
       <h3 id="vat-return">{t("vat.return")}</h3>
-      <p role="note">{t("vat.rules").replace("{rules}", found.rules)}</p>
+      <p role="note">
+        {report.snapshot.reviews?.box_rules.status === "OWNER_CHECKED" &&
+        report.snapshot.reviews.box_rules.on
+          ? t("vat.rulesOwnerChecked")
+              .replace("{rules}", found.rules)
+              .replace(
+                "{on}",
+                dayMonthYear(report.snapshot.reviews.box_rules.on),
+              )
+          : t("vat.rules").replace("{rules}", found.rules)}
+      </p>
       <div className="table-scroll">
         <table>
           <thead>

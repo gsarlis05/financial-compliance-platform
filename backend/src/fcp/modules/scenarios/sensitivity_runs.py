@@ -35,7 +35,7 @@ from .models import Scenario
 from .runs import _refs, items_of
 
 RUN = services.RUN
-ENGINE_STATUS = "PENDING_PROFESSIONAL_REVIEW"
+ENGINE_STATUS = "PENDING_PROFESSIONAL_REVIEW"  # while unchecked; see reviews.engine_status()
 
 
 class QuotaExceededError(DomainError):

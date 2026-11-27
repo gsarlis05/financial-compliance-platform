@@ -15,6 +15,7 @@ from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from ninja import Field, Query, Router, Schema, Status
 
+from fcp.core import reviews
 from fcp.core.api.permissions import requires
 from fcp.core.errors import ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
@@ -292,9 +293,9 @@ class ScenarioComparisonOut(Schema):
     failures: list[str]
     notes: list[str]
     nature: str = "HYPOTHETICAL"
-    engine_status: str = Field(default="PENDING_PROFESSIONAL_REVIEW",
-                               description="The projection engine is not yet validated "
-                               "by a professional")  # fmt: skip
+    engine_status: str = Field(default_factory=reviews.engine_status,
+                               description="The projection engine's review status "
+                               "(fcp.core.reviews)")  # fmt: skip
 
 
 class ScenarioRunOut(Schema):
@@ -491,7 +492,7 @@ class SensitivityOut(Schema):
     watermark: int
     cached: bool
     nature: str = "HYPOTHETICAL"
-    engine_status: str = sensitivity_runs.ENGINE_STATUS
+    engine_status: str = Field(default_factory=reviews.engine_status)
 
 
 def _measure(m: sensitivity.Measure, output: str) -> MeasureOut:
@@ -566,7 +567,7 @@ class WorkingCapitalOut(Schema):
                                      "cut-over")  # fmt: skip
     observed_ccc: str
     months: list[WorkingCapitalMonthOut]
-    engine_status: str = sensitivity_runs.ENGINE_STATUS
+    engine_status: str = Field(default_factory=reviews.engine_status)
 
 
 class DaysWorthIn(Schema):
@@ -584,7 +585,7 @@ class DaysWorthOut(Schema):
     net_working_capital_change: str = Field(description="Negative: cash released")
     by_month: list[dict[str, str]] = Field(description="The cash difference by month")
     nature: str = "HYPOTHETICAL"
-    engine_status: str = sensitivity_runs.ENGINE_STATUS
+    engine_status: str = Field(default_factory=reviews.engine_status)
 
 
 def _days(value: Decimal) -> str:
@@ -688,7 +689,7 @@ class ProjectedKpisOut(Schema):
     start: date
     end: date
     kpis: list[ProjectedKpiOut]
-    engine_status: str = sensitivity_runs.ENGINE_STATUS
+    engine_status: str = Field(default_factory=reviews.engine_status)
 
 
 @router.get("/w/{slug}/entities/{uuid:entity_id}/projected-kpis", response=ProjectedKpisOut)

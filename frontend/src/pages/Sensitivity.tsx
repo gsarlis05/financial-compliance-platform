@@ -14,6 +14,7 @@ import { Page, ProblemMessage } from "../components/common";
 import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 const OUTPUTS: SensitivityOutput[] = [
   "MIN_CASH",
@@ -259,9 +260,7 @@ export function SensitivityPage() {
   return (
     <Page title={t("nav.sensitivity")}>
       <p>{t("se.intro")}</p>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <form className="form" onSubmit={submit}>
         <BasePicker value={choice} onChange={setChoice} />
         <label>

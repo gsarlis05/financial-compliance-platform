@@ -49,7 +49,8 @@ actual one.
   the scenario.
 - **Checks:** the scenario's statements pass the same eight checks as any projection (the balance
   sheet balances, cash ties, and so on). If one fails, it says where.
-- The projection engine is still **pending professional review**, and so are its scenarios.
+- You checked the projection engine on 27/11/2026. It has not been independently validated by a
+  professional, and neither have its scenarios.
 
 Changes apply in their order, each to the result of the ones before. A one-off payment can settle
 at most the liability's balance at the cut-over. Moving a line by whole months drops what moves past

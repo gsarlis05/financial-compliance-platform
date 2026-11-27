@@ -38,8 +38,8 @@ def test_totals_explain_and_export(hist: dict[str, Any]) -> None:
     bs = book["BS"]
     assert bs["A2"].value == "Προβλεπόμενη κατάσταση οικονομικής θέσης"
     assert str(bs["A3"].value).startswith("Πρόβλεψη (όχι πραγματικά αποτελέσματα)")
-    assert "χωρίς πιστοποίηση" in str(bs["A3"].value)
-    assert got["projection"]["validation_status"] == "PENDING_PROFESSIONAL_REVIEW"
+    assert "δεν έχει πιστοποιηθεί ανεξάρτητα" in str(bs["A3"].value)
+    assert got["projection"]["validation_status"] == "OWNER_CHECKED"
     assert [cell.value for cell in bs[6]][:3] == ["Φύση", "Πραγματικό", "Πρόβλεψη"]
     assert bs["B5"].value == "Έναρξη (πραγματικό)"
     cash = next(r for r in bs.iter_rows(min_row=7) if r[0].value == "Ταμειακά διαθέσιμα")

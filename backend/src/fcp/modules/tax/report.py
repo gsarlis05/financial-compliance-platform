@@ -29,6 +29,8 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
+from fcp.core import reviews
+
 from .boxes import ALL_BOXES, VAT_BOXES, LineKind, mapping, ruleset
 
 CENT = Decimal("0.01")
@@ -174,13 +176,23 @@ def compute(
         "accounts": [{**a, "vat": money(a["vat"]), "settled": money(a["settled"])}
                      for a in sorted(accounts.values(), key=lambda a: a["code"])],
         "settlements": money(settlements),
-        "unverified_codes": sorted(r["code"] for r in rows if not r["verified"]),
+        **_reviews(boxes.rules["jurisdiction"], rows),
         "exceptions": exceptions,
         "lines": shown,
     }  # fmt: skip
 
 
 Row = dict[str, Any]
+
+
+def _reviews(jurisdiction: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Who checked the codes and the box rules, pinned with the report as it stood when prepared
+    (brief 27); codes are listed as unverified only while nobody has checked them."""
+    codes = reviews.review(reviews.vat_codes(jurisdiction))
+    rules = reviews.review(reviews.vat_box_rules(jurisdiction))
+    pending = sorted(r["code"] for r in rows if not r["verified"]) if codes.pending else []
+    return {"unverified_codes": pending,
+            "reviews": {"vat_codes": codes.as_dict(), "box_rules": rules.as_dict()}}  # fmt: skip
 
 
 def _summarise(

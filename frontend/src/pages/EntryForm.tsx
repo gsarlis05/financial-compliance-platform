@@ -732,7 +732,12 @@ export function EntryForm({
       </button>
       {!balanced ? <p className="notice">{t("je.unbalanced")}</p> : null}
       {lines.some((l) =>
-        vatCodes.find((v) => v.id === l.vat_code_id && !v.verified),
+        vatCodes.find(
+          (v) =>
+            v.id === l.vat_code_id &&
+            !v.verified &&
+            (v.review_status ?? "PENDING") === "PENDING",
+        ),
       ) ? (
         <p className="notice">{t("vat.unverifiedHelp")}</p>
       ) : null}

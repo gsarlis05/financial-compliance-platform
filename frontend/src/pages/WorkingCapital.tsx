@@ -9,6 +9,7 @@ import { useI18n } from "../i18n/I18n";
 import type { MessageKey } from "../i18n/messages";
 import { formatAmount } from "../money";
 import { BasePicker, baseOf } from "./Sensitivity";
+import { EngineReviewNote } from "../components/ReviewNote";
 
 export function WorkingCapitalPage() {
   const { t, locale } = useI18n();
@@ -27,9 +28,7 @@ export function WorkingCapitalPage() {
   return (
     <Page title={t("nav.workingCapital")}>
       <p>{t("wc.intro")}</p>
-      <p className="notice" role="note">
-        {t("pj.pendingReview")}
-      </p>
+      <EngineReviewNote />
       <div className="form inline">
         <BasePicker value={choice} onChange={setChoice} />
       </div>

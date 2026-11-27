@@ -12,6 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from fcp.core import reviews
 from fcp.modules.tax.boxes import ruleset
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -177,8 +178,8 @@ classes), each with its source. Please have the classes you entered checked.
 
 The validation package is in `docs/validation/`. Its reviewer sign-off form,
 `docs/validation/05-reviewer-sign-off.md`, is for an independent qualified accountant (ACA, ACCA,
-CPA or equivalent) to complete. Until then, projections are marked
-**PENDING_PROFESSIONAL_REVIEW**.
+CPA or equivalent) to complete. You checked the engine on 27 November 2026 (brief 27), so
+projections are marked **OWNER_CHECKED**: not an independent professional validation.
 
 ## 7. Already decided by you (no review needed)
 
@@ -190,11 +191,13 @@ CPA or equivalent) to complete. Until then, projections are marked
 
 
 def build() -> str:
+    status = "".join(f"- {r.subject}: {r.label()}\n" for r in reviews.current())
     head = ["# Professional review list", "",
-            "Everything below is used by the platform and has **not yet been confirmed by a "
-            "qualified Cyprus tax professional** (#93). Tick each item when it is confirmed, or "
-            "write the correction and its source next to it, and send the list back: corrections "
-            "become new versions of the data.", "",
+            "Everything below is used by the platform. You checked it on 27 November 2026 (brief "
+            "27); that is not a confirmation by a **qualified Cyprus tax professional** (#93), "
+            "which remains possible at any time. Tick each item when a professional confirms it, "
+            "or enter the correction and its source on the Tax rules screen: corrections become "
+            "new versions of the data.", "", "Current status:", "", status,
             "This file is generated from the platform's data (`python -m fcp.devtools.review_list`)"
             "; do not edit it by hand.", ""]  # fmt: skip
     parts = [head, _vat_codes(), [""], _boxes(), [""], _methods(), [""], _income_tax()]
