@@ -321,6 +321,8 @@ export interface VatCode {
   verification_note: string;
   /** PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED (brief 27). */
   review_status?: string;
+  corrected_from?: string | null;
+  correction_source?: string;
 }
 
 export interface TaxonomyLine {

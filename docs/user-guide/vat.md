@@ -53,7 +53,18 @@ value of an import. It is listed under **Checks**: ask your tax adviser how to r
 
 The box rules come from your specification and the Tax Department's guides. You checked them on
 27/11/2026; each report records that, and that it is not a verification by a Cyprus tax
-professional. The figures are prepared for you to check and
+professional.
+
+### Correcting a rule
+If a rate, a code or a box rule changes, correct it under **Setup → Tax rules**:
+- **A VAT code:** its rate, treatment, category or name, for lines dated from a day you choose.
+- **A box rule:** which boxes a kind of line goes to, or that it is left out, for returns whose
+  period starts from a day you choose.
+
+Every correction needs its source (the law, the Tax Department's notice or your adviser's note),
+and it is recorded with who made it and when. A correction never changes an earlier one: if you
+make a mistake, enter a new correction from the same day. Returns already prepared keep the rules
+they used; regenerate a draft to use the correction. The figures are prepared for you to check and
 enter yourself.
 
 ### VAT codes and line details

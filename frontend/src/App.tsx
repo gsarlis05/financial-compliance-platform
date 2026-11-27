@@ -39,6 +39,7 @@ import {
 import { LedgerSettingsPage } from "./pages/LedgerSettings";
 import { FxDifferencesPage } from "./pages/FxDifferences";
 import { ImportPage } from "./pages/Import";
+import { TaxRulesPage } from "./pages/TaxRules";
 import { PeriodsPage } from "./pages/Periods";
 import { ReportPacksPage } from "./pages/ReportPacks";
 import { StatementsPage } from "./pages/Statements";
@@ -143,6 +144,7 @@ const router = createBrowserRouter([
         element: <FxDifferencesPage />,
       },
       { path: "w/:slug/e/:entityId/import", element: <ImportPage /> },
+      { path: "w/:slug/e/:entityId/tax-rules", element: <TaxRulesPage /> },
       {
         path: "w/:slug/e/:entityId/trial-balance",
         element: <TrialBalancePage />,

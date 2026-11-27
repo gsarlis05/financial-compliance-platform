@@ -28,6 +28,8 @@ PERMISSIONS: dict[str, str] = {
     "ledger.period.unlock_request": "Request that a locked period be unlocked",
     "ledger.period.unlock_approve": "Approve a period unlock (two distinct approvers needed)",
     "ledger.settings.manage": "Change ledger controls such as the approval policy",
+    "tax.rules.correct": "Correct a VAT code, a VAT box rule or the corporate tax rules for an "
+    "entity (a new version from a date, with its source)",
     # journal entries
     "ledger.entry.read": "See journal entries",
     "ledger.entry.create": "Create, edit and submit draft entries (including reversal drafts)",

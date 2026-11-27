@@ -468,7 +468,7 @@ def mapping_rows(report: Any, lang: Lang) -> list[list[str]]:
         category = categories.get(c["code"], "")
         cells = []
         for kind in kinds:
-            found = mapping(category, kind, rules)
+            found = mapping(category, kind, rules, snap["return"].get("corrections"))
             word = t["excluded" if found.status == "EXCLUDED" else "unsupported"]
             cells.append(", ".join(found.boxes) if found.status == "MAPPED" else word)
         rows.append([c["code"], category, c["rate"] or "", *cells])

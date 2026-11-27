@@ -14,10 +14,14 @@ from django.utils import timezone
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core.api.permissions import requires
+from fcp.core.errors import ValidationFailedError
 from fcp.modules.audit_log.api import record as audit
+from fcp.modules.taxrules.api import Kind, add_correction, all_for, latest_by_target
 from fcp.modules.tenancy.api import get_entity, workspace_ctx
 
 from . import exports, services
+from .boxes import ALL_BOXES, mapping, ruleset
+from .boxes import key as box_key
 from .models import VatAdjustment, VatImport, VatPeriodScheme, VatReport
 
 __all__ = ["router"]
@@ -457,3 +461,89 @@ def export_report(request: HttpRequest, slug: str, entity_id: UUID, report_id: U
     response = HttpResponse(content, content_type=CONTENT_TYPES[query.format])
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# --- box rule corrections (brief 27, T-2) ---------------------------------------------------------
+
+
+LINE_KINDS = ("OUTPUT_VAT", "INPUT_VAT", "NET_SALE", "NET_PURCHASE")
+FORMULA_BOXES = ("3", "5")  # worked out from other boxes, never mapped to
+
+
+class BoxRuleCorrectionIn(Schema):
+    effective_from: date = Field(description="Applies to VAT returns whose period starts then "
+                                             "or later")  # fmt: skip
+    category: str
+    line: Literal["OUTPUT_VAT", "INPUT_VAT", "NET_SALE", "NET_PURCHASE"]
+    status: Literal["MAPPED", "EXCLUDED"]
+    boxes: list[str] = Field(default_factory=list, max_length=6)
+    source: str = Field(min_length=1, max_length=500)
+    note: str = Field(default="", max_length=1000)
+
+
+class BoxRuleOut(Schema):
+    category: str
+    line: str
+    status: str
+    boxes: list[str]
+    reason: str
+    corrected_from: date | None
+
+
+def _categories() -> list[str]:
+    rules = ruleset(services.BOX_RULES["CY"])
+    return sorted({r["category"] for part in ("rules", "excluded", "unsupported")
+                   for r in rules[part]})  # fmt: skip
+
+
+@router.get(f"{BASE}/vat-box-rules", response=list[BoxRuleOut])
+@requires("tax.vat.read")
+def list_box_rules(
+    request: HttpRequest, slug: str, entity_id: UUID, on: date | None = None
+) -> list[BoxRuleOut]:
+    """Every category and line kind with the boxes it goes to for a return starting on ``on``
+    (today by default), the entity's corrections included."""
+    workspace_ctx(request, slug, entity_id)
+    day = on or timezone.localdate()
+    found = latest_by_target(all_for(entity_id, Kind.VAT_BOX_RULE), day)
+    fixes = {t: c.as_ref() for t, c in found.items()}
+    out = []
+    for category in _categories():
+        for line in LINE_KINDS:
+            m = mapping(category, line, services.BOX_RULES["CY"], fixes)  # type: ignore[arg-type]
+            fix = found.get(box_key(category, line))
+            out.append(BoxRuleOut(category=category, line=line, status=m.status,
+                                  boxes=list(m.boxes), reason=m.reason,
+                                  corrected_from=fix.effective_from if fix else None))  # fmt: skip
+    return out
+
+
+@router.post(f"{BASE}/vat-box-rules/corrections", response={201: dict[str, Any]})
+@requires("tax.rules.correct")
+def correct_box_rule(
+    request: HttpRequest, slug: str, entity_id: UUID, payload: BoxRuleCorrectionIn
+) -> Status[dict[str, Any]]:
+    """Correct which boxes a category and line kind go to, for VAT returns whose period starts on
+    or after the date. Earlier returns keep the rules they used."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = payload
+    if p.category not in _categories():
+        raise ValidationFailedError("Choose one of the VAT categories.",
+                                    field_errors={"category": ["unknown"]})  # fmt: skip
+    boxes = list(dict.fromkeys(b.strip().upper() for b in p.boxes))
+    bad = [b for b in boxes if b not in ALL_BOXES or b in FORMULA_BOXES]
+    if bad:
+        raise ValidationFailedError(
+            f"Not boxes a line can go to: {', '.join(bad)} (Boxes 3 and 5 are worked out).",
+            field_errors={"boxes": ["invalid"]},
+        )
+    if (p.status == "MAPPED") != bool(boxes):
+        raise ValidationFailedError(
+            "A mapped rule needs at least one box; an excluded one has none.",
+            field_errors={"boxes": ["required" if p.status == "MAPPED" else "not allowed"]},
+        )
+    found = add_correction(ctx, entity_id, kind=Kind.VAT_BOX_RULE,
+                           target=box_key(p.category, p.line), effective_from=p.effective_from,
+                           values={"status": p.status, "boxes": boxes}, source=p.source,
+                           note=p.note)  # fmt: skip
+    return Status(201, found.as_ref())

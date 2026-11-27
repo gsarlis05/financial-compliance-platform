@@ -104,7 +104,7 @@ def _tax_refs(ctx: WorkspaceContext, entity_id: UUID, made: AssumptionSet, cutov
     rules: dict[str, Any] = {}
     for year in years:
         try:
-            found = rules_for(entity.jurisdiction, date(year, 1, 1))
+            found = rules_for(entity.jurisdiction, date(year, 1, 1), entity_id=entity.id)
         except NotFoundError:
             if year >= months[0].year or year in losses:
                 raise ValidationFailedError(

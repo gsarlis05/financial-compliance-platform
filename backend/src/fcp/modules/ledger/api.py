@@ -3,7 +3,7 @@
 All routes are entity-scoped: ``/api/w/{slug}/entities/{entity_id}/...``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
@@ -13,6 +13,7 @@ from django.db import transaction
 from django.db.models import Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
 from ninja import Field, Query, Router, Schema, Status
 
 from fcp.core import reviews
@@ -34,6 +35,7 @@ from . import (
     periods,
     reports,
     suggestions,
+    vat_corrections,
 )
 from .models import (
     Account,
@@ -250,6 +252,8 @@ class VatLine:
     exchange_rate: Decimal | None = None
     rate_at: datetime | None = None
     rate_source: str = ""
+    # Brief 27, T-2: the entity's correction of the code in force on the line's date, if any.
+    correction: dict[str, Any] | None = None
 
 
 def entry_vat_lines(ctx: Any, entity_id: UUID, entry_id: UUID) -> list[VatLine]:
@@ -311,7 +315,15 @@ def vat_lines(ctx: Any, entity_id: UUID, *, date_from: date, date_to: date) -> l
             else (ln.txn_debit or Decimal(0)) - (ln.txn_credit or Decimal(0)),
             ln.exchange_rate, ln.rate_at, ln.rate_source,
         ))  # fmt: skip
-    return found
+    overlay = vat_corrections.Overlay(entity.id)
+    if not overlay:
+        return found
+    out = []
+    for v in found:
+        fix = overlay.find(v.vat_code, v.tax_point or v.accounting_date) if v.vat_code else None
+        out.append(replace(vat_corrections.corrected(v, fix),
+                           correction=fix.as_ref() if fix else None))  # fmt: skip
+    return out
 
 
 def posting_watermark(ctx: Any, entity_id: UUID) -> int:
@@ -549,6 +561,11 @@ class VatCodeOut(Schema):
     verification_note: str
     review_status: str = Field(description="PENDING, OWNER_CHECKED or PROFESSIONALLY_VERIFIED "
                                "for the jurisdiction's VAT codes (brief 27)")  # fmt: skip
+    corrected_from: date | None = Field(
+        default=None,
+        description="The start of the entity's correction in force on the date asked (brief 27)",
+    )
+    correction_source: str = ""
 
 
 class VatCodeQuery(Schema):
@@ -561,6 +578,9 @@ def list_vat_codes(
     request: HttpRequest, slug: str, entity_id: UUID, q: Query[VatCodeQuery]
 ) -> list[VatCodeOut]:
     ctx = workspace_ctx(request, slug, entity_id)
+    overlay = vat_corrections.Overlay(entity_id)
+    day = q.on or timezone.localdate()
+    shown = [overlay.apply(v, day) for v in accounts.vat_codes(ctx, entity_id, on=q.on)]
     return [
         VatCodeOut(
             id=v.id,
@@ -577,9 +597,44 @@ def list_vat_codes(
             review_status="PROFESSIONALLY_VERIFIED"
             if v.verified
             else reviews.review(reviews.vat_codes(v.jurisdiction)).status,
+            corrected_from=fix.effective_from if fix else None,
+            correction_source=fix.source if fix else "",
         )
-        for v in accounts.vat_codes(ctx, entity_id, on=q.on)
+        for v, fix in shown
     ]
+
+
+class VatCodeCorrectionIn(Schema):
+    effective_from: date
+    rate: str | None = Field(default=None, description="A fraction, 0.19 for 19%")
+    clear_rate: bool = Field(default=False, description="Set the code to have no rate")
+    treatment: str | None = None
+    category: str | None = None
+    name: str | None = Field(default=None, max_length=200)
+    name_el: str | None = Field(default=None, max_length=200)
+    source: str = Field(min_length=1, max_length=500)
+    note: str = Field(default="", max_length=1000)
+
+
+@router.post(f"{BASE}/vat-codes/{{code}}/corrections", response={201: dict[str, Any]})
+@requires("tax.rules.correct")
+def correct_vat_code(
+    request: HttpRequest, slug: str, entity_id: UUID, code: str, payload: VatCodeCorrectionIn
+) -> Status[dict[str, Any]]:
+    """Correct a VAT code for this entity from a date (brief 27, T-2). Lines dated from then on
+    use it in VAT returns prepared after it; earlier returns keep what they used."""
+    ctx = workspace_ctx(request, slug, entity_id)
+    p = payload
+    values: dict[str, Any] = {
+        k: getattr(p, k)
+        for k in ("treatment", "category", "name", "name_el")
+        if getattr(p, k) is not None
+    }
+    if p.rate is not None or p.clear_rate:
+        values["rate"] = None if p.clear_rate else p.rate
+    found = vat_corrections.correct(ctx, entity_id, code.upper(), effective_from=p.effective_from,
+                                    values=values, source=p.source, note=p.note)  # fmt: skip
+    return Status(201, found.as_ref())
 
 
 # --- dimensions (M2-1) -----------------------------------------------------------------------

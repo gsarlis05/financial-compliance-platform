@@ -7,7 +7,10 @@ stays False until a qualified tax professional confirms the set (owner item #154
 that uses an unverified set says so.
 """
 
+from django.conf import settings
 from django.db import models
+
+from fcp.core.db.models import TenantOwned
 
 
 class TaxRuleSet(models.Model):
@@ -59,5 +62,53 @@ class TaxRuleSet(models.Model):
                 condition=models.Q(verified=False)
                 | ~models.Q(verified_by="") & models.Q(verified_on__isnull=False),
                 name="taxrules_verified_by_whom",
+            ),
+        ]
+
+
+class RuleCorrection(TenantOwned):
+    """A correction of a rule for one entity, entered by the owner (brief 27, T-2, #255).
+
+    The global rules (VAT codes, the VAT return's box rules, corporate tax rule sets) stay as
+    seeded; a correction is a version for the entity from ``effective_from``, with its source.
+    Corrections are never changed or deleted (database trigger): a mistake is corrected by a
+    later one, which may start on the same day and then supersedes it. Each kind is checked by
+    the module that owns the rule; this table only keeps them.
+
+    - VAT_CODE: ``target`` is the code (e.g. S19); ``values`` any of rate, treatment, category,
+      name, name_el. Applies to lines whose tax point (else accounting date) is on or after the
+      start.
+    - VAT_BOX_RULE: ``target`` is "CATEGORY|LINE"; ``values`` {"status": MAPPED or EXCLUDED,
+      "boxes": [...]}. Applies to VAT returns whose period starts on or after the start.
+    - CORPORATE_TAX: ``target`` is CIT; ``values`` a full rule set (rate, loss years,
+      instalments, final payment). Applies to tax years starting on or after the start.
+    """
+
+    class Kind(models.TextChoices):
+        VAT_CODE = "VAT_CODE"
+        VAT_BOX_RULE = "VAT_BOX_RULE"
+        CORPORATE_TAX = "CORPORATE_TAX"
+
+    legal_entity = models.ForeignKey("tenancy.LegalEntity", on_delete=models.PROTECT,
+                                     related_name="+")  # fmt: skip
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    target = models.CharField(max_length=60)
+    effective_from = models.DateField()
+    values = models.JSONField()
+    source = models.CharField(max_length=500)
+    note = models.CharField(max_length=1000, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                   related_name="+")  # fmt: skip
+
+    class Meta:
+        db_table = "taxrules_correction"
+        indexes = [models.Index(fields=["legal_entity", "kind", "target", "effective_from"],
+                                name="taxrules_correction_lookup")]  # fmt: skip
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(source=""), name="taxrules_correction_source"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(target=""), name="taxrules_correction_target"
             ),
         ]
